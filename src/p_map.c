@@ -1636,7 +1636,7 @@ static boolean PTR_ShootTraverse(intercept_t *in)
 	  // fix bullet-eaters -- killough:
 	  if  (li->backsector && li->backsector->ceilingpic == skyflatnum)
     {
-      if(!mouselook && freeaim != freeaim_direct && !casual_play)
+      if(!casual_play)
       {
 	      if (demo_compatibility || li->backsector->ceilingheight < z)
 	        return false;
@@ -1649,7 +1649,7 @@ static boolean PTR_ShootTraverse(intercept_t *in)
       // [nugget] Taken from Crispy Doom - check if the bullet puff's z-coordinate is below of above
       // its spawning sector's floor or ceiling, respectively, and move its
       // coordinates to the point where the trajectory hits the plane
-      if (mouselook && freeaim == freeaim_direct && casual_play)
+      if (casual_play)
       {
           const int lineside = P_PointOnLineSide(x, y, li);
           int side;
