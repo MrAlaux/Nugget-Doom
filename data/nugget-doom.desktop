@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Nugget Doom
+Exec=nugget-doom
+Icon=nugget-doom
+Type=Application
+Comment=Nugget Doom is a fork of Woof! with my own additions, including some ported Crispy Doom features.
+Categories=Game;ActionGame;
+Keywords=first;person;shooter;vanilla;doom;boom;mbf;woof;
