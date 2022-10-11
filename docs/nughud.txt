@@ -1,0 +1,219 @@
+--------------------------------------------------------------------------------
+
+  Nugget Doom's NUGHUD guide
+
+--------------------------------------------------------------------------------
+
+The NUGHUD lump is a variant of MBF's OPTIONS lump, used specifically by Nugget
+Doom to customize the Crispy/Minimalistic HUD. As implied, it uses the same
+format as the OPTIONS lump, and can only be loaded from WADs.
+Excerpt from mbfedit.txt:
+
+"The OPTIONS lump has the same format as mbf.cfg: A text file listing option
+names and values, optionally separated by blank or comment lines."
+
+For the most part, there are three variables for each widget:
+
+- An integer for X position. Can be any number between -1 and 320 (inclusive).
+  A value of -1 will disable the widget.
+
+- An integer for Y position. Can be any number between 0 and 200 (inclusive).
+
+- An integer to apply a widescreen delta when using the widescreen Crispy HUD.
+  Can be any number between -1 and 1 (inclusive).
+  As implied, it is only relevant when on widescreen. A value of -1 will shift
+  the widget left, a value of 1 will shift it right, and a value of 0 won't
+  shift it at all.
+
+There is an additional variable to toggle the face background, which is linked
+to the position of the face.
+
+By default and compared to the original Crispy HUD, the NUGHUD hides the face
+widget and shows 8 weapon numbers in the Arms display instead of 6.
+
+As an example of the format, loading a WAD with a NUGHUD lump with the following
+contents (text within the quotation marks, NOT including the quotation marks)
+will restore the face widget:
+
+"
+; This is a comment!
+nughud_face_x 143
+"
+
+--------------------------------------------------------------------------------
+
+The following text is the default configuration for the NUGHUD (built into the
+executable), with added comments for clarity. Feel free to use it as a base to
+make new configurations:
+
+"
+; X position of the Ammo count
+nughud_ammo_x 44
+; Y position of the Ammo count
+nughud_ammo_y 171
+; Apply widescreen delta to the Ammo count
+nughud_ammo_y -1
+
+; X position of the Health count
+nughud_health_x 90
+; Y position of the Health count
+nughud_health_y 171
+; Apply widescreen delta to the Health count
+nughud_health_wide -1
+
+; X position of the weapon number 2
+nughud_arms2_x 111
+; Y position of the weapon number 2
+nughud_arms2_y 172
+; Apply widescreen delta to the weapon number 2
+nughud_arms2_wide -1
+
+; X position of the weapon number 3
+nughud_arms3_x 119
+; Y position of the weapon number 3
+nughud_arms3_y 172
+; Apply widescreen delta to the weapon number 3
+nughud_arms3_wide -1
+
+; X position of the weapon number 4
+nughud_arms4_x 127
+; Y position of the weapon number 4
+nughud_arms4_y 172
+; Apply widescreen delta to the weapon number 4
+nughud_arms4_wide -1
+
+; X position of the weapon number 5
+nughud_arms5_x 135
+; Y position of the weapon number 5
+nughud_arms5_y 172
+; Apply widescreen delta to the weapon number 5
+nughud_arms5_wide -1
+
+; X position of the weapon number 6
+nughud_arms6_x 111
+; Y position of the weapon number 6
+nughud_arms6_y 182
+; Apply widescreen delta to the weapon number 6
+nughud_arms6_wide -1
+
+; X position of the weapon number 7
+nughud_arms7_x 119
+; Y position of the weapon number 7
+nughud_arms7_y 182
+; Apply widescreen delta to the weapon number 2
+nughud_arms7_wide -1
+
+; X position of the weapon number 8
+nughud_arms8_x 127
+; Y position of the weapon number 8
+nughud_arms8_y 182
+; Apply widescreen delta to the weapon number 8
+nughud_arms8_wide -1
+
+; X position of the weapon number 9
+nughud_arms9_x 135
+; Y position of the weapon number 9
+nughud_arms9_y 182
+; Apply widescreen delta to the weapon number 9
+nughud_arms9_wide -1
+
+; X position of the Frags count
+nughud_frags_x 138
+; Y position of the Frags count
+nughud_frags_y 171
+; Apply widescreen delta to the Frags count
+nughud_frags_wide -1
+
+; X position of the Face
+nughud_face_x -1
+; Y position of the Face
+nughud_face_y 168
+; Apply widescreen delta to the Face
+nughud_face_wide 0
+; Draw Face background
+nughud_face_bg 1
+
+; X position of the Armor count
+nughud_armor_x 221
+; Y position of the Armor count
+nughud_armor_y 171
+; Apply widescreen delta to the Armor count
+nughud_armor_wide 1
+
+; X position of the Blue Key
+nughud_key0_x 239
+; Y position of the Blue Key
+nughud_key0_y 171
+; Apply widescreen delta to the Blue Key
+nughud_key0_wide 1
+
+; X position of the Yellow Key
+nughud_key1_x 239
+; Y position of the Yellow key
+nughud_key1_y 181
+; Apply widescreen delta to the Yellow Key
+nughud_key1_wide 1
+
+; X position of the Red Key
+nughud_key2_x 239
+; Y position of the Red Key
+nughud_key2_y 191
+; Apply widescreen delta to the Red Key
+nughud_key2_wide 1
+
+; X position of the Bullets count
+nughud_ammo0_x 288
+; Y position of the Bullets count
+nughud_ammo0_y 173
+; Apply widescreen delta to the Bullets count
+nughud_ammo0_wide 1
+
+; X position of the Shells count
+nughud_ammo1_x 288
+; Y position of the Shells count
+nughud_ammo1_y 179
+; Apply widescreen delta to the Shells count
+nughud_ammo1_wide 1
+
+; X position of the Cells count
+nughud_ammo2_x 288
+; Y position of the Cells count
+nughud_ammo2_y 191
+; Apply widescreen delta to the Cells count
+nughud_ammo2_wide 1
+
+; X position of the Rockets count
+nughud_ammo3_x 288
+; Y position of the Rockets count
+nughud_ammo3_y 185
+; Apply widescreen delta to the Rockets count
+nughud_ammo3_wide 1
+
+; X position of the Max Bullets count
+nughud_maxammo0_x 314
+; Y position of the Max Bullets count
+nughud_maxammo0_y 173
+; Apply widescreen delta to the Max Bullets count
+nughud_maxammo0_wide 1
+
+; X position of the Max Shells count
+nughud_maxammo1_x 314
+; Y position of the Max Shells count
+nughud_maxammo1_y 179
+; Apply widescreen delta to the Max Shells count
+nughud_maxammo1_wide 1
+
+; X position of the Max Cells count
+nughud_maxammo2_x 314
+; Y position of the Max Cells count
+nughud_maxammo2_y 191
+; Apply widescreen delta to the Max Cells count
+nughud_maxammo2_wide 1
+
+; X position of the Max Rockets count
+nughud_maxammo3_x 314
+; Y position of the Max Rockets count
+nughud_maxammo3_y 185
+; Apply widescreen delta to the Max Rockets count
+nughud_maxammo3_wide 1
+"
