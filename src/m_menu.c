@@ -1238,7 +1238,7 @@ void M_DrawOptions(void)
 
   // [Nugget] Increase size to accommodate for extra screen sizes
   M_DrawThermo(OptionsDef.x,OptionsDef.y+LINEHEIGHT*(scrnsize+1),
-              9+4,screenSize);
+              9+2,screenSize);
 }
 
 void M_Options(int choice)
@@ -1678,7 +1678,7 @@ void M_SizeDisplay(int choice)
       }
       break;
     case 1:
-      if (screenSize < 8+4) { // [Nugget] Increase to accommodate for Crispy HUD
+      if (screenSize < 8+2) { // [Nugget] Increase to accommodate for Crispy HUD
         screenblocks++;
         screenSize++;
       }
@@ -5599,13 +5599,13 @@ boolean M_Responder (event_t* ev)
 	  if ((automapactive && !automapoverlay) || chat_on)   // jff 2/22/98
 	    return false;                             // HUD mode control
     // [Nugget] Increase to accommodate for Crispy HUD
-	  if (screenSize<8+4)                         // function on default F5
-	    while (screenSize<8+4 || !hud_displayed)  // make hud visible
+	  if (screenSize<8+2)                         // function on default F5
+	    while (screenSize<8+2 || !hud_displayed)  // make hud visible
 	      M_SizeDisplay(1);                       // when configuring it
 	  else
 	    {
 	      hud_displayed = 1;               //jff 3/3/98 turn hud on
-	      hud_active = (screenSize >= 8 && screenSize <= 11)
+	      hud_active = (screenSize >= 8 && screenSize <= 9)
                      ? !hud_active : (hud_active+1)%3; // cycle hud_active
 	      if (!hud_active)                 //jff 3/4/98 add distributed
 		{

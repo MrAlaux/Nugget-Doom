@@ -758,7 +758,7 @@ default_t defaults[] = {
     // [Nugget] Add more room for Crispy HUD
     "screenblocks",
     (config_t *) &screenblocks, NULL,
-    {10}, {3,11+4}, number, ss_none, wad_no,
+    {10}, {3,11+2}, number, ss_none, wad_no,
     "initial play screen size"
   },
 

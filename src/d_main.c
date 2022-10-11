@@ -52,6 +52,7 @@
 #include "m_argv.h"
 #include "m_misc.h"
 #include "m_misc2.h" // [FG] M_StringDuplicate()
+#include "m_nughud.h" // [Nugget]
 #include "m_menu.h"
 #include "m_swap.h"
 #include "i_system.h"
@@ -283,7 +284,7 @@ void D_Display (void)
     R_RenderPlayerView (&players[displayplayer]);
 
     // [Nugget]: [crispy] Crispy HUD
-    if (screenblocks >= CRISPY_HUD && screenblocks <= CRISPY_HUD+3)
+    if (screenblocks >= CRISPY_HUD && screenblocks <= CRISPY_HUD+1)
       { ST_Drawer(false, true); }
   }
 
@@ -2365,6 +2366,7 @@ void D_DoomMain(void)
 
   puts("M_LoadDefaults: Load system defaults.");
   M_LoadDefaults();              // load before initing other systems
+  M_NughudLoadDefaults(); // [Nugget]
 
   bodyquesize = default_bodyquesize; // killough 10/98
 

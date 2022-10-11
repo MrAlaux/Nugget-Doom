@@ -49,6 +49,7 @@ set(WOOF_SOURCES
     m_menu.c               m_menu.h
     m_misc.c               m_misc.h
     m_misc2.c              m_misc2.h
+    m_nughud.c             m_nughud.h
     m_random.c             m_random.h
     m_swap.h
     memio.c                memio.h

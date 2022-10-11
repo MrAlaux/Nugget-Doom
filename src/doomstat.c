@@ -178,6 +178,64 @@ int bloodier_gibbing;
 
 int nugget_comp[NUGGET_COMP_TOTAL], default_nugget_comp[NUGGET_COMP_TOTAL];
 
+// Variables for NUGHUD
+
+int nughud_ammo_x,     nughud_ammo_y,     nughud_ammo_wide;
+int nughud_health_x,   nughud_health_y,   nughud_health_wide;
+int nughud_arms2_x,    nughud_arms2_y,    nughud_arms2_wide;
+int nughud_arms3_x,    nughud_arms3_y,    nughud_arms3_wide;
+int nughud_arms4_x,    nughud_arms4_y,    nughud_arms4_wide;
+int nughud_arms5_x,    nughud_arms5_y,    nughud_arms5_wide;
+int nughud_arms6_x,    nughud_arms6_y,    nughud_arms6_wide;
+int nughud_arms7_x,    nughud_arms7_y,    nughud_arms7_wide;
+int nughud_arms8_x,    nughud_arms8_y,    nughud_arms8_wide;
+int nughud_arms9_x,    nughud_arms9_y,    nughud_arms9_wide;
+int nughud_frags_x,    nughud_frags_y,    nughud_frags_wide;
+int nughud_face_x,     nughud_face_y,     nughud_face_wide, nughud_face_bg;
+int nughud_armor_x,    nughud_armor_y,    nughud_armor_wide;
+int nughud_key0_x,     nughud_key0_y,     nughud_key0_wide;
+int nughud_key1_x,     nughud_key1_y,     nughud_key1_wide;
+int nughud_key2_x,     nughud_key2_y,     nughud_key2_wide;
+int nughud_ammo0_x,    nughud_ammo0_y,    nughud_ammo0_wide;
+int nughud_ammo1_x,    nughud_ammo1_y,    nughud_ammo1_wide;
+int nughud_ammo2_x,    nughud_ammo2_y,    nughud_ammo2_wide;
+int nughud_ammo3_x,    nughud_ammo3_y,    nughud_ammo3_wide;
+int nughud_maxammo0_x, nughud_maxammo0_y, nughud_maxammo0_wide;
+int nughud_maxammo1_x, nughud_maxammo1_y, nughud_maxammo1_wide;
+int nughud_maxammo2_x, nughud_maxammo2_y, nughud_maxammo2_wide;
+int nughud_maxammo3_x, nughud_maxammo3_y, nughud_maxammo3_wide;
+
+int *nughud_arms[8][3] = {
+  { &nughud_arms2_x, &nughud_arms2_y, &nughud_arms2_wide },
+  { &nughud_arms3_x, &nughud_arms3_y, &nughud_arms3_wide },
+  { &nughud_arms4_x, &nughud_arms4_y, &nughud_arms4_wide },
+  { &nughud_arms5_x, &nughud_arms5_y, &nughud_arms5_wide },
+  { &nughud_arms6_x, &nughud_arms6_y, &nughud_arms6_wide },
+  { &nughud_arms7_x, &nughud_arms7_y, &nughud_arms7_wide },
+  { &nughud_arms8_x, &nughud_arms8_y, &nughud_arms8_wide },
+  { &nughud_arms9_x, &nughud_arms9_y, &nughud_arms9_wide },
+};
+
+int *nughud_key[3][3] = {
+  { &nughud_key0_x, &nughud_key0_y, &nughud_key0_wide },
+  { &nughud_key1_x, &nughud_key1_y, &nughud_key1_wide },
+  { &nughud_key2_x, &nughud_key2_y, &nughud_key2_wide },
+};
+
+int *nughud_ammo[4][3] = {
+  { &nughud_ammo0_x, &nughud_ammo0_y, &nughud_ammo0_wide },
+  { &nughud_ammo1_x, &nughud_ammo1_y, &nughud_ammo1_wide },
+  { &nughud_ammo2_x, &nughud_ammo2_y, &nughud_ammo2_wide },
+  { &nughud_ammo3_x, &nughud_ammo3_y, &nughud_ammo3_wide },
+};
+
+int *nughud_maxammo[4][3] = {
+  { &nughud_maxammo0_x, &nughud_maxammo0_y, &nughud_maxammo0_wide },
+  { &nughud_maxammo1_x, &nughud_maxammo1_y, &nughud_maxammo1_wide },
+  { &nughud_maxammo2_x, &nughud_maxammo2_y, &nughud_maxammo2_wide },
+  { &nughud_maxammo3_x, &nughud_maxammo3_y, &nughud_maxammo3_wide },
+};
+
 
 //----------------------------------------------------------------------------
 //

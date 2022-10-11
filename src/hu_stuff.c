@@ -630,7 +630,7 @@ void HU_Start(void)
   // totals and current values for kills, items, secrets
   // lower left of screen
   HUlib_initTextLine(&w_monsec, hud_distributed ? HU_MONSECX_D : HU_MONSECX,
-		     (scaledviewheight < SCREENHEIGHT || (screenSize >= 8 && screenSize <= 11)) ? (ST_Y - HU_GAPY) :
+		     (scaledviewheight < SCREENHEIGHT || (screenSize >= 8 && screenSize <= 9)) ? (ST_Y - HU_GAPY) :
 		     hud_distributed? HU_MONSECY_D : HU_MONSECY, hu_font2,
 		     HU_FONTSTART, colrngs[CR_GRAY]);
 
@@ -836,7 +836,7 @@ void HU_MoveHud(void)
   }
 
   // [FG] draw Time/STS widgets above status bar
-  if (scaledviewheight < SCREENHEIGHT || (screenSize >= 8 && screenSize <= 11))
+  if (scaledviewheight < SCREENHEIGHT || (screenSize >= 8 && screenSize <= 9))
   {
     // adjust Time widget if set to Time only
     short t_offset = (hud_timests == 1) ? 1 : 2;
@@ -1661,11 +1661,11 @@ void HU_Drawer(void)
   }
   else if (hud_timests && (!automapactive || automapoverlay)
            // [Nugget] Allow Time/STS display in Crispy minimalistic HUD
-           && screenSize <= 8+3)
+           && screenSize <= 8+1)
   {
     // insure HUD display coords are correct
     // [Nugget] Only below certain screen size values
-    if (screenSize <= 8+3) { HU_MoveHud(); }
+    if (screenSize <= 8+1) { HU_MoveHud(); }
 
     if (hud_timests & HU_STTIME)
       HUlib_drawTextLine(&w_sttime, false);
@@ -1895,11 +1895,11 @@ void HU_Ticker(void)
         const int offset_timests = (hud_timests ? (hud_timests == 3 ? 2 : 1) : 0) * HU_GAPY;
         const int offset_nosecrets = (hud_nosecrets ? 1 : 2) * HU_GAPY;
 
-        if (screenblocks >= 11+4) // [Nugget] Account for extra screen sizes
+        if (screenblocks >= 11+2) // [Nugget] Account for extra screen sizes
         {
           if (hud_displayed && hud_active)
           {
-            if (screenSize >= 8 && screenSize <= 11)
+            if (screenSize >= 8 && screenSize <= 9)
               w_title.y -= offset_timests;
             else
             {
@@ -1971,7 +1971,7 @@ void HU_Ticker(void)
 
     if (hud_timests && ((scaledviewheight < SCREENHEIGHT)
         // [Nugget] Allow Time/STS display in Crispy minimalistic HUD
-        || (screenSize >= 8 && screenSize <= 8+3)))
+        || (screenSize >= 8 && screenSize <= 8+1)))
     {
       HU_widget_build_sttime();
       HU_widget_build_monsec();
