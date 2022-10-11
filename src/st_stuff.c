@@ -941,7 +941,10 @@ void ST_drawWidgets(boolean refresh)
   // [Nugget] This probably shouldn't go here, but it works
   if ((screenblocks == CRISPY_HUD || screenblocks == CRISPY_HUD+1)
       && nughud_face_x > -1 && nughud_face_bg)
-    { V_DrawPatch(nughud_face_x, nughud_face_y+1, FG, faceback[netgame ? displayplayer : 1]); }
+  {
+    V_DrawPatch(nughud_face_x + (st_widecrispyhud ? WIDESCREENDELTA*nughud_face_wide : 0),
+                nughud_face_y+1, FG, faceback[netgame ? displayplayer : 1]);
+  }
 
   if (!st_crispyhud || nughud_face_x > -1)
     { STlib_updateMultIcon(&w_faces, refresh); }

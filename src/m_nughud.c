@@ -88,7 +88,7 @@ default_t nughud_defaults[] = {
   { "nughud_frags_y",       (config_t *)&nughud_frags_y,        NULL, {ST_FRAGSY},    {0,200},    number, ss_none, wad_yes },
   { "nughud_frags_wide",    (config_t *)&nughud_frags_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
   { "nughud_face_x",        (config_t *)&nughud_face_x,         NULL, {-1},           {-1,320},   number, ss_none, wad_yes },
-  { "nughud_face_y",        (config_t *)&nughud_face_y,         NULL, {0},            {0,200},    number, ss_none, wad_yes },
+  { "nughud_face_y",        (config_t *)&nughud_face_y,         NULL, {ST_FACESY},    {0,200},    number, ss_none, wad_yes },
   { "nughud_face_wide",     (config_t *)&nughud_face_wide,      NULL, {0},            {-1,1},     number, ss_none, wad_yes },
   { "nughud_face_bg",       (config_t *)&nughud_face_bg,        NULL, {1},            {0,1},      number, ss_none, wad_yes },
   { "nughud_armor_x",       (config_t *)&nughud_armor_x,        NULL, {ST_ARMORX},    {-1,320},   number, ss_none, wad_yes },
