@@ -869,12 +869,12 @@ void ST_drawWidgets(boolean refresh)
 
     // [Nugget] One extra check, just in case
     if (lump > 0) {
-      int delta = (screenblocks >= CRISPY_HUD+2) ? WIDESCREENDELTA : 0; // [Nugget]
+      int delta = (st_widecrispyhud ? WIDESCREENDELTA*nughud.ammo.wide : 0); // [Nugget]
       patch = W_CacheLumpNum(lump, PU_CACHE);
 
       // [crispy] (23,179) is the center of the Ammo widget
       // [Nugget] Nugget HUD
-      V_DrawPatch((st_crispyhud ? nughud.ammo.x : ST_AMMOX) - 21 - SHORT(patch->width)/2 + SHORT(patch->leftoffset) - delta,
+      V_DrawPatch((st_crispyhud ? nughud.ammo.x : ST_AMMOX) - 21 - SHORT(patch->width)/2 + SHORT(patch->leftoffset) + delta,
                   (st_crispyhud ? nughud.ammo.y : ST_AMMOY) + 8 - SHORT(patch->height)/2 + SHORT(patch->topoffset),
                   FG, patch);
     }
