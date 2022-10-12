@@ -19,21 +19,32 @@
 //
 //
 // DESCRIPTION:
-//  Variant of m_misc.h specifically for loading of NUGHUD variables
+//  Variant of m_misc.h specifically for declaration and loading of NUGHUD
+//  variables
 
 #ifndef __M_NUGHUD__
 #define __M_NUGHUD__
 
-#include "doomtype.h"
-#include "doomdef.h"
+typedef struct nughud_widget_s {
+  int x;
+  int y;
+  int wide;
+  int bg;
+} nughud_widget_t;
 
-#include "m_input.h"
+typedef struct nughud_s {
+  struct nughud_widget_s ammo;
+  struct nughud_widget_s health;
+  struct nughud_widget_s arms[8];
+  struct nughud_widget_s frags;
+  struct nughud_widget_s face;
+  struct nughud_widget_s armor;
+  struct nughud_widget_s keys[3];
+  struct nughud_widget_s ammos[4];
+  struct nughud_widget_s maxammos[4];
+} nughud_t;
 
-#include "m_misc.h"
-
-//
-// MISC
-//
+extern nughud_t nughud;
 
 void M_NughudLoadDefaults(void);
 struct default_s *M_NughudLookupDefault(const char *name);

@@ -45,6 +45,7 @@
 #include "dstrings.h"
 #include "m_misc2.h"
 #include "m_swap.h"
+#include "m_nughud.h" // [Nugget]
 
 // [crispy] immediately redraw status bar after help screens have been shown
 extern boolean inhelpscreens;
@@ -840,7 +841,7 @@ void ST_drawWidgets(boolean refresh)
   if (plyr->backpack && !hud_backpack_thresholds)
     maxammo /= 2;
 
-  if (!st_crispyhud || nughud_ammo_x > -1) { // [Nugget] Nugget HUD
+  if (!st_crispyhud || nughud.ammo.x > -1) { // [Nugget] Nugget HUD
     //jff 2/16/98 make color of ammo depend on amount
     // [Nugget] Make it gray if the player has infinite ammo
     if (plyr->cheats & CF_INFAMMO)           { STlib_updateNum(&w_ready, cr_gray, refresh); }
@@ -851,7 +852,7 @@ void ST_drawWidgets(boolean refresh)
   }
 
   // [Nugget]: [crispy] draw berserk pack instead of no ammo if appropriate
-  if ((!st_crispyhud || nughud_ammo_x > -1) // [Nugget] Nugget HUD
+  if ((!st_crispyhud || nughud.ammo.x > -1) // [Nugget] Nugget HUD
       && plyr->readyweapon == wp_fist
       && weaponinfo[plyr->readyweapon].ammo == am_noammo // [Nugget] Check for unlimited ammo type
       && plyr->powers[pw_strength])
@@ -873,16 +874,16 @@ void ST_drawWidgets(boolean refresh)
 
       // [crispy] (23,179) is the center of the Ammo widget
       // [Nugget] Nugget HUD
-      V_DrawPatch((st_crispyhud ? nughud_ammo_x : ST_AMMOX) - 21 - SHORT(patch->width)/2 + SHORT(patch->leftoffset) - delta,
-                  (st_crispyhud ? nughud_ammo_y : ST_AMMOY) + 8 - SHORT(patch->height)/2 + SHORT(patch->topoffset),
+      V_DrawPatch((st_crispyhud ? nughud.ammo.x : ST_AMMOX) - 21 - SHORT(patch->width)/2 + SHORT(patch->leftoffset) - delta,
+                  (st_crispyhud ? nughud.ammo.y : ST_AMMOY) + 8 - SHORT(patch->height)/2 + SHORT(patch->topoffset),
                   FG, patch);
     }
   }
 
   if (st_crispyhud) { // [Nugget] Nugget HUD
     for (i=0;i<4;i++) {
-      if (*nughud_ammo[i][0] > -1)    { STlib_updateNum(&w_ammo[i], NULL, refresh); }
-      if (*nughud_maxammo[i][0] > -1) { STlib_updateNum(&w_maxammo[i], NULL, refresh); }
+      if (nughud.ammos[i].x > -1)     { STlib_updateNum(&w_ammo[i], NULL, refresh); }
+      if (nughud.maxammos[i].x > -1)  { STlib_updateNum(&w_maxammo[i], NULL, refresh); }
     }
   }
   else
@@ -891,7 +892,7 @@ void ST_drawWidgets(boolean refresh)
       STlib_updateNum(&w_maxammo[i], NULL, refresh);
     }
 
-  if (!st_crispyhud || nughud_health_x > -1) { // [Nugget] Nugget HUD
+  if (!st_crispyhud || nughud.health.x > -1) { // [Nugget] Nugget HUD
     //jff 2/16/98 make color of health depend on amount
     // [Nugget] Use the player's health value instead of the percent's value
     // [Nugget] Make it gray if the player's invulnerable
@@ -904,7 +905,7 @@ void ST_drawWidgets(boolean refresh)
     else                              { STlib_updatePercent(&w_health, cr_blue2, refresh); } //killough 2/28/98
   }
 
-  if (!st_crispyhud || nughud_armor_x > -1) { // [Nugget] Nugget HUD
+  if (!st_crispyhud || nughud.armor.x > -1) { // [Nugget] Nugget HUD
     // color of armor depends on type
     // [Nugget] Use code from our implementation,
     // differently formatted to save space, and check for God Mode
@@ -933,7 +934,7 @@ void ST_drawWidgets(boolean refresh)
 
   if (st_crispyhud) { // [Nugget] Nugget HUD
     for (i=0; i<8; i++)
-      if (*nughud_arms[i][0] > -1) { STlib_updateMultIcon(&w_arms[i], refresh); }
+      if (nughud.arms[i].x > -1) { STlib_updateMultIcon(&w_arms[i], refresh); }
   }
   else
     for (i=0; i<6; i++)
@@ -941,25 +942,25 @@ void ST_drawWidgets(boolean refresh)
 
   // [Nugget] This probably shouldn't go here, but it works
   if ((screenblocks == CRISPY_HUD || screenblocks == CRISPY_HUD+1)
-      && nughud_face_x > -1 && nughud_face_bg)
+      && nughud.face.x > -1 && nughud.face.bg)
   {
     // [Nugget] Nugget HUD
-    V_DrawPatch(nughud_face_x + (st_widecrispyhud ? WIDESCREENDELTA*nughud_face_wide : 0),
-                nughud_face_y+1, FG, faceback[netgame ? displayplayer : 1]);
+    V_DrawPatch(nughud.face.x + (st_widecrispyhud ? WIDESCREENDELTA*nughud.face.wide : 0),
+                nughud.face.y+1, FG, faceback[netgame ? displayplayer : 1]);
   }
 
-  if (!st_crispyhud || nughud_face_x > -1) // [Nugget] Nugget HUD
+  if (!st_crispyhud || nughud.face.x > -1) // [Nugget] Nugget HUD
     { STlib_updateMultIcon(&w_faces, refresh); }
 
   if (st_crispyhud) { // [Nugget] Nugget HUD
     for (i=0; i<3; i++)
-      if (*nughud_key[i][0] > -1) { STlib_updateMultIcon(&w_keyboxes[i], refresh); }
+      if (nughud.keys[i].x > -1) { STlib_updateMultIcon(&w_keyboxes[i], refresh); }
   }
   else
     for (i=0;i<3;i++)
       { STlib_updateMultIcon(&w_keyboxes[i], refresh); }
 
-  if (!st_crispyhud || nughud_frags_x > -1) // [Nugget] Nugget HUD
+  if (!st_crispyhud || nughud.frags.x > -1) // [Nugget] Nugget HUD
     { STlib_updateNum(&w_frags, NULL, refresh); }
 
 }
@@ -1000,7 +1001,7 @@ void ST_Drawer(boolean fullscreen, boolean refresh)
   st_crispyhud = screenblocks >= CRISPY_HUD && (!automapactive || automapoverlay);
 
   st_classicstatusbar = st_statusbaron && !st_crispyhud;
-  st_statusbarface = st_classicstatusbar || (st_crispyhud && nughud_face_x);
+  st_statusbarface = st_classicstatusbar || (st_crispyhud && nughud.face.x);
 
   oldwide = st_widecrispyhud; // [Nugget]
   st_widecrispyhud = screenblocks >= CRISPY_HUD+1 && (!automapactive || automapoverlay);
@@ -1182,8 +1183,8 @@ void ST_createWidgets(void)
 
   // ready weapon ammo
   STlib_initNum(&w_ready,
-                (st_crispyhud ? nughud_ammo_x : ST_AMMOX) + (wide ? delta*nughud_ammo_wide : 0),
-                (st_crispyhud ? nughud_ammo_y : ST_AMMOY),
+                (st_crispyhud ? nughud.ammo.x : ST_AMMOX) + (wide ? delta*nughud.ammo.wide : 0),
+                (st_crispyhud ? nughud.ammo.y : ST_AMMOY),
                 tallnum,
                 &plyr->ammo[weaponinfo[plyr->readyweapon].ammo],
                 &st_statusbaron,
@@ -1194,8 +1195,8 @@ void ST_createWidgets(void)
 
   // health percentage
   STlib_initPercent(&w_health,
-                    (st_crispyhud ? nughud_health_x : ST_HEALTHX) + (wide ? delta*nughud_health_wide : 0),
-                    (st_crispyhud ? nughud_health_y : ST_HEALTHY),
+                    (st_crispyhud ? nughud.health.x : ST_HEALTHX) + (wide ? delta*nughud.health.wide : 0),
+                    (st_crispyhud ? nughud.health.y : ST_HEALTHY),
                     tallnum,
                     &STHealth, // [Nugget] Smooth counts
                     &st_statusbaron,
@@ -1205,8 +1206,8 @@ void ST_createWidgets(void)
   if (st_crispyhud) {
     for (i=0; i<8; i++)
       STlib_initMultIcon(&w_arms[i],
-                         *nughud_arms[i][0] + (wide ? delta*(*nughud_arms[i][2]) : 0),
-                         *nughud_arms[i][1],
+                         nughud.arms[i].x + (wide ? delta*nughud.arms[i].wide : 0),
+                         nughud.arms[i].y,
                          arms[i], (int *) &plyr->weaponowned[i+1], &st_armson);
   }
   else {
@@ -1225,8 +1226,8 @@ void ST_createWidgets(void)
 
   // frags sum
   STlib_initNum(&w_frags,
-                (st_crispyhud ? nughud_frags_x : ST_FRAGSX) + (wide ? delta*nughud_frags_wide : 0),
-                (st_crispyhud ? nughud_frags_y : ST_FRAGSY),
+                (st_crispyhud ? nughud.frags.x : ST_FRAGSX) + (wide ? delta*nughud.frags.wide : 0),
+                (st_crispyhud ? nughud.frags.y : ST_FRAGSY),
                 tallnum,
                 &st_fragscount,
                 &st_fragson,
@@ -1234,70 +1235,70 @@ void ST_createWidgets(void)
 
   // faces
   STlib_initMultIcon(&w_faces,
-                     (st_crispyhud ? nughud_face_x : ST_FACESX) + (wide ? delta*nughud_face_wide : 0),
-                     (st_crispyhud ? nughud_face_y : ST_FACESY),
+                     (st_crispyhud ? nughud.face.x : ST_FACESX) + (wide ? delta*nughud.face.wide : 0),
+                     (st_crispyhud ? nughud.face.y : ST_FACESY),
                      faces,
                      &st_faceindex,
                      &st_statusbarface); // [Nugget] Crispy minimalistic HUD
 
   // armor percentage - should be colored later
   STlib_initPercent(&w_armor,
-                    (st_crispyhud ? nughud_armor_x : ST_ARMORX) + (wide ? delta*nughud_armor_wide : 0),
-                    (st_crispyhud ? nughud_armor_y : ST_ARMORY),
+                    (st_crispyhud ? nughud.armor.x : ST_ARMORX) + (wide ? delta*nughud.armor.wide : 0),
+                    (st_crispyhud ? nughud.armor.y : ST_ARMORY),
                     tallnum,
                     &STArmor, // [Nugget] Smooth counts
                     &st_statusbaron, tallpercent);
 
   // keyboxes 0-2
   STlib_initMultIcon(&w_keyboxes[0],
-                     (st_crispyhud ? nughud_key0_x : ST_KEY0X) + (wide ? delta*nughud_key0_wide : 0),
-                     (st_crispyhud ? nughud_key0_y : ST_KEY0Y),
+                     (st_crispyhud ? nughud.keys[0].x : ST_KEY0X) + (wide ? delta*nughud.keys[0].wide : 0),
+                     (st_crispyhud ? nughud.keys[0].y : ST_KEY0Y),
                      keys,
                      &keyboxes[0],
                      &st_statusbaron);
 
   STlib_initMultIcon(&w_keyboxes[1],
-                     (st_crispyhud ? nughud_key1_x : ST_KEY1X) + (wide ? delta*nughud_key1_wide : 0),
-                     (st_crispyhud ? nughud_key1_y : ST_KEY1Y),
+                     (st_crispyhud ? nughud.keys[1].x : ST_KEY1X) + (wide ? delta*nughud.keys[1].wide : 0),
+                     (st_crispyhud ? nughud.keys[1].y : ST_KEY1Y),
                      keys,
                      &keyboxes[1],
                      &st_statusbaron);
 
   STlib_initMultIcon(&w_keyboxes[2],
-                     (st_crispyhud ? nughud_key2_x : ST_KEY2X) + (wide ? delta*nughud_key2_wide : 0),
-                     (st_crispyhud ? nughud_key2_y : ST_KEY2Y),
+                     (st_crispyhud ? nughud.keys[2].x : ST_KEY2X) + (wide ? delta*nughud.keys[2].wide : 0),
+                     (st_crispyhud ? nughud.keys[2].y : ST_KEY2Y),
                      keys,
                      &keyboxes[2],
                      &st_statusbaron);
 
   // ammo count (all four kinds)
   STlib_initNum(&w_ammo[0],
-                (st_crispyhud ? nughud_ammo0_x : ST_AMMO0X) + (wide ? delta*nughud_ammo0_wide : 0),
-                (st_crispyhud ? nughud_ammo0_y : ST_AMMO0Y),
+                (st_crispyhud ? nughud.ammos[0].x : ST_AMMO0X) + (wide ? delta*nughud.ammos[0].wide : 0),
+                (st_crispyhud ? nughud.ammos[0].y : ST_AMMO0Y),
                 shortnum,
                 &plyr->ammo[0],
                 &st_statusbaron,
                 ST_AMMO0WIDTH);
 
   STlib_initNum(&w_ammo[1],
-                (st_crispyhud ? nughud_ammo1_x : ST_AMMO1X) + (wide ? delta*nughud_ammo1_wide : 0),
-                (st_crispyhud ? nughud_ammo1_y : ST_AMMO1Y),
+                (st_crispyhud ? nughud.ammos[1].x : ST_AMMO1X) + (wide ? delta*nughud.ammos[1].wide : 0),
+                (st_crispyhud ? nughud.ammos[1].y : ST_AMMO1Y),
                 shortnum,
                 &plyr->ammo[1],
                 &st_statusbaron,
                 ST_AMMO1WIDTH);
 
   STlib_initNum(&w_ammo[2],
-                (st_crispyhud ? nughud_ammo2_x : ST_AMMO2X) + (wide ? delta*nughud_ammo2_wide : 0),
-                (st_crispyhud ? nughud_ammo2_y : ST_AMMO2Y),
+                (st_crispyhud ? nughud.ammos[2].x : ST_AMMO2X) + (wide ? delta*nughud.ammos[2].wide : 0),
+                (st_crispyhud ? nughud.ammos[2].y : ST_AMMO2Y),
                 shortnum,
                 &plyr->ammo[2],
                 &st_statusbaron,
                 ST_AMMO2WIDTH);
 
   STlib_initNum(&w_ammo[3],
-                (st_crispyhud ? nughud_ammo3_x : ST_AMMO3X) + (wide ? delta*nughud_ammo3_wide : 0),
-                (st_crispyhud ? nughud_ammo3_y : ST_AMMO3Y),
+                (st_crispyhud ? nughud.ammos[3].x : ST_AMMO3X) + (wide ? delta*nughud.ammos[3].wide : 0),
+                (st_crispyhud ? nughud.ammos[3].y : ST_AMMO3Y),
                 shortnum,
                 &plyr->ammo[3],
                 &st_statusbaron,
@@ -1305,32 +1306,32 @@ void ST_createWidgets(void)
 
   // max ammo count (all four kinds)
   STlib_initNum(&w_maxammo[0],
-                (st_crispyhud ? nughud_maxammo0_x : ST_MAXAMMO0X) + (wide ? delta*nughud_maxammo0_wide : 0),
-                (st_crispyhud ? nughud_maxammo0_y : ST_MAXAMMO0Y),
+                (st_crispyhud ? nughud.maxammos[0].x : ST_MAXAMMO0X) + (wide ? delta*nughud.maxammos[0].wide : 0),
+                (st_crispyhud ? nughud.maxammos[0].y : ST_MAXAMMO0Y),
                 shortnum,
                 &plyr->maxammo[0],
                 &st_statusbaron,
                 ST_MAXAMMO0WIDTH);
 
   STlib_initNum(&w_maxammo[1],
-                (st_crispyhud ? nughud_maxammo1_x : ST_MAXAMMO1X) + (wide ? delta*nughud_maxammo1_wide : 0),
-                (st_crispyhud ? nughud_maxammo1_y : ST_MAXAMMO1Y),
+                (st_crispyhud ? nughud.maxammos[1].x : ST_MAXAMMO1X) + (wide ? delta*nughud.maxammos[1].wide : 0),
+                (st_crispyhud ? nughud.maxammos[1].y : ST_MAXAMMO1Y),
                 shortnum,
                 &plyr->maxammo[1],
                 &st_statusbaron,
                 ST_MAXAMMO1WIDTH);
 
   STlib_initNum(&w_maxammo[2],
-                (st_crispyhud ? nughud_maxammo2_x : ST_MAXAMMO2X) + (wide ? delta*nughud_maxammo2_wide : 0),
-                (st_crispyhud ? nughud_maxammo2_y : ST_MAXAMMO2Y),
+                (st_crispyhud ? nughud.maxammos[2].x : ST_MAXAMMO2X) + (wide ? delta*nughud.maxammos[2].wide : 0),
+                (st_crispyhud ? nughud.maxammos[2].y : ST_MAXAMMO2Y),
                 shortnum,
                 &plyr->maxammo[2],
                 &st_statusbaron,
                 ST_MAXAMMO2WIDTH);
 
   STlib_initNum(&w_maxammo[3],
-                (st_crispyhud ? nughud_maxammo3_x : ST_MAXAMMO3X) + (wide ? delta*nughud_maxammo3_wide : 0),
-                (st_crispyhud ? nughud_maxammo3_y : ST_MAXAMMO3Y),
+                (st_crispyhud ? nughud.maxammos[3].x : ST_MAXAMMO3X) + (wide ? delta*nughud.maxammos[3].wide : 0),
+                (st_crispyhud ? nughud.maxammos[3].y : ST_MAXAMMO3Y),
                 shortnum,
                 &plyr->maxammo[3],
                 &st_statusbaron,

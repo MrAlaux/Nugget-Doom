@@ -19,114 +19,99 @@
 //
 //
 // DESCRIPTION:
-//  Variant of m_misc.c specifically for loading of NUGHUD variables
+//  Variant of m_misc.c specifically for declaration and loading of NUGHUD
+//  variables
 
-#include "doomstat.h"
-#include "doomkeys.h"
-#include "m_argv.h"
-#include "g_game.h"
 #include "m_menu.h"
-#include "am_map.h"
 #include "w_wad.h"
-#include "i_system.h"
-#include "i_sound.h"
 #include "i_video.h"
-#include "v_video.h"
-#include "hu_stuff.h"
 #include "st_stuff.h"
-#include "dstrings.h"
 #include "m_misc.h"
-#include "m_misc2.h"
-#include "m_swap.h"
-#include "s_sound.h"
-#include "sounds.h"
-#include "d_main.h"
-#include "r_draw.h" // [FG] fuzzcolumn_mode
-#include "r_sky.h" // [FG] stretchsky
-#include "hu_lib.h" // HU_MAXMESSAGES
 #include "m_nughud.h"
 
 #include "m_io.h"
 #include <errno.h>
+
+nughud_t nughud; // Behold!!!
 
 //
 // DEFAULTS
 //
 
 default_t nughud_defaults[] = {
-  { "nughud_ammo_x",        (config_t *)&nughud_ammo_x,         NULL, {ST_AMMOX},     {-1,320},   number, ss_none, wad_yes },
-  { "nughud_ammo_y",        (config_t *)&nughud_ammo_y,         NULL, {ST_AMMOY},     {0,200},    number, ss_none, wad_yes },
-  { "nughud_ammo_wide",     (config_t *)&nughud_ammo_wide,      NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_health_x",      (config_t *)&nughud_health_x,       NULL, {ST_HEALTHX},   {-1,320},   number, ss_none, wad_yes },
-  { "nughud_health_y",      (config_t *)&nughud_health_y,       NULL, {ST_HEALTHY},   {0,200},    number, ss_none, wad_yes },
-  { "nughud_health_wide",   (config_t *)&nughud_health_wide,    NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms2_x",       (config_t *)&nughud_arms2_x,        NULL, {111},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms2_y",       (config_t *)&nughud_arms2_y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms2_wide",    (config_t *)&nughud_arms2_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms3_x",       (config_t *)&nughud_arms3_x,        NULL, {119},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms3_y",       (config_t *)&nughud_arms3_y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms3_wide",    (config_t *)&nughud_arms3_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms4_x",       (config_t *)&nughud_arms4_x,        NULL, {127},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms4_y",       (config_t *)&nughud_arms4_y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms4_wide",    (config_t *)&nughud_arms4_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms5_x",       (config_t *)&nughud_arms5_x,        NULL, {135},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms5_y",       (config_t *)&nughud_arms5_y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms5_wide",    (config_t *)&nughud_arms5_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms6_x",       (config_t *)&nughud_arms6_x,        NULL, {111},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms6_y",       (config_t *)&nughud_arms6_y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms6_wide",    (config_t *)&nughud_arms6_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms7_x",       (config_t *)&nughud_arms7_x,        NULL, {119},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms7_y",       (config_t *)&nughud_arms7_y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms7_wide",    (config_t *)&nughud_arms7_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms8_x",       (config_t *)&nughud_arms8_x,        NULL, {127},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms8_y",       (config_t *)&nughud_arms8_y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms8_wide",    (config_t *)&nughud_arms8_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_arms9_x",       (config_t *)&nughud_arms9_x,        NULL, {135},          {-1,320},   number, ss_none, wad_yes },
-  { "nughud_arms9_y",       (config_t *)&nughud_arms9_y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
-  { "nughud_arms9_wide",    (config_t *)&nughud_arms9_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_frags_x",       (config_t *)&nughud_frags_x,        NULL, {ST_FRAGSX},    {-1,320},   number, ss_none, wad_yes },
-  { "nughud_frags_y",       (config_t *)&nughud_frags_y,        NULL, {ST_FRAGSY},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_frags_wide",    (config_t *)&nughud_frags_wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
-  { "nughud_face_x",        (config_t *)&nughud_face_x,         NULL, {-1},           {-1,320},   number, ss_none, wad_yes },
-  { "nughud_face_y",        (config_t *)&nughud_face_y,         NULL, {ST_FACESY},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_face_wide",     (config_t *)&nughud_face_wide,      NULL, {0},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_face_bg",       (config_t *)&nughud_face_bg,        NULL, {1},            {0,1},      number, ss_none, wad_yes },
-  { "nughud_armor_x",       (config_t *)&nughud_armor_x,        NULL, {ST_ARMORX},    {-1,320},   number, ss_none, wad_yes },
-  { "nughud_armor_y",       (config_t *)&nughud_armor_y,        NULL, {ST_ARMORY},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_armor_wide",    (config_t *)&nughud_armor_wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_key0_x",        (config_t *)&nughud_key0_x,         NULL, {ST_KEY0X},     {-1,320},   number, ss_none, wad_yes },
-  { "nughud_key0_y",        (config_t *)&nughud_key0_y,         NULL, {ST_KEY0Y},     {0,200},    number, ss_none, wad_yes },
-  { "nughud_key0_wide",     (config_t *)&nughud_key0_wide,      NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_key1_x",        (config_t *)&nughud_key1_x,         NULL, {ST_KEY1X},     {-1,320},   number, ss_none, wad_yes },
-  { "nughud_key1_y",        (config_t *)&nughud_key1_y,         NULL, {ST_KEY1Y},     {0,200},    number, ss_none, wad_yes },
-  { "nughud_key1_wide",     (config_t *)&nughud_key1_wide,      NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_key2_x",        (config_t *)&nughud_key2_x,         NULL, {ST_KEY2X},     {-1,320},   number, ss_none, wad_yes },
-  { "nughud_key2_y",        (config_t *)&nughud_key2_y,         NULL, {ST_KEY2Y},     {0,200},    number, ss_none, wad_yes },
-  { "nughud_key2_wide",     (config_t *)&nughud_key2_wide,      NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_ammo0_x",       (config_t *)&nughud_ammo0_x,        NULL, {ST_AMMO0X},    {-1,320},   number, ss_none, wad_yes },
-  { "nughud_ammo0_y",       (config_t *)&nughud_ammo0_y,        NULL, {ST_AMMO0Y},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_ammo0_wide",    (config_t *)&nughud_ammo0_wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_ammo1_x",       (config_t *)&nughud_ammo1_x,        NULL, {ST_AMMO1X},    {-1,320},   number, ss_none, wad_yes },
-  { "nughud_ammo1_y",       (config_t *)&nughud_ammo1_y,        NULL, {ST_AMMO1Y},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_ammo1_wide",    (config_t *)&nughud_ammo1_wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_ammo2_x",       (config_t *)&nughud_ammo2_x,        NULL, {ST_AMMO2X},    {-1,320},   number, ss_none, wad_yes },
-  { "nughud_ammo2_y",       (config_t *)&nughud_ammo2_y,        NULL, {ST_AMMO2Y},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_ammo2_wide",    (config_t *)&nughud_ammo2_wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_ammo3_x",       (config_t *)&nughud_ammo3_x,        NULL, {ST_AMMO3X},    {-1,320},   number, ss_none, wad_yes },
-  { "nughud_ammo3_y",       (config_t *)&nughud_ammo3_y,        NULL, {ST_AMMO3Y},    {0,200},    number, ss_none, wad_yes },
-  { "nughud_ammo3_wide",    (config_t *)&nughud_ammo3_wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_maxammo0_x",    (config_t *)&nughud_maxammo0_x,     NULL, {ST_MAXAMMO0X}, {-1,320},   number, ss_none, wad_yes },
-  { "nughud_maxammo0_y",    (config_t *)&nughud_maxammo0_y,     NULL, {ST_MAXAMMO0Y}, {0,200},    number, ss_none, wad_yes },
-  { "nughud_maxammo0_wide", (config_t *)&nughud_maxammo0_wide,  NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_maxammo1_x",    (config_t *)&nughud_maxammo1_x,     NULL, {ST_MAXAMMO1X}, {-1,320},   number, ss_none, wad_yes },
-  { "nughud_maxammo1_y",    (config_t *)&nughud_maxammo1_y,     NULL, {ST_MAXAMMO1Y}, {0,200},    number, ss_none, wad_yes },
-  { "nughud_maxammo1_wide", (config_t *)&nughud_maxammo1_wide,  NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_maxammo2_x",    (config_t *)&nughud_maxammo2_x,     NULL, {ST_MAXAMMO2X}, {-1,320},   number, ss_none, wad_yes },
-  { "nughud_maxammo2_y",    (config_t *)&nughud_maxammo2_y,     NULL, {ST_MAXAMMO2Y}, {0,200},    number, ss_none, wad_yes },
-  { "nughud_maxammo2_wide", (config_t *)&nughud_maxammo2_wide,  NULL, {1},            {-1,1},     number, ss_none, wad_yes },
-  { "nughud_maxammo3_x",    (config_t *)&nughud_maxammo3_x,     NULL, {ST_MAXAMMO3X}, {-1,320},   number, ss_none, wad_yes },
-  { "nughud_maxammo3_y",    (config_t *)&nughud_maxammo3_y,     NULL, {ST_MAXAMMO3Y}, {0,200},    number, ss_none, wad_yes },
-  { "nughud_maxammo3_wide", (config_t *)&nughud_maxammo3_wide,  NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_ammo_x",        (config_t *)&nughud.ammo.x,           NULL, {ST_AMMOX},     {-1,320},   number, ss_none, wad_yes },
+  { "nughud_ammo_y",        (config_t *)&nughud.ammo.y,           NULL, {ST_AMMOY},     {0,200},    number, ss_none, wad_yes },
+  { "nughud_ammo_wide",     (config_t *)&nughud.ammo.wide,        NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_health_x",      (config_t *)&nughud.health.x,         NULL, {ST_HEALTHX},   {-1,320},   number, ss_none, wad_yes },
+  { "nughud_health_y",      (config_t *)&nughud.health.y,         NULL, {ST_HEALTHY},   {0,200},    number, ss_none, wad_yes },
+  { "nughud_health_wide",   (config_t *)&nughud.health.wide,      NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms2_x",       (config_t *)&nughud.arms[0].x,        NULL, {111},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms2_y",       (config_t *)&nughud.arms[0].y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms2_wide",    (config_t *)&nughud.arms[0].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms3_x",       (config_t *)&nughud.arms[1].x,        NULL, {119},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms3_y",       (config_t *)&nughud.arms[1].y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms3_wide",    (config_t *)&nughud.arms[1].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms4_x",       (config_t *)&nughud.arms[2].x,        NULL, {127},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms4_y",       (config_t *)&nughud.arms[2].y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms4_wide",    (config_t *)&nughud.arms[2].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms5_x",       (config_t *)&nughud.arms[3].x,        NULL, {135},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms5_y",       (config_t *)&nughud.arms[3].y,        NULL, {172},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms5_wide",    (config_t *)&nughud.arms[3].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms6_x",       (config_t *)&nughud.arms[4].x,        NULL, {111},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms6_y",       (config_t *)&nughud.arms[4].y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms6_wide",    (config_t *)&nughud.arms[4].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms7_x",       (config_t *)&nughud.arms[5].x,        NULL, {119},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms7_y",       (config_t *)&nughud.arms[5].y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms7_wide",    (config_t *)&nughud.arms[5].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms8_x",       (config_t *)&nughud.arms[6].x,        NULL, {127},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms8_y",       (config_t *)&nughud.arms[6].y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms8_wide",    (config_t *)&nughud.arms[6].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_arms9_x",       (config_t *)&nughud.arms[7].x,        NULL, {135},          {-1,320},   number, ss_none, wad_yes },
+  { "nughud_arms9_y",       (config_t *)&nughud.arms[7].y,        NULL, {182},          {0,200},    number, ss_none, wad_yes },
+  { "nughud_arms9_wide",    (config_t *)&nughud.arms[7].wide,     NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_frags_x",       (config_t *)&nughud.frags.x,          NULL, {ST_FRAGSX},    {-1,320},   number, ss_none, wad_yes },
+  { "nughud_frags_y",       (config_t *)&nughud.frags.y,          NULL, {ST_FRAGSY},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_frags_wide",    (config_t *)&nughud.frags.wide,       NULL, {-1},           {-1,1},     number, ss_none, wad_yes },
+  { "nughud_face_x",        (config_t *)&nughud.face.x,           NULL, {-1},           {-1,320},   number, ss_none, wad_yes },
+  { "nughud_face_y",        (config_t *)&nughud.face.y,           NULL, {ST_FACESY},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_face_wide",     (config_t *)&nughud.face.wide,        NULL, {0},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_face_bg",       (config_t *)&nughud.face.bg,          NULL, {1},            {0,1},      number, ss_none, wad_yes },
+  { "nughud_armor_x",       (config_t *)&nughud.armor.x,          NULL, {ST_ARMORX},    {-1,320},   number, ss_none, wad_yes },
+  { "nughud_armor_y",       (config_t *)&nughud.armor.y,          NULL, {ST_ARMORY},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_armor_wide",    (config_t *)&nughud.armor.wide,       NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_key0_x",        (config_t *)&nughud.keys[0].x,        NULL, {ST_KEY0X},     {-1,320},   number, ss_none, wad_yes },
+  { "nughud_key0_y",        (config_t *)&nughud.keys[0].y,        NULL, {ST_KEY0Y},     {0,200},    number, ss_none, wad_yes },
+  { "nughud_key0_wide",     (config_t *)&nughud.keys[0].wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_key1_x",        (config_t *)&nughud.keys[1].x,        NULL, {ST_KEY1X},     {-1,320},   number, ss_none, wad_yes },
+  { "nughud_key1_y",        (config_t *)&nughud.keys[1].y,        NULL, {ST_KEY1Y},     {0,200},    number, ss_none, wad_yes },
+  { "nughud_key1_wide",     (config_t *)&nughud.keys[1].wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_key2_x",        (config_t *)&nughud.keys[2].x,        NULL, {ST_KEY2X},     {-1,320},   number, ss_none, wad_yes },
+  { "nughud_key2_y",        (config_t *)&nughud.keys[2].y,        NULL, {ST_KEY2Y},     {0,200},    number, ss_none, wad_yes },
+  { "nughud_key2_wide",     (config_t *)&nughud.keys[2].wide,     NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_ammo0_x",       (config_t *)&nughud.ammos[0].x,       NULL, {ST_AMMO0X},    {-1,320},   number, ss_none, wad_yes },
+  { "nughud_ammo0_y",       (config_t *)&nughud.ammos[0].y,       NULL, {ST_AMMO0Y},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_ammo0_wide",    (config_t *)&nughud.ammos[0].wide,    NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_ammo1_x",       (config_t *)&nughud.ammos[1].x,       NULL, {ST_AMMO1X},    {-1,320},   number, ss_none, wad_yes },
+  { "nughud_ammo1_y",       (config_t *)&nughud.ammos[1].y,       NULL, {ST_AMMO1Y},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_ammo1_wide",    (config_t *)&nughud.ammos[1].wide,    NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_ammo2_x",       (config_t *)&nughud.ammos[2].x,       NULL, {ST_AMMO2X},    {-1,320},   number, ss_none, wad_yes },
+  { "nughud_ammo2_y",       (config_t *)&nughud.ammos[2].y,       NULL, {ST_AMMO2Y},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_ammo2_wide",    (config_t *)&nughud.ammos[2].wide,    NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_ammo3_x",       (config_t *)&nughud.ammos[3].x,       NULL, {ST_AMMO3X},    {-1,320},   number, ss_none, wad_yes },
+  { "nughud_ammo3_y",       (config_t *)&nughud.ammos[3].y,       NULL, {ST_AMMO3Y},    {0,200},    number, ss_none, wad_yes },
+  { "nughud_ammo3_wide",    (config_t *)&nughud.ammos[3].wide,    NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_maxammo0_x",    (config_t *)&nughud.maxammos[0].x,    NULL, {ST_MAXAMMO0X}, {-1,320},   number, ss_none, wad_yes },
+  { "nughud_maxammo0_y",    (config_t *)&nughud.maxammos[0].y,    NULL, {ST_MAXAMMO0Y}, {0,200},    number, ss_none, wad_yes },
+  { "nughud_maxammo0_wide", (config_t *)&nughud.maxammos[0].wide, NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_maxammo1_x",    (config_t *)&nughud.maxammos[1].x,    NULL, {ST_MAXAMMO1X}, {-1,320},   number, ss_none, wad_yes },
+  { "nughud_maxammo1_y",    (config_t *)&nughud.maxammos[1].y,    NULL, {ST_MAXAMMO1Y}, {0,200},    number, ss_none, wad_yes },
+  { "nughud_maxammo1_wide", (config_t *)&nughud.maxammos[1].wide, NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_maxammo2_x",    (config_t *)&nughud.maxammos[2].x,    NULL, {ST_MAXAMMO2X}, {-1,320},   number, ss_none, wad_yes },
+  { "nughud_maxammo2_y",    (config_t *)&nughud.maxammos[2].y,    NULL, {ST_MAXAMMO2Y}, {0,200},    number, ss_none, wad_yes },
+  { "nughud_maxammo2_wide", (config_t *)&nughud.maxammos[2].wide, NULL, {1},            {-1,1},     number, ss_none, wad_yes },
+  { "nughud_maxammo3_x",    (config_t *)&nughud.maxammos[3].x,    NULL, {ST_MAXAMMO3X}, {-1,320},   number, ss_none, wad_yes },
+  { "nughud_maxammo3_y",    (config_t *)&nughud.maxammos[3].y,    NULL, {ST_MAXAMMO3Y}, {0,200},    number, ss_none, wad_yes },
+  { "nughud_maxammo3_wide", (config_t *)&nughud.maxammos[3].wide, NULL, {1},            {-1,1},     number, ss_none, wad_yes },
 
   {NULL}         // last entry
 };
