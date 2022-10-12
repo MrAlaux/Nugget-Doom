@@ -840,7 +840,7 @@ void ST_drawWidgets(boolean refresh)
   if (plyr->backpack && !hud_backpack_thresholds)
     maxammo /= 2;
 
-  if (!st_crispyhud || nughud_ammo_x > -1) {
+  if (!st_crispyhud || nughud_ammo_x > -1) { // [Nugget] Nugget HUD
     //jff 2/16/98 make color of ammo depend on amount
     // [Nugget] Make it gray if the player has infinite ammo
     if (plyr->cheats & CF_INFAMMO)           { STlib_updateNum(&w_ready, cr_gray, refresh); }
@@ -851,7 +851,7 @@ void ST_drawWidgets(boolean refresh)
   }
 
   // [Nugget]: [crispy] draw berserk pack instead of no ammo if appropriate
-  if ((!st_crispyhud || nughud_ammo_x > -1)
+  if ((!st_crispyhud || nughud_ammo_x > -1) // [Nugget] Nugget HUD
       && plyr->readyweapon == wp_fist
       && weaponinfo[plyr->readyweapon].ammo == am_noammo // [Nugget] Check for unlimited ammo type
       && plyr->powers[pw_strength])
@@ -872,13 +872,14 @@ void ST_drawWidgets(boolean refresh)
       patch = W_CacheLumpNum(lump, PU_CACHE);
 
       // [crispy] (23,179) is the center of the Ammo widget
+      // [Nugget] Nugget HUD
       V_DrawPatch((st_crispyhud ? nughud_ammo_x : ST_AMMOX) - 21 - SHORT(patch->width)/2 + SHORT(patch->leftoffset) - delta,
                   (st_crispyhud ? nughud_ammo_y : ST_AMMOY) + 8 - SHORT(patch->height)/2 + SHORT(patch->topoffset),
                   FG, patch);
     }
   }
 
-  if (st_crispyhud) {
+  if (st_crispyhud) { // [Nugget] Nugget HUD
     for (i=0;i<4;i++) {
       if (*nughud_ammo[i][0] > -1)    { STlib_updateNum(&w_ammo[i], NULL, refresh); }
       if (*nughud_maxammo[i][0] > -1) { STlib_updateNum(&w_maxammo[i], NULL, refresh); }
@@ -890,7 +891,7 @@ void ST_drawWidgets(boolean refresh)
       STlib_updateNum(&w_maxammo[i], NULL, refresh);
     }
 
-  if (!st_crispyhud || nughud_health_x > -1) {
+  if (!st_crispyhud || nughud_health_x > -1) { // [Nugget] Nugget HUD
     //jff 2/16/98 make color of health depend on amount
     // [Nugget] Use the player's health value instead of the percent's value
     // [Nugget] Make it gray if the player's invulnerable
@@ -903,7 +904,7 @@ void ST_drawWidgets(boolean refresh)
     else                              { STlib_updatePercent(&w_health, cr_blue2, refresh); } //killough 2/28/98
   }
 
-  if (!st_crispyhud || nughud_armor_x > -1) { // [Nugget]
+  if (!st_crispyhud || nughud_armor_x > -1) { // [Nugget] Nugget HUD
     // color of armor depends on type
     // [Nugget] Use code from our implementation,
     // differently formatted to save space, and check for God Mode
@@ -930,7 +931,7 @@ void ST_drawWidgets(boolean refresh)
   // [Nugget]: [crispy] show SSG availability in the Shotgun slot of the arms widget
   st_shotguns = plyr->weaponowned[wp_shotgun] | plyr->weaponowned[wp_supershotgun];
 
-  if (st_crispyhud) {
+  if (st_crispyhud) { // [Nugget] Nugget HUD
     for (i=0; i<8; i++)
       if (*nughud_arms[i][0] > -1) { STlib_updateMultIcon(&w_arms[i], refresh); }
   }
@@ -942,14 +943,15 @@ void ST_drawWidgets(boolean refresh)
   if ((screenblocks == CRISPY_HUD || screenblocks == CRISPY_HUD+1)
       && nughud_face_x > -1 && nughud_face_bg)
   {
+    // [Nugget] Nugget HUD
     V_DrawPatch(nughud_face_x + (st_widecrispyhud ? WIDESCREENDELTA*nughud_face_wide : 0),
                 nughud_face_y+1, FG, faceback[netgame ? displayplayer : 1]);
   }
 
-  if (!st_crispyhud || nughud_face_x > -1)
+  if (!st_crispyhud || nughud_face_x > -1) // [Nugget] Nugget HUD
     { STlib_updateMultIcon(&w_faces, refresh); }
 
-  if (st_crispyhud) {
+  if (st_crispyhud) { // [Nugget] Nugget HUD
     for (i=0; i<3; i++)
       if (*nughud_key[i][0] > -1) { STlib_updateMultIcon(&w_keyboxes[i], refresh); }
   }
@@ -957,7 +959,7 @@ void ST_drawWidgets(boolean refresh)
     for (i=0;i<3;i++)
       { STlib_updateMultIcon(&w_keyboxes[i], refresh); }
 
-  if (!st_crispyhud || nughud_frags_x > -1)
+  if (!st_crispyhud || nughud_frags_x > -1) // [Nugget] Nugget HUD
     { STlib_updateNum(&w_frags, NULL, refresh); }
 
 }
@@ -1003,7 +1005,7 @@ void ST_Drawer(boolean fullscreen, boolean refresh)
   oldwide = st_widecrispyhud; // [Nugget]
   st_widecrispyhud = screenblocks >= CRISPY_HUD+1 && (!automapactive || automapoverlay);
 
-  if (oldcrispy != st_crispyhud || oldwide != st_widecrispyhud)
+  if (oldcrispy != st_crispyhud || oldwide != st_widecrispyhud) // [Nugget]
     { ST_createWidgets(); }
 
   ST_doPaletteStuff();  // Do red-/gold-shifts from damage/items
@@ -1043,7 +1045,7 @@ void ST_loadGraphics(void)
   armsbg = (patch_t *) W_CacheLumpName("STARMS", PU_STATIC);
 
   // arms ownership widgets
-  // [Nugget] Increase the range for Alternative Arms display
+  // [Nugget] Increase the range for Alternative Arms display and Nugget HUD
   for (i=0;i<8;i++)
     {
       sprintf(namebuf, "STGNUM%d", i+2);
