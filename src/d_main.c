@@ -1805,7 +1805,6 @@ int playback_warp = -1;
 void D_NuggetUpdateCasual()
 {
   casual_play = !(demorecording||demoplayback||timingdemo||netgame||fauxdemo);
-  if (old_casual_play == -1) { old_casual_play = casual_play; }
 
   if (old_casual_play != casual_play) {
     old_casual_play = casual_play;

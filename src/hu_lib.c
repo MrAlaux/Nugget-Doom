@@ -18,7 +18,7 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program; if not, write to the Free Software
-//  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+//  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 //  02111-1307, USA.
 //
 // DESCRIPTION:  heads-up text and input code
@@ -200,7 +200,7 @@ void HUlib_drawTextLine(hu_textline_t *l, boolean drawcursor)
 void HUlib_eraseTextLine(hu_textline_t* l)
 {
   // killough 11/98: trick to shadow variables
-  int x = viewwindowx, y = viewwindowy; 
+  int x = viewwindowx, y = viewwindowy;
   int viewwindowx = x >> hires, viewwindowy = y >> hires;  // killough 11/98
 
   // Only erases when NOT in automap and the screen is reduced,
@@ -448,7 +448,8 @@ void HUlib_drawMText(hu_mtext_t* m)
       if (idx < 0)
 	idx += m->nl; // handle queue of lines
 
-      m->l[idx].y = i * HU_REFRESHSPACING;
+      // [Nugget] Restore message scroll direction toggle
+      m->l[idx].y = (hud_msg_scrollup ? m->nl-1-i : i) * HU_REFRESHSPACING;
 
       HUlib_drawTextLine(&m->l[idx], false); // no cursor, please
     }

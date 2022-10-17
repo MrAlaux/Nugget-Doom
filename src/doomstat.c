@@ -175,6 +175,8 @@ int smooth_counts;
 // Enemies
 int extra_gibbing;
 int bloodier_gibbing;
+// CFG only
+int sp_chat;
 
 int nugget_comp[NUGGET_COMP_TOTAL], default_nugget_comp[NUGGET_COMP_TOTAL];
 

@@ -218,6 +218,8 @@ int hudcolor_xyco;  // color range of new coords on automap
 int hudcolor_mesg;  // color range of scrolling messages
 int hudcolor_chat;  // color range of chat lines
 int hud_msg_lines;  // number of message lines in window
+// [Nugget] Restore message scroll direction toggle
+int hud_msg_scrollup;  // killough 11/98: allow messages to scroll upwards
 int message_list;      // killough 11/98: made global
 
 int message_timer  = HU_MSGTIMEOUT * (1000/TICRATE);     // killough 11/98
@@ -2121,7 +2123,7 @@ boolean HU_Responder(event_t *ev)
       else // killough 10/02/98: no chat if demo playback
         if (!demoplayback)
           {
-	    if (netgame && M_InputActivated(input_chat))
+	    if ((netgame || sp_chat) && M_InputActivated(input_chat)) // [Nugget] Singleplayer chat
 	      {
 		eatkey = chat_on = true;
 		HUlib_resetIText(&w_chat);

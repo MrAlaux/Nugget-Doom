@@ -480,7 +480,7 @@ default_t defaults[] = {
   {
     "no_ss_background",
     (config_t *) &no_ss_background, NULL,
-    {0}, {0,1}, number, ss_gen, wad_yes,
+    {0}, {0,1}, number, ss_gen, wad_no,
     "1 to disable the background in setup screens"
   },
 
@@ -529,7 +529,7 @@ default_t defaults[] = {
   {
     "no_berserk_tint",
     (config_t *) &no_berserk_tint, NULL,
-    {0}, {0,1}, number, ss_gen, wad_yes,
+    {0}, {0,1}, number, ss_gen, wad_no,
     "1 to disable Berserk tint"
   },
 
@@ -615,14 +615,14 @@ default_t defaults[] = {
   {
     "no_hor_autoaim",
     (config_t *) &no_hor_autoaim, NULL,
-    {0}, {0,1}, number, ss_weap, wad_no,
+    {0}, {0,1}, number, ss_weap, wad_yes,
     "1 to disable horizontal projectile autoaim"
   },
 
   {
     "freeaim",
     (config_t *) &freeaim, NULL,
-    {0}, {0,2}, number, ss_weap, wad_no,
+    {0}, {0,2}, number, ss_weap, wad_yes,
     "Weapon freeaim (1 = Direct, 2 = Direct + Autoaim)"
   },
 
@@ -664,7 +664,7 @@ default_t defaults[] = {
   {
     "smooth_counts",
     (config_t *) &smooth_counts, NULL,
-    {0}, {0,1}, number, ss_stat, wad_no,
+    {0}, {0,1}, number, ss_stat, wad_yes,
     "1 to enable smooth health/armor counts"
   },
 
@@ -680,6 +680,13 @@ default_t defaults[] = {
     (config_t *) &bloodier_gibbing, NULL,
     {0}, {0,1}, number, ss_enem, wad_yes,
     "1 to enable bloodier gibbing"
+  },
+
+  {
+    "sp_chat",
+    (config_t *) &sp_chat, NULL,
+    {0}, {0,1}, number, ss_none, wad_no,
+    "1 to enable multiplayer chat in singleplayer"
   },
 
   // [Nugget] End -------------------------------------
@@ -2184,6 +2191,13 @@ default_t defaults[] = {
     (config_t *) &hud_msg_lines, NULL,
     {4}, {1,HU_MAXMESSAGES}, number, ss_mess, wad_yes,
     "number of message lines"
+  },
+
+  { // [Nugget] Restore message scroll direction toggle
+    "hud_msg_scrollup",
+    (config_t *) &hud_msg_scrollup, NULL,
+    {1}, {0,1}, number, ss_mess, wad_yes,
+    "1 enables message review list scrolling upward"
   },
 
   {

@@ -77,6 +77,8 @@ extern int hudcolor_mesg;   // color range of scrolling messages
 extern int hudcolor_chat;   // color range of chat lines
 //jff 2/26/98 hud message list color and background enable
 extern int hud_msg_lines;   // number of message lines in window up to 16
+// [Nugget] Restore message scroll direction toggle
+extern int hud_msg_scrollup;// killough 11/98: whether message list scrolls up
 extern int message_list;    // killough 11/98: whether message list is active
 extern int message_timer;   // killough 11/98: timer used for normal messages
 extern int chat_msg_timer;  // killough 11/98: timer used for chat messages

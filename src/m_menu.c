@@ -4526,7 +4526,8 @@ enum {
   mess_chat_timer,
   mess_stub2,
   mess_list,
-  mess_lines
+  mess_lines,
+  mess_scrollup // [Nugget] Restore message scroll direction toggle
 };
 
 setup_menu_t mess_settings1[];
@@ -4540,6 +4541,8 @@ setup_menu_t* mess_settings[] =
 static void M_UpdateMultiLineMsgItem(void)
 {
   DISABLE_ITEM(!message_list, mess_settings1[mess_lines]);
+  // [Nugget] Restore message scroll direction toggle
+  DISABLE_ITEM(!message_list, mess_settings1[mess_scrollup]);
 }
 
 setup_menu_t mess_settings1[] =  // Messages screen
@@ -4564,6 +4567,9 @@ setup_menu_t mess_settings1[] =  // Messages screen
      M_Y + mess_list*M_SPC, {"message_list"}, 0, M_UpdateMultiLineMsgItem},
     {"Number of Lines", S_NUM, m_null,  M_X,
      M_Y + mess_lines*M_SPC, {"hud_msg_lines"}},
+    // [Nugget] Restore message scroll direction toggle
+    {"Message Listing Scrolls Upwards",  S_YESNO,  m_null,  M_X,
+     M_Y + mess_scrollup*M_SPC, {"hud_msg_scrollup"}},
 
   // Button for resetting to defaults
   {0,S_RESET,m_null,X_BUTTON,Y_BUTTON},

@@ -480,6 +480,8 @@ extern int smooth_counts;
 // Enemies
 extern int extra_gibbing;
 extern int bloodier_gibbing;
+// CFG only
+extern int sp_chat;
 
 enum {
   comp_blazing2,
