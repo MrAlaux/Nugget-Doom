@@ -25,25 +25,37 @@
 #ifndef __M_NUGHUD__
 #define __M_NUGHUD__
 
+#include "m_fixed.h"
+
 typedef struct nughud_widget_s {
-  int x;
-  int y;
+  int x,y;
   int wide;
-  int misc;
 } nughud_widget_t;
 
+typedef struct nughud_patch_s {
+  int x,y;
+  int wide;
+  char *name;
+} nughud_patch_t;
+
+#define NUMNUGHUDPATCHES 8
+
 typedef struct nughud_s {
-  struct nughud_widget_s ammo;
-  struct nughud_widget_s health;
-  struct nughud_widget_s arms[8];
-  struct nughud_widget_s frags;
-  struct nughud_widget_s face;
-  struct nughud_widget_s armor;
-  struct nughud_widget_s keys[3];
-  struct nughud_widget_s ammos[4];
-  struct nughud_widget_s maxammos[4];
-  struct nughud_widget_s time;
-  struct nughud_widget_s sts;
+  nughud_widget_t ammo;
+  nughud_widget_t health;
+  nughud_widget_t arms[8];
+  nughud_widget_t frags;
+  nughud_widget_t face;
+  boolean         face_bg;
+  nughud_widget_t armor;
+  nughud_widget_t keys[3];
+  nughud_widget_t ammos[4];
+  nughud_widget_t maxammos[4];
+  nughud_widget_t time;
+  boolean         time_sts;
+  nughud_widget_t sts;
+  nughud_patch_t  patches[NUMNUGHUDPATCHES];
+  fixed_t         weapheight;
 } nughud_t;
 
 extern nughud_t nughud;

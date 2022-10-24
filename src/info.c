@@ -7842,6 +7842,12 @@ const lumpinfo_t predefined_lumps[]={
   { "CROSS07S", sizeof cross07s, cross07s },
   { "CROSS08S", sizeof cross08s, cross08s },
 
+  // [Nugget] Horizontal autoaim indicators
+  { "CROSSIL", sizeof crossil, crossil },
+  { "CROSSIR", sizeof crossir, crossir },
+  { "CROSSILS", sizeof crossils, crossils },
+  { "CROSSIRS", sizeof crossirs, crossirs },
+
   // mini-thermo patches
   { "M_MTHRML",  sizeof therml, therml },
   { "M_MTHRMM",  sizeof thermm, thermm },

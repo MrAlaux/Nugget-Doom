@@ -3371,6 +3371,8 @@ enum {
   stat3_xhairsh,
   stat3_xhairhealth,
   stat3_xhairtarget,
+  stat3_xhairlockon,
+  stat3_xhairindicators,
   stat3_xhaircolor,
   stat3_xhairforce,
   stat3_xhairtcolor,
@@ -3383,6 +3385,12 @@ static void M_UpdateCrosshairItems (void)
     DISABLE_ITEM(!hud_crosshair_on,               stat_settings3[stat3_xhairsh]);
     DISABLE_ITEM(!hud_crosshair_on,               stat_settings3[stat3_xhairhealth]);
     DISABLE_ITEM(!STRICTMODE(hud_crosshair_on),   stat_settings3[stat3_xhairtarget]);
+    DISABLE_ITEM(!STRICTMODE(hud_crosshair_on && hud_crosshair_target
+                             && !(mouselook && freeaim == freeaim_direct)),
+                                                  stat_settings3[stat3_xhairlockon]);
+    DISABLE_ITEM(!STRICTMODE(hud_crosshair_on && hud_crosshair_target
+                             && !(mouselook && freeaim == freeaim_direct)),
+                                                  stat_settings3[stat3_xhairindicators]);
     DISABLE_ITEM(!hud_crosshair_on,               stat_settings3[stat3_xhaircolor]);
     DISABLE_ITEM(!STRICTMODE(hud_crosshair_on && hud_crosshair_health == 2),
                                                   stat_settings3[stat3_xhairforce]);
@@ -3396,6 +3404,9 @@ static const char *crosshair_health[] = {
 };
 static const char *crosshair_targets[] = {
   "Off", "Non-Fuzzy", "All", NULL
+};
+static const char *crosshair_lockon_modes[] = {
+  "Off", "Vertically", "Full", NULL
 };
 
 static const char *hudcolor_str[] = {
@@ -3411,6 +3422,8 @@ setup_menu_t stat_settings3[] =
     {"SHADED CROSSHAIR",      S_YESNO, m_null,M_X,M_Y+stat3_xhairsh*M_SPC, {"hud_crosshair_shaded"}},
     {"COLOR BY HEALTH",       S_CHOICE, m_null,M_X,M_Y+stat3_xhairhealth*M_SPC, {"hud_crosshair_health"}, 0, M_UpdateCrosshairItems, crosshair_health},
     {"HIGHLIGHT ON TARGET",   S_CHOICE, m_null,M_X,M_Y+stat3_xhairtarget*M_SPC, {"hud_crosshair_target"}, 0, M_UpdateCrosshairItems, crosshair_targets},
+    {"LOCK ON TARGET",        S_CHOICE, m_null,M_X,M_Y+stat3_xhairlockon*M_SPC, {"hud_crosshair_lockon"}, 0, 0, crosshair_lockon_modes},
+    {"HORIZ. AUTOAIM INDICATORS",S_YESNO, m_null,M_X,M_Y+stat3_xhairindicators*M_SPC, {"hud_crosshair_indicators"}},
     {"DEFAULT COLOR",         S_CRITEM,m_null,M_X,M_Y+stat3_xhaircolor*M_SPC, {"hud_crosshair_color"}, 0, NULL, hudcolor_str},
     {"FORCE DEFAULT COLOR",   S_YESNO, m_null,M_X,M_Y+stat3_xhairforce*M_SPC, {"hud_crosshair_force_color"}},
     {"HIGHLIGHT COLOR",       S_CRITEM,m_null,M_X,M_Y+stat3_xhairtcolor*M_SPC, {"hud_crosshair_target_color"}, 0, NULL, hudcolor_str},
@@ -3948,7 +3961,10 @@ static void M_UpdateMouseLook(void)
       if (playeringame[i])
         players[i].centering = true;
   }
-  M_UpdateFreeaimItem(); // [Nugget]
+
+  // [Nugget]
+  M_UpdateFreeaimItem();
+  M_UpdateCrosshairItems();
 }
 
 void static M_SmoothLight(void)
@@ -5452,7 +5468,8 @@ boolean M_Responder (event_t* ev)
 
   // If there is no active menu displayed...
 
-  if (!menuactive)                                            // phares
+  // [Nugget] Ignore these inputs if typing on chat
+  if (!menuactive && !chat_on)                                // phares
     {                                                         //  |
                                                               //  V
       // [Nugget]
@@ -5584,7 +5601,7 @@ boolean M_Responder (event_t* ev)
 
       if (M_InputActivated(input_zoomout))     // zoom out
 	{
-	  if (automapactive || chat_on)
+	  if (automapactive)
 	    return false;
 	  M_SizeDisplay(0);
 	  S_StartSound(NULL,sfx_stnmov);
@@ -5593,7 +5610,7 @@ boolean M_Responder (event_t* ev)
 
       if (M_InputActivated(input_zoomin))               // zoom in
 	{                                 // jff 2/23/98
-	  if (automapactive || chat_on)     // allow
+	  if (automapactive)                // allow
 	    return false;                   // key_hud==key_zoomin
 	  M_SizeDisplay(1);                                             //  ^
 	  S_StartSound(NULL,sfx_stnmov);                                //  |
@@ -5602,7 +5619,7 @@ boolean M_Responder (event_t* ev)
 
       if (M_InputActivated(input_hud))   // heads-up mode
 	{
-	  if ((automapactive && !automapoverlay) || chat_on)   // jff 2/22/98
+	  if (automapactive && !automapoverlay)       // jff 2/22/98
 	    return false;                             // HUD mode control
     // [Nugget] Increase to accommodate for Crispy HUD
 	  if (screenSize<8+2)                         // function on default F5

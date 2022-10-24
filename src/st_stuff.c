@@ -831,8 +831,29 @@ void ST_drawWidgets(boolean refresh)
     V_CopyRect(WIDESCREENDELTA, 0, BG, ST_WIDTH, ST_HEIGHT, WIDESCREENDELTA, ST_Y, FG);
   }
 
+  // [Nugget] Draw Nugget HUD patches
+  if (st_crispyhud)
+    for (i=0; i<NUMNUGHUDPATCHES; i++)
+      if (nughud.patches[i].name != NULL)
+      {
+        int lump = -1;
+        patch_t *patch;
+
+        lump = (W_CheckNumForName)(nughud.patches[i].name, ns_sprites);
+        if (lump < 0)
+          { lump = (W_CheckNumForName)(nughud.patches[i].name, ns_global); }
+
+        if (lump > 0) {
+          int delta = (st_widecrispyhud ? WIDESCREENDELTA*nughud.patches[i].wide : 0);
+          patch = W_CacheLumpNum(lump, PU_CACHE);
+
+          V_DrawPatch(nughud.patches[i].x + delta, nughud.patches[i].y, FG, patch);
+        }
+      }
+
   // used by w_arms[] widgets
-  st_armson = st_statusbaron && !deathmatch;
+  // [Nugget] Draw both Arms and Frags in Nugget HUD
+  st_armson = st_statusbaron && (!deathmatch || st_crispyhud);
 
   // used by w_frags widget
   st_fragson = deathmatch && st_statusbaron;
@@ -942,7 +963,7 @@ void ST_drawWidgets(boolean refresh)
 
   // [Nugget] This probably shouldn't go here, but it works
   if ((screenblocks == CRISPY_HUD || screenblocks == CRISPY_HUD+1)
-      && nughud.face.x > -1 && nughud.face.misc)
+      && nughud.face.x > -1 && nughud.face_bg)
   {
     // [Nugget] Nugget HUD
     V_DrawPatch(nughud.face.x + (st_widecrispyhud ? WIDESCREENDELTA*nughud.face.wide : 0),

@@ -38,6 +38,7 @@
 #include "r_things.h"
 #include "r_bmaps.h" // [crispy] R_BrightmapForTexName()
 #include "m_swap.h"
+#include "m_nughud.h" // [Nugget]
 
 #define MINZ        (FRACUNIT*4)
 #define BASEYCENTER 100
@@ -696,6 +697,7 @@ void R_DrawPSprite (pspdef_t *psp)
   boolean       flip;
   vissprite_t   *vis;
   vissprite_t   avis;
+  extern boolean st_crispyhud; // [Nugget]
 
   // decide which patch to use
 
@@ -742,7 +744,9 @@ void R_DrawPSprite (pspdef_t *psp)
 
   // killough 12/98: fix psprite positioning problem
   vis->texturemid = (BASEYCENTER<<FRACBITS) /* + FRACUNIT/2 */ -
-                    (psp->sy2-spritetopoffset[lump]); // [FG] centered weapon sprite
+                    (psp->sy2-spritetopoffset[lump]) // [FG] centered weapon sprite
+                    + ((st_crispyhud && screenblocks < 13)
+                       ? nughud.weapheight*FRACUNIT : 0); // [Nugget] Nugget HUD
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
