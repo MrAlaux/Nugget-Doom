@@ -103,7 +103,7 @@ char *M_GetSavegameTime (int i)
 
 static void M_TakeSnapshot (void)
 {
-  const int inc = hires ? 2 : 1;
+  const int inc = 1 << hires;
   int x, y;
   byte *p;
   const byte *s = screens[0];

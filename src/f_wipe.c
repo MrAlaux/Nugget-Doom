@@ -58,7 +58,9 @@ static int wipe_doColorXForm(int width, int height, int ticks)
   byte *end = wipe_scr+width*height;
 
   // [Nugget] Speed it up
-  ticks *= 4 * (hires ? 1 : 2);
+  ticks <<= 3;
+  ticks >>= hires;
+  ticks = MAX(1, ticks);
 
   for (;w != end; w++, e++) {
     if (*w != *e) {
@@ -177,7 +179,9 @@ static int wipe_doFade(int width, int height, int ticks)
   static const int targshade = 31;
   
   // [Nugget] Speed it up
-  ticks *= (hires ? 1 : 2);
+  ticks <<= 1;
+  ticks >>= hires;
+  ticks = MAX(1, ticks);
 
   memcpy(wipe_scr, fadeIn ? wipe_scr_end : wipe_scr_start, width*height);
 
@@ -246,7 +250,7 @@ int wipe_ScreenWipe(int wipeno, int x, int y, int width, int height, int ticks)
   static boolean go;                               // when zero, stop the wipe
 
   if (hires)     // killough 11/98: hires support
-    width <<= 1, height <<= 1, ticks <<= 1;
+    width <<= hires, height <<= hires, ticks <<= hires;
 
   if (!go)                                         // initial stuff
     {

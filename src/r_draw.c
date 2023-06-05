@@ -404,7 +404,7 @@ void R_DrawSkyColumn(void)
 
 // [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
 int fuzzdark_mode;
-#define FUZZDARK    ((NOTSTRICTMODE(!fuzzdark_mode) || (fuzzoffset[fuzzpos] && (count != dc_yh - dc_yl + 1))) ? 6*256 : 0)
+#define FUZZDARK    ((NOTSTRICTMODE(!fuzzdark_mode) || (fuzzoffset[fuzzpos] && (count != first_count))) ? 6*256 : 0)
 #define FUZZDARKCUT ((NOTSTRICTMODE(!fuzzdark_mode) || !fuzzoffset[fuzzpos]) ? 6*256 : 0)
 #define FUZZLINE    (linesize * (fuzzoffset[fuzzpos] ? 1 : -1))
 #define FUZZLINECUT (linesize * fuzzoffset[fuzzpos])
@@ -453,7 +453,7 @@ void R_SetFuzzPosDraw(void)
 
 static void R_DrawFuzzColumn_orig(void)
 { 
-  int      count; 
+  int      count, first_count;
   byte     *dest; 
   boolean  cutoff = false;
 
@@ -492,6 +492,7 @@ static void R_DrawFuzzColumn_orig(void)
   // using the colormap #6 (of 0-31, a bit brighter than average).
 
   count++;        // killough 1/99: minor tuning
+  first_count = count;
 
   do 
     {
@@ -529,24 +530,26 @@ static void R_DrawFuzzColumn_orig(void)
 
 static void R_DrawFuzzColumn_block(void)
 {
-  int count;
+  int i, count, first_count;
   byte *dest;
   boolean cutoff = false;
+  const int hires_size = 1 << hires;
+  const int hires_mult = hires_size - 1;
 
   // [FG] draw only even columns
-  if (dc_x & 1)
+  if (dc_x & hires_mult)
     return;
 
   // [FG] draw only even pixels
-  dc_yl &= (int)~1;
-  dc_yh &= (int)~1;
+  dc_yl &= (int)~hires_mult;
+  dc_yh &= (int)~hires_mult;
 
   if (!dc_yl)
-    dc_yl = 2;
+    dc_yl = hires_size;
 
-  if (dc_yh == viewheight-2)
+  if (dc_yh == viewheight - hires_size)
   {
-    dc_yh = viewheight - 4;
+    dc_yh = viewheight - 2 * hires_size;
     cutoff = true;
   }
 
@@ -565,22 +568,21 @@ static void R_DrawFuzzColumn_block(void)
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
 
-  count+=2;
-  count /= 2;
+  count += hires_size;
+  count >>= hires;
+  first_count = count;
 
   do
     {
       // [FG] draw only even pixels as 2x2 squares
       //      using the same fuzzoffset value
-      const byte fuzz = fullcolormap[FUZZDARK + dest[2 * FUZZLINE]];
+      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE]];
 
-      dest[0] = fuzz;
-      dest[1] = fuzz;
-      dest += linesize;
-
-      dest[0] = fuzz;
-      dest[1] = fuzz;
-      dest += linesize;
+      for (i = 0; i < hires_size; i++)
+      {
+        memset(dest, fuzz, hires_size);
+        dest += linesize;
+      }
 
       fuzzpos++;
       fuzzpos &= (fuzzpos - FUZZTABLE) >> (8*sizeof fuzzpos-1);
@@ -589,14 +591,13 @@ static void R_DrawFuzzColumn_block(void)
 
   if (cutoff)
     {
-      const byte fuzz = fullcolormap[FUZZDARKCUT + dest[2 * FUZZLINECUT]];
+      const byte fuzz = fullcolormap[FUZZDARKCUT + dest[hires_size * FUZZLINECUT]];
 
-      dest[0] = fuzz;
-      dest[1] = fuzz;
-      dest += linesize;
-
-      dest[0] = fuzz;
-      dest[1] = fuzz;
+      for (i = 0; i < hires_size; i++)
+      {
+        memset(dest, fuzz, hires_size);
+        dest += linesize;
+      }
     }
 }
 
@@ -816,7 +817,9 @@ void R_InitBuffer(int width, int height)
   //  e.g. smaller view windows
   //  with border and/or status bar.
 
-  viewwindowx = (SCREENWIDTH-width) >> !hires;  // killough 11/98
+//viewwindowx = (SCREENWIDTH-width) >> !hires;  // killough 11/98
+  viewwindowx = (SCREENWIDTH - width) >> 1;
+  viewwindowx <<= hires;
 
   // Column offset. For windows.
 
@@ -849,14 +852,18 @@ void R_DrawBackground(char *patchname, byte *back_dest)
 
   if (hires)       // killough 11/98: hires support
   {
-    for (y = 0; y < SCREENHEIGHT<<1; y++)
-      for (x = 0; x < SCREENWIDTH<<1; x += 2)
+    int i;
+    for (y = 0; y < (SCREENHEIGHT << hires); y++)
+    {
+      for (x = 0; x < (SCREENWIDTH << hires); x += (1 << hires))
       {
-        const byte dot = src[(((y>>1)&63)<<6) + ((x>>1)&63)];
-
-        *back_dest++ = dot;
-        *back_dest++ = dot;
+        const byte dot = src[(((y >> hires) & 63) << 6) + ((x >> hires) & 63)];
+        for (i = 0; i < (1 << hires); i++)
+        {
+          *back_dest++ = dot;
+        }
       }
+    }
   }
   else
   {
@@ -926,9 +933,16 @@ void R_VideoErase(unsigned ofs, int count)
 { 
   if (hires)     // killough 11/98: hires support
     {
-      ofs = ofs*4 - (ofs % SCREENWIDTH)*2;   // recompose offset
-      memcpy(screens[0]+ofs, screens[1]+ofs, count*=2);   // LFB copy.
-      ofs += SCREENWIDTH*2;
+      int i;
+      const int pos = ofs % SCREENWIDTH;
+      ofs = (((ofs - pos) << hires) + pos) << hires;   // recompose offset
+      count <<= hires;
+      for (i = 0; i < (1 << hires); i++)
+      {
+        memcpy(screens[0]+ofs, screens[1]+ofs, count);   // LFB copy.
+        ofs += SCREENWIDTH << hires;
+      }
+      return;
     }
   memcpy(screens[0]+ofs, screens[1]+ofs, count);   // LFB copy.
 } 

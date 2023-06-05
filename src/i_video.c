@@ -46,7 +46,7 @@ int NONWIDEWIDTH; // [crispy] non-widescreen SCREENWIDTH
 int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
 
 boolean use_vsync;  // killough 2/8/98: controls whether vsync is called
-boolean hires, default_hires;      // killough 11/98
+int hires, default_hires;      // killough 11/98
 boolean use_aspect;
 boolean stretch_to_fit; // [Nugget]
 boolean uncapped; // [FG] uncapped rendering frame rate
@@ -461,18 +461,29 @@ void I_FinishUpdate(void)
         tics = 20;
       if (hires)    // killough 11/98: hires support
         {
-          for (i=0 ; i<tics*2 ; i+=2)
-            s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i] =
-              s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i+1] =
-              s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i+SCREENWIDTH*2] =
-              s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i+SCREENWIDTH*2+1] =
-              0xff;
-          for ( ; i<20*2 ; i+=2)
-            s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i] =
-              s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i+1] =
-              s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i+SCREENWIDTH*2] =
-              s[(SCREENHEIGHT-1)*SCREENWIDTH*4+i+SCREENWIDTH*2+1] =
-              0x0;
+          int j;
+          const int hires_size = 1 << hires;
+          const int pos0 = ((SCREENHEIGHT - 1) << hires) * (SCREENWIDTH << hires);
+          for (i = 0; i < tics * 2; i += 2)
+          {
+            const int pos1 = pos0 + (i << hires);
+            int pos2 = 0;
+            for (j = 0; j < hires_size; j++)
+            {
+              memset(&s[pos1 + pos2], 0xFF, hires_size);
+              pos2 += SCREENWIDTH << hires;
+            }
+          }
+          for ( ; i < 20 * 2; i += 2)
+          {
+            const int pos1 = pos0 + (i << hires);
+            int pos2 = 0;
+            for (j = 0; j < hires_size; j++)
+            {
+              memset(&s[pos1 + pos2], 0x0, hires_size);
+              pos2 += SCREENWIDTH << hires;
+            }
+          }
         }
       else
         {
@@ -548,7 +559,7 @@ void I_FinishUpdate(void)
 
 void I_ReadScreen(byte *scr)
 {
-   int size = hires ? SCREENWIDTH*SCREENHEIGHT*4 : SCREENWIDTH*SCREENHEIGHT;
+   const int size = SCREENWIDTH * (SCREENHEIGHT << (2 * hires));
 
    // haleyjd
    memcpy(scr, *screens, size);
@@ -562,7 +573,7 @@ static byte *diskflash, *old_data;
 
 static void I_InitDiskFlash(void)
 {
-  byte temp[32*32];
+  byte temp[(16 * 16) << (2 * MAX_HIRES)];
 
   if (diskflash)
     {
@@ -937,14 +948,14 @@ void I_GetScreenDimensions(void)
         // [crispy] make sure SCREENWIDTH is an integer multiple of 4 ...
         if (hires)
         {
-            SCREENWIDTH = ((2 * SCREENWIDTH) & (int)~3) / 2;
+            SCREENWIDTH = ((SCREENWIDTH << hires) & (int)~3) / (1 << hires);
         }
         else
         {
             SCREENWIDTH = (SCREENWIDTH + 3) & (int)~3;
         }
         // [crispy] ... but never exceeds MAX_SCREENWIDTH (array size!)
-        SCREENWIDTH = MIN(SCREENWIDTH, MAX_SCREENWIDTH / 2);
+        SCREENWIDTH = MIN(SCREENWIDTH, MAX_SCREENWIDTH >> MAX_HIRES);
     }
 
     WIDESCREENDELTA = (SCREENWIDTH - NONWIDEWIDTH) / 2;
@@ -1112,6 +1123,7 @@ static void I_ResetGraphicsMode(void)
     SDL_RenderPresent(renderer);
 
     V_Init();
+    ST_Init();
 
     // [FG] create paletted frame buffer
 
@@ -1197,7 +1209,7 @@ static void I_InitGraphicsMode(void)
     //
 
     if (M_CheckParm("-hires"))
-        hires = true;
+        hires = 1;
 
     //!
     // @category video
@@ -1206,7 +1218,7 @@ static void I_InitGraphicsMode(void)
     //
 
     else if (M_CheckParm("-nohires"))
-        hires = false;
+        hires = 0;
 
     if (M_CheckParm("-grabmouse"))
         grabmouse = true;

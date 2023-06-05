@@ -277,7 +277,7 @@ void ST_refreshBackground(boolean force)
         {
           // [FG] calculate average color of the 16px left and right of the status bar
           const int vstep[][2] = {{0, 1}, {1, 2}, {2, ST_HEIGHT}};
-          const int hstep = hires ? (4 * SCREENWIDTH) : SCREENWIDTH;
+          const int hstep = SCREENWIDTH << (2 * hires);
           const int lo = MAX(st_x + WIDESCREENDELTA - SHORT(sbar->leftoffset), 0);
           const int w = MIN(SHORT(sbar->width), SCREENWIDTH);
           const int depth = 16;
@@ -338,14 +338,19 @@ void ST_refreshBackground(boolean force)
 
           if (hires)
           {
-            for (y = (SCREENHEIGHT-ST_HEIGHT)<<1; y < SCREENHEIGHT<<1; y++)
-                for (x = 0; x < SCREENWIDTH<<1; x += 2)
+            int i;
+            const int hires_size = 1 << hires;
+            for (y = ((SCREENHEIGHT - ST_HEIGHT) << hires); y < (SCREENHEIGHT << hires); y++)
+            {
+              for (x = 0; x < (SCREENWIDTH << hires); x += hires_size)
+              {
+                const byte dot = src[(((y >> hires) & 63) << 6) + ((x >> hires) & 63)];
+                for (i = 0; i < hires_size; i++)
                 {
-                    const byte dot = src[(((y>>1)&63)<<6) + ((x>>1)&63)];
-
-                    *dest++ = dot;
-                    *dest++ = dot;
+                  *dest++ = dot;
                 }
+              }
+            }
           }
           else
           {
@@ -1454,9 +1459,16 @@ void ST_Stop(void)
 
 void ST_Init(void)
 {
+  const int size = SCREENWIDTH * (ST_HEIGHT << (2 * hires));
+
+  if(screens[4])
+  {
+    Z_Free(screens[4]);
+  }
+
   ST_loadData();
   // killough 11/98: allocate enough for hires
-  screens[4] = Z_Malloc(MAX_SCREENWIDTH*ST_HEIGHT*4, PU_STATIC, 0);
+  screens[4] = Z_Malloc(size, PU_STATIC, 0);
 }
 
 //----------------------------------------------------------------------------
