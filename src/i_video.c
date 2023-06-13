@@ -1166,6 +1166,7 @@ static int scalefactor;
 
 static void I_ResetGraphicsMode(void)
 {
+    SDL_DisplayMode mode;
     int min_width, min_height;
     int w, h;
     static int old_w, old_h;
@@ -1234,7 +1235,11 @@ static void I_ResetGraphicsMode(void)
       SDL_RenderSetLogicalSize(renderer, w, actualheight);
 
     // [FG] force integer scales
-    SDL_RenderSetIntegerScale(renderer, integer_scaling ? SDL_TRUE : SDL_FALSE);
+    if (SDL_GetCurrentDisplayMode(video_display, &mode) == 0)
+    {
+        const boolean use_scale = integer_scaling && w <= mode.w && actualheight <= mode.h;
+        SDL_RenderSetIntegerScale(renderer, use_scale ? SDL_TRUE : SDL_FALSE);
+    }
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
