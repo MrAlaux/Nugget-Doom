@@ -87,6 +87,7 @@ static int window_x, window_y;
 static int actualheight;
 
 static boolean need_resize;
+static boolean need_downscaling;
 
 // haleyjd 10/08/05: Chocolate DOOM application focus state code added
 
@@ -465,7 +466,7 @@ static inline void I_UpdateRender (void)
     SDL_UpdateTexture(texture, NULL, argbbuffer->pixels, argbbuffer->pitch);
     SDL_RenderClear(renderer);
 
-    if (smooth_scaling)
+    if (smooth_scaling && !need_downscaling)
     {
         // Render this intermediate texture into the upscaled texture
         // using "nearest" integer scaling.
@@ -1128,6 +1129,39 @@ static void CreateUpscaledTexture(boolean force)
                                         h_upscale * screen_height);
 }
 
+static boolean NeedDownscaling(void)
+{
+    SDL_RendererInfo info;
+    int w, h;
+
+    const int screen_width = SCREENWIDTH << hires;
+
+    SDL_GetRendererInfo(renderer, &info);
+    if (info.flags & SDL_RENDERER_SOFTWARE)
+    {
+        return false;
+    }
+
+    if (SDL_GetRendererOutputSize(renderer, &w, &h) != 0)
+    {
+        I_Error("Failed to get renderer output size: %s", SDL_GetError());
+        return false;
+    }
+
+    if (w * actualheight < h * screen_width)
+    {
+        // Tall window.
+        h = w * actualheight / screen_width;
+    }
+    else
+    {
+        // Wide window.
+        w = h * screen_width / actualheight;
+    }
+
+    return screen_width > w || actualheight > h;
+}
+
 static int scalefactor;
 
 static void I_ResetGraphicsMode(void)
@@ -1253,14 +1287,17 @@ static void I_ResetGraphicsMode(void)
         SDL_DestroyTexture(texture);
     }
 
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+    need_downscaling = NeedDownscaling();
+
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
+                smooth_scaling && need_downscaling ? "linear" : "nearest");
 
     texture = SDL_CreateTexture(renderer,
                                 pixel_format,
                                 SDL_TEXTUREACCESS_STREAMING,
                                 w, h);
 
-    if (smooth_scaling)
+    if (smooth_scaling && !need_downscaling)
     {
         CreateUpscaledTexture(true);
     }
