@@ -799,7 +799,8 @@ void R_InitSpriteLumps(void)
 
   for (i=0 ; i< numspritelumps ; i++)
     {
-      if (!(i&127))            // killough
+      if (!(i&127)             // killough
+          && firsttime)        // [Nugget]
         putchar ('.');
 
       patch = W_CacheLumpNum(firstspritelump+i, PU_CACHE);
@@ -935,7 +936,7 @@ void R_InitTranMap(int progress)
                 long g1 = pal[1][i] * w2;
                 long b1 = pal[2][i] * w2;
 
-                if (!(i & 31) && progress)
+                if (!(i & 31) && progress && firsttime) // [Nugget]
 		  putchar('.');
 
 		if (!(~i & 15))
@@ -972,7 +973,7 @@ void R_InitTranMap(int progress)
             }
         }
       else
-	if (progress)
+	if (progress && firsttime) // [Nugget]
 	  fputs("........",stdout);
 
       if (cachefp)              // killough 11/98: fix filehandle leak

@@ -681,7 +681,7 @@ void R_ExecuteSetViewSize (void)
     pspr_interp = false;
 }
 
-// [Nugget]
+// [Nugget] Dynamic arrays
 static void R_InitArrays(void)
 {
   static boolean first_allocation = true;
@@ -723,7 +723,7 @@ static void R_InitArrays(void)
 
 void R_Init (void)
 {
-  R_InitArrays(); // [Nugget]
+  R_InitArrays(); // [Nugget] Dynamic arrays
   R_InitData();
   R_SetViewSize(screenblocks);
   R_InitPlanes();

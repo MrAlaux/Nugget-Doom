@@ -103,6 +103,7 @@ static angle_t *xtoskyangle;
 //
 void R_InitPlanes (void)
 {
+  // [Nugget] Dynamic arrays
   static boolean first_allocation = true;
   extern int SCREENWIDTH, SCREENHEIGHT, hires;
   const int w = SCREENWIDTH << hires, h = SCREENHEIGHT << hires;
@@ -249,7 +250,7 @@ void R_ClearPlanes(void)
   lastopening = openings;
 
   // texture calculation
-  memset (cachedheight, 0, sizeof(*cachedheight));
+  memset (cachedheight, 0, sizeof(*cachedheight)); // [Nugget] Dynamic arrays
 
   // left to right mapping
   angle = (viewangle-ANG90)>>ANGLETOFINESHIFT;
