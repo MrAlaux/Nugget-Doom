@@ -2531,6 +2531,8 @@ void D_DoomMain(void)
   M_Init();
 
   printf("R_Init: Init DOOM refresh daemon - ");
+  // [Nugget] Dynamic arrays: screen variables must be set before calling R_Init()
+  I_InitGraphics();
   R_Init();
 
   //!
@@ -2722,9 +2724,6 @@ void D_DoomMain(void)
   {
     I_SetFastdemoTimer(true);
   }
-
-  // [FG] init graphics (WIDESCREENDELTA) before HUD widgets
-  I_InitGraphics();
 
   if (startloadgame >= 0)
   {

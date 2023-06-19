@@ -28,8 +28,8 @@
 // Visplane related.
 extern  int *lastopening; // [FG] 32-bit integer math
 
-extern int floorclip[], ceilingclip[]; // [FG] 32-bit integer math
-extern fixed_t *yslope, yslopes[LOOKDIRS][MAX_SCREENHEIGHT], distscale[];
+extern int *floorclip, *ceilingclip; // [FG] 32-bit integer math
+extern fixed_t *yslope, **yslopes, *distscale; // [Nugget] Dynamic arrays
 
 void R_InitPlanes(void);
 void R_ClearPlanes(void);

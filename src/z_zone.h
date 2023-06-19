@@ -40,6 +40,7 @@
 
 typedef enum {
   PU_STATIC,
+  PU_VIDEO, // [Nugget]
   PU_LEVEL,
   PU_CACHE,
   /* Must always be last -- killough */

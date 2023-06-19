@@ -58,18 +58,19 @@ visplane_t *floorplane, *ceilingplane;
 
 // killough 8/1/98: set static number of openings to be large enough
 // (a static limit is okay in this case and avoids difficulties in r_segs.c)
-#define MAXOPENINGS (MAX_SCREENWIDTH*MAX_SCREENHEIGHT)
-int openings[MAXOPENINGS],*lastopening; // [FG] 32-bit integer math
+// [Nugget] Dynamic arrays
+int *openings, *lastopening; // [FG] 32-bit integer math
 
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
 //  ceilingclip starts out -1
 
-int floorclip[MAX_SCREENWIDTH], ceilingclip[MAX_SCREENWIDTH]; // [FG] 32-bit integer math
+// [Nugget] Dynamic arrays
+int *floorclip, *ceilingclip; // [FG] 32-bit integer math
 
 // spanstart holds the start of a plane span; initialized to 0 at start
 
-static int spanstart[MAX_SCREENHEIGHT];                // killough 2/8/98
+static int *spanstart; // [Nugget] Dynamic arrays
 
 //
 // texture mapping
@@ -81,13 +82,16 @@ static fixed_t planeheight;
 // killough 2/8/98: make variables static
 
 static fixed_t basexscale, baseyscale;
-static fixed_t cachedheight[MAX_SCREENHEIGHT];
-static fixed_t cacheddistance[MAX_SCREENHEIGHT];
-static fixed_t cachedxstep[MAX_SCREENHEIGHT];
-static fixed_t cachedystep[MAX_SCREENHEIGHT];
+
+// [Nugget] Dynamic arrays
+static fixed_t *cachedheight;
+static fixed_t *cacheddistance;
+static fixed_t *cachedxstep;
+static fixed_t *cachedystep;
+
 static fixed_t xoffs,yoffs;    // killough 2/28/98: flat offsets
 
-fixed_t *yslope, yslopes[LOOKDIRS][MAX_SCREENHEIGHT], distscale[MAX_SCREENWIDTH];
+fixed_t *yslope, **yslopes, *distscale; // [Nugget] Dynamic arrays
 
 // [FG] linear horizontal sky scrolling
 boolean linearsky;
@@ -99,6 +103,52 @@ static angle_t *xtoskyangle;
 //
 void R_InitPlanes (void)
 {
+  static boolean first_allocation = true;
+  extern int SCREENWIDTH, SCREENHEIGHT, hires;
+  const int w = SCREENWIDTH << hires, h = SCREENHEIGHT << hires;
+  int i;
+
+  if (first_allocation) {
+    first_allocation = false;
+
+    #define R_Malloc(size) Z_Malloc(size, PU_VIDEO, NULL)
+
+          openings = R_Malloc((w * h) * sizeof(int));
+         spanstart = R_Malloc(h       * sizeof(int));
+         floorclip = R_Malloc(w       * sizeof(int));
+       ceilingclip = R_Malloc(w       * sizeof(int));
+      cachedheight = R_Malloc(h       * sizeof(fixed_t));
+    cacheddistance = R_Malloc(h       * sizeof(fixed_t));
+       cachedxstep = R_Malloc(h       * sizeof(fixed_t));
+       cachedystep = R_Malloc(h       * sizeof(fixed_t));
+         distscale = R_Malloc(w       * sizeof(fixed_t));
+
+    yslopes = R_Malloc(LOOKDIRS * sizeof(fixed_t*));
+    for (i = 0;  i < LOOKDIRS;  i++)
+    { yslopes[i] = R_Malloc(h * sizeof(fixed_t)); }
+
+    #undef R_Malloc
+  }
+  else {
+    #define R_Realloc(pointer,size) Z_Realloc(pointer, size, PU_VIDEO, NULL)
+
+          openings = R_Realloc(openings,       (w * h) * sizeof(int));
+         spanstart = R_Realloc(spanstart,      h       * sizeof(int));
+         floorclip = R_Realloc(floorclip,      w       * sizeof(int));
+       ceilingclip = R_Realloc(ceilingclip,    w       * sizeof(int));
+      cachedheight = R_Realloc(cachedheight,   h       * sizeof(fixed_t));
+    cacheddistance = R_Realloc(cacheddistance, h       * sizeof(fixed_t));
+       cachedxstep = R_Realloc(cachedxstep,    h       * sizeof(fixed_t));
+       cachedystep = R_Realloc(cachedystep,    h       * sizeof(fixed_t));
+         distscale = R_Realloc(distscale,      w       * sizeof(fixed_t));
+
+    yslopes = R_Realloc(yslopes, LOOKDIRS * sizeof(fixed_t*));
+    for (i = 0;  i < LOOKDIRS;  i++)
+    { yslopes[i] = R_Realloc(yslopes[i], h * sizeof(fixed_t)); }
+    
+    #undef R_Realloc
+  }
+  
   xtoskyangle = linearsky ? linearskyangle : xtoviewangle;
 }
 
@@ -199,7 +249,7 @@ void R_ClearPlanes(void)
   lastopening = openings;
 
   // texture calculation
-  memset (cachedheight, 0, sizeof(cachedheight));
+  memset (cachedheight, 0, sizeof(*cachedheight));
 
   // left to right mapping
   angle = (viewangle-ANG90)>>ANGLETOFINESHIFT;

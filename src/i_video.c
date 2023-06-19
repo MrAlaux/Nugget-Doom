@@ -1522,6 +1522,7 @@ void I_ResetScreen(void)
     hires = default_hires;
 
     I_ResetGraphicsMode();     // Switch to new graphics mode
+    R_Init(); // [Nugget]
 
     if (automapactive)
         AM_Start();        // Reset automap dimensions

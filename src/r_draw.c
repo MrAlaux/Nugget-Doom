@@ -26,9 +26,6 @@
 #include "v_video.h"
 #include "m_menu.h"
 
-#define MAXWIDTH  MAX_SCREENWIDTH          /* kilough 2/8/98 */
-#define MAXHEIGHT MAX_SCREENHEIGHT
-
 #define SBARHEIGHT 32             /* status bar height at bottom of screen */
 
 //
@@ -47,8 +44,8 @@ int  scaledviewheight;        // killough 11/98
 int  viewheight;
 int  viewwindowx;
 int  viewwindowy; 
-byte *ylookup[MAXHEIGHT]; 
-int  columnofs[MAXWIDTH]; 
+byte **ylookup; // [Nugget] Dynamic arrays
+int  *columnofs; // [Nugget] Dynamic arrays
 int  linesize = ORIGWIDTH;  // killough 11/98
 
 // Color tables for different players,
@@ -97,9 +94,9 @@ void R_DrawColumn (void)
     return; 
                                  
 #ifdef RANGECHECK 
-  if ((unsigned)dc_x >= MAX_SCREENWIDTH
+  if ((unsigned)dc_x >= SCREENWIDTH << hires // [Nugget] Dynamic arrays
       || dc_yl < 0
-      || dc_yh >= MAX_SCREENHEIGHT) 
+      || dc_yh >= SCREENHEIGHT << hires) // [Nugget] Dynamic arrays
     I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x); 
 #endif 
 
@@ -200,9 +197,9 @@ void R_DrawTLColumn (void)
     return; 
                                  
 #ifdef RANGECHECK 
-  if ((unsigned)dc_x >= MAX_SCREENWIDTH
+  if ((unsigned)dc_x >= SCREENWIDTH << hires // [Nugget] Dynamic arrays
       || dc_yl < 0
-      || dc_yh >= MAX_SCREENHEIGHT) 
+      || dc_yh >= SCREENHEIGHT << hires) // [Nugget] Dynamic arrays
     I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x); 
 #endif 
 
@@ -287,9 +284,9 @@ void R_DrawSkyColumn(void)
     return;
 
 #ifdef RANGECHECK
-  if ((unsigned)dc_x >= MAX_SCREENWIDTH
+  if ((unsigned)dc_x >= SCREENWIDTH << hires // [Nugget] Dynamic arrays
     || dc_yl < 0
-    || dc_yh >= MAX_SCREENHEIGHT)
+    || dc_yh >= SCREENHEIGHT << hires) // [Nugget] Dynamic arrays
     I_Error ("R_DrawSkyColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
 #endif
 
@@ -475,9 +472,9 @@ static void R_DrawFuzzColumn_orig(void)
     return; 
     
 #ifdef RANGECHECK 
-  if ((unsigned) dc_x >= MAX_SCREENWIDTH
+  if ((unsigned) dc_x >= SCREENWIDTH << hires // [Nugget] Dynamic arrays
       || dc_yl < 0 
-      || dc_yh >= MAX_SCREENHEIGHT)
+      || dc_yh >= SCREENHEIGHT << hires) // [Nugget] Dynamic arrays
     I_Error ("R_DrawFuzzColumn: %i to %i at %i",
              dc_yl, dc_yh, dc_x);
 #endif
@@ -559,9 +556,9 @@ static void R_DrawFuzzColumn_block(void)
     return;
 
 #ifdef RANGECHECK
-  if ((unsigned) dc_x >= MAX_SCREENWIDTH
+  if ((unsigned) dc_x >= SCREENWIDTH << hires // [Nugget] Dynamic arrays
       || dc_yl < 0
-      || dc_yh >= MAX_SCREENHEIGHT)
+      || dc_yh >= SCREENHEIGHT << hires) // [Nugget] Dynamic arrays
     I_Error ("R_DrawFuzzColumn: %i to %i at %i",
              dc_yl, dc_yh, dc_x);
 #endif
@@ -637,9 +634,9 @@ void R_DrawTranslatedColumn (void)
     return; 
                                  
 #ifdef RANGECHECK 
-  if ((unsigned)dc_x >= MAX_SCREENWIDTH
+  if ((unsigned)dc_x >= SCREENWIDTH << hires // [Nugget] Dynamic arrays
       || dc_yl < 0
-      || dc_yh >= MAX_SCREENHEIGHT)
+      || dc_yh >= SCREENHEIGHT << hires) // [Nugget] Dynamic arrays
     I_Error ( "R_DrawColumn: %i to %i at %i",
               dc_yl, dc_yh, dc_x);
 #endif 

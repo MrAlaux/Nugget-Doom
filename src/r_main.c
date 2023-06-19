@@ -79,10 +79,10 @@ int viewangletox[FINEANGLES/2];
 // to the lowest viewangle that maps back to x ranges
 // from clipangle to -clipangle.
 
-angle_t xtoviewangle[MAX_SCREENWIDTH+1];   // killough 2/8/98
+angle_t *xtoviewangle; // [Nugget] Dynamic arrays
 
 // [FG] linear horizontal sky scrolling
-angle_t linearskyangle[MAX_SCREENWIDTH+1];
+angle_t *linearskyangle; // [Nugget] Dynamic arrays
 
 int LIGHTLEVELS;
 int LIGHTSEGSHIFT;
@@ -681,12 +681,49 @@ void R_ExecuteSetViewSize (void)
     pspr_interp = false;
 }
 
+// [Nugget]
+static void R_InitArrays(void)
+{
+  static boolean first_allocation = true;
+  const int w = SCREENWIDTH << hires, h = SCREENHEIGHT << hires;
+
+  if (first_allocation) {
+    first_allocation = false;
+
+    #define R_Malloc(size) Z_Malloc(size, PU_VIDEO, NULL)
+
+             solidcol = R_Malloc(w       * sizeof(byte));
+              ylookup = R_Malloc(h       * sizeof(byte*));
+            columnofs = R_Malloc(w       * sizeof(int));
+         xtoviewangle = R_Malloc((w + 1) * sizeof(angle_t));
+       linearskyangle = R_Malloc((w + 1) * sizeof(angle_t));
+          negonearray = R_Malloc(w       * sizeof(int));
+    screenheightarray = R_Malloc(w       * sizeof(int));
+
+    #undef R_Malloc
+  }
+  else {
+    #define R_Realloc(pointer,size) Z_Realloc(pointer, size, PU_VIDEO, NULL)
+
+             solidcol = R_Realloc(solidcol,          w       * sizeof(byte));
+              ylookup = R_Realloc(ylookup,           h       * sizeof(byte*));
+            columnofs = R_Realloc(columnofs,         w       * sizeof(int));
+         xtoviewangle = R_Realloc(xtoviewangle,      (w + 1) * sizeof(angle_t));
+       linearskyangle = R_Realloc(linearskyangle,    (w + 1) * sizeof(angle_t));
+          negonearray = R_Realloc(negonearray,       w       * sizeof(int));
+    screenheightarray = R_Realloc(screenheightarray, w       * sizeof(int));
+    
+    #undef R_Realloc
+  }
+}
+
 //
 // R_Init
 //
 
 void R_Init (void)
 {
+  R_InitArrays(); // [Nugget]
   R_InitData();
   R_SetViewSize(screenblocks);
   R_InitPlanes();

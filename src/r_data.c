@@ -503,6 +503,8 @@ byte *R_GetColumnMod(int tex, int col)
   return texturecomposite[tex] + ofs;
 }
 
+static boolean firsttime = true; // [Nugget]
+
 //
 // R_InitTextures
 // Initializes the texture list
@@ -611,6 +613,7 @@ void R_InitTextures (void)
   textureheight = Z_Malloc(numtextures*sizeof*textureheight, PU_STATIC, 0);
   texturebrightmap = Z_Malloc (numtextures * sizeof(*texturebrightmap), PU_STATIC, 0);
 
+  if (firsttime) // [Nugget]
   {  // Really complex printing shit...
     int temp1 = W_GetNumForName("S_START");
     int temp2 = W_GetNumForName("S_END") - 1;
@@ -629,7 +632,8 @@ void R_InitTextures (void)
 
   for (i=0 ; i<numtextures ; i++, directory++)
     {
-      if (!(i&127))          // killough
+      if (!(i&127)           // killough
+          && firsttime)      // [Nugget]
         putchar('.');
 
       if (i == numtextures1)
@@ -998,6 +1002,7 @@ void R_InitData(void)
   R_InitSpriteLumps();
     R_InitTranMap(1);                   // killough 2/21/98, 3/6/98
   R_InitColormaps();                    // killough 3/20/98
+  firsttime = false;                    // [Nugget]
 }
 
 //

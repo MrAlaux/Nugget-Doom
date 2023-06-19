@@ -97,7 +97,7 @@ extern angle_t          viewangle;
 extern player_t         *viewplayer;
 extern angle_t          clipangle;
 extern int              viewangletox[FINEANGLES/2];
-extern angle_t          xtoviewangle[MAX_SCREENWIDTH+1];  // killough 2/8/98
+extern angle_t          *xtoviewangle; // [Nugget] Dynamic arrays
 extern fixed_t          rw_distance;
 extern angle_t          rw_normalangle;
 
@@ -106,7 +106,7 @@ extern fixed_t          chasexofs, chaseyofs;
 extern angle_t          chaseaofs;
 
 // [FG] linear horizontal sky scrolling
-extern angle_t          linearskyangle[MAX_SCREENWIDTH+1];
+extern angle_t          *linearskyangle; // [Nugget] Dynamic arrays
 
 // angle to line origin
 extern int              rw_angle1;
