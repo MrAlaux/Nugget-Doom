@@ -82,9 +82,9 @@ static fixed_t planeheight;
 // killough 2/8/98: make variables static
 
 static fixed_t basexscale, baseyscale;
-static fixed_t cachedheight[MAX_SCREENHEIGHT];
 
 // [Nugget] Dynamic arrays
+static fixed_t *cachedheight, cachedheightsize;
 static fixed_t *cacheddistance;
 static fixed_t *cachedxstep;
 static fixed_t *cachedystep;
@@ -114,15 +114,16 @@ void R_InitPlanes (void)
 
     #define R_Malloc(size) Z_Malloc(size, PU_VIDEO, NULL)
 
-          openings = R_Malloc((w * h) * sizeof(int));
-         spanstart = R_Malloc(h       * sizeof(int));
-         floorclip = R_Malloc(w       * sizeof(int));
-       ceilingclip = R_Malloc(w       * sizeof(int));
-//      cachedheight = R_Malloc(h       * sizeof(fixed_t));
-    cacheddistance = R_Malloc(h       * sizeof(fixed_t));
-       cachedxstep = R_Malloc(h       * sizeof(fixed_t));
-       cachedystep = R_Malloc(h       * sizeof(fixed_t));
-         distscale = R_Malloc(w       * sizeof(fixed_t));
+            openings = R_Malloc((w * h) * sizeof(int));
+           spanstart = R_Malloc(h * sizeof(int));
+           floorclip = R_Malloc(w * sizeof(int));
+         ceilingclip = R_Malloc(w * sizeof(int));
+    cachedheightsize =          h * sizeof(fixed_t);
+        cachedheight = R_Malloc(cachedheightsize);
+      cacheddistance = R_Malloc(h * sizeof(fixed_t));
+         cachedxstep = R_Malloc(h * sizeof(fixed_t));
+         cachedystep = R_Malloc(h * sizeof(fixed_t));
+           distscale = R_Malloc(w * sizeof(fixed_t));
 
     yslopes = R_Malloc(LOOKDIRS * sizeof(fixed_t*));
     for (i = 0;  i < LOOKDIRS;  i++)
@@ -133,15 +134,16 @@ void R_InitPlanes (void)
   else {
     #define R_Realloc(pointer,size) Z_Realloc(pointer, size, PU_VIDEO, NULL)
 
-          openings = R_Realloc(openings,       (w * h) * sizeof(int));
-         spanstart = R_Realloc(spanstart,      h       * sizeof(int));
-         floorclip = R_Realloc(floorclip,      w       * sizeof(int));
-       ceilingclip = R_Realloc(ceilingclip,    w       * sizeof(int));
-//      cachedheight = R_Realloc(cachedheight,   h       * sizeof(fixed_t));
-    cacheddistance = R_Realloc(cacheddistance, h       * sizeof(fixed_t));
-       cachedxstep = R_Realloc(cachedxstep,    h       * sizeof(fixed_t));
-       cachedystep = R_Realloc(cachedystep,    h       * sizeof(fixed_t));
-         distscale = R_Realloc(distscale,      w       * sizeof(fixed_t));
+            openings = R_Realloc(openings, (w * h) * sizeof(int));
+           spanstart = R_Realloc(spanstart,      h * sizeof(int));
+           floorclip = R_Realloc(floorclip,      w * sizeof(int));
+         ceilingclip = R_Realloc(ceilingclip,    w * sizeof(int));
+    cachedheightsize =                           h * sizeof(fixed_t);
+        cachedheight = R_Realloc(cachedheight,   cachedheightsize);
+      cacheddistance = R_Realloc(cacheddistance, h * sizeof(fixed_t));
+         cachedxstep = R_Realloc(cachedxstep,    h * sizeof(fixed_t));
+         cachedystep = R_Realloc(cachedystep,    h * sizeof(fixed_t));
+           distscale = R_Realloc(distscale,      w * sizeof(fixed_t));
 
     yslopes = R_Realloc(yslopes, LOOKDIRS * sizeof(fixed_t*));
     for (i = 0;  i < LOOKDIRS;  i++)
@@ -250,7 +252,7 @@ void R_ClearPlanes(void)
   lastopening = openings;
 
   // texture calculation
-  memset (cachedheight, 0, sizeof(cachedheight));
+  memset (cachedheight, 0, cachedheightsize);
 
   // left to right mapping
   angle = (viewangle-ANG90)>>ANGLETOFINESHIFT;
