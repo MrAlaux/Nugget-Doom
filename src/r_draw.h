@@ -96,7 +96,6 @@ void R_DrawBorder(int x, int y, int w, int h, int s);
 void R_DrawViewBorder(void);
 
 extern byte **ylookup; // [Nugget] Dynamic arrays
-extern int  *columnofs; // [Nugget] Dynamic arrays
 
 #endif
 

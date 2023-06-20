@@ -807,6 +807,7 @@ void R_DrawSpan (void)
 void R_InitBuffer(int width, int height)
 { 
   int i; 
+  static boolean first_allocation = true; // [Nugget]
 
   linesize = SCREENWIDTH << hires;    // killough 11/98
 
@@ -820,6 +821,12 @@ void R_InitBuffer(int width, int height)
 
   // Column offset. For windows.
 
+  // [Nugget] Dynamic arrays
+  if (first_allocation)
+  { columnofs = Z_Malloc((SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL); }
+  else
+  { columnofs = Z_Realloc(columnofs, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL); }
+
   for (i = width << hires ; i--; )   // killough 11/98
     columnofs[i] = viewwindowx + i;
     
@@ -831,8 +838,16 @@ void R_InitBuffer(int width, int height)
 
   // Preclaculate all row offsets.
 
+  // [Nugget] Dynamic arrays
+  if (first_allocation)
+  { ylookup = Z_Malloc((SCREENHEIGHT << hires) * sizeof(byte*), PU_VIDEO, NULL); }
+  else
+  { ylookup = Z_Realloc(ylookup, (SCREENHEIGHT << hires) * sizeof(byte*), PU_VIDEO, NULL); }
+
   for (i = height << hires; i--; )
     ylookup[i] = screens[0] + (i+viewwindowy)*linesize; // killough 11/98
+  
+  first_allocation = false; // [Nugget]
 } 
 
 //
