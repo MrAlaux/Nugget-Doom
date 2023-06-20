@@ -81,7 +81,7 @@ static int drawsegs_xrange_count = 0;
 //  used for psprite clipping and initializing clipping
 
 // [FG] 32-bit integer math
-int negonearray[MAX_SCREENWIDTH];
+int negonearray[MAX_SCREENWIDTH]; // killough 2/8/98: change to MAX_*
 int *screenheightarray; // [Nugget] Dynamic arrays
 
 //
@@ -284,7 +284,8 @@ static size_t num_vissprite, num_vissprite_alloc, num_vissprite_ptrs;
 void R_InitSprites(char **namelist)
 {
   int i;
-  static boolean first_allocation = true; // [Nugget]
+  // [Nugget] Dynamic arrays
+  static boolean first_allocation = true;
 
   if (first_allocation) {
     first_allocation = false;
@@ -297,7 +298,7 @@ void R_InitSprites(char **namelist)
     screenheightarray = Z_Realloc(screenheightarray, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
   }
 
-  for (i=0; i < SCREENWIDTH<<hires; i++) // [Nugget] Dynamic arrays
+  for (i=0; i < SCREENWIDTH<<hires; i++)
     negonearray[i] = -1;
 
   R_InitSpriteDefs(namelist);
@@ -988,8 +989,8 @@ void R_DrawSprite (vissprite_t* spr)
 {
   drawseg_t *ds;
   // [FG] 32-bit integer math
-  int   clipbot[SCREENWIDTH << hires]; // [Nugget] Dynamic arrays
-  int   cliptop[SCREENWIDTH << hires]; // [Nugget] Dynamic arrays
+  int   clipbot[MAX_SCREENWIDTH];
+  int   cliptop[MAX_SCREENWIDTH];
   int     x;
   int     r1;
   int     r2;

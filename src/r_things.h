@@ -27,7 +27,7 @@
 // Constant arrays used for psprite clipping and initializing clipping.
 
 // [FG] 32-bit integer math
-extern int negonearray[MAX_SCREENWIDTH];
+extern int negonearray[MAX_SCREENWIDTH]; // killough 2/8/98: change to MAX_*
 extern int *screenheightarray; // [Nugget] Dynamic arrays
 
 // Vars for R_DrawMaskedColumn

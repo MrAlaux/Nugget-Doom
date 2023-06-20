@@ -646,7 +646,7 @@ static byte *diskflash, *old_data;
 
 static void I_InitDiskFlash(void)
 {
-  byte temp[(16 * 16) << (2 * hires)];
+  byte temp[(16 * 16) << (2 * MAX_HIRES)];
 
   if (diskflash)
     {
