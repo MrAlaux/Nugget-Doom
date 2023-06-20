@@ -81,8 +81,9 @@ static int drawsegs_xrange_count = 0;
 //  used for psprite clipping and initializing clipping
 
 // [FG] 32-bit integer math
-int negonearray[MAX_SCREENWIDTH]; // killough 2/8/98: change to MAX_*
-int *screenheightarray; // [Nugget] Dynamic arrays
+// [Nugget] Dynamic arrays
+int *negonearray;
+int *screenheightarray;
 
 //
 // INITIALIZATION FUNCTIONS
@@ -290,11 +291,11 @@ void R_InitSprites(char **namelist)
   if (first_allocation) {
     first_allocation = false;
 
-    //negonearray = Z_Malloc((SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
+    negonearray = Z_Malloc((SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
     screenheightarray = Z_Malloc((SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
   }
   else {
-    // negonearray = Z_Realloc(negonearray, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
+    negonearray = Z_Realloc(negonearray, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
     screenheightarray = Z_Realloc(screenheightarray, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
   }
 

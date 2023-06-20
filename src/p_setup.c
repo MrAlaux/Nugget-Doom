@@ -1675,7 +1675,7 @@ void P_Init (void)
 {
   P_InitSwitchList();
   P_InitPicAnims();
-  R_InitSprites(sprnames);
+  // [Nugget] R_InitSprites() is now called in R_Init()
 }
 
 //----------------------------------------------------------------------------

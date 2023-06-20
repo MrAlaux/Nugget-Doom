@@ -711,6 +711,7 @@ void R_Init (void)
   R_InitLightTables();
   R_InitSkyMap();
   R_InitTranslationTables();
+  R_InitSprites(sprnames); // [Nugget] Moved from P_Init()
 }
 
 //
