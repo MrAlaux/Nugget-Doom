@@ -28,7 +28,7 @@
 
 // [FG] 32-bit integer math
 // [Nugget] Dynamic arrays
-extern int *negonearray;
+extern int negonearray[MAX_SCREENWIDTH];
 extern int *screenheightarray;
 
 // Vars for R_DrawMaskedColumn

@@ -697,7 +697,7 @@ static void R_InitArrays(void)
             columnofs = R_Malloc(w       * sizeof(int));
          xtoviewangle = R_Malloc((w + 1) * sizeof(angle_t));
        linearskyangle = R_Malloc((w + 1) * sizeof(angle_t));
-          negonearray = R_Malloc(w       * sizeof(int));
+//          negonearray = R_Malloc(w       * sizeof(int));
     screenheightarray = R_Malloc(w       * sizeof(int));
 
     #undef R_Malloc
@@ -710,7 +710,7 @@ static void R_InitArrays(void)
             columnofs = R_Realloc(columnofs,         w       * sizeof(int));
          xtoviewangle = R_Realloc(xtoviewangle,      (w + 1) * sizeof(angle_t));
        linearskyangle = R_Realloc(linearskyangle,    (w + 1) * sizeof(angle_t));
-          negonearray = R_Realloc(negonearray,       w       * sizeof(int));
+//          negonearray = R_Realloc(negonearray,       w       * sizeof(int));
     screenheightarray = R_Realloc(screenheightarray, w       * sizeof(int));
     
     #undef R_Realloc

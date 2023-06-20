@@ -82,7 +82,7 @@ static int drawsegs_xrange_count = 0;
 
 // [FG] 32-bit integer math
 // [Nugget] Dynamic arrays
-int *negonearray;
+int negonearray[MAX_SCREENWIDTH];
 int *screenheightarray;
 
 //
