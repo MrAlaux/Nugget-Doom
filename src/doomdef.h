@@ -84,7 +84,7 @@ typedef enum
 #define ORIGWIDTH  320 // [crispy]
 #define ORIGHEIGHT 200 // [crispy]
 
-#define MAX_HIRES 3
+#define MAX_HIRES 2
 #define MAX_SCREENWIDTH  (576 << MAX_HIRES) // [FG] corresponds to 2.4:1 in hires mode
 #define MAX_SCREENHEIGHT (ORIGHEIGHT << MAX_HIRES) // [crispy]
 
