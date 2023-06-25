@@ -285,19 +285,11 @@ static size_t num_vissprite, num_vissprite_alloc, num_vissprite_ptrs;
 void R_InitSprites(char **namelist)
 {
   int i;
+  
   // [Nugget] Dynamic arrays
-  static boolean first_allocation = true;
 
-  if (first_allocation) {
-    first_allocation = false;
-
-    negonearray = Z_Malloc((SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
-    screenheightarray = Z_Malloc((SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
-  }
-  else {
-    negonearray = Z_Realloc(negonearray, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
-    screenheightarray = Z_Realloc(screenheightarray, (SCREENWIDTH << hires) * sizeof(int), PU_VIDEO, NULL);
-  }
+  negonearray = Z_Realloc(negonearray, (SCREENWIDTH << hires) * sizeof(int), PU_STATIC, NULL);
+  screenheightarray = Z_Realloc(screenheightarray, (SCREENWIDTH << hires) * sizeof(int), PU_STATIC, NULL);
 
   for (i=0; i < SCREENWIDTH<<hires; i++)
     negonearray[i] = -1;

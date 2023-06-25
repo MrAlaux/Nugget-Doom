@@ -91,7 +91,7 @@ static fixed_t *cachedystep;
 
 static fixed_t xoffs,yoffs;    // killough 2/28/98: flat offsets
 
-fixed_t *yslope, **yslopes, *distscale; // [Nugget] Dynamic arrays
+fixed_t *yslope, **yslopes = NULL, *distscale; // [Nugget] Dynamic arrays
 
 // [FG] linear horizontal sky scrolling
 boolean linearsky;
@@ -104,52 +104,33 @@ static angle_t *xtoskyangle;
 void R_InitPlanes (void)
 {
   // [Nugget] Dynamic arrays
-  static boolean first_allocation = true;
   extern int SCREENWIDTH, SCREENHEIGHT, hires;
   const int w = SCREENWIDTH << hires, h = SCREENHEIGHT << hires;
   int i;
+  static boolean first_allocation = true;
+
+          openings = Z_Realloc(openings, (w * h) * sizeof(int), PU_STATIC, NULL);
+         spanstart = Z_Realloc(spanstart,      h * sizeof(int), PU_STATIC, NULL);
+         floorclip = Z_Realloc(floorclip,      w * sizeof(int), PU_STATIC, NULL);
+       ceilingclip = Z_Realloc(ceilingclip,    w * sizeof(int), PU_STATIC, NULL);
+  cachedheightsize =                           h * sizeof(fixed_t);
+      cachedheight = Z_Realloc(cachedheight,   cachedheightsize, PU_STATIC, NULL);
+    cacheddistance = Z_Realloc(cacheddistance, h * sizeof(fixed_t), PU_STATIC, NULL);
+       cachedxstep = Z_Realloc(cachedxstep,    h * sizeof(fixed_t), PU_STATIC, NULL);
+       cachedystep = Z_Realloc(cachedystep,    h * sizeof(fixed_t), PU_STATIC, NULL);
+         distscale = Z_Realloc(distscale,      w * sizeof(fixed_t), PU_STATIC, NULL);
 
   if (first_allocation) {
     first_allocation = false;
 
-    #define R_Malloc(size) Z_Malloc(size, PU_VIDEO, NULL)
-
-            openings = R_Malloc((w * h) * sizeof(int));
-           spanstart = R_Malloc(h * sizeof(int));
-           floorclip = R_Malloc(w * sizeof(int));
-         ceilingclip = R_Malloc(w * sizeof(int));
-    cachedheightsize =          h * sizeof(fixed_t);
-        cachedheight = R_Malloc(cachedheightsize);
-      cacheddistance = R_Malloc(h * sizeof(fixed_t));
-         cachedxstep = R_Malloc(h * sizeof(fixed_t));
-         cachedystep = R_Malloc(h * sizeof(fixed_t));
-           distscale = R_Malloc(w * sizeof(fixed_t));
-
-    yslopes = R_Malloc(LOOKDIRS * sizeof(fixed_t*));
+    yslopes = Z_Malloc(LOOKDIRS * sizeof(fixed_t*), PU_STATIC, NULL);
     for (i = 0;  i < LOOKDIRS;  i++)
-    { yslopes[i] = R_Malloc(h * sizeof(fixed_t)); }
-
-    #undef R_Malloc
+    { yslopes[i] = Z_Malloc(h * sizeof(fixed_t), PU_STATIC, NULL); }
   }
   else {
-    #define R_Realloc(pointer,size) Z_Realloc(pointer, size, PU_VIDEO, NULL)
-
-            openings = R_Realloc(openings, (w * h) * sizeof(int));
-           spanstart = R_Realloc(spanstart,      h * sizeof(int));
-           floorclip = R_Realloc(floorclip,      w * sizeof(int));
-         ceilingclip = R_Realloc(ceilingclip,    w * sizeof(int));
-    cachedheightsize =                           h * sizeof(fixed_t);
-        cachedheight = R_Realloc(cachedheight,   cachedheightsize);
-      cacheddistance = R_Realloc(cacheddistance, h * sizeof(fixed_t));
-         cachedxstep = R_Realloc(cachedxstep,    h * sizeof(fixed_t));
-         cachedystep = R_Realloc(cachedystep,    h * sizeof(fixed_t));
-           distscale = R_Realloc(distscale,      w * sizeof(fixed_t));
-
-    yslopes = R_Realloc(yslopes, LOOKDIRS * sizeof(fixed_t*));
+    yslopes = Z_Realloc(yslopes, LOOKDIRS * sizeof(fixed_t*), PU_STATIC, NULL);
     for (i = 0;  i < LOOKDIRS;  i++)
-    { yslopes[i] = R_Realloc(yslopes[i], h * sizeof(fixed_t)); }
-    
-    #undef R_Realloc
+    { yslopes[i] = Z_Realloc(yslopes[i], h * sizeof(fixed_t), PU_STATIC, NULL); }
   }
   
   xtoskyangle = linearsky ? linearskyangle : xtoviewangle;

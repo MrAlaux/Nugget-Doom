@@ -688,21 +688,10 @@ void R_ExecuteSetViewSize (void)
 void R_Init (void)
 {
   // [Nugget] Dynamic arrays
-  static boolean first_allocation = true;
-  
   #define width (SCREENWIDTH << hires)
-  if (first_allocation) {
-    first_allocation = false;
-
-          solidcol = Z_Malloc(width       * sizeof(byte),    PU_VIDEO, NULL);
-      xtoviewangle = Z_Malloc((width + 1) * sizeof(angle_t), PU_VIDEO, NULL);
-    linearskyangle = Z_Malloc((width + 1) * sizeof(angle_t), PU_VIDEO, NULL);
-  }
-  else {
-          solidcol = Z_Realloc(solidcol,       width       * sizeof(byte),    PU_VIDEO, NULL);
-      xtoviewangle = Z_Realloc(xtoviewangle,   (width + 1) * sizeof(angle_t), PU_VIDEO, NULL);
-    linearskyangle = Z_Realloc(linearskyangle, (width + 1) * sizeof(angle_t), PU_VIDEO, NULL);
-  }
+        solidcol = Z_Realloc(solidcol,       width       * sizeof(byte),    PU_STATIC, NULL);
+    xtoviewangle = Z_Realloc(xtoviewangle,   (width + 1) * sizeof(angle_t), PU_STATIC, NULL);
+  linearskyangle = Z_Realloc(linearskyangle, (width + 1) * sizeof(angle_t), PU_STATIC, NULL);
   #undef width
   
   R_InitData();
