@@ -82,7 +82,7 @@ static int drawsegs_xrange_count = 0;
 
 // [FG] 32-bit integer math
 // [Nugget] Dynamic arrays
-int *negonearray;
+int negonearray[MAX_SCREENWIDTH];
 int *screenheightarray;
 
 //
@@ -285,13 +285,11 @@ static size_t num_vissprite, num_vissprite_alloc, num_vissprite_ptrs;
 void R_InitSprites(char **namelist)
 {
   int i;
-  
-  // [Nugget] Dynamic arrays
 
-  negonearray = Z_Realloc(negonearray, (SCREENWIDTH << hires) * sizeof(int), PU_STATIC, NULL);
+  // [Nugget] Dynamic arrays
   screenheightarray = Z_Realloc(screenheightarray, (SCREENWIDTH << hires) * sizeof(int), PU_STATIC, NULL);
 
-  for (i=0; i < SCREENWIDTH<<hires; i++)
+  for (i=0; i<MAX_SCREENWIDTH; i++)    // killough 2/8/98
     negonearray[i] = -1;
 
   R_InitSpriteDefs(namelist);
