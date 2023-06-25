@@ -76,8 +76,15 @@ static byte channel_volume[MIDI_CHANNELS_PER_TRACK];
 static float volume_factor = 0.0f;
 static boolean update_volume = false;
 
-static boolean playing;
-static boolean paused;
+typedef enum
+{
+    STATE_STOPPED,
+    STATE_PLAYING,
+    STATE_PAUSING,
+    STATE_PAUSED
+} win_midi_state_t;
+
+static win_midi_state_t win_midi_state;
 
 static DWORD timediv;
 static DWORD tempo;
@@ -131,7 +138,9 @@ typedef struct
 
 static win_midi_song_t song;
 
-#define BUFFER_INITIAL_SIZE 1024
+#define BUFFER_INITIAL_SIZE 8192
+
+#define PLAYER_THREAD_WAIT_TIME 3000
 
 typedef struct
 {
@@ -185,13 +194,29 @@ static void CALLBACK MidiStreamProc(HMIDIOUT hMidi, UINT uMsg,
     }
 }
 
-static void AllocateBuffer(const unsigned int size)
+static void PrepareHeader(void)
 {
     MIDIHDR *hdr = &MidiStreamHdr;
     MMRESULT mmr;
 
+    hdr->lpData = (LPSTR)buffer.data;
+    hdr->dwBytesRecorded = 0;
+    hdr->dwBufferLength = buffer.size;
+    mmr = midiOutPrepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
+    if (mmr != MMSYSERR_NOERROR)
+    {
+        MidiError("midiOutPrepareHeader", mmr);
+    }
+}
+
+static void AllocateBuffer(const unsigned int size)
+{
     if (buffer.data)
     {
+        MIDIHDR *hdr = &MidiStreamHdr;
+        MMRESULT mmr;
+
+        hdr->dwFlags &= ~MHDR_INQUEUE;
         mmr = midiOutUnprepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
         if (mmr != MMSYSERR_NOERROR)
         {
@@ -202,14 +227,7 @@ static void AllocateBuffer(const unsigned int size)
     buffer.size = PADDED_SIZE(size);
     buffer.data = I_Realloc(buffer.data, buffer.size);
 
-    hdr->lpData = (LPSTR)buffer.data;
-    hdr->dwBytesRecorded = 0;
-    hdr->dwBufferLength = buffer.size;
-    mmr = midiOutPrepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
-    if (mmr != MMSYSERR_NOERROR)
-    {
-        MidiError("midiOutPrepareHeader", mmr);
-    }
+    PrepareHeader();
 }
 
 static void WriteBufferPad(void)
@@ -357,7 +375,7 @@ static void ResetVolume(void)
     }
 }
 
-static void StopSound(void)
+static void SendNotesSoundOff(void)
 {
     int i;
 
@@ -407,8 +425,8 @@ static void ResetPitchBendSensitivity(void)
 
 static void ResetDevice(void)
 {
-    // Stop sound prior to reset to prevent volume spikes.
-    StopSound();
+    // Send notes/sound off prior to reset to prevent volume spikes.
+    SendNotesSoundOff();
 
     MIDI_ResetFallback();
     use_fallback = false;
@@ -1236,20 +1254,27 @@ static void FillBuffer(void)
         return;
     }
 
-    if (paused)
+    switch (win_midi_state)
     {
-        if (playing)
-        {
-            playing = false;
-            StopSound();
-        }
-        // Send a NOP every 100 ms while paused.
-        SendDelayMsg(100);
-        StreamOut();
-        return;
-    }
+        case STATE_PLAYING:
+            break;
 
-    playing = true;
+        case STATE_PAUSING:
+            // Send notes/sound off to prevent hanging notes.
+            SendNotesSoundOff();
+            StreamOut();
+            win_midi_state = STATE_PAUSED;
+            return;
+
+        case STATE_PAUSED:
+            // Send a NOP every 100 ms while paused.
+            SendDelayMsg(100);
+            StreamOut();
+            return;
+
+        case STATE_STOPPED:
+            return;
+    }
 
     for (num_events = 0; num_events < STREAM_MAX_EVENTS; )
     {
@@ -1421,10 +1446,18 @@ static boolean I_WIN_InitMusic(int device)
     if (mmr != MMSYSERR_NOERROR)
     {
         MidiError("midiStreamOpen", mmr);
+        hMidiStream = NULL;
         return false;
     }
 
-    AllocateBuffer(BUFFER_INITIAL_SIZE);
+    if (buffer.data == NULL)
+    {
+        AllocateBuffer(BUFFER_INITIAL_SIZE);
+    }
+    else
+    {
+        PrepareHeader();
+    }
 
     hBufferReturnEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     hExitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -1432,6 +1465,8 @@ static boolean I_WIN_InitMusic(int device)
     AddToBuffer = (winmm_complevel == COMP_VANILLA) ? AddToBuffer_Vanilla
                                                     : AddToBuffer_Standard;
     MIDI_InitFallback();
+
+    win_midi_state = STATE_STOPPED;
 
     printf("Windows MIDI Init: Using '%s'.\n", winmm_device);
 
@@ -1459,15 +1494,21 @@ static void I_WIN_StopSong(void *handle)
 {
     MMRESULT mmr;
 
-    if (!hMidiStream)
+    if (!hPlayerThread)
     {
         return;
     }
 
     SetEvent(hExitEvent);
-    WaitForSingleObject(hPlayerThread, INFINITE);
+    WaitForSingleObject(hPlayerThread, PLAYER_THREAD_WAIT_TIME);
     CloseHandle(hPlayerThread);
     hPlayerThread = NULL;
+    win_midi_state = STATE_STOPPED;
+
+    if (!hMidiStream)
+    {
+        return;
+    }
 
     mmr = midiStreamStop(hMidiStream);
     if (mmr != MMSYSERR_NOERROR)
@@ -1492,7 +1533,7 @@ static void I_WIN_PlaySong(void *handle, boolean looping)
     SetThreadPriority(hPlayerThread, THREAD_PRIORITY_TIME_CRITICAL);
 
     initial_playback = true;
-    paused = false;
+    win_midi_state = STATE_PLAYING;
 
     SetEvent(hBufferReturnEvent);
 
@@ -1510,7 +1551,7 @@ static void I_WIN_PauseSong(void *handle)
         return;
     }
 
-    paused = true;
+    win_midi_state = STATE_PAUSING;
 }
 
 static void I_WIN_ResumeSong(void *handle)
@@ -1520,7 +1561,7 @@ static void I_WIN_ResumeSong(void *handle)
         return;
     }
 
-    paused = false;
+    win_midi_state = STATE_PLAYING;
 }
 
 static void *I_WIN_RegisterSong(void *data, int len)
@@ -1660,27 +1701,14 @@ static void I_WIN_ShutdownMusic(void)
     {
         MidiError("midiStreamRestart", mmr);
     }
-    WaitForSingleObject(hBufferReturnEvent, INFINITE);
+    WaitForSingleObject(hBufferReturnEvent, PLAYER_THREAD_WAIT_TIME);
     mmr = midiStreamStop(hMidiStream);
     if (mmr != MMSYSERR_NOERROR)
     {
         MidiError("midiStreamStop", mmr);
     }
 
-    if (buffer.data)
-    {
-        MidiStreamHdr.dwFlags &= ~MHDR_INQUEUE;
-        mmr = midiOutUnprepareHeader((HMIDIOUT)hMidiStream, &MidiStreamHdr,
-                                     sizeof(MIDIHDR));
-        if (mmr != MMSYSERR_NOERROR)
-        {
-            MidiError("midiOutUnprepareHeader", mmr);
-        }
-        free(buffer.data);
-        buffer.data = NULL;
-        buffer.size = 0;
-        buffer.position = 0;
-    }
+    buffer.position = 0;
 
     mmr = midiStreamClose(hMidiStream);
     if (mmr != MMSYSERR_NOERROR)

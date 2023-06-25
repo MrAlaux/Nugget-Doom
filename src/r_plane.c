@@ -80,7 +80,6 @@ static fixed_t planeheight;
 
 // killough 2/8/98: make variables static
 
-static fixed_t basexscale, baseyscale;
 static fixed_t cachedheight[MAX_SCREENHEIGHT];
 static fixed_t cacheddistance[MAX_SCREENHEIGHT];
 static fixed_t cachedxstep[MAX_SCREENHEIGHT];
@@ -108,8 +107,6 @@ void R_InitPlanes (void)
 // Uses global vars:
 //  planeheight
 //  ds_source
-//  basexscale
-//  baseyscale
 //  viewx
 //  viewy
 //  xoffs
@@ -146,8 +143,9 @@ static void R_MapPlane(int y, int x1, int x2)
     {
       cachedheight[y] = planeheight;
       distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
-      ds_xstep = cachedxstep[y] = FixedDiv(FixedMul(viewsin, planeheight), dy);
-      ds_ystep = cachedystep[y] = FixedDiv(FixedMul(viewcos, planeheight), dy);
+      // [FG] avoid right-shifting in FixedMul() followed by left-shifting in FixedDiv()
+      ds_xstep = cachedxstep[y] = (fixed_t)((int64_t)viewsin * planeheight / dy);
+      ds_ystep = cachedystep[y] = (fixed_t)((int64_t)viewcos * planeheight / dy);
     }
   else
     {
@@ -186,7 +184,6 @@ static void R_MapPlane(int y, int x1, int x2)
 void R_ClearPlanes(void)
 {
   int i;
-  angle_t angle;
 
   // opening / clipping determination
   for (i=0 ; i<viewwidth ; i++)
@@ -199,13 +196,7 @@ void R_ClearPlanes(void)
   lastopening = openings;
 
   // texture calculation
-  memset (cachedheight, 0, sizeof(cachedheight));
-
-  // left to right mapping
-  angle = (viewangle-ANG90)>>ANGLETOFINESHIFT;
-  // scale will be unit scale at SCREENWIDTH/2 distance
-  basexscale = FixedDiv (finecosine[angle],centerxfrac);
-  baseyscale = -FixedDiv (finesine[angle],centerxfrac);
+  memset(cachedheight, 0, viewheight * sizeof(*cachedheight));
 }
 
 // New function, by Lee Killough
@@ -237,7 +228,7 @@ visplane_t *R_DupPlane(const visplane_t *pl, int start, int stop)
       new_pl->yoffs = pl->yoffs;
       new_pl->minx = start;
       new_pl->maxx = stop;
-      memset(new_pl->top, 0xff, sizeof new_pl->top);
+      memset(new_pl->top, UCHAR_MAX, viewwidth * sizeof(*new_pl->top));
 
       return new_pl;
 }
@@ -254,7 +245,17 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel,
   unsigned hash;                      // killough
 
   if (picnum == skyflatnum || picnum & PL_SKYFLAT)  // killough 10/98
-    lightlevel = height = 0;   // killough 7/19/98: most skies map together
+  {
+    lightlevel = 0;   // killough 7/19/98: most skies map together
+
+    // haleyjd 05/06/08: but not all. If height > viewpoint.z, set height to 1
+    // instead of 0, to keep ceilings mapping with ceilings, and floors mapping
+    // with floors.
+    if (height > viewz)
+      height = 1;
+    else
+      height = 0;
+  }
 
   // New visplane algorithm uses hash table -- killough
   hash = visplane_hash(picnum,lightlevel,height);
@@ -277,7 +278,7 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel,
   check->xoffs = xoffs;               // killough 2/28/98: Save offsets
   check->yoffs = yoffs;
 
-  memset (check->top, 0xff, sizeof check->top);
+  memset(check->top, UCHAR_MAX, viewwidth * sizeof(*check->top));
 
   return check;
 }
@@ -299,7 +300,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
   else
     unionh  = pl->maxx, intrh  = stop;
 
-  for (x=intrl ; x <= intrh && pl->top[x] == 0xffffffffu; x++) // [FG] 32-bit integer math
+  for (x=intrl ; x <= intrh && pl->top[x] == USHRT_MAX; x++)
     ;
 
   if (x > intrh)
@@ -424,7 +425,7 @@ static void do_draw_plane(visplane_t *pl)
 
 	// killough 10/98: Use sky scrolling offset, and possibly flip picture
         for (x = pl->minx; (dc_x = x) <= pl->maxx; x++)
-          if ((unsigned)(dc_yl = pl->top[x]) <= (dc_yh = pl->bottom[x])) // [FG] 32-bit integer math
+          if ((dc_yl = pl->top[x]) != USHRT_MAX && dc_yl <= (dc_yh = pl->bottom[x]))
             {
               dc_source = R_GetColumn(texture, ((an + xtoskyangle[x])^flip) >>
 				      ANGLETOSKYSHIFT);
@@ -464,7 +465,7 @@ static void do_draw_plane(visplane_t *pl)
 
         stop = pl->maxx + 1;
         planezlight = zlight[light];
-        pl->top[pl->minx-1] = pl->top[stop] = 0xffffffffu; // [FG] 32-bit integer math
+        pl->top[pl->minx-1] = pl->top[stop] = USHRT_MAX;
 
         for (x = pl->minx ; x <= stop ; x++)
           R_MakeSpans(x,pl->top[x-1],pl->bottom[x-1],pl->top[x],pl->bottom[x]);
