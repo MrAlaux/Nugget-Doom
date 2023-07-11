@@ -756,12 +756,20 @@ static void saveg_read_pspdef_t(pspdef_t *str)
 
     // [Nugget] fixed_t dy;
     str->dy = saveg_read32();
+
+    // [Nugget] fixed_t wix;
+    str->wix = saveg_read32();
+
+    // [Nugget] fixed_t wiy;
+    str->wiy = saveg_read32();
     }
     else
     {
         str->sx2 = str->sx;
         str->sy2 = str->sy;
         str->dy = 0; // [Nugget]
+        str->wix = 0; // [Nugget]
+        str->wiy = 0; // [Nugget]
     }
 }
 
@@ -794,6 +802,12 @@ static void saveg_write_pspdef_t(pspdef_t *str)
 
     // [Nugget] fixed_t dy;
     saveg_write32(str->dy);
+
+    // [Nugget] fixed_t wix;
+    saveg_write32(str->wix);
+
+    // [Nugget] fixed_t wiy;
+    saveg_write32(str->wiy);
 }
 
 //

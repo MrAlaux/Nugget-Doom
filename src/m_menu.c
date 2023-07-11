@@ -3187,6 +3187,7 @@ enum {
   weap2_bobbing,
   weap2_bobstyle,
   weap2_squat,
+  weap2_inertia,
   weap2_transpspr,
   weap2_recoilpitch,
   weap2_berserk,
@@ -3278,6 +3279,9 @@ setup_menu_t weap_settings2[] =
 
   {"Squat Weapon Down On Impact", S_YESNO|S_STRICT, m_null, M_X, // [Nugget]
    M_Y + weap2_squat*M_SPC, {"weaponsquat"}},
+
+  {"Weapon Inertia", S_YESNO|S_STRICT, m_null, M_X, // [Nugget]
+   M_Y + weap2_inertia*M_SPC, {"weapon_inertia"}},
 
   {"Translucent Flashes", S_YESNO|S_STRICT, m_null, M_X, // [Nugget]
    M_Y + weap2_transpspr*M_SPC, {"translucent_pspr"}},

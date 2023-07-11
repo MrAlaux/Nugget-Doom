@@ -497,6 +497,7 @@ enum {
   BOBSTYLE_QUAKE,
 }; extern int bobbing_style;
 extern int weaponsquat;
+extern int weapon_inertia;
 extern int translucent_pspr;
 extern int show_berserk;
 

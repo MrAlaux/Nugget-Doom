@@ -171,6 +171,7 @@ int no_hor_autoaim;
 int weapon_bobbing_percentage;
 int bobbing_style;
 int weaponsquat;
+int weapon_inertia;
 int translucent_pspr;
 int show_berserk;
 

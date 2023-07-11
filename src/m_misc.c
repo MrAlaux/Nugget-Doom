@@ -922,6 +922,13 @@ default_t defaults[] = {
   },
 
   {
+    "weapon_inertia",
+    (config_t *) &weapon_inertia, NULL,
+    {0}, {0,1}, number, ss_weap, wad_no,
+    "1 to enable weapon inertia"
+  },
+
+  {
     "translucent_pspr",
     (config_t *) &translucent_pspr, NULL,
     {0}, {0,1}, number, ss_weap, wad_yes,
