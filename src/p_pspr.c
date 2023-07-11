@@ -1288,13 +1288,6 @@ static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
 
     if (mouselook || padlook)
       WeaponInertiaVertical(player, psp);
-    else
-      psp->wiy = 0;
-  }
-  else
-  {
-    psp->wix = 0;
-    psp->wiy = 0;
   }
 }
 
