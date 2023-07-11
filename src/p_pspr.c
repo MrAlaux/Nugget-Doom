@@ -1242,11 +1242,15 @@ static void WeaponInertiaHorizontal(player_t* player, pspdef_t *psp)
     psp->wix += clockwise ? -delta : delta;
   }
 
-  psp->wix >>= 1;
-  if (abs(psp->wix) < FRACUNIT)
-    psp->wix = 0;
+  if (psp->wix != 0)
+  {
+    psp->wix >>= 1;
+    if (abs(psp->wix) < FRACUNIT)
+      psp->wix = 0;
+  }
 
-  psp->sx2 += psp->wix;
+  if (psp->wix != 0)
+    psp->sx2 += psp->wix;
 }
 
 static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
@@ -1260,9 +1264,12 @@ static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
     psp->wiy += lookdir < 0 ? -delta : delta;
   }
 
-  psp->wiy >>= 1;
-  if (abs(psp->wiy) < FRACUNIT)
-    psp->wiy = 0;
+  if (psp->wiy != 0)
+  {
+    psp->wiy >>= 1;
+    if (abs(psp->wiy) < FRACUNIT)
+      psp->wiy = 0;
+  }
 
   if (psp->wiy != 0)
   {
