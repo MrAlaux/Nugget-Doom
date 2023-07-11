@@ -1381,8 +1381,6 @@ void P_MovePsprites(player_t *player)
   player->psprites[ps_flash].dy = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].sx2 = player->psprites[ps_weapon].sx2;
   player->psprites[ps_flash].sy2 = player->psprites[ps_weapon].sy2;
-  player->psprites[ps_flash].wix = player->psprites[ps_weapon].wix;
-  player->psprites[ps_flash].wiy = player->psprites[ps_weapon].wiy;
 }
 
 //
