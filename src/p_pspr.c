@@ -1282,7 +1282,7 @@ static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
 
 static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
 {
-  if (weapon_inertia)
+  if (STRICTMODE(weapon_inertia))
   {
     WeaponInertiaHorizontal(player, psp);
 
