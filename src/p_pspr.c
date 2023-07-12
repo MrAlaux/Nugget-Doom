@@ -1248,9 +1248,6 @@ static void WeaponInertiaHorizontal(player_t* player, pspdef_t *psp)
     if (abs(psp->wix) < FRACUNIT)
       psp->wix = 0;
   }
-
-  if (psp->wix != 0)
-    psp->sx2 += psp->wix;
 }
 
 static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
@@ -1274,9 +1271,8 @@ static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
   if (psp->wiy != 0)
   {
     const fixed_t min = WEAPONTOP - (screenblocks < 11 ? (WEAPONTOP >> 1) : 0);
-    psp->sy2 += psp->wiy;
-    if (psp->sy2 < min)
-      psp->sy2 = min;
+    if (psp->sy2 + psp->wiy < min)
+      psp->wiy = min - psp->sy2;
   }
 }
 
@@ -1284,6 +1280,13 @@ static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
 {
   if (STRICTMODE(weapon_inertia))
   {
+    if (player->attackdown || !psp->state || psp->state->misc1 || player->switching)
+    {
+      psp->wix = 0;
+      psp->wiy = 0;
+      return;
+    }
+
     WeaponInertiaHorizontal(player, psp);
 
     if (mouselook || padlook)
@@ -1322,10 +1325,7 @@ void P_MovePsprites(player_t *player)
   // [Nugget] Calculate sx2 and sy2 separately from sx and sy
   if ((!player->attackdown || center_weapon_strict == WEAPON_BOBBING) // [FG] not attacking means idle
       && psp->state && !psp->state->misc1 && !player->switching)
-  {
-    P_NuggetBobbing(player);
-    P_NuggetWeaponInertia(player, psp);
-  }
+  { P_NuggetBobbing(player); }
 
   if (psp->state)
   {
@@ -1370,6 +1370,8 @@ void P_MovePsprites(player_t *player)
 
     if (psp->dy < 0) { psp->dy = 0; }
   }
+
+  P_NuggetWeaponInertia(player, psp);
 
   player->psprites[ps_flash].dy = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].sx2 = player->psprites[ps_weapon].sx2;
