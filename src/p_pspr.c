@@ -1294,6 +1294,15 @@ static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
   }
 }
 
+void P_NuggetResetWeaponInertia(void)
+{
+  if (gamestate == GS_LEVEL && playeringame[displayplayer])
+  {
+    pspdef_t *psp = &players[displayplayer].psprites[ps_weapon];
+    psp->wix = psp->wiy = 0;
+  }
+}
+
 //
 // P_MovePsprites
 // Called every tic by player thinking routine.

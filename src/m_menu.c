@@ -3250,6 +3250,11 @@ static const char *bobbing_styles[] = {
   "Vanilla", "Inv. Vanilla", "Alpha", "Inv. Alpha", "Smooth", "Inv. Smooth", "Quake", NULL
 };
 
+static void M_NuggetResetWeaponInertia(void)
+{
+  P_NuggetResetWeaponInertia();
+}
+
 setup_menu_t weap_settings2[] =
 {
   // [Nugget] These three
@@ -3281,7 +3286,7 @@ setup_menu_t weap_settings2[] =
    M_Y + weap2_squat*M_SPC, {"weaponsquat"}},
 
   {"Weapon Inertia", S_YESNO|S_STRICT, m_null, M_X, // [Nugget]
-   M_Y + weap2_inertia*M_SPC, {"weapon_inertia"}},
+   M_Y + weap2_inertia*M_SPC, {"weapon_inertia"}, 0, M_NuggetResetWeaponInertia},
 
   {"Translucent Flashes", S_YESNO|S_STRICT, m_null, M_X, // [Nugget]
    M_Y + weap2_transpspr*M_SPC, {"translucent_pspr"}},

@@ -80,6 +80,8 @@ void P_DropWeapon(struct player_s *player);
 void P_SubtractAmmo(struct player_s *player, int compat_amt);
 void P_SetPspritePtr(struct player_s *player, pspdef_t *psp, statenum_t stnum);
 
+void P_NuggetResetWeaponInertia(void);
+
 #endif
 
 //----------------------------------------------------------------------------
