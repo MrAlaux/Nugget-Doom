@@ -844,7 +844,7 @@ void ST_drawWidgets(void)
 
         if (lump[i] >= 0)
         { V_DrawPatch(nughud.patches[i].x + DELTA(nughud.patches[i].wide),
-                      nughud.patches[i].y, FG, W_CacheLumpNum(lump[i], PU_CACHE)); }
+                      nughud.patches[i].y, FG, W_CacheLumpNum(lump[i], PU_STATIC)); }
       }
 
   // used by w_arms[] widgets
@@ -895,7 +895,7 @@ void ST_drawWidgets(void)
       }
       
       if (lump >= 0) {
-        patch = W_CacheLumpNum(lump, PU_CACHE);
+        patch = W_CacheLumpNum(lump, PU_STATIC);
         
         // [crispy] (23,179) is the center of the Ammo widget
         // [Nugget] Nugget HUD
