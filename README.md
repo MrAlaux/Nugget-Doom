@@ -26,6 +26,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - Toggle to **stretch viewport to fit window** (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Gamma Correction slider ranging from 0.50 to 2.0 in steps of 0.05**
 - Toggle for **Gamma Correction key cycling**, through either original or extended gamma levels (CFG-Only: `gammacycle`)
+- **Menu items for _Air Absorption_ and _Doppler Effect_**, both of which are set to 5 by default
 - **Tweaked _Stretch Short Skies_ algorithm**
 - _**Screen Wipe Style**_ selection:
   - _"Seizure"_ (**Warning**: this one might legitimately be seizure-inducing, use with caution);

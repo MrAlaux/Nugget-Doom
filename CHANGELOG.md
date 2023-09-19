@@ -10,7 +10,8 @@
   - Added three-lined widget toggles to NUGHUD;
   - Disabled Powerup Timers in Strict Mode;
   - Changed internal values of Nugget's player cheats;
-  - Maintained `-cdrom` command-line parameter.
+  - Maintained `-cdrom` command-line parameter;
+  - Added menu items for _Air Absorption_ and _Doppler Effect_, and set both to 5 by default.
 - **Added Explosive Hitscan support to MDK Fist**
 - **Lowered MDK (Fist) attack's autoaim range** from 2048 to 1024 units
 - **Moved `comp_bruistarget` menu item to the top of its list**

@@ -456,14 +456,14 @@ default_t defaults[] = {
   {
     "snd_absorption",
     (config_t *) &snd_absorption, NULL,
-    {5}, {0, 10}, number, ss_none, wad_no,
+    {5}, {0, 10}, number, ss_none, wad_no, // [Nugget] Enabled by default
     "[OpenAL 3D] Air absorption effect (0 = Off, 10 = Max)"
   },
 
   {
     "snd_doppler",
     (config_t *) &snd_doppler, NULL,
-    {5}, {0, 10}, number, ss_none, wad_no,
+    {5}, {0, 10}, number, ss_none, wad_no, // [Nugget] Enabled by default
     "[OpenAL 3D] Doppler effect (0 = Off, 10 = Max)"
   },
 
