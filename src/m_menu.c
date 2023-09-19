@@ -4143,6 +4143,8 @@ enum {
   gen2_sndresampler,
   gen2_sndmodule,
   gen2_sndhrtf,
+  gen2_sndabsorption,
+  gen2_snddoppler,
   gen2_gap2,
 
   gen2_musicbackend,
@@ -4206,6 +4208,8 @@ static const char *sound_resampler_menu_strings[] = {
 static void M_UpdateAdvancedSoundItems(void)
 {
   DISABLE_ITEM(snd_module != SND_MODULE_3D, gen_settings2[gen2_sndhrtf]);
+  DISABLE_ITEM(snd_module != SND_MODULE_3D, gen_settings2[gen2_sndabsorption]);
+  DISABLE_ITEM(snd_module != SND_MODULE_3D, gen_settings2[gen2_snddoppler]);
 }
 
 static void M_SetSoundModule(void)
@@ -4336,6 +4340,12 @@ setup_menu_t gen_settings2[] = { // General Settings screen2
 
   {"Headphones Mode", S_YESNO, m_null, M_X,
    M_Y + gen2_sndhrtf*M_SPC, {"snd_hrtf"}, 0, M_SetSoundModule},
+
+  {"Air Absorption", S_THERMO, m_null, M_X_THRM,
+   M_Y + gen2_sndabsorption*M_SPC, {"snd_absorption"}, 0, M_UpdateUserSoundSettings},
+
+  {"Doppler Effect", S_THERMO, m_null, M_X_THRM,
+   M_Y+ gen2_snddoppler*M_SPC, {"snd_doppler"}, 0, M_UpdateUserSoundSettings},
 
   {"", S_SKIP, m_null, M_X, M_Y + gen2_gap2*M_SPC},
 
