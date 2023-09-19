@@ -340,6 +340,10 @@ static void ResetParams(void)
     const ALint default_orientation[] = {0, 0, -1, 0, 1, 0};
     int i;
 
+    // [Nugget] Initialize these here
+    S_CLIPPING_DIST = (1200 << FRACBITS) * (STRICTMODE(s_clipping_dist_x2) + 1); // Double sound clipping distance
+    S_ATTENUATOR = (S_CLIPPING_DIST - S_CLOSE_DIST) >> FRACBITS;
+
     // Source parameters.
     for (i = 0; i < MAX_CHANNELS; i++)
     {

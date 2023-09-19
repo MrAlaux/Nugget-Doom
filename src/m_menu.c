@@ -4753,7 +4753,7 @@ setup_menu_t gen_settings7[] = { // [Nugget]
     {"Screen Wipe Speed Percentage",  S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_wipespeed     * M_SPC, {"wipe_speed_percentage"}},
   {"", S_SKIP, m_null, M_X, M_Y + gen7_stub1*M_SPC},
   {"Nugget - Miscellaneous", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title2 * M_SPC},
-    {"Sound Hearing Distance",        S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen7_sclipdist     * M_SPC, {"s_clipping_dist_x2"}, 0, NULL, s_clipping_dists},
+    {"Sound Hearing Distance",        S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen7_sclipdist     * M_SPC, {"s_clipping_dist_x2"}, 0, M_SetSoundModule, s_clipping_dists},
     {"One-Key Quick Save/Load",       S_YESNO,           m_null, M_X, M_Y + gen7_quicksaveload * M_SPC, {"one_key_saveload"}},
     {"Play Internal Demos",           S_CHOICE,          m_null, M_X, M_Y + gen7_nopagetic     * M_SPC, {"no_page_ticking"}, 0, NULL, page_ticking_conds},
     {"Quick \"Quit Game\"",           S_YESNO,           m_null, M_X, M_Y + gen7_quickexit     * M_SPC, {"quick_quitgame"}},
