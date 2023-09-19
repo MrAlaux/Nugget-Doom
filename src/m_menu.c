@@ -4345,7 +4345,7 @@ setup_menu_t gen_settings2[] = { // General Settings screen2
    M_Y + gen2_sndabsorption*M_SPC, {"snd_absorption"}, 0, M_UpdateUserSoundSettings},
 
   {"Doppler Effect", S_THERMO, m_null, M_X_THRM,
-   M_Y+ gen2_snddoppler*M_SPC, {"snd_doppler"}, 0, M_UpdateUserSoundSettings},
+   M_Y + gen2_snddoppler*M_SPC, {"snd_doppler"}, 0, M_UpdateUserSoundSettings},
 
   {"", S_SKIP, m_null, M_X, M_Y + gen2_gap2*M_SPC},
 
