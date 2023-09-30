@@ -404,8 +404,7 @@ void R_DrawSkyColumn(void)
 
 // [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
 int fuzzdark_mode;
-#define FUZZDARK    ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos] && count != first_count) ? 0 : 6*256)
-#define FUZZDARKCUT ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : 6*256)
+#define FUZZDARK    ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : 6*256)
 #define FUZZLINE    (linesize * (fuzzoffset[fuzzpos] ? -1 : 1))
 #define FUZZLINECUT (linesize * fuzzoffset[fuzzpos])
 
@@ -453,7 +452,7 @@ void R_SetFuzzPosDraw(void)
 
 static void R_DrawFuzzColumn_orig(void)
 { 
-  int      count, first_count;
+  int      count;
   byte     *dest; 
   boolean  cutoff = false;
 
@@ -480,8 +479,6 @@ static void R_DrawFuzzColumn_orig(void)
   // Looks like an attempt at dithering,
   // using the colormap #6 (of 0-31, a bit brighter than average).
 
-  first_count = count;
-
   do 
     {
       // Lookup framebuffer, and retrieve
@@ -506,7 +503,7 @@ static void R_DrawFuzzColumn_orig(void)
   // draw one extra line using only pixels of that line and the one above
   if (cutoff)
   {
-    *dest = fullcolormap[FUZZDARKCUT + dest[FUZZLINECUT]];
+    *dest = fullcolormap[FUZZDARK + dest[FUZZLINECUT]];
   }
 }
 
@@ -517,7 +514,7 @@ static void R_DrawFuzzColumn_orig(void)
 
 static void R_DrawFuzzColumn_block(void)
 {
-  int i, count, first_count;
+  int i, count;
   byte *dest;
   boolean cutoff = false;
   const int hires_size = 1 << hires;
@@ -546,8 +543,6 @@ static void R_DrawFuzzColumn_block(void)
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
 
-  first_count = count;
-
   do
     {
       // [FG] draw only even pixels as 2x2 squares
@@ -566,7 +561,7 @@ static void R_DrawFuzzColumn_block(void)
 
   if (cutoff)
     {
-      const byte fuzz = fullcolormap[FUZZDARKCUT + dest[hires_size * FUZZLINECUT]];
+      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINECUT]];
 
       for (i = 0; i < hires_size; i++)
       {
