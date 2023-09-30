@@ -457,17 +457,6 @@ static void R_DrawFuzzColumn_orig(void)
   byte     *dest; 
   boolean  cutoff = false;
 
-  // Adjust borders. Low... 
-  if (!dc_yl) 
-    dc_yl = 1;
-
-  // .. and high.
-  if (dc_yh == viewheight-1) 
-  {
-    dc_yh = viewheight - 2; 
-    cutoff = true;
-  }
-                 
   count = dc_yh - dc_yl + 1;
 
   // Zero length.
@@ -541,15 +530,6 @@ static void R_DrawFuzzColumn_block(void)
   // [FG] draw only even pixels
   dc_yl &= (int)~hires_mult;
   dc_yh &= (int)~hires_mult;
-
-  if (!dc_yl)
-    dc_yl = hires_size;
-
-  if (dc_yh == viewheight - hires_size)
-  {
-    dc_yh = viewheight - 2 * hires_size;
-    cutoff = true;
-  }
 
   count = (dc_yh - dc_yl + hires_size) >> hires;
 
