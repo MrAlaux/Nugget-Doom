@@ -454,7 +454,8 @@ static void R_DrawFuzzColumn_orig(void)
 { 
   int      count;
   byte     *dest; 
-  boolean  cutoff = false;
+  const boolean cutoff_yl = (dc_yl == 0);
+  const boolean cutoff_yh = (dc_yh == viewheight - 1);
 
   count = dc_yh - dc_yl + 1;
 
@@ -479,7 +480,19 @@ static void R_DrawFuzzColumn_orig(void)
   // Looks like an attempt at dithering,
   // using the colormap #6 (of 0-31, a bit brighter than average).
 
-  do 
+  // Pixel at the top edge. Skip for now.
+  if (cutoff_yl)
+  {
+    dest += linesize;
+    count--;
+  }
+
+  // Pixel at the bottom edge. Reduce count and process later.
+  if (cutoff_yh)
+    count--;
+
+  // Pixels in the middle of the column.
+  while (count-- > 0)
     {
       // Lookup framebuffer, and retrieve
       // a pixel that is either one row
@@ -497,11 +510,10 @@ static void R_DrawFuzzColumn_orig(void)
       // Clamp table lookup index.
       fuzzpos = ++fuzzpos % FUZZTABLE;
     } 
-  while (--count);
 
   // [crispy] if the line at the bottom had to be cut off,
   // draw one extra line using only pixels of that line and the one above
-  if (cutoff)
+  if (cutoff_yh)
   {
     *dest = fullcolormap[FUZZDARK + dest[FUZZLINECUT]];
   }
@@ -516,7 +528,7 @@ static void R_DrawFuzzColumn_block(void)
 {
   int i, count;
   byte *dest;
-  boolean cutoff = false;
+  boolean cutoff_yl, cutoff_yh;
   const int hires_size = 1 << hires;
   const int hires_mult = hires_size - 1;
 
@@ -533,6 +545,9 @@ static void R_DrawFuzzColumn_block(void)
   if (count <= 0)
     return;
 
+  cutoff_yl = (dc_yl == 0);
+  cutoff_yh = (dc_yh == viewheight - hires_size);
+
 #ifdef RANGECHECK
   if ((unsigned) dc_x >= MAX_SCREENWIDTH
       || dc_yl < 0
@@ -543,7 +558,23 @@ static void R_DrawFuzzColumn_block(void)
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
 
-  do
+  // Pixel at the top edge. Skip for now.
+  if (cutoff_yl)
+  {
+    for (i = 0; i < hires_size; i++)
+    {
+      dest += linesize;
+    }
+
+    count--;
+  }
+
+  // Pixel at the bottom edge. Reduce count and process later.
+  if (cutoff_yh)
+    count--;
+
+  // Pixels in the middle of the column.
+  while (count-- > 0)
     {
       // [FG] draw only even pixels as 2x2 squares
       //      using the same fuzzoffset value
@@ -557,9 +588,9 @@ static void R_DrawFuzzColumn_block(void)
 
       fuzzpos = ++fuzzpos % FUZZTABLE;
     }
-  while (--count);
 
-  if (cutoff)
+  // Pixel at the bottom edge. Don't copy from below.
+  if (cutoff_yh)
     {
       const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINECUT]];
 
