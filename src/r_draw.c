@@ -510,8 +510,7 @@ static void R_DrawFuzzColumn_orig(void)
       dest += linesize;             // killough 11/98
 
       // Clamp table lookup index.
-      fuzzpos++;
-      fuzzpos &= (fuzzpos - FUZZTABLE) >> (8*sizeof fuzzpos-1); //killough 1/99
+      fuzzpos = ++fuzzpos % FUZZTABLE;
     } 
   while (--count);
 
@@ -584,8 +583,7 @@ static void R_DrawFuzzColumn_block(void)
         dest += linesize;
       }
 
-      fuzzpos++;
-      fuzzpos &= (fuzzpos - FUZZTABLE) >> (8*sizeof fuzzpos-1);
+      fuzzpos = ++fuzzpos % FUZZTABLE;
     }
   while (--count);
 
