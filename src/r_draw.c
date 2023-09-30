@@ -405,8 +405,7 @@ void R_DrawSkyColumn(void)
 // [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
 int fuzzdark_mode;
 #define FUZZDARK    ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : 6*256)
-#define FUZZLINE    (linesize * (fuzzoffset[fuzzpos] ? -1 : 1))
-#define FUZZLINECUT (linesize * fuzzoffset[fuzzpos])
+#define FUZZLINE(a, b) (linesize * (fuzzoffset[fuzzpos] ? (a) : (b)))
 
 #define FUZZTABLE 50 
 
@@ -504,7 +503,7 @@ static void R_DrawFuzzColumn_orig(void)
       // fraggle 1/8/2000: fix with the bugfix from lees
       // why_i_left_doom.html
 
-      *dest = fullcolormap[FUZZDARK + dest[FUZZLINE]];
+      *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(-1, 1)]];
       dest += linesize;             // killough 11/98
 
       // Clamp table lookup index.
@@ -515,7 +514,7 @@ static void R_DrawFuzzColumn_orig(void)
   // draw one extra line using only pixels of that line and the one above
   if (cutoff_yh)
   {
-    *dest = fullcolormap[FUZZDARK + dest[FUZZLINECUT]];
+    *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(-1, 0)]];
   }
 }
 
@@ -578,7 +577,7 @@ static void R_DrawFuzzColumn_block(void)
     {
       // [FG] draw only even pixels as 2x2 squares
       //      using the same fuzzoffset value
-      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE]];
+      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE(-1, 1)]];
 
       for (i = 0; i < hires_size; i++)
       {
@@ -592,7 +591,7 @@ static void R_DrawFuzzColumn_block(void)
   // Pixel at the bottom edge. Don't copy from below.
   if (cutoff_yh)
     {
-      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINECUT]];
+      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE(-1, 0)]];
 
       for (i = 0; i < hires_size; i++)
       {
