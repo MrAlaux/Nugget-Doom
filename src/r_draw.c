@@ -468,10 +468,10 @@ static void R_DrawFuzzColumn_orig(void)
     cutoff = true;
   }
                  
-  count = dc_yh - dc_yl; 
+  count = dc_yh - dc_yl + 1;
 
   // Zero length.
-  if (count < 0) 
+  if (count <= 0)
     return; 
     
 #ifdef RANGECHECK 
@@ -491,7 +491,6 @@ static void R_DrawFuzzColumn_orig(void)
   // Looks like an attempt at dithering,
   // using the colormap #6 (of 0-31, a bit brighter than average).
 
-  count++;        // killough 1/99: minor tuning
   first_count = count;
 
   do 
@@ -552,9 +551,9 @@ static void R_DrawFuzzColumn_block(void)
     cutoff = true;
   }
 
-  count = dc_yh - dc_yl;
+  count = (dc_yh - dc_yl + hires_size) >> hires;
 
-  if (count < 0)
+  if (count <= 0)
     return;
 
 #ifdef RANGECHECK
@@ -567,8 +566,6 @@ static void R_DrawFuzzColumn_block(void)
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
 
-  count += hires_size;
-  count >>= hires;
   first_count = count;
 
   do
