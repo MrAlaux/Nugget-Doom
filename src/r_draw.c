@@ -479,10 +479,12 @@ static void R_DrawFuzzColumn_orig(void)
   // Looks like an attempt at dithering,
   // using the colormap #6 (of 0-31, a bit brighter than average).
 
-  // Pixel at the top edge. Skip for now.
+  // Pixel at the top edge. Don't copy from above.
   if (cutoff_yl)
   {
+    *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(0, 1)]];
     dest += linesize;
+    fuzzpos = ++fuzzpos % FUZZTABLE;
     count--;
   }
 
@@ -515,6 +517,7 @@ static void R_DrawFuzzColumn_orig(void)
   if (cutoff_yh)
   {
     *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(-1, 0)]];
+    fuzzpos = ++fuzzpos % FUZZTABLE;
   }
 }
 
@@ -557,14 +560,18 @@ static void R_DrawFuzzColumn_block(void)
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
 
-  // Pixel at the top edge. Skip for now.
+  // Pixel at the top edge. Don't copy from above.
   if (cutoff_yl)
   {
+    const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE(0, 1)]];
+
     for (i = 0; i < hires_size; i++)
     {
+      memset(dest, fuzz, hires_size);
       dest += linesize;
     }
 
+    fuzzpos = ++fuzzpos % FUZZTABLE;
     count--;
   }
 
@@ -598,6 +605,8 @@ static void R_DrawFuzzColumn_block(void)
         memset(dest, fuzz, hires_size);
         dest += linesize;
       }
+
+      fuzzpos = ++fuzzpos % FUZZTABLE;
     }
 }
 
