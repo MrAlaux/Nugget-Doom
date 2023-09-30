@@ -403,8 +403,9 @@ void R_DrawSkyColumn(void)
 //
 
 // [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
-int fuzzdark_mode;
-#define FUZZDARK    ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : 6*256)
+int fuzzdark_mode, fuzzstable;
+#define FUZZMAP (6*256)
+#define FUZZDARK ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : FUZZMAP)
 #define FUZZLINE(a, b) (linesize * (fuzzoffset[fuzzpos] ? (a) : (b)))
 
 #define FUZZTABLE 50 
@@ -494,13 +495,20 @@ static void R_DrawFuzzColumn_orig(void)
   // Pixel at the top edge. Don't copy from above.
   if (cutoff_yl)
   {
-    DrawFuzzPixel(FUZZDARK, &dest, 0, 1);
+    DrawFuzzPixel(fuzzstable ? FUZZMAP : FUZZDARK, &dest, 0, 1);
     count--;
   }
 
   // Pixel at the bottom edge. Reduce count and process later.
   if (cutoff_yh)
     count--;
+
+  // First pixel in the column.
+  if (!cutoff_yl && count > 0)
+  {
+    DrawFuzzPixel(fuzzstable ? FUZZMAP : FUZZDARK, &dest, -1, 1);
+    count--;
+  }
 
   // Pixels in the middle of the column.
   while (count-- > 0)
@@ -571,13 +579,20 @@ static void R_DrawFuzzColumn_block(void)
   // Pixel at the top edge. Don't copy from above.
   if (cutoff_yl)
   {
-    DrawFuzzBlock(FUZZDARK, &dest, hires_size, 0, 1);
+    DrawFuzzBlock(fuzzstable ? FUZZMAP : FUZZDARK, &dest, hires_size, 0, 1);
     count--;
   }
 
   // Pixel at the bottom edge. Reduce count and process later.
   if (cutoff_yh)
     count--;
+
+  // First pixel in the column.
+  if (!cutoff_yl && count > 0)
+  {
+    DrawFuzzBlock(fuzzstable ? FUZZMAP : FUZZDARK, &dest, hires_size, -1, 1);
+    count--;
+  }
 
   // Pixels in the middle of the column.
   while (count-- > 0)
