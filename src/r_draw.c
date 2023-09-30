@@ -25,6 +25,7 @@
 #include "r_main.h"
 #include "v_video.h"
 #include "m_menu.h"
+#include "m_random.h" // Woof_Random()
 
 #define MAXWIDTH  MAX_SCREENWIDTH          /* kilough 2/8/98 */
 #define MAXHEIGHT MAX_SCREENHEIGHT
@@ -403,8 +404,8 @@ void R_DrawSkyColumn(void)
 //
 
 // [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
-int fuzzdark_mode, fuzzstable;
-#define FUZZMAP (6*256)
+int fuzzdark_mode, fuzzstable, fuzznoise;
+#define FUZZMAP (256 * ((STRICTMODE(fuzzdark_mode) && fuzznoise && Woof_Random() < 32) ? (Woof_Random() & 1 ? 4 : 8) : 6))
 #define FUZZDARK ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : FUZZMAP)
 #define FUZZLINE(a, b) (linesize * (fuzzoffset[fuzzpos] ? (a) : (b)))
 
