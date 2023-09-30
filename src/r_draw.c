@@ -449,6 +449,25 @@ void R_SetFuzzPosDraw(void)
 //  i.e. spectres and invisible players.
 //
 
+static void DrawFuzzPixel(int dark, byte **dest, int a, int b)
+{
+  // Looks like an attempt at dithering,
+  // using the colormap #6 (of 0-31, a bit brighter than average).
+
+  // Lookup framebuffer, and retrieve
+  // a pixel that is either one row
+  // above or below the current one.
+  // Add index from colormap to index.
+  // killough 3/20/98: use fullcolormap instead of colormaps
+  // killough 11/98: use linesize
+
+  **dest = fullcolormap[dark + (*dest)[FUZZLINE(a, b)]];
+  *dest += linesize;             // killough 11/98
+
+  // Clamp table lookup index.
+  fuzzpos = ++fuzzpos % FUZZTABLE;
+}
+
 static void R_DrawFuzzColumn_orig(void)
 { 
   int      count;
@@ -470,21 +489,12 @@ static void R_DrawFuzzColumn_orig(void)
              dc_yl, dc_yh, dc_x);
 #endif
 
-  // Keep till detailshift bug in blocky mode fixed,
-  //  or blocky mode removed.
-
-  // Does not work with blocky mode.
   dest = ylookup[dc_yl] + columnofs[dc_x];
-  
-  // Looks like an attempt at dithering,
-  // using the colormap #6 (of 0-31, a bit brighter than average).
 
   // Pixel at the top edge. Don't copy from above.
   if (cutoff_yl)
   {
-    *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(0, 1)]];
-    dest += linesize;
-    fuzzpos = ++fuzzpos % FUZZTABLE;
+    DrawFuzzPixel(FUZZDARK, &dest, 0, 1);
     count--;
   }
 
@@ -494,30 +504,14 @@ static void R_DrawFuzzColumn_orig(void)
 
   // Pixels in the middle of the column.
   while (count-- > 0)
-    {
-      // Lookup framebuffer, and retrieve
-      // a pixel that is either one row
-      // above or below the current one.
-      // Add index from colormap to index.
-      // killough 3/20/98: use fullcolormap instead of colormaps
-      // killough 11/98: use linesize
+  {
+    DrawFuzzPixel(FUZZDARK, &dest, -1, 1);
+  }
 
-      // fraggle 1/8/2000: fix with the bugfix from lees
-      // why_i_left_doom.html
-
-      *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(-1, 1)]];
-      dest += linesize;             // killough 11/98
-
-      // Clamp table lookup index.
-      fuzzpos = ++fuzzpos % FUZZTABLE;
-    } 
-
-  // [crispy] if the line at the bottom had to be cut off,
-  // draw one extra line using only pixels of that line and the one above
+  // Pixel at the bottom edge. Don't copy from below.
   if (cutoff_yh)
   {
-    *dest = fullcolormap[FUZZDARK + dest[FUZZLINE(-1, 0)]];
-    fuzzpos = ++fuzzpos % FUZZTABLE;
+    DrawFuzzPixel(FUZZDARK, &dest, -1, 0);
   }
 }
 
@@ -526,9 +520,23 @@ static void R_DrawFuzzColumn_orig(void)
 //      draw only even pixels as 2x2 squares
 //      using the same fuzzoffset value
 
+static void DrawFuzzBlock(int dark, byte **dest, int size, int a, int b)
+{
+  int i;
+  const byte fuzz = fullcolormap[dark + (*dest)[size * FUZZLINE(a, b)]];
+
+  for (i = 0; i < size; i++)
+  {
+    memset(*dest, fuzz, size);
+    *dest += linesize;
+  }
+
+  fuzzpos = ++fuzzpos % FUZZTABLE;
+}
+
 static void R_DrawFuzzColumn_block(void)
 {
-  int i, count;
+  int count;
   byte *dest;
   boolean cutoff_yl, cutoff_yh;
   const int hires_size = 1 << hires;
@@ -563,15 +571,7 @@ static void R_DrawFuzzColumn_block(void)
   // Pixel at the top edge. Don't copy from above.
   if (cutoff_yl)
   {
-    const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE(0, 1)]];
-
-    for (i = 0; i < hires_size; i++)
-    {
-      memset(dest, fuzz, hires_size);
-      dest += linesize;
-    }
-
-    fuzzpos = ++fuzzpos % FUZZTABLE;
+    DrawFuzzBlock(FUZZDARK, &dest, hires_size, 0, 1);
     count--;
   }
 
@@ -581,33 +581,15 @@ static void R_DrawFuzzColumn_block(void)
 
   // Pixels in the middle of the column.
   while (count-- > 0)
-    {
-      // [FG] draw only even pixels as 2x2 squares
-      //      using the same fuzzoffset value
-      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE(-1, 1)]];
-
-      for (i = 0; i < hires_size; i++)
-      {
-        memset(dest, fuzz, hires_size);
-        dest += linesize;
-      }
-
-      fuzzpos = ++fuzzpos % FUZZTABLE;
-    }
+  {
+    DrawFuzzBlock(FUZZDARK, &dest, hires_size, -1, 1);
+  }
 
   // Pixel at the bottom edge. Don't copy from below.
   if (cutoff_yh)
-    {
-      const byte fuzz = fullcolormap[FUZZDARK + dest[hires_size * FUZZLINE(-1, 0)]];
-
-      for (i = 0; i < hires_size; i++)
-      {
-        memset(dest, fuzz, hires_size);
-        dest += linesize;
-      }
-
-      fuzzpos = ++fuzzpos % FUZZTABLE;
-    }
+  {
+    DrawFuzzBlock(FUZZDARK, &dest, hires_size, -1, 0);
+  }
 }
 
 // [FG] spectre drawing mode: 0 original, 1 blocky (hires)
