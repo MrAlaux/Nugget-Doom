@@ -467,7 +467,7 @@ static void DrawFuzzPixel(int dark, byte **dest, int a, int b)
   *dest += linesize;             // killough 11/98
 
   // Clamp table lookup index.
-  fuzzpos = ++fuzzpos % FUZZTABLE;
+  fuzzpos = (fuzzpos + 1) % FUZZTABLE;
 }
 
 static void R_DrawFuzzColumn_orig(void)
@@ -540,7 +540,7 @@ static void DrawFuzzBlock(int dark, byte **dest, int size, int a, int b)
     *dest += linesize;
   }
 
-  fuzzpos = ++fuzzpos % FUZZTABLE;
+  fuzzpos = (fuzzpos + 1) % FUZZTABLE;
 }
 
 static void R_DrawFuzzColumn_block(void)
