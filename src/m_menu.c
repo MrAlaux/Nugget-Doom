@@ -5944,6 +5944,31 @@ enum
 // action based on the state of the system.
 //
 
+extern int fuzzstable, fuzznoise;
+static boolean FuzzTesting(int ch)
+{
+  switch (ch)
+  {
+    case KEY_F1:
+      togglemsg("Blocky: %s", hires ? ((fuzzcolumn_mode = !fuzzcolumn_mode) ? "Yes" : "No") : "N/A");
+      R_SetFuzzColumnMode();
+      break;
+    case KEY_F2:
+      togglemsg("Selective: %s", (fuzzdark_mode = !fuzzdark_mode) ? "Yes" : "No");
+      break;
+    case KEY_F3:
+      togglemsg("Stable: %s", fuzzdark_mode ? ((fuzzstable = !fuzzstable) ? "Yes" : "No") : "N/A");
+      break;
+    case KEY_F4:
+      togglemsg("Noise: %s", fuzzdark_mode ? ((fuzznoise = !fuzznoise) ? "Yes" : "No") : "N/A");
+      break;
+    default:
+      return false;
+  }
+  S_StartSound(NULL, sfx_swtchn);
+  return true;
+}
+
 boolean M_Responder (event_t* ev)
 {
   int    ch;
@@ -6190,6 +6215,9 @@ boolean M_Responder (event_t* ev)
 	  M_UpdateMouseLook();
 	  // return true; // [FG] don't let toggles eat keys
 	}
+
+      if (FuzzTesting(ch))
+        return true;
 
       if (ch == key_help)      // Help key
 	{
