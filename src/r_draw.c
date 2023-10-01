@@ -405,8 +405,10 @@ void R_DrawSkyColumn(void)
 
 // [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
 int fuzzdark_mode;
-#define FUZZMAP (256 * ((STRICTMODE(fuzzdark_mode) && Woof_Random() < 32) ? (Woof_Random() & 1 ? 4 : 8) : 6))
-#define FUZZDARK ((STRICTMODE(fuzzdark_mode) && fuzzoffset[fuzzpos]) ? 0 : FUZZMAP)
+#define FUZZMAP (6*256)
+#define FUZZNOISE (256 * (Woof_Random() < 32 ? (Woof_Random() & 1 ? 4 : 8) : 6))
+#define FUZZTOP (STRICTMODE(fuzzdark_mode) ? FUZZNOISE : FUZZMAP)
+#define FUZZDARK (STRICTMODE(fuzzdark_mode) ? (fuzzoffset[fuzzpos] ? 0 : FUZZNOISE) : FUZZMAP)
 #define FUZZLINE(a, b) (linesize * (fuzzoffset[fuzzpos] ? (a) : (b)))
 
 #define FUZZTABLE 50 
@@ -453,16 +455,6 @@ void R_SetFuzzPosDraw(void)
 
 static void DrawFuzzPixel(int dark, byte **dest, int a, int b)
 {
-  // Looks like an attempt at dithering,
-  // using the colormap #6 (of 0-31, a bit brighter than average).
-
-  // Lookup framebuffer, and retrieve
-  // a pixel that is either one row
-  // above or below the current one.
-  // Add index from colormap to index.
-  // killough 3/20/98: use fullcolormap instead of colormaps
-  // killough 11/98: use linesize
-
   **dest = fullcolormap[dark + (*dest)[FUZZLINE(a, b)]];
   *dest += linesize;             // killough 11/98
 
@@ -472,15 +464,15 @@ static void DrawFuzzPixel(int dark, byte **dest, int a, int b)
 
 static void R_DrawFuzzColumn_orig(void)
 { 
-  int      count;
+  int      count; 
   byte     *dest; 
   const boolean cutoff_yl = (dc_yl == 0);
   const boolean cutoff_yh = (dc_yh == viewheight - 1);
 
-  count = dc_yh - dc_yl + 1;
+  count = dc_yh - dc_yl; 
 
   // Zero length.
-  if (count <= 0)
+  if (count < 0) 
     return; 
     
 #ifdef RANGECHECK 
@@ -491,33 +483,45 @@ static void R_DrawFuzzColumn_orig(void)
              dc_yl, dc_yh, dc_x);
 #endif
 
-  dest = ylookup[dc_yl] + columnofs[dc_x];
+  // Keep till detailshift bug in blocky mode fixed,
+  //  or blocky mode removed.
 
-  // Pixel at the top edge. Don't copy from above.
-  if (cutoff_yl)
-  {
-    DrawFuzzPixel(FUZZMAP, &dest, 0, 1);
-    count--;
-  }
+  // Does not work with blocky mode.
+  dest = ylookup[dc_yl] + columnofs[dc_x];
+  
+  // Looks like an attempt at dithering,
+  // using the colormap #6 (of 0-31, a bit brighter than average).
+
+  count++;        // killough 1/99: minor tuning
 
   // Pixel at the bottom edge. Reduce count and process later.
   if (cutoff_yh)
     count--;
 
-  // First pixel in the column.
-  if (!cutoff_yl && count > 0)
+  // First pixel in the column or pixel at the top edge.
+  if (count > 0 || cutoff_yl)
   {
-    DrawFuzzPixel(FUZZMAP, &dest, -1, 1);
+    DrawFuzzPixel(FUZZTOP, &dest, cutoff_yl ? 0 : -1, 1);
     count--;
   }
 
-  // Pixels in the middle of the column.
   while (count-- > 0)
-  {
-    DrawFuzzPixel(FUZZDARK, &dest, -1, 1);
-  }
+    {
+      // Lookup framebuffer, and retrieve
+      // a pixel that is either one row
+      // above or below the current one.
+      // Add index from colormap to index.
+      // killough 3/20/98: use fullcolormap instead of colormaps
+      // killough 11/98: use linesize
 
-  // Pixel at the bottom edge. Don't copy from below.
+      // fraggle 1/8/2000: fix with the bugfix from lees
+      // why_i_left_doom.html
+
+      DrawFuzzPixel(FUZZDARK, &dest, -1, 1);
+    } 
+
+  // [crispy] if the line at the bottom had to be cut off,
+  // draw one extra line using only pixels of that line and the one above
   if (cutoff_yh)
   {
     DrawFuzzPixel(FUZZDARK, &dest, -1, 0);
@@ -559,9 +563,9 @@ static void R_DrawFuzzColumn_block(void)
   dc_yl &= (int)~hires_mult;
   dc_yh &= (int)~hires_mult;
 
-  count = (dc_yh - dc_yl + hires_size) >> hires;
+  count = dc_yh - dc_yl;
 
-  if (count <= 0)
+  if (count < 0)
     return;
 
   cutoff_yl = (dc_yl == 0);
@@ -577,35 +581,29 @@ static void R_DrawFuzzColumn_block(void)
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
 
-  // Pixel at the top edge. Don't copy from above.
-  if (cutoff_yl)
-  {
-    DrawFuzzBlock(FUZZMAP, &dest, hires_size, 0, 1);
-    count--;
-  }
+  count >>= hires;
+  count++;
 
-  // Pixel at the bottom edge. Reduce count and process later.
   if (cutoff_yh)
     count--;
 
-  // First pixel in the column.
-  if (!cutoff_yl && count > 0)
+  if (count > 0 || cutoff_yl)
   {
-    DrawFuzzBlock(FUZZMAP, &dest, hires_size, -1, 1);
+    DrawFuzzBlock(FUZZTOP, &dest, hires_size, cutoff_yl ? 0 : -1, 1);
     count--;
   }
 
-  // Pixels in the middle of the column.
   while (count-- > 0)
-  {
-    DrawFuzzBlock(FUZZDARK, &dest, hires_size, -1, 1);
-  }
+    {
+      // [FG] draw only even pixels as 2x2 squares
+      //      using the same fuzzoffset value
+      DrawFuzzBlock(FUZZDARK, &dest, hires_size, -1, 1);
+    }
 
-  // Pixel at the bottom edge. Don't copy from below.
   if (cutoff_yh)
-  {
-    DrawFuzzBlock(FUZZDARK, &dest, hires_size, -1, 0);
-  }
+    {
+      DrawFuzzBlock(FUZZDARK, &dest, hires_size, -1, 0);
+    }
 }
 
 // [FG] spectre drawing mode: 0 original, 1 blocky (hires)
