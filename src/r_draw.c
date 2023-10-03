@@ -499,7 +499,7 @@ static void R_DrawFuzzColumn_orig(void)
     count--;
 
   // First pixel in the column or pixel at the top edge.
-  if (count > 0 || cutoff_yl)
+  if (count > 0)
   {
     DrawFuzzPixel(FUZZTOP, &dest, cutoff_yl ? 0 : -1, 1);
     count--;
@@ -587,7 +587,7 @@ static void R_DrawFuzzColumn_block(void)
   if (cutoff_yh)
     count--;
 
-  if (count > 0 || cutoff_yl)
+  if (count > 0)
   {
     DrawFuzzBlock(FUZZTOP, &dest, hires_size, cutoff_yl ? 0 : -1, 1);
     count--;
