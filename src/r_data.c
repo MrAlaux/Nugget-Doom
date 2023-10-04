@@ -118,6 +118,8 @@ int       *flatterrain;
 int       *texturetranslation;
 const byte **texturebrightmap; // [crispy] brightmaps
 
+byte tinttab50[256*256]; // [Nugget] Antialiasing from Doom Retro
+
 
 // needed for pre-rendering
 fixed_t   *spritewidth, *spriteoffset, *spritetopoffset;
@@ -983,6 +985,50 @@ void R_InitTranMap(int progress)
     }
 }
 
+// [Nugget] Antialiasing from Doom Retro /------------------------------------
+
+static int FindNearestColor(byte *palette, const byte red, const byte green, const byte blue)
+{
+  int bestdiff = INT_MAX;
+  int bestcolor = 0;
+
+  for (int i = 0; i < 256; i++) {
+    // From <https://www.compuphase.com/cmetric.htm>
+    const int rmean = (red + *palette) / 2;
+    const int r = red   - *palette++;
+    const int g = green - *palette++;
+    const int b = blue  - *palette++;
+    const int diff = (((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8);
+
+    if (!diff) {
+      return i;
+    }
+    else if (diff < bestdiff) {
+      bestcolor = i;
+      bestdiff = diff;
+    }
+  }
+
+  return bestcolor;
+}
+
+static void GenerateTintTable(byte *const table, byte *palette, int percent)
+{
+  for (int foreground = 0; foreground < 256; foreground++)
+    for (int background = 0; background < 256; background++)
+    {
+      byte *color1 = &palette[background * 3];
+      byte *color2 = &palette[foreground * 3];
+      const byte r = ((byte)color1[0] * percent + (byte)color2[0] * (100 - percent)) / 100;
+      const byte g = ((byte)color1[1] * percent + (byte)color2[1] * (100 - percent)) / 100;
+      const byte b = ((byte)color1[2] * percent + (byte)color2[2] * (100 - percent)) / 100;
+
+      table[(background << 8) + foreground] = FindNearestColor(palette, r, g, b);
+    }
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 //
 // R_InitData
 // Locates all the lumps
@@ -1002,6 +1048,9 @@ void R_InitData(void)
   R_InitSpriteLumps();
     R_InitTranMap(1);                   // killough 2/21/98, 3/6/98
   R_InitColormaps();                    // killough 3/20/98
+
+  // [Nugget] Antialiasing from Doom Retro
+  GenerateTintTable(tinttab50, W_CacheLumpName("PLAYPAL", PU_STATIC), 50);
 }
 
 //

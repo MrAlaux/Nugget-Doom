@@ -155,6 +155,7 @@ int chasecam_mode;
 int chasecam_distance;
 int chasecam_height;
 
+int antialiasing;
 int no_menu_tint;
 int no_berserk_tint;
 int no_radsuit_tint;

@@ -4451,6 +4451,7 @@ enum {
 
 enum {
   gen7_title1,
+  gen7_antialiasing,
   gen7_menutint,
   gen7_berserktint,
   gen7_radsuittint,
@@ -4787,6 +4788,7 @@ static const char *page_ticking_conds[] = {
 setup_menu_t gen_settings7[] = { // [Nugget]
 
   {"Nugget - Display", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title1 * M_SPC},
+    {"Antialiasing",                  S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_antialiasing  * M_SPC, {"antialiasing"}},
     {"Disable Palette Tint in Menus", S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_menutint      * M_SPC, {"no_menu_tint"}},
     {"Disable Berserk Tint",          S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_berserktint   * M_SPC, {"no_berserk_tint"}},
     {"Disable Radiation Suit Tint",   S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_radsuittint   * M_SPC, {"no_radsuit_tint"}},

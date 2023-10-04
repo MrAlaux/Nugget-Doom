@@ -482,6 +482,7 @@ enum {
 extern int chasecam_distance;
 extern int chasecam_height;
 
+extern int antialiasing;
 extern int no_menu_tint;
 extern int no_berserk_tint;
 extern int no_radsuit_tint;

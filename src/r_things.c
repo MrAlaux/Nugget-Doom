@@ -1215,6 +1215,15 @@ void R_DrawMasked(void)
     if (ds->maskedtexturecol)
       R_RenderMaskedSegRange(ds, ds->x1, ds->x2);
 
+  // [Nugget] Antialiasing from Doom Retro;
+  // applied here so that it doesn't affect the crosshair and psprites
+  if (antialiasing) {
+    V_AntialiasScreen(viewwindowx,
+                      viewwindowy * (SCREENWIDTH << hires),
+                      viewwindowx + viewwidth,
+                      (viewwindowy + viewheight) * (SCREENWIDTH << hires));
+  }
+
   // draw the psprites on top of everything
   //  but does not draw on side views
   if (!viewangleoffset)

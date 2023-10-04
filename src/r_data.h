@@ -63,6 +63,8 @@ boolean R_IsPatchLump (const int lump);
 
 extern byte *main_tranmap, *tranmap;
 
+extern byte tinttab50[]; // [Nugget] Antialiasing from Doom Retro
+
 #endif
 
 //----------------------------------------------------------------------------
