@@ -72,6 +72,8 @@ void M_DrawCredits(void);    // killough 11/98
 
 void M_SetMenuFontSpacing(void);
 
+int M_ToUpper(int character, boolean fontB); // [Nugget] Lowercase characters
+
 // killough 8/15/98: warn about changes not being committed until next game
 #define warn_about_changes(x) (warning_about_changes=(x), \
 			       print_warning_about_changes = 2)

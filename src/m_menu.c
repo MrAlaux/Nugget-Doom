@@ -5528,7 +5528,7 @@ void M_DrawStringCR(int cx, int cy, char *color, const char *ch)
   while (*ch)
     {
       c = *ch++;         // get next char
-      c = toupper(c) - HU_FONTSTART;
+      c = M_ToUpper(c, false) - HU_FONTSTART;
       if (c < 0 || c> HU_FONTSIZE)
 	{
 	  cx += SPACEWIDTH;    // space
@@ -5580,7 +5580,7 @@ int M_GetPixelWidth(const char *ch)
   while (*ch)
     {
       c = *ch++;    // pick up next char
-      c = toupper(c) - HU_FONTSTART;
+      c = M_ToUpper(c, false) - HU_FONTSTART;
       if (c < 0 || c > HU_FONTSIZE)
 	{
 	  len += SPACEWIDTH;   // space
@@ -5864,7 +5864,7 @@ boolean M_Responder (event_t* ev)
 
       else
 	{
-	  ch = toupper(ch);
+	  ch = M_ToUpper(ch, false);
 #if 0
 	  // killough 11/98: removed useless code
 	  if (ch != 32)
@@ -6189,13 +6189,13 @@ boolean M_Responder (event_t* ev)
   {
     if (delete_verify)
     {
-      if (toupper(ch) == 'Y')
+      if (M_ToUpper(ch, false) == 'Y')
       {
         M_DeleteGame(itemOn);
         S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
         delete_verify = false;
       }
-      else if (toupper(ch) == 'N')
+      else if (M_ToUpper(ch, false) == 'N')
       {
         S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
         delete_verify = false;
@@ -6241,13 +6241,13 @@ boolean M_Responder (event_t* ev)
 
       if (default_verify)
 	{
-	  if (toupper(ch) == 'Y')
+	  if (M_ToUpper(ch, false) == 'Y')
 	    {
 	      M_ResetDefaults();
 	      default_verify = false;
 	      M_SelectDone(ptr1);
 	    }
-	  else if (toupper(ch) == 'N')
+	  else if (M_ToUpper(ch, false) == 'N')
 	    {
 	      default_verify = false;
 	      M_SelectDone(ptr1);
@@ -7404,7 +7404,7 @@ int M_StringWidth(const char *string)
         string++;
       continue;
     }
-    c = toupper(c) - HU_FONTSTART;
+    c = M_ToUpper(c, false) - HU_FONTSTART;
     if (c < 0 || c > HU_FONTSIZE)
     {
       w += SPACEWIDTH;
@@ -7456,7 +7456,7 @@ void M_WriteText (int x,int y,const char *string)
 	  continue;
 	}
 
-      c = toupper(c) - HU_FONTSTART;
+      c = M_ToUpper(c, false) - HU_FONTSTART;
       if (c < 0 || c>= HU_FONTSIZE)
 	{
 	  cx += 4;
@@ -7645,6 +7645,19 @@ void M_ResetMenu(void)
       MainMenu[options]  = MainMenu[savegame];
       MainMenu[savegame] = t;
     }
+}
+
+// [Nugget] Determine whether character should be toupper()'d
+int M_ToUpper(int character, boolean fontB)
+{
+  extern boolean hu_fontA_lowercase, hu_fontB_lowercase;
+  char ret = character;
+
+  if (   (!fontB && !hu_fontA_lowercase)  // Using standard Doom font
+      || ( fontB && !hu_fontB_lowercase)) // Using Boom font
+    ret = toupper(character);
+  
+  return ret;
 }
 
 void M_ResetSetupMenu(void)

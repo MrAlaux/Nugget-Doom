@@ -94,10 +94,11 @@ char chat_char;                 // remove later.
 static player_t*  plr;
 
 // font sets
-static patch_t* hu_fontA[HU_FONTSIZE+6];
-static patch_t* hu_fontB[HU_FONTSIZE+6];
+patch_t* hu_fontA[HU_FONTSIZE+6]; // [Nugget] Non-static
+patch_t* hu_fontB[HU_FONTSIZE+6]; // [Nugget] Non-static
 patch_t **hu_font  = hu_fontA;
 patch_t **hu_font2 = hu_fontB;
+boolean hu_fontA_lowercase = true, hu_fontB_lowercase = true; // [Nugget] Lowercase characters
 static int CR_BLUE = CR_BLUE1;
 
 // widgets
@@ -419,6 +420,23 @@ void HU_Init(void)
       hu_fontB[i] = (patch_t *) W_CacheLumpName(buffer, PU_STATIC);
       sprintf(buffer, "STCFN%.3d", j);
       hu_font[i]  = (patch_t *) W_CacheLumpName(buffer, PU_STATIC);
+    }
+    else if ('a' <= j && j <= 'z') // [Nugget] Lowercase characters support
+    {
+      if (hu_fontB_lowercase) {
+        sprintf(buffer, "DIG%.3d", j);
+        if (W_CheckNumForName(buffer) != -1)
+          hu_fontB[i] = (patch_t *) W_CacheLumpName(buffer, PU_STATIC);
+        else
+          hu_fontB_lowercase = false;
+      }
+      if (hu_fontA_lowercase) {
+        sprintf(buffer, "STCFN%.3d", j);
+        if (W_CheckNumForName(buffer) != -1)
+          hu_font[i]  = (patch_t *) W_CacheLumpName(buffer, PU_STATIC);
+        else
+          hu_fontA_lowercase = false;
+      }
     }
     else if (j == '"') // [Nugget]
     {
@@ -1232,19 +1250,19 @@ static void HU_widget_build_powers(void)
   int offset = 0;
 
   if (plr->powers[pw_invisibility] > 0) {
-    offset += sprintf(hud_powerstr, "\x1b%cINVIS %i\" ", '0'+CR_RED,
+    offset += sprintf(hud_powerstr, "\x1b%cInvis %i\" ", '0'+CR_RED,
                       MIN(INVISTICS/TICRATE, 1 + (plr->powers[pw_invisibility] / TICRATE)));
   }
   if (plr->powers[pw_invulnerability] > 0) {
-    offset += sprintf(hud_powerstr + offset, "\x1b%cINVUL %i\" ", '0'+CR_GREEN,
+    offset += sprintf(hud_powerstr + offset, "\x1b%cInvul %i\" ", '0'+CR_GREEN,
                       MIN(INVULNTICS/TICRATE, 1 + (plr->powers[pw_invulnerability] / TICRATE)));
   }
   if (plr->powers[pw_infrared] > 0) {
-    offset += sprintf(hud_powerstr + offset, "\x1b%cLIGHT %i\" ", '0'+CR_BRICK,
+    offset += sprintf(hud_powerstr + offset, "\x1b%cLight %i\" ", '0'+CR_BRICK,
                       MIN(INFRATICS/TICRATE, 1 + (plr->powers[pw_infrared] / TICRATE)));
   }
   if (plr->powers[pw_ironfeet] > 0) {
-    offset += sprintf(hud_powerstr + offset, "\x1b%cSUIT %i\"", '0'+CR_GRAY,
+    offset += sprintf(hud_powerstr + offset, "\x1b%cSuit %i\"", '0'+CR_GRAY,
                       MIN(IRONTICS/TICRATE, 1 + (plr->powers[pw_ironfeet] / TICRATE)));
   }
 

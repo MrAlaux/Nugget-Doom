@@ -3840,7 +3840,7 @@ int M_DrawText(int x,int y,boolean direct,char* string)
 
   while (*string)
     {
-      c = toupper(*string) - HU_FONTSTART;
+      c = M_ToUpper(*string, false) - HU_FONTSTART;
       string++;
       if (c < 0 || c> HU_FONTSIZE)
         {

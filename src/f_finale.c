@@ -29,8 +29,9 @@
 #include "m_misc2.h" // [FG] M_StringDuplicate()
 #include "m_swap.h"
 #include "r_draw.h"
-// [Nugget] Include the following
+// [Nugget]
 #include "g_game.h" // [crispy] key_*
+#include "m_menu.h"
 #include "m_input.h"
 #include "m_random.h" // [crispy] Crispy_Random()
 
@@ -413,7 +414,7 @@ void F_TextWrite (void)
       continue;
     }
 
-    c = toupper(c) - HU_FONTSTART;
+    c = M_ToUpper(c, false) - HU_FONTSTART;
     if (c < 0 || c> HU_FONTSIZE)
     {
       cx += 4;
@@ -823,7 +824,7 @@ void F_CastPrint (char* text)
     c = *ch++;
     if (!c)
       break;
-    c = toupper(c) - HU_FONTSTART;
+    c = M_ToUpper(c, false) - HU_FONTSTART;
     if (c < 0 || c> HU_FONTSIZE)
     {
       width += 4;
@@ -842,7 +843,7 @@ void F_CastPrint (char* text)
     c = *ch++;
     if (!c)
       break;
-    c = toupper(c) - HU_FONTSTART;
+    c = M_ToUpper(c, false) - HU_FONTSTART;
     if (c < 0 || c> HU_FONTSIZE)
     {
       cx += 4;

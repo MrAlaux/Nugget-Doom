@@ -26,7 +26,9 @@
 #include "hu_stuff.h"
 #include "r_main.h"
 #include "r_draw.h"
-#include "m_nughud.h" // [Nugget]
+// [Nugget]
+#include "m_menu.h"
+#include "m_nughud.h"
 
 // boolean : whether the screen is always erased
 #define noterased viewwindowx
@@ -138,7 +140,7 @@ void HUlib_addStringToTextLine(hu_textline_t *l, char *s)
 
   while (*s)
   {
-    c = toupper(*s++);
+    c = M_ToUpper(*s++, !hud_widget_font);
 
     if (c == '\x1b')
     {
@@ -248,7 +250,7 @@ static void HUlib_drawTextLineAligned(hu_textline_t *l, boolean drawcursor)
   // draw the new stuff
   for (i = 0; i < l->len; i++)
     {
-      c = toupper(l->l[i]); //jff insure were not getting a cheap toupper conv.
+      c = M_ToUpper(l->l[i], !hud_widget_font); //jff insure were not getting a cheap toupper conv.
 
       if (c=='\n')         // killough 1/18/98 -- support multiple lines
         x = 0, y += 8;
