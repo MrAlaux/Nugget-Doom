@@ -560,7 +560,7 @@ static void R_DrawFuzzColumn_block(void)
     return;
 
   // [FG] draw only even pixels
-  dc_yl &= (int)~hires_mult;
+  dc_yl = (dc_yl + hires_mult) & ~hires_mult;
   dc_yh &= (int)~hires_mult;
 
   count = dc_yh - dc_yl;
