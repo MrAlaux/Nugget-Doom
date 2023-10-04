@@ -846,10 +846,6 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   // [crispy] free look
   vis->texturemid += (centery - viewheight/2) * pspriteiscale;
 
-  // Prevent visual artifacts with blocky fuzz.
-  if (!vis->colormap[0] && fuzzcolumn_mode && hires)
-    vis->texturemid = (vis->texturemid >> FRACBITS) << FRACBITS;
-
   if (STRICTMODE(hide_weapon || chasecam_on)) // [Nugget] Chasecam
     return;
 
