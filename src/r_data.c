@@ -118,7 +118,7 @@ int       *flatterrain;
 int       *texturetranslation;
 const byte **texturebrightmap; // [crispy] brightmaps
 
-byte tinttab50[256*256]; // [Nugget] Antialiasing from Doom Retro
+byte *aa_tranmap; // [Nugget] Antialiasing
 
 
 // needed for pre-rendering
@@ -985,49 +985,74 @@ void R_InitTranMap(int progress)
     }
 }
 
-// [Nugget] Antialiasing from Doom Retro /------------------------------------
-
-static int FindNearestColor(byte *palette, const byte red, const byte green, const byte blue)
+// [Nugget] Antialiasing; function based on `R_InitTranmap()` without all the R/W stuff
+void R_InitAntialiasingTable(void)
 {
-  int bestdiff = INT_MAX;
-  int bestcolor = 0;
+  unsigned char *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
+  long pal[3][256], tot[256], pal_w1[3][256];
+  long w1 = ((unsigned long) antialiasing << TSC) / 100;
+  long w2 = (1l << TSC) - w1;
 
-  for (int i = 0; i < 256; i++) {
-    // From <https://www.compuphase.com/cmetric.htm>
-    const int rmean = (red + *palette) / 2;
-    const int r = red   - *palette++;
-    const int g = green - *palette++;
-    const int b = blue  - *palette++;
-    const int diff = (((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8);
+  if (aa_tranmap == NULL) // [FG] prevent memory leak
+  { aa_tranmap = Z_Malloc(256*256, PU_STATIC, 0); } // killough 4/11/98
 
-    if (!diff) {
-      return i;
-    }
-    else if (diff < bestdiff) {
-      bestcolor = i;
-      bestdiff = diff;
+  // First, convert playpal into long int type, and transpose array,
+  // for fast inner-loop calculations. Precompute tot array.
+  {
+    register int i = 255;
+    register const unsigned char *p = playpal+255*3;
+    do {
+      register long t, d;
+      pal_w1[0][i] = (pal[0][i] = t = p[0]) * w1;
+      d = t*t;
+      pal_w1[1][i] = (pal[1][i] = t = p[1]) * w1;
+      d += t*t;
+      pal_w1[2][i] = (pal[2][i] = t = p[2]) * w1;
+      d += t*t;
+      p -= 3;
+      tot[i] = d << (TSC-1);
+    } while (--i >= 0);
+  }
+
+  // Next, compute all entries using minimum arithmetic.
+  {
+    int i, j;
+    byte *tp = aa_tranmap;
+    for (i = 0;  i < 256;  i++)
+    {
+      long r1 = pal[0][i] * w2;
+      long g1 = pal[1][i] * w2;
+      long b1 = pal[2][i] * w2;
+
+      if (!(~i & 15))
+      {
+        if (i & 32)       // killough 10/98: display flashing disk
+          I_EndRead();
+        else
+          I_BeginRead(DISK_ICON_THRESHOLD);
+      }
+
+      for (j = 0; j < 256; j++, tp++)
+      {
+        register int color = 255;
+        register long err;
+        long r = pal_w1[0][j] + r1;
+        long g = pal_w1[1][j] + g1;
+        long b = pal_w1[2][j] + b1;
+        long best = LONG_MAX;
+        
+        do {
+          if ((err = tot[color] - pal[0][color]*r - pal[1][color]*g - pal[2][color]*b) < best)
+          {
+            best = err, *tp = color;
+          }
+        } while (--color >= 0);
+      }
     }
   }
 
-  return bestcolor;
+  Z_ChangeTag(playpal, PU_CACHE);
 }
-
-static void GenerateTintTable(byte *const table, byte *palette, int percent)
-{
-  for (int foreground = 0; foreground < 256; foreground++)
-    for (int background = 0; background < 256; background++)
-    {
-      byte *color1 = &palette[background * 3];
-      byte *color2 = &palette[foreground * 3];
-      const byte r = ((byte)color1[0] * percent + (byte)color2[0] * (100 - percent)) / 100;
-      const byte g = ((byte)color1[1] * percent + (byte)color2[1] * (100 - percent)) / 100;
-      const byte b = ((byte)color1[2] * percent + (byte)color2[2] * (100 - percent)) / 100;
-
-      table[(background << 8) + foreground] = FindNearestColor(palette, r, g, b);
-    }
-}
-
-// [Nugget] -----------------------------------------------------------------/
 
 //
 // R_InitData
@@ -1049,8 +1074,7 @@ void R_InitData(void)
     R_InitTranMap(1);                   // killough 2/21/98, 3/6/98
   R_InitColormaps();                    // killough 3/20/98
 
-  // [Nugget] Antialiasing from Doom Retro
-  GenerateTintTable(tinttab50, W_CacheLumpName("PLAYPAL", PU_STATIC), 50);
+  R_InitAntialiasingTable(); // [Nugget] Antialiasing
 }
 
 //

@@ -132,7 +132,7 @@ void V_ShadeScreen(const int targshade); // [Nugget] Parameterized
 
 int V_BloodColor(int blood);
 
-// [Nugget] Antialiasing from Doom Retro
+// [Nugget] Antialiasing
 void V_AntialiasScreen(int left, int top, int windowwidth, int windowheight);
 
 #endif

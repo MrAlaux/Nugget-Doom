@@ -809,8 +809,8 @@ default_t defaults[] = {
   {
     "antialiasing",
     (config_t *) &antialiasing, NULL,
-    {0}, {0,1}, number, ss_gen, wad_no,
-    "1 to enable antialiasing for world rendering"
+    {0}, {0,50}, number, ss_gen, wad_no,
+    "Antialiasing for world rendering"
   },
 
   {

@@ -4788,7 +4788,7 @@ static const char *page_ticking_conds[] = {
 setup_menu_t gen_settings7[] = { // [Nugget]
 
   {"Nugget - Display", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title1 * M_SPC},
-    {"Antialiasing",                  S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_antialiasing  * M_SPC, {"antialiasing"}},
+    {"Antialiasing Post-Process",     S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_antialiasing  * M_SPC, {"antialiasing"}, 0, R_InitAntialiasingTable},
     {"Disable Palette Tint in Menus", S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_menutint      * M_SPC, {"no_menu_tint"}},
     {"Disable Berserk Tint",          S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_berserktint   * M_SPC, {"no_berserk_tint"}},
     {"Disable Radiation Suit Tint",   S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_radsuittint   * M_SPC, {"no_radsuit_tint"}},

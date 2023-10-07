@@ -914,7 +914,7 @@ void V_ShadeScreen(const int targshade) // [Nugget] Parameterized
   oldtic = gametic;
 }
 
-// [Nugget] Antialiasing from Doom Retro
+// [Nugget] Antialiasing; function based on code from Doom Retro
 void V_AntialiasScreen(int left, int top, int windowwidth, int windowheight)
 {
   const int screenwidth = SCREENWIDTH << hires,
@@ -934,10 +934,10 @@ void V_AntialiasScreen(int left, int top, int windowwidth, int windowheight)
           const byte  *dot3 = dot2 + pixelheight;
           const byte  *dot4 = dot3 - pixelwidth;
 
-          color = tinttab50[(tinttab50[(*dot1 << 8) + *dot2] << 8) + tinttab50[(*dot3 << 8) + *dot4]];
+          color = aa_tranmap[(aa_tranmap[(*dot1 << 8) + *dot2] << 8) + aa_tranmap[(*dot3 << 8) + *dot4]];
         }
         else
-        { color = tinttab50[(*dot1 << 8) + *(dot1 + pixelheight)]; }
+        { color = aa_tranmap[(*dot1 << 8) + *(dot1 + pixelheight)]; }
 
         for (int yy = 0; yy < pixelheight && y + yy < windowheight; yy += screenwidth)
           for (int xx = 0; xx < pixelwidth && x + xx < windowwidth; xx++)
@@ -945,7 +945,7 @@ void V_AntialiasScreen(int left, int top, int windowwidth, int windowheight)
       }
       else if (x + pixelwidth < windowwidth)
       {
-        color = tinttab50[(*dot1 << 8) + *(dot1 + pixelwidth)];
+        color = aa_tranmap[(*dot1 << 8) + *(dot1 + pixelwidth)];
 
         for (int yy = 0; yy < pixelheight && y + yy < windowheight; yy += screenwidth)
           for (int xx = 0; xx < pixelwidth && x + xx < windowwidth; xx++)
