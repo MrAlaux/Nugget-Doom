@@ -1616,14 +1616,18 @@ void ST_Stop(void)
 
 void ST_Init(void)
 {
-  const int size = SCREENWIDTH * (ST_HEIGHT << (2 * hires));
+  int st_height, size;
+
+  ST_loadData();
+
+  st_height = ((sbar && sbar->height > ST_HEIGHT) ? sbar->height : ST_HEIGHT);
+  size = SCREENWIDTH * (st_height << (2 * hires));
 
   if(screens[4])
   {
     Z_Free(screens[4]);
   }
 
-  ST_loadData();
   // killough 11/98: allocate enough for hires
   screens[4] = Z_Malloc(size, PU_STATIC, 0);
 }
