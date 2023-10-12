@@ -37,6 +37,7 @@
 #include "m_misc2.h"
 #include "m_swap.h"
 #include "m_nughud.h" // [Nugget]
+#include "i_printf.h"
 
 // [crispy] immediately redraw status bar after help screens have been shown
 extern boolean inhelpscreens;
@@ -1622,6 +1623,12 @@ void ST_Init(void)
 
   st_height = ((sbar && sbar->height > ST_HEIGHT) ? sbar->height : ST_HEIGHT);
   size = SCREENWIDTH * (st_height << (2 * hires));
+
+  if (sbar && sbar->height != ST_HEIGHT)
+  {
+    I_Printf(VB_WARNING, "ST_Init: Non-standard STBAR height of %d. "
+                         "Expected %d.", st_height, ST_HEIGHT);
+  }
 
   if (screens[4])
   {
