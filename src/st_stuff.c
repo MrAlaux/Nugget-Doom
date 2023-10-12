@@ -1171,6 +1171,11 @@ void ST_loadGraphics(void)
     {
       sprintf(namebuf, "STFB%d", i);
       faceback[i] = (patch_t *) W_CacheLumpName(namebuf, PU_STATIC);
+      if (faceback[i] && faceback[i]->height > ST_HEIGHT)
+      {
+        I_Printf(VB_WARNING, "ST_loadGraphics: Non-standard STFB%d height of %d. "
+                             "Expected <= %d.", i, faceback[i]->height, ST_HEIGHT);
+      }
     }
 
   // status bar background bits
@@ -1637,6 +1642,7 @@ void ST_Stop(void)
 
 static int StatusBarBufferHeight(void)
 {
+  int i;
   int st_height = ST_HEIGHT;
 
   if (sbar && sbar->height > st_height)
@@ -1647,6 +1653,12 @@ static int StatusBarBufferHeight(void)
 
   if (bezel && bezel->height > st_height)
     st_height = bezel->height;
+
+  for (i = 0; i < MAXPLAYERS; i++)
+  {
+    if (faceback[i] && faceback[i]->height > st_height)
+      st_height = faceback[i]->height;
+  }
 
   return st_height;
 }
