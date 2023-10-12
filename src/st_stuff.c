@@ -1623,7 +1623,7 @@ void ST_Init(void)
   st_height = ((sbar && sbar->height > ST_HEIGHT) ? sbar->height : ST_HEIGHT);
   size = SCREENWIDTH * (st_height << (2 * hires));
 
-  if(screens[4])
+  if (screens[4])
   {
     Z_Free(screens[4]);
   }
