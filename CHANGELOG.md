@@ -24,6 +24,7 @@
 - **Moved Event Timer within Time widget**; it is now displayed after everything else
 - **Added Explosive Hitscan support to MDK Fist**
 - **Lowered MDK (Fist) attack's autoaim range** from 2048 to 1024 units
+- **Added support for Status Bar graphics of non-standard height** (thanks to @ceski-1 and @fabiangreffrath)
 - **Added toggle for SSG availability display in Arms widget**
 - **SSG availability display now applies to NUGHUD** if prudent
 - **`blink_keys` can now be changed by WADs**
