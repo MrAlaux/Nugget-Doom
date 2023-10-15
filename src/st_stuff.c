@@ -36,8 +36,8 @@
 #include "dstrings.h"
 #include "m_misc2.h"
 #include "m_swap.h"
-#include "m_nughud.h" // [Nugget]
 #include "i_printf.h"
+#include "m_nughud.h" // [Nugget]
 
 // [crispy] immediately redraw status bar after help screens have been shown
 extern boolean inhelpscreens;
@@ -168,9 +168,6 @@ static patch_t *faceback[MAXPLAYERS]; // killough 3/7/98: make array
 
  // main bar right
 static patch_t *armsbg;
-
-// Bezel bottom edge for st_solidbackground.
-static patch_t *bezel;
 
 // weapon ownership patches
 static patch_t *arms[6+3][2]; // [Nugget] Extend array to accomodate 9 numbers
@@ -381,10 +378,12 @@ void ST_refreshBackground(boolean force)
           // [crispy] preserve bezel bottom edge
           if (scaledviewwidth == SCREENWIDTH)
           {
+            patch_t *const patch = W_CacheLumpName("brdr_b", PU_CACHE);
+
             for (x = 0; x < WIDESCREENDELTA; x += 8)
             {
-              V_DrawPatch(x - WIDESCREENDELTA, 0, BG, bezel);
-              V_DrawPatch(ORIGWIDTH + WIDESCREENDELTA - x - 8, 0, BG, bezel);
+              V_DrawPatch(x - WIDESCREENDELTA, 0, BG, patch);
+              V_DrawPatch(ORIGWIDTH + WIDESCREENDELTA - x - 8, 0, BG, patch);
             }
           }
         }
@@ -1216,9 +1215,6 @@ void ST_loadGraphics(void)
   }
   have_xdthfaces = i;
 
-  // Bezel bottom edge for st_solidbackground.
-  bezel = W_CacheLumpName("BRDR_B", PU_STATIC);
-
   { // [Nugget] --------------------------------------------------------------
     int lump;
 
@@ -1623,15 +1619,16 @@ static int StatusBarBufferHeight(void)
 {
   int i;
   int st_height = ST_HEIGHT;
+  patch_t *const patch = W_CacheLumpName("brdr_b", PU_CACHE);
+
+  if (patch && patch->height > st_height)
+    st_height = patch->height;
 
   if (sbar && sbar->height > st_height)
     st_height = sbar->height;
 
   if (armsbg && armsbg->height > st_height)
     st_height = armsbg->height;
-
-  if (bezel && bezel->height > st_height)
-    st_height = bezel->height;
 
   for (i = 0; i < MAXPLAYERS; i++)
   {
@@ -1663,6 +1660,13 @@ void ST_Init(void)
 void ST_Warnings(void)
 {
   int i;
+  patch_t *const patch = W_CacheLumpName("brdr_b", PU_CACHE);
+
+  if (patch && patch->height > ST_HEIGHT)
+  {
+    I_Printf(VB_WARNING, "ST_Init: Non-standard BRDR_B height of %d. "
+                         "Expected <= %d.", patch->height, ST_HEIGHT);
+  }
 
   if (sbar && sbar->height != ST_HEIGHT)
   {
@@ -1674,12 +1678,6 @@ void ST_Warnings(void)
   {
     I_Printf(VB_WARNING, "ST_Init: Non-standard STARMS height of %d. "
                          "Expected <= %d.", armsbg->height, ST_HEIGHT);
-  }
-
-  if (bezel && bezel->height > ST_HEIGHT)
-  {
-    I_Printf(VB_WARNING, "ST_Init: Non-standard BRDR_B height of %d. "
-                         "Expected <= %d.", bezel->height, ST_HEIGHT);
   }
 
   for (i = 0; i < MAXPLAYERS; i++)
