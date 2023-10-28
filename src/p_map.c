@@ -552,14 +552,6 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 
       int damage = ((P_Random(pr_skullfly)%8)+1)*tmthing->info->damage;
 
-      // [Nugget]: [crispy] check if attacking skull flies over/under thing
-      if (casual_play && over_under) {
-        if (tmthing->z > thing->z + thing->height)
-        { return true; } // over
-        else if (tmthing->z + tmthing->height < thing->z)
-        { return true; } // under
-      }
-
       // [Nugget] Fix lost soul collision
       if (casual_play && comp_lscollision && !(thing->flags & MF_SHOOTABLE))
       { return !(thing->flags & MF_SOLID); }
@@ -571,7 +563,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 
       // [Nugget] Fix forgetful lost soul
       if (casual_play && comp_lsamnesia)
-      { P_SetMobjState(tmthing, tmthing->info->seestate); }
+        P_SetMobjState(tmthing, tmthing->info->seestate);
       else
         P_SetMobjState (tmthing, tmthing->info->spawnstate);
 
@@ -660,33 +652,6 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 	P_TouchSpecialThing(thing, tmthing); // can remove thing
       return !solid;
     }
-
-  // [Nugget] Allow things to move over/under solid things
-  if (casual_play && over_under && (thing->flags & MF_SOLID))
-  {
-    if (tmthing->z >= thing->z + thing->height) { // Over
-      thing->intflags   |= MIF_OVERUNDER;
-      tmthing->intflags |= MIF_OVERUNDER;
-
-      tmfloorz = MAX(thing->z + thing->height, tmfloorz);
-      thing->ceilingz = MIN(tmthing->z, thing->ceilingz);
-
-      return true;
-    }
-    else if (tmthing->z + tmthing->height <= thing->z) { // Under
-      thing->intflags   |= MIF_OVERUNDER;
-      tmthing->intflags |= MIF_OVERUNDER;
-
-      tmceilingz = MIN(thing->z, tmceilingz);
-      thing->floorz = MAX(tmthing->z + tmthing->height, thing->floorz);
-
-      return true;
-    }
-    else {
-      thing->intflags   &= ~MIF_OVERUNDER;
-      tmthing->intflags &= ~MIF_OVERUNDER;
-    }
-  }
 
   // RjY
   // comperr_hangsolid, an attempt to handle blocking hanging bodies

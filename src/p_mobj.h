@@ -235,9 +235,8 @@ enum {
   MIF_FLIP = 16,
   // [Nugget]
   MIF_CROUCHING    = 32,  // Mobj (player) is crouching
-  MIF_OVERUNDER    = 64,  // Mobj is over/under another mobj
-  MIF_EXTRASPAWNED = 128, // [So Doom] Nightmare-spawned, Icon of Sin-spawned and Archvile-resurrected monsters
-  MIF_CHEESE       = 256,
+  MIF_EXTRASPAWNED = 64, // [So Doom] Nightmare-spawned, Icon of Sin-spawned and Archvile-resurrected monsters
+  MIF_CHEESE       = 128,
 };
 
 // Map Object definition.
