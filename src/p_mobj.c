@@ -292,8 +292,10 @@ void P_XYMovement (mobj_t* mo)
 
   // no friction for missiles or skulls ever, no friction when airborne
   if (mo->flags & (MF_MISSILE | MF_SKULLFLY)
-      // [Nugget] Do apply friction if airborne with the flight cheat on
-      || (!(player && player->cheats & CF_FLY) && (mo->z > mo->floorz)))
+      // [Nugget] Do apply friction if...
+      || ((mo->z > mo->floorz)                        
+          && !(   (player && player->cheats & CF_FLY) // ... using flight cheat
+               || (mo->intflags & MIF_ONMOBJ))))      // ... on top of a mobj
     return;
 
   // killough 8/11/98: add bouncers
@@ -784,7 +786,57 @@ void P_MobjThinker (mobj_t* mobj)
 
   if (mobj->z != mobj->floorz || mobj->momz)
     {
-      P_ZMovement(mobj);
+      // [Nugget]
+      if (casual_play && over_under && (mobj->flags & MF_SOLID))
+      {
+        mobj_t *onmo;
+
+        if (!(onmo = P_CheckOnmobj(mobj)))
+        {
+          P_ZMovement(mobj);
+          mobj->intflags &= ~MIF_ONMOBJ;
+        }
+        else
+        {
+          if (mobj->player)
+          {
+            if (mobj->momz < 0)
+            {
+              mobj->intflags |= MIF_ONMOBJ;
+              mobj->momz = 0;
+            }
+
+            if (onmo->player)
+            {
+              mobj->momx = onmo->momx;
+              mobj->momy = onmo->momy;
+
+              if (onmo->z < onmo->floorz)
+              {
+                mobj->z += onmo->floorz - onmo->z;
+
+                onmo->player->viewheight -= onmo->floorz - onmo->z;
+                onmo->player->deltaviewheight = ((!strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT)
+                                                 - onmo->player->viewheight) >> 3;
+
+                onmo->z = onmo->floorz;
+              }
+            }
+          }
+          else {
+            mobj->momz = 0;
+
+            if (onmo->z + onmo->height - mobj->z <= 24 * FRACUNIT)
+            {
+              mobj->z = onmo->z + onmo->height;
+              mobj->intflags |= MIF_ONMOBJ;
+            }
+          }
+        }
+      }
+      else
+        P_ZMovement(mobj);
+
       if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
         return;       // mobj was removed
     }

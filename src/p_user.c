@@ -221,9 +221,11 @@ void P_MovePlayer (player_t* player)
   int cforwardmove, csidemove;
 
   mo->angle += cmd->angleturn << 16;
-  onground = mo->z <= mo->floorz;
-  // [Nugget] Allow mid-air control with noclip or fly enabled
-  onground |= ((player->mo->flags & MF_NOCLIP) || (player->cheats & CF_FLY));
+  onground = (mo->z <= mo->floorz
+              // [Nugget]
+              || (casual_play && (mo->intflags & MIF_ONMOBJ)) // [DSDA]
+              // Mid-air control with noclip or flight cheat enabled
+              || (player->mo->flags & MF_NOCLIP) || (player->cheats & CF_FLY));
 
   // [Nugget]
   if (player->cheats & CF_FLY)
@@ -269,6 +271,7 @@ void P_MovePlayer (player_t* player)
       { // Jump
         player->mo->momz = 8*FRACUNIT;
         player->jumptics = 20;
+//        player->mo->intflags &= ~MIF_ONMOBJ; // [DSDA]
         // [NS] Jump sound.
         S_StartSoundOptional(player->mo, sfx_pljump, -1);
         // [crispy] squat down weapon sprite a bit
