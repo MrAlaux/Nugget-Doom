@@ -547,7 +547,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   if (casual_play && over_under
       && (tmthing->flags & MF_SOLID) && !(thing->flags & MF_SPECIAL)
       && (   (  thing->z +   thing->height <= tmthing->z)   // Over
-          || (tmthing->z + tmthing->height <    thing->z))) // Under
+          || (tmthing->z + tmthing->height <=   thing->z))) // Under
   {
     return true;
   }
@@ -2473,8 +2473,8 @@ boolean PIT_CheckOnmobjZ(mobj_t *thing)
   if (thing == tmthing)
   { return true; } // Don't clip against self
 
-  if (   (  thing->z +   thing->height <= tmthing->z)   // Over thing
-      || (tmthing->z + tmthing->height <    thing->z))  // Under thing
+  if (   (  thing->z +   thing->height < tmthing->z)  // Over thing
+      || (tmthing->z + tmthing->height <   thing->z)) // Under thing
   { return true; }
 
   if (thing->flags & MF_SOLID)
@@ -2517,13 +2517,13 @@ void P_FakeZMovement(mobj_t *mo)
   }
   else if (mo->flags2 & MF2_LOGRAV)
   {
-    if (mo->momz == 0) { mo->momz = -(GRAVITY >> 3) * 2; }
-    else               { mo->momz -= GRAVITY >> 3; }
+    if (!mo->momz) { mo->momz = -(GRAVITY >> 3) * 2; }
+    else           { mo->momz -= GRAVITY >> 3; }
   }
   else if (!(mo->flags & MF_NOGRAVITY))
   {
-    if (mo->momz == 0) { mo->momz = -GRAVITY * 2; }
-    else               { mo->momz -= GRAVITY; }
+    if (!mo->momz) { mo->momz = -GRAVITY; }
+    else           { mo->momz -= GRAVITY; }
   }
 
   if (mo->z + mo->height > mo->ceilingz)

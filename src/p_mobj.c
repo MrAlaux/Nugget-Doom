@@ -798,39 +798,18 @@ void P_MobjThinker (mobj_t* mobj)
         }
         else
         {
-          if (mobj->player)
+          mobj->momz = 0;
+
+          if (onmo->z + onmo->height - mobj->z <= 24 * FRACUNIT)
           {
-            if (mobj->momz < 0)
-            {
-              mobj->intflags |= MIF_ONMOBJ;
-              mobj->momz = 0;
+            if (mobj->player) {
+              mobj->player->viewheight -= onmo->z + onmo->height - mobj->z;
+              mobj->player->deltaviewheight = ((!strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT)
+                                               - mobj->player->viewheight) >> 3;
             }
 
-            if (onmo->player)
-            {
-              mobj->momx = onmo->momx;
-              mobj->momy = onmo->momy;
-
-              if (onmo->z < onmo->floorz)
-              {
-                mobj->z += onmo->floorz - onmo->z;
-
-                onmo->player->viewheight -= onmo->floorz - onmo->z;
-                onmo->player->deltaviewheight = ((!strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT)
-                                                 - onmo->player->viewheight) >> 3;
-
-                onmo->z = onmo->floorz;
-              }
-            }
-          }
-          else {
-            mobj->momz = 0;
-
-            if (onmo->z + onmo->height - mobj->z <= 24 * FRACUNIT)
-            {
-              mobj->z = onmo->z + onmo->height;
-              mobj->intflags |= MIF_ONMOBJ;
-            }
+            mobj->z = onmo->z + onmo->height;
+            mobj->intflags |= MIF_ONMOBJ;
           }
         }
       }
