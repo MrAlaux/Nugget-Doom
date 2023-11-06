@@ -648,9 +648,9 @@ static void AM_LevelInit(void)
     f_w = f_h = 80 * hires;
   }
   else {
-    f_w = HIRESCREENWIDTH;
+    f_w = (SCREENWIDTH * hires);
     if (automapoverlay && scaledviewheight == SCREENHEIGHT)
-      f_h = HIRESCREENHEIGHT;
+      f_h = (SCREENHEIGHT * hires);
     else
       f_h = (SCREENHEIGHT-ST_HEIGHT) * hires;
   }
@@ -957,7 +957,7 @@ boolean AM_Responder
       }
 
       if (automapoverlay && scaledviewheight == SCREENHEIGHT)
-        f_h = HIRESCREENHEIGHT;
+        f_h = (SCREENHEIGHT * hires);
       else
         f_h = (SCREENHEIGHT-ST_HEIGHT) * hires;
 
@@ -1239,7 +1239,7 @@ static void AM_clearFB(int color)
 
   for (x = f_x;  x < f_x+f_w;  x++)
     for (y = f_y;  y < f_y+f_h;  y++)
-      fb[y * HIRESCREENWIDTH + x] = color;
+      fb[y * (SCREENWIDTH * hires) + x] = color;
 }
 
 //
@@ -1391,10 +1391,10 @@ void PUTDOT(int x, int y, int color)
   {
     for (int i = 0;  i < MAX(1, 2 * (hires-2)) && (f_x <= x+i && x+i < f_x+f_w);  i++)
       for (int j = 0;  j < MAX(1, 2 * (hires-2)) && (f_y <= y+j && y+j < f_y+f_h);  j++)
-        fb[(y + j) * HIRESCREENWIDTH + (x + i)] = color;
+        fb[(y + j) * (SCREENWIDTH * hires) + (x + i)] = color;
   }
   else if ((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h))
-    fb[y * HIRESCREENWIDTH + x] = color;
+    fb[y * (SCREENWIDTH * hires) + x] = color;
 }
 
 //
@@ -2474,7 +2474,7 @@ void AM_shadeScreen(void)
 
     for (x = f_x;  x < f_x+f_w;  x++)
       for (y = f_y;  y < f_y+f_h;  y++) {
-        pixel = y * HIRESCREENWIDTH + x;
+        pixel = y * (SCREENWIDTH * hires) + x;
         fb[pixel] = colormaps[0][automap_overlay_darkening * 256 + fb[pixel]];
       }
   }

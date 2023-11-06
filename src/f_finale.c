@@ -915,7 +915,7 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col)
 	  for (pos = 0, i = 0; i < hires; i++)
 	  {
 	    memset(&dest[pos], *source, hires);
-	    pos += HIRESCREENWIDTH;
+	    pos += (SCREENWIDTH * hires);
 	  }
 	  source++;
 	}
@@ -963,7 +963,7 @@ void F_BunnyScroll (void)
   if (pillar_width > 0)
   {
     // [crispy] fill pillarboxes in widescreen mode
-    memset(screens[0], 0, HIRESCREENWIDTH * HIRESCREENHEIGHT);
+    memset(screens[0], 0, (SCREENWIDTH * hires) * (SCREENHEIGHT * hires));
   }
   else
   {

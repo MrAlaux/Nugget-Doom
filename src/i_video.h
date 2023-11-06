@@ -28,7 +28,6 @@ extern int SCREENWIDTH;
 extern int SCREENHEIGHT;
 extern int NONWIDEWIDTH; // [crispy] non-widescreen SCREENWIDTH
 extern int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
-extern int HIRESCREENWIDTH, HIRESCREENHEIGHT; // [Nugget]
 void I_GetScreenDimensions (void); // [crispy] re-calculate WIDESCREENDELTA
 
 enum

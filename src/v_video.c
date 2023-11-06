@@ -326,8 +326,8 @@ void V_CopyRect(int srcx, int srcy, int srcscrn, int width,
       for ( ; height>0 ; height--)
         {
           memcpy (dest, src, width);
-          src += HIRESCREENWIDTH;
-          dest += HIRESCREENWIDTH;
+          src += (SCREENWIDTH * hires);
+          dest += (SCREENWIDTH * hires);
         }
     }
   else
@@ -432,7 +432,7 @@ void V_DrawPatchGeneral(int x, int y, int scrn, patch_t *patch,
                       for (j = 0; j < hires; j++)
                       {
                         memset(dest, *source, hires);
-                        dest += HIRESCREENWIDTH;
+                        dest += (SCREENWIDTH * hires);
                       }
                       source++;
                     }
@@ -444,7 +444,7 @@ void V_DrawPatchGeneral(int x, int y, int scrn, patch_t *patch,
                     for (i = 0; i < hires; i++)
                     {
                       memset(dest, *source, hires);
-                      dest += HIRESCREENWIDTH;
+                      dest += (SCREENWIDTH * hires);
                     }
                     source++;
                   }
@@ -615,7 +615,7 @@ void V_DrawPatchTranslated(int x, int y, int scrn, patch_t *patch, char *outr)
                       for (j = 0; j < hires; j++)
                       {
                         memset(dest, outr[*source], hires);
-                        dest += HIRESCREENWIDTH;
+                        dest += (SCREENWIDTH * hires);
                       }
                       source++;
                     }
@@ -627,7 +627,7 @@ void V_DrawPatchTranslated(int x, int y, int scrn, patch_t *patch, char *outr)
                     for (i = 0; i < hires; i++)
                     {
                       memset(dest, outr[*source], hires);
-                      dest += HIRESCREENWIDTH;
+                      dest += (SCREENWIDTH * hires);
                     }
                     source++;
                   }
@@ -728,7 +728,7 @@ void V_DrawPatchFullScreen(int scrn, patch_t *patch)
     // [crispy] fill pillarboxes in widescreen mode
     if (SCREENWIDTH != NONWIDEWIDTH)
     {
-       memset(screens[scrn], 0, HIRESCREENWIDTH * HIRESCREENHEIGHT);
+       memset(screens[scrn], 0, (SCREENWIDTH * hires) * (SCREENHEIGHT * hires));
     }
 
     V_DrawPatch(x, 0, scrn, patch);
@@ -773,7 +773,7 @@ void V_DrawBlock(int x, int y, int scrn, int width, int height, byte *src)
               for (pos = 0, i = 0; i < hires; i++)
               {
                 memset(&d[pos], *src, hires);
-                pos += HIRESCREENWIDTH;
+                pos += (SCREENWIDTH * hires);
               }
               src++;
             }
@@ -824,7 +824,7 @@ void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
   while (height--)
     {
       memcpy (dest, src, width);
-      src += HIRESCREENWIDTH;
+      src += (SCREENWIDTH * hires);
       dest += width;
     }
 }
@@ -852,7 +852,7 @@ void V_PutBlock(int x, int y, int scrn, int width, int height, byte *src)
   while (height--)
     {
       memcpy (dest, src, width);
-      dest += HIRESCREENWIDTH;
+      dest += (SCREENWIDTH * hires);
       src += width;
     }
 }
@@ -874,7 +874,7 @@ void V_DrawHorizLine(int x, int y, int scrn, int width, byte color)
   while (height--)
   {
     memset(dest, color, width);
-    dest += HIRESCREENWIDTH;
+    dest += (SCREENWIDTH * hires);
   }
 }
 
@@ -892,7 +892,7 @@ void V_ShadeScreen(const int targshade) // [Nugget] Parameterized
     screenshade = 0;
   }
 
-  for (y = 0; y < HIRESCREENWIDTH * HIRESCREENHEIGHT; y++)
+  for (y = 0; y < (SCREENWIDTH * hires) * (SCREENHEIGHT * hires); y++)
   {
     dest[y] = colormaps[0][screenshade * 256 + dest[y]];
   }

@@ -119,11 +119,11 @@ static void M_TakeSnapshot (void)
   }
   p = current_snapshot;
 
-  for (y = 0; y < HIRESCREENHEIGHT; y += inc)
+  for (y = 0; y < (SCREENHEIGHT * hires); y += inc)
   {
     for (x = 0; x < (NONWIDEWIDTH * hires); x += inc)
     {
-      *p++ = s[y * HIRESCREENWIDTH + (WIDESCREENDELTA * hires) + x];
+      *p++ = s[y * (SCREENWIDTH * hires) + (WIDESCREENDELTA * hires) + x];
     }
   }
 
@@ -155,7 +155,7 @@ boolean M_DrawSnapshot (int n, int x, int y, int w, int h)
     for (desty = 0; desty < (h * hires); desty++)
     {
       memset(dest, 0, w * hires);
-      dest += HIRESCREENWIDTH;
+      dest += (SCREENWIDTH * hires);
     }
 
     return false;
@@ -170,7 +170,7 @@ boolean M_DrawSnapshot (int n, int x, int y, int w, int h)
 
     for (desty = 0, srcy = 0; desty < (h * hires); desty++, srcy += step_y)
     {
-      destline = dest + desty * HIRESCREENWIDTH;
+      destline = dest + desty * (SCREENWIDTH * hires);
       srcline = snapshots[n] + (srcy >> FRACBITS) * ORIGWIDTH;
 
       for (destx = 0, srcx = 0; destx < (w * hires); destx++, srcx += step_x)

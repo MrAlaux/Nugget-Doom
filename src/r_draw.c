@@ -815,7 +815,7 @@ void R_InitBuffer(int width, int height)
 { 
   int i; 
 
-  linesize = HIRESCREENWIDTH;    // killough 11/98
+  linesize = (SCREENWIDTH * hires);    // killough 11/98
 
   // Handle resize,
   //  e.g. smaller view windows
@@ -857,9 +857,9 @@ void R_DrawBackground(char *patchname, byte *back_dest)
   if (hires > 1)       // killough 11/98: hires support
   {
     int i;
-    for (y = 0; y < HIRESCREENHEIGHT; y++)
+    for (y = 0; y < (SCREENHEIGHT * hires); y++)
     {
-      for (x = 0; x < HIRESCREENWIDTH; x += hires)
+      for (x = 0; x < (SCREENWIDTH * hires); x += hires)
       {
         const byte dot = src[(((y / hires) & 63) << 6) + ((x / hires) & 63)];
         for (i = 0; i < hires; i++)
@@ -944,7 +944,7 @@ void R_VideoErase(unsigned ofs, int count)
       for (i = 0; i < hires; i++)
       {
         memcpy(screens[0]+ofs, screens[1]+ofs, count);   // LFB copy.
-        ofs += HIRESCREENWIDTH;
+        ofs += (SCREENWIDTH * hires);
       }
       return;
     }

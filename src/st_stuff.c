@@ -336,7 +336,7 @@ void ST_refreshBackground(boolean force)
             // [FG] fill background buffer with average status bar color
             for (y = (v0 * hires); y < (v1 * hires); y++)
             {
-              memset(dest + y * HIRESCREENWIDTH, col, HIRESCREENWIDTH);
+              memset(dest + y * (SCREENWIDTH * hires), col, (SCREENWIDTH * hires));
             }
           }
 
@@ -355,9 +355,9 @@ void ST_refreshBackground(boolean force)
           if (hires > 1)
           {
             int i;
-            for (y = ((SCREENHEIGHT - ST_HEIGHT) * hires); y < HIRESCREENHEIGHT; y++)
+            for (y = ((SCREENHEIGHT - ST_HEIGHT) * hires); y < (SCREENHEIGHT * hires); y++)
             {
-              for (x = 0; x < HIRESCREENWIDTH; x += hires)
+              for (x = 0; x < (SCREENWIDTH * hires); x += hires)
               {
                 const byte dot = src[(((y / hires) & 63) << 6) + ((x / hires) & 63)];
                 for (i = 0; i < hires; i++)
