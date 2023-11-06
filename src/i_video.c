@@ -1019,7 +1019,8 @@ void I_GetScreenDimensions(void)
         // [crispy] make sure SCREENWIDTH is an integer multiple of 4 ...
         if (hires > 1)
         {
-            SCREENWIDTH = ((SCREENWIDTH * hires) & (int)~3) / hires;
+            // [Nugget] Since we have uneven resolution multipliers, mask it twice
+            SCREENWIDTH = (((SCREENWIDTH * hires) & (int)~3) / hires + 3) & (int)~3;
         }
         else
         {

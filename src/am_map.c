@@ -1389,8 +1389,8 @@ void PUTDOT(int x, int y, int color)
 {
   if (need_downscaling && !smooth_scaling)
   {
-    for (int i = 0;  i < MAX(1, 2 * (hires-2)) && (f_x <= x+i && x+i < f_x+f_w);  i++)
-      for (int j = 0;  j < MAX(1, 2 * (hires-2)) && (f_y <= y+j && y+j < f_y+f_h);  j++)
+    for (int i = 0;  i < MAX(1, hires-2) && (f_x <= x+i && x+i < f_x+f_w);  i++)
+      for (int j = 0;  j < MAX(1, hires-2) && (f_y <= y+j && y+j < f_y+f_h);  j++)
         fb[(y + j) * (SCREENWIDTH * hires) + (x + i)] = color;
   }
   else if ((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h))
