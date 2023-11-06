@@ -4246,7 +4246,7 @@ static void M_ResetScreen(void)
 }
 
 static const char *hires_strings[] = {
-  "1X (200p)", "2X (400p)", "4X (800p)", "8X (1600p)", NULL
+  NULL, "1X (200p)", "2X (400p)", "3X (600p)", "4X (800p)", "5X (1000p)", "6X (1200p)", "7X (1400p)", "8X (1600p)", NULL
 };
 
 setup_menu_t gen_settings1[] = { // General Settings screen1
@@ -7941,7 +7941,7 @@ void M_ResetSetupMenu(void)
 
 void M_ResetSetupMenuVideo(void)
 {
-  DISABLE_ITEM(!hires, enem_settings2[enem2_fuzz]); // [Nugget] Now in page 2
+  DISABLE_ITEM(hires == 1, enem_settings2[enem2_fuzz]); // [Nugget] Now in page 2
   M_EnableDisableFPSLimit();
 }
 

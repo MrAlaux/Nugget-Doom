@@ -45,6 +45,7 @@
 int SCREENWIDTH, SCREENHEIGHT;
 int NONWIDEWIDTH; // [crispy] non-widescreen SCREENWIDTH
 int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
+int HIRESCREENWIDTH, HIRESCREENHEIGHT; // [Nugget]
 
 boolean use_vsync;  // killough 2/8/98: controls whether vsync is called
 int hires, default_hires;      // killough 11/98
@@ -340,8 +341,8 @@ static void I_ToggleFullScreen(void)
     {
         if (WindowOutOfBounds())
         {
-            const int w = SCREENWIDTH << hires;
-            const int h = SCREENHEIGHT << hires;
+            const int w = HIRESCREENWIDTH;
+            const int h = HIRESCREENHEIGHT;
             if (!FindMinWindowSize(w, h, &window_width, &window_height))
             {
                 window_width = w;
@@ -533,29 +534,28 @@ void I_FinishUpdate(void)
       lasttic = i;
       if (tics > 20)
         tics = 20;
-      if (hires)    // killough 11/98: hires support
+      if (hires > 1)    // killough 11/98: hires support
         {
           int j;
-          const int hires_size = 1 << hires;
-          const int pos0 = ((SCREENHEIGHT - 1) << hires) * (SCREENWIDTH << hires);
+          const int pos0 = ((SCREENHEIGHT - 1) * hires) * HIRESCREENWIDTH;
           for (i = 0; i < tics * 2; i += 2)
           {
-            const int pos1 = pos0 + (i << hires);
+            const int pos1 = pos0 + (i * hires);
             int pos2 = 0;
-            for (j = 0; j < hires_size; j++)
+            for (j = 0; j < hires; j++)
             {
-              memset(&s[pos1 + pos2], 0xFF, hires_size);
-              pos2 += SCREENWIDTH << hires;
+              memset(&s[pos1 + pos2], 0xFF, hires);
+              pos2 += HIRESCREENWIDTH;
             }
           }
           for ( ; i < 20 * 2; i += 2)
           {
-            const int pos1 = pos0 + (i << hires);
+            const int pos1 = pos0 + (i * hires);
             int pos2 = 0;
-            for (j = 0; j < hires_size; j++)
+            for (j = 0; j < hires; j++)
             {
-              memset(&s[pos1 + pos2], 0x0, hires_size);
-              pos2 += SCREENWIDTH << hires;
+              memset(&s[pos1 + pos2], 0x0, hires);
+              pos2 += HIRESCREENWIDTH;
             }
           }
         }
@@ -633,7 +633,7 @@ void I_FinishUpdate(void)
 
 void I_ReadScreen(byte *scr)
 {
-   const int size = SCREENWIDTH * (SCREENHEIGHT << (2 * hires));
+   const int size = SCREENWIDTH * (SCREENHEIGHT * hires*hires);
 
    // haleyjd
    memcpy(scr, *screens, size);
@@ -647,7 +647,7 @@ static byte *diskflash, *old_data;
 
 static void I_InitDiskFlash(void)
 {
-  byte temp[(16 * 16) << (2 * MAX_HIRES)];
+  byte temp[(16 * 16) * MAX_HIRES*MAX_HIRES];
 
   if (diskflash)
     {
@@ -655,8 +655,8 @@ static void I_InitDiskFlash(void)
       Z_Free(old_data);
     }
 
-  diskflash = Z_Malloc((16<<hires) * (16<<hires) * sizeof(*diskflash), PU_STATIC, 0);
-  old_data = Z_Malloc((16<<hires) * (16<<hires) * sizeof(*old_data), PU_STATIC, 0);
+  diskflash = Z_Malloc((16*hires) * (16*hires) * sizeof(*diskflash), PU_STATIC, 0);
+  old_data = Z_Malloc((16*hires) * (16*hires) * sizeof(*old_data), PU_STATIC, 0);
 
   V_GetBlock(0, 0, 0, 16, 16, temp);
   V_DrawPatchDirect(0-WIDESCREENDELTA, 0, 0, W_CacheLumpName("STDISK", PU_CACHE));
@@ -812,7 +812,7 @@ boolean I_WritePNGfile(char *filename)
 {
   SDL_Rect rect = {0};
   SDL_PixelFormat *format;
-  const int screen_width = (SCREENWIDTH << hires);
+  const int screen_width = HIRESCREENWIDTH;
   int pitch;
   byte *pixels;
   boolean ret = false;
@@ -1018,19 +1018,23 @@ void I_GetScreenDimensions(void)
 
         SCREENWIDTH = w * ah / h;
         // [crispy] make sure SCREENWIDTH is an integer multiple of 4 ...
-        if (hires)
+        if (hires > 1)
         {
-            SCREENWIDTH = ((SCREENWIDTH << hires) & (int)~3) / (1 << hires);
+            SCREENWIDTH = ((SCREENWIDTH * hires) & (int)~3) / hires;
         }
         else
         {
             SCREENWIDTH = (SCREENWIDTH + 3) & (int)~3;
         }
         // [crispy] ... but never exceeds MAX_SCREENWIDTH (array size!)
-        SCREENWIDTH = MIN(SCREENWIDTH, MAX_SCREENWIDTH >> MAX_HIRES);
+        SCREENWIDTH = MIN(SCREENWIDTH, MAX_SCREENWIDTH / MAX_HIRES);
     }
 
     WIDESCREENDELTA = (SCREENWIDTH - NONWIDEWIDTH) / 2;
+    
+    // [Nugget]
+    HIRESCREENWIDTH  = SCREENWIDTH  * hires;
+    HIRESCREENHEIGHT = SCREENHEIGHT * hires;
 }
 
 static void CreateUpscaledTexture(boolean force)
@@ -1039,8 +1043,8 @@ static void CreateUpscaledTexture(boolean force)
     int w, h, w_upscale, h_upscale;
     static int h_upscale_old, w_upscale_old;
 
-    const int screen_width = (SCREENWIDTH << hires);
-    const int screen_height = (SCREENHEIGHT << hires);
+    const int screen_width  = HIRESCREENWIDTH;
+    const int screen_height = HIRESCREENHEIGHT;
 
     SDL_GetRendererInfo(renderer, &info);
 
@@ -1134,7 +1138,7 @@ static boolean NeedDownscaling(void)
     SDL_RendererInfo info;
     int w, h;
 
-    const int screen_width = SCREENWIDTH << hires;
+    const int screen_width = HIRESCREENWIDTH;
 
     SDL_GetRendererInfo(renderer, &info);
     if (info.flags & SDL_RENDERER_SOFTWARE)
@@ -1175,8 +1179,8 @@ static void I_ResetGraphicsMode(void)
 
     I_GetScreenDimensions();
 
-    w = (SCREENWIDTH << hires);
-    h = (SCREENHEIGHT << hires);
+    w = HIRESCREENWIDTH;
+    h = HIRESCREENHEIGHT;
 
     blit_rect.w = w;
     blit_rect.h = h;

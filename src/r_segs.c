@@ -159,7 +159,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
         if (!fixedcolormap)      // calculate lighting
           {
             unsigned index = (int) (spryscale/fovdiff)  // [Nugget]
-                             >>(LIGHTSCALESHIFT+hires); // killough 11/98
+                             >>(LIGHTSCALESHIFT + ((hires-1) / 2)); // killough 11/98
 
             if (index >=  MAXLIGHTSCALE )
               index = MAXLIGHTSCALE-1;
@@ -377,7 +377,7 @@ static void R_RenderSegLoop (void)
 
           // calculate lighting
           index = (int) (rw_scale/fovdiff)   // [Nugget]
-                  >>(LIGHTSCALESHIFT+hires); // killough 11/98
+                  >>(LIGHTSCALESHIFT + ((hires-1) / 2)); // killough 11/98
 
           if (index >=  MAXLIGHTSCALE )
             index = MAXLIGHTSCALE-1;

@@ -59,8 +59,8 @@ static int wipe_doColorXForm(int width, int height, int ticks)
   byte *end = wipe_scr+width*height;
 
   // [Nugget] Speed it up
-  ticks <<= 3;
-  ticks >>= hires;
+  ticks *= MAX_HIRES;
+  ticks /= hires;
   ticks = MAX(1, ticks);
 
   for (;w != end; w++, e++) {
@@ -86,7 +86,6 @@ static int *y;
 static int wipe_initMelt(int width, int height, int ticks)
 {
   int i;
-  const int hires_size = 1 << hires;
 
   // copy start screen to main screen
   memcpy(wipe_scr, wipe_scr_start, width*height);
@@ -98,16 +97,16 @@ static int wipe_initMelt(int width, int height, int ticks)
 
   // setup initial column positions (y<0 => not ready to scroll yet)
   y = (int *) Z_Malloc(width*sizeof(int), PU_STATIC, 0);
-  y[0] = -(M_Random()%16) * hires_size;
+  y[0] = -(M_Random()%16) * hires;
   for (i=1;i<width;i++)
     {
-      int r = ((M_Random()%3) - 1) * hires_size;
+      int r = ((M_Random()%3) - 1) * hires;
       y[i] = y[i-1] + r;
       if (y[i] > 0)
         y[i] = 0;
       else
-        if (y[i] == -16 * hires_size)
-          y[i] = -15 * hires_size;
+        if (y[i] == -16 * hires)
+          y[i] = -15 * hires;
     }
   return 0;
 }
@@ -180,8 +179,8 @@ static int wipe_doFade(int width, int height, int ticks)
   static const int targshade = 31;
   
   // [Nugget] Speed it up
-  ticks <<= 1;
-  ticks >>= hires;
+  ticks *= MAX_HIRES / 3;
+  ticks /= hires;
   ticks = MAX(1, ticks);
 
   memcpy(wipe_scr, fadeIn ? wipe_scr_end : wipe_scr_start, width * height);
@@ -247,8 +246,8 @@ int wipe_ScreenWipe(int wipeno, int x, int y, int width, int height, int ticks)
 {
   static boolean go;                               // when zero, stop the wipe
 
-  if (hires)     // killough 11/98: hires support
-    width <<= hires, height <<= hires, ticks <<= hires;
+  if (hires > 1)     // killough 11/98: hires support
+    width *= hires, height *= hires, ticks *= hires;
 
   // [Nugget] Screen Wipe speed
   if (!strictmode && wipe_speed_percentage != 100)

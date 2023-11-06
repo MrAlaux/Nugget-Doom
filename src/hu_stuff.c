@@ -1598,15 +1598,15 @@ static void HU_UpdateCrosshair(void)
 
 void HU_UpdateCrosshairLock(int x, int y)
 {
-  int w = (crosshair.w << hires);
-  int h = (crosshair.h << hires);
+  int w = (crosshair.w * hires);
+  int h = (crosshair.h * hires);
 
   x = viewwindowx + BETWEEN(w, viewwidth  - w - 1, x);
   y = viewwindowy + BETWEEN(h, viewheight - h - 1, y);
 
   if (hud_crosshair_lockon == crosslockon_full) // [Nugget]
-  { crosshair.x = (x >> hires) - WIDESCREENDELTA; }
-  crosshair.y = (y >> hires);
+  { crosshair.x = (x / hires) - WIDESCREENDELTA; }
+  crosshair.y = (y / hires);
 }
 
 void HU_DrawCrosshair(void)

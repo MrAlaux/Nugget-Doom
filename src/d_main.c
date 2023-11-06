@@ -344,11 +344,11 @@ void D_Display (void)
   if (paused)
     {
       int y = 4;
-      int x = (viewwindowx>>hires);
+      int x = (viewwindowx/hires);
       patch_t *patch = W_CacheLumpName("M_PAUSE", PU_CACHE);
 
       if (!automapactive)
-        y += (viewwindowy>>hires);
+        y += (viewwindowy/hires);
       V_DrawPatchDirect(x + (scaledviewwidth - SHORT(patch->width)) / 2 - WIDESCREENDELTA,
                         y, 0, patch);
     }

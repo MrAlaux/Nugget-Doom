@@ -165,9 +165,10 @@ default_t defaults[] = {
   //
 
   { // killough 11/98: hires
+    // [Nugget] Now a multiplier
     "hires", (config_t *) &default_hires, NULL,
-    {1}, {0,MAX_HIRES}, number, ss_none, wad_no,
-    "Renderer resolution (0 = 200p, 1 = 400p, 2 = 800p, 3 = 1600p)"
+    {2}, {1,MAX_HIRES}, number, ss_none, wad_no,
+    "Renderer resolution multiplier (1 = 200p, 2 = 400p, 3 = 600p...)"
   },
 
   {

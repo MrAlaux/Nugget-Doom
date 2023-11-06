@@ -596,11 +596,11 @@ void R_ExecuteSetViewSize (void)
       }
     }
 
-  viewwidth = scaledviewwidth << hires;                  // killough 11/98
-  viewheight = scaledviewheight << hires;                // killough 11/98
-  viewwidth_nonwide = scaledviewwidth_nonwide << hires;
+  viewwidth = scaledviewwidth * hires;                  // killough 11/98
+  viewheight = scaledviewheight * hires;                // killough 11/98
+  viewwidth_nonwide = scaledviewwidth_nonwide * hires;
 
-  viewblocks = MIN(setblocks, 10) << hires;
+  viewblocks = MIN(setblocks, 10) * hires;
 
   // [Nugget] FOV changes
   if (fovchange) {
@@ -1130,8 +1130,8 @@ void R_RenderPlayerView (player_t* player)
           c[i] = t=='/' ? color : t;
         }
       if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8)
-        V_DrawBlock(((viewwindowx +  viewwidth/2) >> hires) - 24,
-                    ((viewwindowy + viewheight/2) >> hires) - 24, 0, 47, 47, c);
+        V_DrawBlock(((viewwindowx +  viewwidth/2) / hires) - 24,
+                    ((viewwindowy + viewheight/2) / hires) - 24, 0, 47, 47, c);
       R_DrawViewBorder();
     }
 
