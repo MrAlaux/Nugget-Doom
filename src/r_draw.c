@@ -555,12 +555,13 @@ static void R_DrawFuzzColumn_block(void)
   const int hires_mult = hires - 1;
 
   // [FG] draw only even columns
-  if (dc_x & hires_mult)
+  if (dc_x % hires)
     return;
 
   // [FG] draw only even pixels
-  dc_yl = (dc_yl + hires_mult) & ~hires_mult;
-  dc_yh &= (int)~hires_mult;
+  dc_yl += hires;
+  dc_yl -= dc_yl % hires;
+  dc_yh -= dc_yh % hires;
 
   count = dc_yh - dc_yl;
 
