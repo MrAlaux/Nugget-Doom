@@ -552,7 +552,6 @@ static void R_DrawFuzzColumn_block(void)
   int count;
   byte *dest;
   boolean cutoff_yl, cutoff_yh;
-  const int hires_mult = hires - 1;
 
   // [FG] draw only even columns
   if (dc_x % hires)
