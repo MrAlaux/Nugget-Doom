@@ -85,7 +85,7 @@ typedef enum
 #define ORIGHEIGHT 200 // [crispy]
 
 // [Nugget] We now multiply and divide by `hires` rather than bit-shifting
-#define MAX_HIRES 8
+#define MAX_HIRES 9
 #define MAX_SCREENWIDTH  (576 * MAX_HIRES) // [FG] corresponds to 2.4:1 in hires mode
 #define MAX_SCREENHEIGHT (ORIGHEIGHT * MAX_HIRES) // [crispy]
 
