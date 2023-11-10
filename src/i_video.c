@@ -59,6 +59,8 @@ boolean integer_scaling; // [FG] force integer scales
 boolean vga_porch_flash; // emulate VGA "porch" behaviour
 boolean smooth_scaling;
 
+boolean no_downscaling; // [Nugget]
+
 boolean need_reset;
 boolean toggle_fullscreen;
 boolean toggle_exclusive_fullscreen;
@@ -286,16 +288,19 @@ static boolean FindMinWindowSize(const int desired_width, const int desired_heig
     *width = desired_width;
     *height = desired_height;
 
-    do
+    if (!no_downscaling)
     {
-        const int aspect_height = use_aspect ? (6 * (*height) / 5) : *height;
-        if (*width < mode.w && aspect_height < mode.h)
-        {
-            break;
-        }
-        *width >>= 1;
-        *height >>= 1;
-    } while (*width && *height);
+      do
+      {
+          const int aspect_height = use_aspect ? (6 * (*height) / 5) : *height;
+          if (*width < mode.w && aspect_height < mode.h)
+          {
+              break;
+          }
+          *width >>= 1;
+          *height >>= 1;
+      } while (*width && *height);
+    }
 
     if (*width < SCREENWIDTH || *height < SCREENHEIGHT)
     {
