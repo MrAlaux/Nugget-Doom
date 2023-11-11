@@ -114,6 +114,7 @@ extern int warning_about_changes, print_warning_about_changes;
 #define S_BOOM         0x10000000 // Disable if complevel < boom
 #define S_VANILLA      0x20000000 // Disable if complevel != vanilla
 #define S_CRITICAL     0x40000000 // Disable when recording/playing a demo and in netgame
+#define S_RESOLUTION   0x80000000 // [Nugget] Report current resolution
 
 // S_SHOWDESC  = the set of items whose description should be displayed
 // S_SHOWSET   = the set of items whose setting should be displayed

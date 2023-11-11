@@ -2674,6 +2674,19 @@ void M_DrawInstructions()
     strcpy(menu_buffer, s);
     M_DrawMenuString(x,20,color);
   }
+
+  // [Nugget] Report current resolution
+  if (flags & S_RESOLUTION)
+  {
+    char str[48];
+
+    M_snprintf(str, sizeof(str), "Current Resolution: %ix%i",
+               (SCREENWIDTH * hires),
+               (use_aspect ? (6 * SCREENHEIGHT / 5) : SCREENHEIGHT) * hires);
+
+    M_DrawString((ORIGWIDTH / 2) - (M_GetPixelWidth(str) / 2),
+                 M_Y + (14 * M_SPC), CR_GOLD, str);
+  }
 }
 
 // [FG] reload current level / go to next level
@@ -4321,10 +4334,13 @@ setup_menu_t gen_settings1[] = { // General Settings screen1
 
   {"Video"       ,S_SKIP|S_TITLE, m_null, M_X, M_Y},
 
-  {"Renderer Resolution", S_CHOICE, m_null, M_X, M_Y+ gen1_hires*M_SPC,
+  // [Nugget] These first two items now report
+  // the current resolution when sitting on them
+
+  {"Renderer Resolution", S_CHOICE|S_RESOLUTION, m_null, M_X, M_Y+ gen1_hires*M_SPC,
    {"hires"}, 0, M_ResetScreen, hires_strings},
 
-  {"Widescreen Rendering", S_CHOICE, m_null, M_X, M_Y+ gen1_widescreen*M_SPC,
+  {"Widescreen Rendering", S_CHOICE|S_RESOLUTION, m_null, M_X, M_Y+ gen1_widescreen*M_SPC,
    {"widescreen"}, 0, M_ResetScreen, widescreen_ratios}, // [Nugget] Widescreen ratios
 
   {"", S_SKIP, m_null, M_X, M_Y + gen1_gap1*M_SPC},
