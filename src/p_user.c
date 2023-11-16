@@ -144,10 +144,13 @@ void P_CalcHeight (player_t* player)
     }
 
   angle = (FINEANGLES/20*leveltime)&FINEMASK;
-  // [Nugget] View bobbing percentage setting
+
   bob = player->bob;
+
+  // [Nugget] View bobbing percentage setting
   if (view_bobbing_percentage != 100)
   { bob = FixedDiv(FixedMul(bob, view_bobbing_percentage), 100); }
+
   bob = FixedMul(bob / 2, finesine[angle]);
 
   // move viewheight
@@ -229,8 +232,7 @@ void P_MovePlayer (player_t* player)
   // [Nugget]
   if (player->cheats & CF_FLY)
   {
-    if (!(player->mo->flags & MF_NOGRAVITY))
-    { player->mo->flags |= MF_NOGRAVITY; }
+    player->mo->flags |= MF_NOGRAVITY;
 
     if (!(M_InputGameActive(input_jump) ^ M_InputGameActive(input_crouch)))
     { // Stop moving...
@@ -262,16 +264,20 @@ void P_MovePlayer (player_t* player)
       if (player->mo->momz > 8*FRACUNIT) { player->mo->momz = 8*FRACUNIT; }
     }
     else if (jump_crouch) {
-      if (player->mo->intflags & MIF_CROUCHING) // Stand up first
-      { player->mo->intflags &= ~MIF_CROUCHING; }
+      if (player->mo->intflags & MIF_CROUCHING)
+      {
+        player->mo->intflags &= ~MIF_CROUCHING; // Stand up first
+      }
       else if (onground && !(player->jumptics)
                && (player->mo->height == player->mo->info->height)
                && ((player->mo->ceilingz - player->mo->floorz) > player->mo->height))
       { // Jump
         player->mo->momz = 8*FRACUNIT;
         player->jumptics = 20;
+
         // [NS] Jump sound.
         S_StartSoundOptional(player->mo, sfx_pljump, -1);
+
         // [crispy] squat down weapon sprite a bit
         if (STRICTMODE(weaponsquat))
         { player->psprites[ps_weapon].dy = player->mo->momz>>1; }
@@ -280,7 +286,10 @@ void P_MovePlayer (player_t* player)
   }
 
   // [Nugget] Crouch/Fly Down
-  if (!M_InputGameActive(input_crouch)) { crouchKeyDown = false; }
+  if (!M_InputGameActive(input_crouch))
+  {
+    crouchKeyDown = false;
+  }
   else if (casual_play)
   {
     if (player->cheats & CF_FLY) {
@@ -297,7 +306,9 @@ void P_MovePlayer (player_t* player)
   // [Nugget] Forcefully stand up under certain conditions
   if ((player->mo->intflags & MIF_CROUCHING)
       && (!jump_crouch || player->cheats & CF_FLY || chasecam_mode))
-  { player->mo->intflags &= ~MIF_CROUCHING; }
+  {
+    player->mo->intflags &= ~MIF_CROUCHING;
+  }
 
   // [Nugget] Smooth crouching
   if (   ((player->mo->intflags & MIF_CROUCHING)
@@ -332,7 +343,8 @@ void P_MovePlayer (player_t* player)
     }
 
     if ((player->mo->height * sign) >= (heighttarget * sign))
-    { // Done crouching
+    {
+      // Done crouching
       if (!onground && (sign < 0)) // Take away excess Z shifting
       { player->mo->z -= heighttarget - player->mo->height; }
       player->mo->height = heighttarget;
@@ -442,7 +454,8 @@ void P_DeathThink (player_t* player)
 
   // [Nugget] Gradually decrease the crouching offset;
   // should give a nice arching POV effect, appropriate for the context
-  if (player->crouchoffset) {
+  if (player->crouchoffset)
+  {
     int step = player->crouchoffset/4;
     if (step < FRACUNIT) { step = FRACUNIT; }
 
@@ -520,8 +533,11 @@ void P_DeathThink (player_t* player)
 // [Nugget] Event Timers
 void P_SetPlayerEvent(player_t* player, eventtimer_t type)
 {
-  if (!STRICTMODE(event_timers[type] == 2 || (event_timers[type] && (demorecording||demoplayback))))
-  { return; }
+  if (!STRICTMODE(event_timers[type] == 2
+                  || (event_timers[type] && (demorecording||demoplayback))))
+  {
+    return;
+  }
 
   player->eventtype = type;
   player->eventtime = leveltime;
@@ -618,7 +634,10 @@ void P_PlayerThink (player_t* player)
       return;
     }
 
-  if (!M_InputGameActive(input_zoom)) { zoomKeyDown = false; }
+  if (!M_InputGameActive(input_zoom))
+  {
+    zoomKeyDown = false;
+  }
   else if (STRICTMODE(zoomKeyDown == false))
   {
     zoomKeyDown = true;
@@ -752,24 +771,30 @@ void P_PlayerThink (player_t* player)
     player->powers[pw_ironfeet]--;
 
   // [Nugget] Fast weapons cheat
-  if (player->cheats & CF_FASTWEAPS) {
+  if (player->cheats & CF_FASTWEAPS)
+  {
     if (player->psprites[ps_weapon].tics >= 1)
     { player->psprites[ps_weapon].tics = 1; }
+
     if (player->psprites[ps_flash].tics >= 1)
     { player->psprites[ps_flash].tics = 1; }
   }
 
   // [Nugget] Linetarget Query cheat
-  if (player->cheats & CF_LINETARGET) {
+  if (player->cheats & CF_LINETARGET)
+  {
     boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
 
     overflow[emu_intercepts].enabled = false;
     P_AimLineAttack(player->mo, player->mo->angle, 16*64*FRACUNIT * (comp_longautoaim+1), 0);
     overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
 
-    if (linetarget) // Give some info on the thing
+    if (linetarget)
+    {
+      // Give some info on the thing
       displaymsg("Type: %i - Health: %i/%i", linetarget->type,
                  linetarget->health, linetarget->info->spawnhealth);
+    }
   }
 
   if (player->cheats & CF_RENDERSTATS)

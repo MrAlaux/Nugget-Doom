@@ -3465,14 +3465,16 @@ void M_DrawWeapons(void)
 // Screen table definitions
 
 setup_menu_t stat_settings1[], stat_settings2[], stat_settings3[],
-             stat_settings4[]; // [Nugget]
+             stat_settings4[], stat_settings5[]; // [Nugget]
 
 setup_menu_t* stat_settings[] =
 {
   stat_settings1,
   stat_settings2,
   stat_settings3,
-  stat_settings4, // [Nugget]
+  // [Nugget]
+  stat_settings4,
+  stat_settings5,
   NULL
 };
 
@@ -3655,12 +3657,10 @@ setup_menu_t stat_settings3[] =
 enum {
   stat4_title1,
   stat4_powers,
-  stat4_stub1,
+  stat4_altarms,
   stat4_smart,
+  stat4_killspct,
   stat4_stub2,
-  stat4_msincomp,
-  stat4_mscomp,
-  stat4_stub3,
   stat4_title2,
   stat4_timeruse,
   stat4_timertelept,
@@ -3671,14 +3671,12 @@ setup_menu_t stat_settings4[] =
 {
   {"Nugget - Extended HUD", S_SKIP|S_TITLE, m_null, M_X, M_Y + stat4_title1 * M_SPC},
 
-    {"Show Powerup Timers",        S_YESNO|S_COSMETIC, m_null, M_X, M_Y + stat4_powers   * M_SPC, {"hud_power_timers"}},
-    {"",                           S_SKIP,             m_null, M_X, M_Y + stat4_stub1    * M_SPC},
-    {"Smart Totals",               S_YESNO,            m_null, M_X, M_Y + stat4_smart    * M_SPC, {"smarttotals"}},
-    {"",                           S_SKIP,             m_null, M_X, M_Y + stat4_stub2    * M_SPC},
-    {"Incomplete Milestone Color", S_CRITEM,           m_null, M_X, M_Y + stat4_msincomp * M_SPC, {"hudcolor_ms_incomp"}, 0, NULL, hudcolor_str},
-    {"Complete Milestone Color",   S_CRITEM,           m_null, M_X, M_Y + stat4_mscomp   * M_SPC, {"hudcolor_ms_comp"}, 0, NULL, hudcolor_str},
+    {"Show Powerup Timers",      S_YESNO|S_COSMETIC, m_null, M_X, M_Y + stat4_powers   * M_SPC, {"hud_power_timers"}},
+    {"Alternative Arms Display", S_YESNO,            m_null, M_X, M_Y + stat4_altarms  * M_SPC, {"alt_arms"}},
+    {"Smart Totals",             S_YESNO,            m_null, M_X, M_Y + stat4_smart    * M_SPC, {"smarttotals"}},
+    {"Show Kills Percentage",    S_YESNO,            m_null, M_X, M_Y + stat4_killspct * M_SPC, {"hud_kills_percentage"}},
 
-  {"",                      S_SKIP,         m_null, M_X, M_Y + stat4_stub3  * M_SPC},
+  {"",                      S_SKIP,         m_null, M_X, M_Y + stat4_stub2  * M_SPC},
   {"Nugget - Event Timers", S_SKIP|S_TITLE, m_null, M_X, M_Y + stat4_title2 * M_SPC},
 
     {"\"Use\" Button Timer", S_CHOICE,          m_null, M_X, M_Y + stat4_timeruse    * M_SPC, {"timer_use"},        0, NULL, timer_strings},
@@ -3686,6 +3684,42 @@ setup_menu_t stat_settings4[] =
     {"Key Pickup Timer",     S_CHOICE|S_STRICT, m_null, M_X, M_Y + stat4_timerkey    * M_SPC, {"timer_key_pickup"}, 0, NULL, timer_strings},
 
   {"<- PREV", S_SKIP|S_PREV, m_null, M_X_PREV, M_Y_PREVNEXT, {stat_settings3}},
+  {"NEXT ->", S_SKIP|S_NEXT, m_null, M_X_NEXT, M_Y_PREVNEXT, {stat_settings5}},
+
+  // Final entry
+  {0,S_SKIP|S_END,m_null}
+};
+
+enum {
+  stat5_title1,
+  stat5_timescale,
+  stat5_totaltime,
+  stat5_time,
+  stat5_eventtimer,
+  stat5_stub1,
+  stat5_kills,
+  stat5_items,
+  stat5_secrets,
+  stat5_msincomp,
+  stat5_mscomp,
+};
+
+setup_menu_t stat_settings5[] =
+{
+  {"Nugget - Extended HUD Colors", S_SKIP|S_TITLE, m_null, M_X, M_Y + stat5_title1 * M_SPC},
+
+    {"Time Scale (Game Speed %)", S_CRITEM, m_null, M_X, M_Y + stat5_timescale  * M_SPC, {"hudcolor_time_scale"}, 0, NULL, hudcolor_str},
+    {"Total Level Time",          S_CRITEM, m_null, M_X, M_Y + stat5_totaltime  * M_SPC, {"hudcolor_total_time"}, 0, NULL, hudcolor_str},
+    {"Level Time",                S_CRITEM, m_null, M_X, M_Y + stat5_time       * M_SPC, {"hudcolor_time"}, 0, NULL, hudcolor_str},
+    {"Event Timer",               S_CRITEM, m_null, M_X, M_Y + stat5_eventtimer * M_SPC, {"hudcolor_event_timer"}, 0, NULL, hudcolor_str},
+    {"",                          S_SKIP,   m_null, M_X, M_Y + stat5_stub1      * M_SPC},
+    {"Kills label",               S_CRITEM, m_null, M_X, M_Y + stat5_kills      * M_SPC, {"hudcolor_kills"}, 0, NULL, hudcolor_str},
+    {"Items label",               S_CRITEM, m_null, M_X, M_Y + stat5_items      * M_SPC, {"hudcolor_items"}, 0, NULL, hudcolor_str},
+    {"Secrets label",             S_CRITEM, m_null, M_X, M_Y + stat5_secrets    * M_SPC, {"hudcolor_secrets"}, 0, NULL, hudcolor_str},
+    {"Incomplete Milestone",      S_CRITEM, m_null, M_X, M_Y + stat5_msincomp   * M_SPC, {"hudcolor_ms_incomp"}, 0, NULL, hudcolor_str},
+    {"Complete Milestone",        S_CRITEM, m_null, M_X, M_Y + stat5_mscomp     * M_SPC, {"hudcolor_ms_comp"}, 0, NULL, hudcolor_str},
+
+  {"<- PREV", S_SKIP|S_PREV, m_null, M_X_PREV, M_Y_PREVNEXT, {stat_settings4}},
 
   // Final entry
   {0,S_SKIP|S_END,m_null}

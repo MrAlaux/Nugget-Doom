@@ -167,6 +167,7 @@ static void P_BringUpWeapon(player_t *player)
   player->psprites[ps_weapon].sy  = demo_version >= 203
                                     ? WEAPONBOTTOM+FRACUNIT*2
                                     : WEAPONBOTTOM;
+
   // [Nugget]: [crispy] squat down weapon sprite
   player->psprites[ps_weapon].dy = 0;
   // [Nugget] Reset offsets for weapon inertia
@@ -497,28 +498,30 @@ static void P_NuggetBobbing(player_t* player)
   { bob = FixedDiv(FixedMul(bob, weapon_bobbing_percentage), 100); }
 
   // sx - Default, differs in a few styles
-  psp->sx2 = ((1 - STRICTMODE(sx_fix))*FRACUNIT) + FixedMul(bob, finecosine[angle]);
+  psp->sx2 = ((1 - STRICTMODE(sx_fix)) * FRACUNIT) + FixedMul(bob, finecosine[angle]);
+
   // sy - Used for all styles, their specific values are added to this one right after
   psp->sy2 = WEAPONTOP + abs(psp->dy); // Squat weapon down on impact
 
   // Bobbing Styles, ported from Zandronum
-  switch (style) {
+  switch (style)
+  {
     case BOBSTYLE_VANILLA:
-      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_INVVANILLA:
-      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_ALPHA:
       psp->sx2 = FixedMul(bob, finesine[angle]);
-      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_INVALPHA:
       psp->sx2 = FixedMul(bob, finesine[angle]);
-      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_SMOOTH:
@@ -526,7 +529,7 @@ static void P_NuggetBobbing(player_t* player)
       break;
 
     case BOBSTYLE_INVSMOOTH:
-      psp->sy2 += (FixedMul(bob, finecosine[angle*2 & (FINEANGLES-1)]) + bob) / 2;
+      psp->sy2 += (bob + FixedMul(bob, finecosine[angle*2 & (FINEANGLES-1)])) / 2;
       break;
 
     case BOBSTYLE_QUAKE:
@@ -584,7 +587,7 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
 
   P_ApplyBobbing(&psp->sx, &psp->sy, player->bob);
   
-  // [Nugget] Calculate sx2 and sy2 alongside sx and sy
+  // [Nugget] Calculate `sx2` and `sy2` alongside `sx` and `sy`
   if (!always_bob) { P_NuggetBobbing(player); }
 }
 
@@ -1422,7 +1425,8 @@ void P_MovePsprites(player_t *player)
   }
 
   // [Nugget]: [crispy] squat down weapon sprite a bit after hitting the ground
-  if (psp->dy) {
+  if (psp->dy)
+  {
     if (psp->dy > 24*FRACUNIT)
     { psp->dy = 24*FRACUNIT; }
     else

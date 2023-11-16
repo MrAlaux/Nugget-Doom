@@ -116,7 +116,7 @@ void P_NoiseAlert(mobj_t *target, mobj_t *emitter)
 {
   // [crispy] monsters are deaf with NOTARGET cheat
   if (target && target->player && (target->player->cheats & CF_NOTARGET))
-    { return; }
+    return;
 
   validcount++;
   P_RecursiveSound(emitter->subsector->sector, 0, target);
@@ -129,11 +129,10 @@ static boolean P_NuggetCheckMeleeHeight(mobj_t *actor)
 
   if (!casual_play || !over_under)
   { return true; }
-  else if (pl->z > actor->z + actor->height
-           || actor->z > pl->z + pl->height)
+  else if (pl->z > actor->z + actor->height || actor->z > pl->z + pl->height)
   { return false; }
-  else
-  { return true; }
+
+  return true;
 }
 
 //
@@ -145,11 +144,12 @@ static boolean P_CheckRange(mobj_t *actor, fixed_t range)
   mobj_t *pl = actor->target;
 
   return  // killough 7/18/98: friendly monsters don't attack other friends
-    pl && !(actor->flags & pl->flags & MF_FRIEND)
-    && (P_AproxDistance(pl->x-actor->x, pl->y-actor->y) < range)
+    pl && !(actor->flags & pl->flags & MF_FRIEND) &&
+    (P_AproxDistance(pl->x-actor->x, pl->y-actor->y) <
+     range) &&
+    P_CheckSight(actor, actor->target)
     // [Nugget]: [crispy] height check for melee attacks
-    && P_NuggetCheckMeleeHeight(actor)
-    && P_CheckSight(actor, actor->target);
+    && P_NuggetCheckMeleeHeight(actor);
 }
 
 //
@@ -1324,11 +1324,7 @@ void A_CPosAttack(mobj_t *actor)
   if (!actor->target)
     return;
 
-  // [Nugget]
-  if (STRICTMODE(comp_cgunnersfx))
-    S_StartSound (actor, sound);
-  else
-    S_StartSound (actor, sfx_shotgn);
+  S_StartSound (actor, STRICTMODE(comp_cgunnersfx) ? sound : sfx_shotgn); // [Nugget]
 
   A_FaceTarget(actor);
   bangle = actor->angle;
@@ -1451,8 +1447,7 @@ void A_BruisAttack(mobj_t *actor)
     return;
 
   // [Nugget] Fix A_BruisAttack not calling A_FaceTarget
-  if (casual_play && !comp_bruistarget)
-  { A_FaceTarget(actor); }
+  if (casual_play && !comp_bruistarget) { A_FaceTarget(actor); }
 
   if (P_CheckMeleeRange(actor))
     {
@@ -1564,9 +1559,9 @@ void A_Tracer(mobj_t *actor)
 
   // [Nugget] Check for crouching
   if (dest->player && (dest->intflags & MIF_CROUCHING))
-  { slope = (dest->z+20*FRACUNIT - actor->z) / dist; }
+    slope = (dest->z+20*FRACUNIT - actor->z) / dist;
   else
-  { slope = (dest->z+40*FRACUNIT - actor->z) / dist; }
+    slope = (dest->z+40*FRACUNIT - actor->z) / dist;
 
   if (slope < actor->momz)
     actor->momz -= FRACUNIT/8;
@@ -1852,8 +1847,7 @@ void A_VileTarget(mobj_t *actor)
   P_SetTarget(&fog->target, actor);
   P_SetTarget(&fog->tracer, actor->target);
   // [Nugget]: [crispy] play DSFLAMST sound when Arch-Vile spawns fire attack
-  if (STRICTMODE(comp_flamst))
-  { S_StartSound(fog, sfx_flamst); }
+  if (STRICTMODE(comp_flamst)) { S_StartSound(fog, sfx_flamst); }
   A_Fire(fog);
 }
 

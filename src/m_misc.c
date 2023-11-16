@@ -3366,19 +3366,79 @@ default_t defaults[] = {
     "1 to enable Smart Totals"
   },
 
-  { // [Nugget] Incomplete milestone color
+  { // [Nugget]
+    "hud_kills_percentage",
+    (config_t *) &hud_kills_percentage, NULL,
+    {1}, {0,1}, number, ss_stat, wad_no,
+    "1 to show Kills percentage in Stats display"
+  },
+
+  // [Nugget] Extended HUD colors /-------------------------------------------
+
+  {
+    "hudcolor_time_scale",
+    (config_t *) &hudcolor_time_scale, NULL,
+    {CR_BLUE1}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for time scale (game speed percentage) in Time display"
+  },
+
+  {
+    "hudcolor_total_time",
+    (config_t *) &hudcolor_total_time, NULL,
+    {CR_GREEN}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for total level time in Time display"
+  },
+
+  {
+    "hudcolor_time",
+    (config_t *) &hudcolor_time, NULL,
+    {CR_GRAY}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for level time in Time display"
+  },
+
+  {
+    "hudcolor_event_timer",
+    (config_t *) &hudcolor_event_timer, NULL,
+    {CR_GOLD}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for event timer in Time display"
+  },
+
+  {
+    "hudcolor_kills",
+    (config_t *) &hudcolor_kills, NULL,
+    {CR_RED}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for Kills label in Stats display"
+  },
+
+  {
+    "hudcolor_items",
+    (config_t *) &hudcolor_items, NULL,
+    {CR_RED}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for Items label in Stats display"
+  },
+
+  {
+    "hudcolor_secrets",
+    (config_t *) &hudcolor_secrets, NULL,
+    {CR_RED}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for Secrets label in Stats display"
+  },
+
+  {
     "hudcolor_ms_incomp",
     (config_t *) &hudcolor_ms_incomp, NULL,
     {CR_GRAY}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
     "Color used for incomplete milestones in Stats display"
   },
 
-  { // [Nugget] Complete milestone color
+  {
     "hudcolor_ms_comp",
     (config_t *) &hudcolor_ms_comp, NULL,
     {CR_BLUE1}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
     "Color used for complete milestones in Stats display"
   },
+
+  // [Nugget] ---------------------------------------------------------------/
 
   { // no secrets/items/kills HUD line
     "hud_level_time",
