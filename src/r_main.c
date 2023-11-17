@@ -19,6 +19,8 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <math.h> // [Nugget]
+
 #include "doomstat.h"
 #include "r_main.h"
 #include "r_things.h"
@@ -34,11 +36,6 @@
 #include "m_random.h"
 #include "p_map.h"
 #include "p_mobj.h"
-
-// [Nugget]
-#ifndef M_PI
-  #define M_PI 3.14159265358979323846
-#endif
 
 // [Nugget] Removed unused FIELDOFVIEW macro
 
