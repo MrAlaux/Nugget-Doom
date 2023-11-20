@@ -1164,7 +1164,8 @@ static void G_ReadDemoTiccmd(ticcmd_t *cmd)
 	  cmd->buttons & BTS_SAVEGAME)
 	{
 	  cmd->buttons &= ~BT_SPECIALMASK;
-	  displaymsg("Game Saved (Suppressed)");
+	  if (show_save_messages) // [Nugget]
+	  { displaymsg("Game Saved (Suppressed)"); }
 	}
     }
 }
@@ -2071,7 +2072,7 @@ static void G_DoSaveGame(void)
 
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
-  else
+  else if (show_save_messages) // [Nugget]
     displaymsg("%s", s_GGSAVED);  // Ty 03/27/98 - externalized
 
   Z_Free(savebuffer);  // killough

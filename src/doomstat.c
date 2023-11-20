@@ -217,6 +217,7 @@ int zdoom_item_drops;
 
 // Messages ---------------------------
 
+int show_save_messages; // CFG-Only
 int announce_milestones;
 
 // Key Bindings -----------------------

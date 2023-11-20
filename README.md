@@ -124,6 +124,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 ### Messages
 
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
+- **Show Save Messages** setting (CFG-Only: `show_save_messages`)
 - _**Announce Milestone Completion**_ setting, to report completion of milestones (e.g. all items acquired)
 - Restored _**Message Listing Scrolls Upwards**_ setting, and enabled it by default
 

@@ -1131,8 +1131,9 @@ static void AM_changeWindowScale(void)
 //
 static void AM_doFollowPlayer(void)
 {
-  m_x = ((viewx - chasexofs) >> FRACTOMAPBITS) - m_w/2; // [Nugget]
-  m_y = ((viewy - chaseyofs) >> FRACTOMAPBITS) - m_h/2; // [Nugget]
+  // [Nugget] Prevent Chasecam from shifting the map view
+  m_x = ((viewx - chasexofs) >> FRACTOMAPBITS) - m_w/2;
+  m_y = ((viewy - chaseyofs) >> FRACTOMAPBITS) - m_h/2;
   m_x2 = m_x + m_w;
   m_y2 = m_y + m_h;
 }
@@ -2526,7 +2527,8 @@ void AM_Drawer (void)
       pspr_interp = false;
   }
   // [Alaux] Dark automap overlay
-  else if (automapoverlay == overlay_dark && !M_MenuIsShaded())
+  else if (automapoverlay == overlay_dark && (!M_MenuIsShaded()
+                                              || automapactive == AM_MINI)) // [Nugget] Minimap
     AM_shadeScreen();
 
   if (automap_grid)                  // killough 2/28/98: change var name

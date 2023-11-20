@@ -3130,6 +3130,13 @@ default_t defaults[] = {
     "1 to enable obituaries"
   },
 
+  { // [Nugget]
+    "show_save_messages",
+    (config_t *) &show_save_messages, NULL,
+    {1}, {0,1}, number, ss_none, wad_no,
+    "1 to enable save messages"
+  },
+
   // "A secret is revealed!" message
   {
     "hud_secret_message",

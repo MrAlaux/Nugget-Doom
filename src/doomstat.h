@@ -571,6 +571,7 @@ extern int zdoom_item_drops;
 
 // Messages ---------------------------
 
+extern int show_save_messages; // CFG-Only
 extern int announce_milestones;
 
 // Key Bindings -----------------------
