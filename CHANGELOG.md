@@ -24,6 +24,7 @@
 
 ## Bug Fixes
 
+- **Further corrected view pitch as FOV changes**
 - **Disabled teleport-to-Automap-pointer during non-Casual Play**
 - **Excess speed when airborne with noclip enabled** [thanks @kitchen-ace]
 - **Teleporter Zoom and BFG "explosion" shake affecting all players in multiplayer**

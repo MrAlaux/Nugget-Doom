@@ -40,7 +40,7 @@
 
 extern int need_downscaling; // [Nugget]
 
-// [Nugget] Tag Finder from PrBoomX /------------
+// [Nugget] Tag Finder from PrBoomX /-----------------------------------------
 
 static boolean findtag;
 
@@ -54,7 +54,7 @@ static int magic_line_color_pos = MAGIC_LINE_COLOR_MIN;
 static sector_t* magic_sector;
 static short     magic_tag = -1;
 
-// [Nugget] Tag Finder from PrBoomX ------------/
+// [Nugget] Tag Finder from PrBoomX -----------------------------------------/
 
 //jff 1/7/98 default automap colors added
 int mapcolor_back;    // map background
@@ -755,17 +755,6 @@ void AM_Start()
   HU_NughudAlignTime(); // [Nugget] NUGHUD
 }
 
-// [Nugget]
-void AM_ChangeMode(automapmode_t mode)
-{
-  automapactive = mode;
-
-  if (!automapactive)
-    AM_Stop();
-  else
-    AM_Start();
-}
-
 //
 // AM_minOutWindowScale()
 //
@@ -806,6 +795,20 @@ enum
 };
 
 static int buttons_state[STATE_NUM] = { 0 };
+
+// [Nugget]
+void AM_ChangeMode(automapmode_t mode)
+{
+  automapactive = mode;
+
+  if (automapactive == AM_MINI)
+  { memset(buttons_state, 0, sizeof(buttons_state)); }
+
+  if (!automapactive)
+    AM_Stop();
+  else
+    AM_Start();
+}
 
 //
 // AM_Responder()
