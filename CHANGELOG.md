@@ -1,5 +1,6 @@
 ## New Features
 
+- **Support for intermediate resolutions** (e.g. 3X, 5X) **and 9X (1800p)**
 - **_Background for all menus_** setting
 - **Minimap mode for Automap**
 - **NUGHUD:**
@@ -17,6 +18,7 @@
   - Let Ammo, Health and Armor icons fall back to vanilla sprites;
   - Made Patches and icons alignable horizontally and vertically;
   - Disabled Armor icon by default.
+- **Speed of non-Melt wipes is now independent of resolution**
 - **Implemented Teleporter Zoom for multiplayer respawning**
 - **MDK Fist attacks now prioritize enemies over friends**
 - **Current resolution is now reported by some video-related menu items**

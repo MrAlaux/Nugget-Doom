@@ -25,7 +25,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 ### General
 
-- **Support for higher resolutions:** 4X (800p) and 8X (1600p) [by _ceski_]
+- **Support for higher resolutions:** 3X (600p), 4X (800p)... up to 9X (1800p) [by _ceski_]
 - **Selection of widescreen ratios** in the setup menu itself [i.b. Crispy Doom]
 - Toggle to **stretch viewport to fit window** (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Gamma Correction slider ranging from 0.50 to 2.0 in steps of 0.05**
