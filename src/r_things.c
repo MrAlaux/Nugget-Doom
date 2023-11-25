@@ -1217,9 +1217,9 @@ void R_DrawMasked(void)
   // applied here so that it doesn't affect the crosshair and psprites
   if (antialiasing) {
     V_AntialiasScreen(viewwindowx,
-                      viewwindowy * (SCREENWIDTH << hires),
+                      viewwindowy * (SCREENWIDTH * hires),
                       viewwindowx + viewwidth,
-                      (viewwindowy + viewheight) * (SCREENWIDTH << hires));
+                      (viewwindowy + viewheight) * (SCREENWIDTH * hires));
   }
 
   // draw the psprites on top of everything

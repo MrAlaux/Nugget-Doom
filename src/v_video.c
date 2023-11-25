@@ -914,7 +914,7 @@ void V_ShadeScreen(const int targshade) // [Nugget] Parameterized
 // [Nugget] Antialiasing; function based on code from Doom Retro
 void V_AntialiasScreen(int left, int top, int windowwidth, int windowheight)
 {
-  const int screenwidth = SCREENWIDTH << hires,
+  const int screenwidth = (SCREENWIDTH * hires),
             pixelwidth  = 1,
             pixelheight = 1 * screenwidth;
 
@@ -926,7 +926,8 @@ void V_AntialiasScreen(int left, int top, int windowwidth, int windowheight)
 
       if (y + pixelheight < windowheight)
       {
-        if (x + pixelwidth < windowwidth) {
+        if (x + pixelwidth < windowwidth)
+        {
           const byte  *dot2 = dot1 + pixelwidth;
           const byte  *dot3 = dot2 + pixelheight;
           const byte  *dot4 = dot3 - pixelwidth;
