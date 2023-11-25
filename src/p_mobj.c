@@ -40,7 +40,7 @@
 
 // [FG] colored blood and gibs
 boolean colored_blood;
-int vertical_aiming, default_vertical_aiming; // [Nugget] Replace `direct_vertical_aiming`
+int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
 
 void P_UpdateDirectVerticalAiming(void)
 {
@@ -157,9 +157,9 @@ void P_XYMovement (mobj_t* mo)
 
         // [Nugget] Fix forgetful lost soul
         if (casual_play && !comp_lsamnesia)
-        { P_SetMobjState(mo, mo->info->seestate); }
+          P_SetMobjState(mo, mo->info->seestate);
         else
-        { P_SetMobjState(mo, mo->info->spawnstate); }
+          P_SetMobjState(mo, mo->info->spawnstate);
       }
       return;
     }
@@ -293,8 +293,9 @@ void P_XYMovement (mobj_t* mo)
 
   // no friction for missiles or skulls ever, no friction when airborne
   if (mo->flags & (MF_MISSILE | MF_SKULLFLY)
-      // [Nugget] Do apply friction if airborne with the flight cheat on
-      || (!(player && player->cheats & CF_FLY) && (mo->z > mo->floorz)))
+      // [Nugget] Do apply friction if airborne with noclip or flight cheat enabled
+      || (mo->z > mo->floorz
+          && !(casual_play && player && (mo->flags & MF_NOCLIP || player->cheats & CF_FLY))))
     return;
 
   // killough 8/11/98: add bouncers
@@ -546,7 +547,10 @@ floater:
 
 		// [Nugget]: [crispy] squat down weapon sprite as well
 		if (STRICTMODE(weaponsquat))
-		{ mo->player->psprites[ps_weapon].dy = ((-mo->momz>>1) > 24*FRACUNIT) ? (24*FRACUNIT) : (-mo->momz>>1); }
+		{
+		  mo->player->psprites[ps_weapon].dy = ((-mo->momz >> 1) > 24*FRACUNIT)
+		                                       ? (24*FRACUNIT) : (-mo->momz >> 1);
+		}
 
 		// [Nugget] Pitch view down on impact
 		if (STRICTMODE(impact_pitch & IMPACTPITCH_FALL))
@@ -1488,9 +1492,10 @@ mobj_t* P_SpawnMissile(mobj_t* source,mobj_t* dest,mobjtype_t type)
 
   // [Nugget] Check for crouching player
   if (dest->player && dest->player->crouchoffset)
-  { th->momz = ((dest->z - dest->player->crouchoffset) - source->z) / dist; }
+    th->momz = ((dest->z - dest->player->crouchoffset) - source->z) / dist;
   else
-  { th->momz = (dest->z - source->z) / dist; }
+    th->momz = (dest->z - source->z) / dist;
+
   P_CheckMissileSpawn(th);
   return th;
 }
@@ -1517,7 +1522,7 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
   // Taken outside of code block after this one
   // to allow direct vertical aiming in Beta
   if (vertical_aiming == VERTAIM_DIRECT)
-  { slope = PLAYER_SLOPE(source->player); }
+  { slope = source->player->slope; }
   else
   // killough 7/19/98: autoaiming was not in original beta
   if (!beta_emulation || autoaim)
@@ -1540,18 +1545,17 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
           if (!linetarget)
             an = source->angle,
             // [Nugget] Vertical aiming
-            slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? PLAYER_SLOPE(source->player) : 0;
+            slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? source->player->slope : 0;
         }
       while (mask && (mask=0, !linetarget));  // killough 8/2/98
     }
 
   x = source->x;
   y = source->y;
+  z = source->z + 4*8*FRACUNIT;
+
   // [Nugget] Check for crouching
-  if (source->player && source->player->crouchoffset)
-    z = source->z + ((4*8*FRACUNIT) - source->player->crouchoffset);
-  else
-    z = source->z + 4*8*FRACUNIT;
+  if (source->player) { z -= source->player->crouchoffset; }
 
   th = P_SpawnMobj (x,y,z, type);
 

@@ -39,7 +39,13 @@
 void HU_Init(void);
 void HU_Start(void);
 void HU_disable_all_widgets (void);
-void HU_NughudAlignTime(void); // [Nugget] NUGHUD
+
+// [Nugget] NUGHUD /----------------------------------------------------------
+
+void HU_NughudAlignTime(void);
+void HU_widget_rebuild_sttime(void);
+
+// [Nugget] -----------------------------------------------------------------/
 
 boolean HU_Responder(event_t* ev);
 

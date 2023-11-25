@@ -108,6 +108,7 @@ enum
   input_map_zoomout,
   input_map_mark,
   input_map_clear,
+  input_map_mini, // [Nugget] Minimap
   input_map_blink, // [Nugget] Blink marks
   input_map_tagfinder, // [Nugget] Tag Finder from PrBoomX
   input_map_teleport, // [Nugget] Teleport to Automap pointer

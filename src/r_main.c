@@ -113,15 +113,16 @@ lighttable_t **colormaps;
 int extralight;                           // bumped light from gun blasts
 int extra_level_brightness;               // level brightness feature
 
-// [Nugget] FOV from Doom Retro /------
+// [Nugget] FOV from Doom Retro /---------------------------------------------
 
 boolean fovchange = true;
 static int bfov; // Base FOV
 static int rfov; // Rendered (currently applied) FOV, with effects added to it
 float fovdiff;   // Used for some corrections
+#define FOVDIFF2 (fovdiff + ((fovdiff - 1.0) * ((fovdiff < 1.0) ? 0.5 : 0.22)))
 
 static fixed_t fovscale;
-static int lookdirmax;
+static int     pitchmax;
 
 static fovfx_t fovfx[NUMFOVFX]; // FOV effects (recoil, teleport)
 static int     zoomed = 0;      // Current zoom state
@@ -175,9 +176,9 @@ void R_SetZoom(const int state)
   { zoomed = ZOOM_OFF; }
 }
 
-// [Nugget] --------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
-// [Nugget] Explosion shake effect /---------------------------------
+// [Nugget] Explosion shake effect /------------------------------------------
 
 static fixed_t shake;
 #define MAXSHAKE 50
@@ -219,7 +220,7 @@ void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
   #undef SHAKERANGEMULT
 }
 
-// [Nugget] --------------------------------------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
 void (*colfunc)(void) = R_DrawColumn;     // current column draw function
 
@@ -559,7 +560,7 @@ void R_ExecuteSetViewSize (void)
   int i, j;
   extern void AM_Start(void);
   // [Nugget] FOV from Doom Retro
-  int WIDEFOVDELTA;
+  double WIDEFOVDELTA;
   fixed_t num;
 
   setsizeneeded = false;
@@ -596,14 +597,15 @@ void R_ExecuteSetViewSize (void)
       }
     }
 
-  viewwidth = scaledviewwidth << hires;                  // killough 11/98
-  viewheight = scaledviewheight << hires;                // killough 11/98
-  viewwidth_nonwide = scaledviewwidth_nonwide << hires;
+  viewwidth = scaledviewwidth * hires;                  // killough 11/98
+  viewheight = scaledviewheight * hires;                // killough 11/98
+  viewwidth_nonwide = scaledviewwidth_nonwide * hires;
 
-  viewblocks = MIN(setblocks, 10) << hires;
+  viewblocks = MIN(setblocks, 10) * hires;
 
   // [Nugget] FOV changes
-  if (fovchange) {
+  if (fovchange)
+  {
     static int oldtic = -1;
     int fx = 0;
     int zoomtarget;
@@ -629,26 +631,31 @@ void R_ExecuteSetViewSize (void)
       else for (i = 0;  i < NUMFOVFX;  i++)
         if (fovfx[i].target || fovfx[i].current) { fovchange = true; }
     }
-  
-    if (fovchange) {
+
+    if (fovchange)
+    {
       if (oldtic != gametic)
       {
         fovchange = false;
-        
+
         fovfx[FOVFX_ZOOM].old = fovfx[FOVFX_ZOOM].current = fovfx[FOVFX_ZOOM].target;
-        if (zoomtarget || fovfx[FOVFX_ZOOM].target) { // Special handling for zoom
+        if (zoomtarget || fovfx[FOVFX_ZOOM].target)
+        {
+          // Special handling for zoom
           int step = zoomtarget - fovfx[FOVFX_ZOOM].target;
           const int sign = ((step > 0) ? 1 : -1);
           step = BETWEEN(2, 16, abs(step) / 4);
+
           fovfx[FOVFX_ZOOM].target += step*sign;
-          if (  (sign > 0 && fovfx[FOVFX_ZOOM].target > zoomtarget)
-              ||(sign < 0 && fovfx[FOVFX_ZOOM].target < zoomtarget))
+
+          if (   (sign > 0 && fovfx[FOVFX_ZOOM].target > zoomtarget)
+              || (sign < 0 && fovfx[FOVFX_ZOOM].target < zoomtarget))
           { fovfx[FOVFX_ZOOM].target = zoomtarget; }
-          
+
           if (fovfx[FOVFX_ZOOM].current != fovfx[FOVFX_ZOOM].target)
           { fovchange = true; }
         }
-        
+
         fovfx[FOVFX_TELEPORT].old = fovfx[FOVFX_TELEPORT].current = fovfx[FOVFX_TELEPORT].target;
         if (fovfx[FOVFX_TELEPORT].target)
         {
@@ -662,31 +669,30 @@ void R_ExecuteSetViewSize (void)
         for (i = 0;  i < NUMFOVFX;  i++)
         { fovfx[i].current = fovfx[i].old + ((fovfx[i].target - fovfx[i].old) * ((float) fractionaltic/FRACUNIT)); }
     }
-    
+
     oldtic = gametic;
 
     for (i = 0;  i < NUMFOVFX;  i++)
     { fx += fovfx[i].current; }
-    
+
     rfov = bfov + fx;
     fovdiff = (float) ORIGFOV / rfov;
-    lookdirmax = LOOKDIRMAX2 * fovdiff;
+    pitchmax = PITCHMAX * FOVDIFF2; // Mitigate `PLAYER_SLOPE()` and `lookdir` misalignment
   }
-  
+
   // [Nugget] FOV from Doom Retro
   if (widescreen) {
     // fov * 0.82 is vertical FOV for 4:3 aspect ratio
-    WIDEFOVDELTA = (int)(atan(SCREENWIDTH / ((SCREENHEIGHT+40) / tan(rfov * 0.82 * M_PI / 360.0))) * 360.0 / M_PI) - rfov;
+    WIDEFOVDELTA = (atan(SCREENWIDTH / ((SCREENHEIGHT * 1.2) / tan(rfov * 0.82 * M_PI / 360.0))) * 360.0 / M_PI) - rfov;
   }
-  else
-  { WIDEFOVDELTA = 0; }
+  else { WIDEFOVDELTA = 0; }
 
   centery = viewheight/2;
   centerx = viewwidth/2;
   centerxfrac = centerx<<FRACBITS;
   centeryfrac = centery<<FRACBITS;
   centerxfrac_nonwide = (viewwidth_nonwide/2)<<FRACBITS;
-  fovscale = finetangent[FINEANGLES / 4 + (rfov + WIDEFOVDELTA) * FINEANGLES / 360 / 2]; // [Nugget] FOV from Doom Retro
+  fovscale = finetangent[(int)(FINEANGLES / 4 + (rfov + WIDEFOVDELTA) * FINEANGLES / 360 / 2)]; // [Nugget] FOV from Doom Retro
   projection = FixedDiv(centerxfrac, fovscale); // [Nugget] FOV from Doom Retro
   viewheightfrac = viewheight<<(FRACBITS+1); // [FG] sprite clipping optimizations
 
@@ -710,12 +716,11 @@ void R_ExecuteSetViewSize (void)
       for (j = 0; j < LOOKDIRS; j++)
       {
         // [crispy] re-generate lookup-table for yslope[] whenever "viewheight" or "hires" change
-        // [Nugget] Mitigate PLAYER_SLOPE() and 'lookdir' misalignment
-        fixed_t dy = abs(((i-viewheight/2-(j-lookdirmax)*viewblocks/10)<<FRACBITS)+FRACUNIT/2);
+        fixed_t dy = abs(((i-viewheight/2-(j-pitchmax)*viewblocks/10)<<FRACBITS)+FRACUNIT/2);
         yslopes[j][i] = FixedDiv(num, dy);
       }
     }
-  yslope = yslopes[lookdirmax]; // [Nugget] Mitigate PLAYER_SLOPE() and 'lookdir' misalignment
+  yslope = yslopes[pitchmax];
 
   for (i=0 ; i<viewwidth ; i++)
     {
@@ -831,7 +836,9 @@ void R_SetupFrame (player_t *player)
 {
   int i, cm;
   int tempCentery, pitch;
-  int playerz, lookdir; // [Nugget]
+  // [Nugget]
+  int playerz, lookdir;
+  static fixed_t chasecamheight;
 
   viewplayer = player;
   // [AM] Interpolate the player camera if the feature is enabled.
@@ -868,15 +875,42 @@ void R_SetupFrame (player_t *player)
   pitch = lookdir + player->recoilpitch + player->impactpitch; // [Nugget]
   }
 
-  // [Nugget] Mitigate PLAYER_SLOPE() and 'lookdir' misalignment
-  pitch *= fovdiff;
+  // [Nugget] Mitigate `PLAYER_SLOPE()` and `lookdir` misalignment
+  pitch *= FOVDIFF2;
+
+  // [Nugget] Explosion shake effect
+  chasecamheight = chasecam_height * FRACUNIT;
+  if (shake > 0)
+  {
+    static fixed_t xofs=0, yofs=0, zofs=0;
+
+    if (!(menuactive || paused))
+    {
+      static int oldtime = -1;
+
+      #define CALCSHAKE (((Woof_Random() - 128) % 3) * FRACUNIT) * shake / MAXSHAKE
+      xofs = CALCSHAKE;
+      yofs = CALCSHAKE;
+      zofs = CALCSHAKE;
+      #undef CALCSHAKE
+
+      if (oldtime != leveltime) { shake--; }
+
+      oldtime = leveltime;
+    }
+
+    viewx += xofs;
+    viewy += yofs;
+    viewz += zofs;
+    chasecamheight += zofs;
+  }
 
   // [Nugget] Chasecam
   chasecam_on = STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0 && player->playerstate == PST_DEAD));
   if (chasecam_on)
   {
     static fixed_t extradist = 0;
-    const fixed_t z = MIN(playerz + (((player->mo->health <= 0 && player->playerstate == PST_DEAD) ? 6 : chasecam_height) * FRACUNIT),
+    const fixed_t z = MIN(playerz + ((player->mo->health <= 0 && player->playerstate == PST_DEAD) ? 6*FRACUNIT : chasecamheight),
                           player->mo->ceilingz - (2*FRACUNIT));
     fixed_t slope;
     fixed_t dist = chasecam_distance*FRACUNIT;
@@ -903,7 +937,7 @@ void R_SetupFrame (player_t *player)
       oldtic = gametic;
     }
 
-    P_PositionChasecam(z, dist, slope = ((-(lookdir * FRACUNIT) / PLAYER_SLOPE_DENOM) / fovdiff));
+    P_PositionChasecam(z, dist, slope = (-(lookdir * FRACUNIT) / PLAYER_SLOPE_DENOM));
 
     if (chasecam.hit) {
       viewx = chasecam.x;
@@ -935,33 +969,7 @@ void R_SetupFrame (player_t *player)
     chaseyofs = viewy - oldviewy;
     chaseaofs = viewangle - oldviewangle;
   }
-  else
-  { chasexofs = chaseyofs = chaseaofs = 0; }
-
-  // [Nugget] Explosion shake effect
-  if (shake > 0)
-  {
-    static fixed_t xofs=0, yofs=0, zofs=0;
-
-    if (!(menuactive || paused))
-    {
-      static int oldtime = -1;
-      
-      #define CALCSHAKE (((Woof_Random() - 128) % 3) * FRACUNIT) * shake / MAXSHAKE
-      xofs = CALCSHAKE;
-      yofs = CALCSHAKE;
-      zofs = CALCSHAKE;
-      #undef CALCSHAKE
-
-      if (oldtime != leveltime) { shake--; }
-
-      oldtime = leveltime;
-    }
-
-    viewx += xofs;
-    viewy += yofs;
-    viewz += zofs;
-  }
+  else { chasexofs = chaseyofs = chaseaofs = 0; }
 
   // [Nugget]: [crispy] A11Y
   if (!NOTSTRICTMODE(a11y_weapon_flash))
@@ -971,11 +979,10 @@ void R_SetupFrame (player_t *player)
 
   extralight += STRICTMODE(LIGHTBRIGHT * extra_level_brightness); // level brightness feature
 
-  // [Nugget] Mitigate PLAYER_SLOPE() and 'lookdir' misalignment
-  if (pitch > lookdirmax)
-    pitch = lookdirmax;
-  else if (pitch < -lookdirmax)
-    pitch = -lookdirmax;
+  if (pitch > pitchmax)
+    pitch = pitchmax;
+  else if (pitch < -pitchmax)
+    pitch = -pitchmax;
 
   // apply new yslope[] whenever "lookdir", "viewheight" or "hires" change
   tempCentery = viewheight/2 + pitch * viewblocks / 10;
@@ -983,7 +990,7 @@ void R_SetupFrame (player_t *player)
   {
       centery = tempCentery;
       centeryfrac = centery << FRACBITS;
-      yslope = yslopes[lookdirmax + pitch]; // [Nugget] Mitigate PLAYER_SLOPE() and 'lookdir' misalignment
+      yslope = yslopes[pitchmax + pitch];
   }
 
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
@@ -1126,8 +1133,8 @@ void R_RenderPlayerView (player_t* player)
           c[i] = t=='/' ? color : t;
         }
       if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8)
-        V_DrawBlock(((viewwindowx +  viewwidth/2) >> hires) - 24,
-                    ((viewwindowy + viewheight/2) >> hires) - 24, 0, 47, 47, c);
+        V_DrawBlock(((viewwindowx +  viewwidth/2) / hires) - 24,
+                    ((viewwindowy + viewheight/2) / hires) - 24, 0, 47, 47, c);
       R_DrawViewBorder();
     }
 

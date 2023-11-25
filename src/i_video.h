@@ -82,6 +82,8 @@ extern boolean smooth_scaling;
 extern boolean toggle_fullscreen;
 extern boolean toggle_exclusive_fullscreen;
 
+extern boolean no_downscaling; // [Nugget]
+
 // [Nugget]
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];

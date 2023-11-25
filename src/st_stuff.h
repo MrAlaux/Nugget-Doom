@@ -37,7 +37,7 @@
 
 // [Nugget] Crispy minimalistic HUD
 #define CRISPY_HUD      11
-#define CRISPY_HUD_WIDE CRISPY_HUD+1
+#define CRISPY_HUD_WIDE (CRISPY_HUD+1)
 
 // [Nugget] Macros brought over from st_stuff.c
 
@@ -134,6 +134,7 @@ void ST_Start(void);
 
 // Called by startup code.
 void ST_Init(void);
+void ST_Warnings(void);
 
 // [crispy] forcefully initialize the status bar backing screen
 extern void ST_refreshBackground(boolean force);
@@ -162,15 +163,14 @@ extern int sts_traditional_keys;  // display keys the traditional way
 #define KEYBLINKTICS (7*KEYBLINKMASK)
 extern void ST_blinkKeys(player_t* player, int blue, int yellow, int red);
 
-extern boolean st_crispyhud, oldcrispy, st_crispyhudwide; // [Nugget]
-
 extern int hud_backpack_thresholds; // backpack changes thresholds
 extern int hud_armor_type; // color of armor depends on type
 
 extern int st_solidbackground;
 
-// [Nugget]
-extern patch_t *nhtminus, *nhrminus;
+extern int st_crispyhud; // [Nugget] Included here; now an int
+
+extern patch_t *nhtminus, *nhrminus; // [Nugget]
 
 #endif
 

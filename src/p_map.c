@@ -34,7 +34,9 @@
 #include "v_video.h"
 #include "m_argv.h"
 #include "m_misc2.h"
-#include "r_main.h" // [Nugget]
+// [Nugget]
+#include "p_tick.h"
+#include "r_main.h"
 
 static mobj_t    *tmthing;
 static int       tmflags;
@@ -551,7 +553,8 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
       int damage = ((P_Random(pr_skullfly)%8)+1)*tmthing->info->damage;
 
       // [Nugget]: [crispy] check if attacking skull flies over/under thing
-      if (casual_play && over_under) {
+      if (casual_play && over_under)
+      {
         if (tmthing->z > thing->z + thing->height)
         { return true; } // over
         else if (tmthing->z + tmthing->height < thing->z)
@@ -569,7 +572,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 
       // [Nugget] Fix forgetful lost soul
       if (casual_play && comp_lsamnesia)
-      { P_SetMobjState(tmthing, tmthing->info->seestate); }
+        P_SetMobjState(tmthing, tmthing->info->seestate);
       else
         P_SetMobjState (tmthing, tmthing->info->spawnstate);
 
@@ -662,7 +665,9 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   // [Nugget] Allow things to move over/under solid things
   if (casual_play && over_under && (thing->flags & MF_SOLID))
   {
-    if (tmthing->z >= thing->z + thing->height) { // Over
+    if (tmthing->z >= thing->z + thing->height)
+    {
+      // Over
       thing->intflags   |= MIF_OVERUNDER;
       tmthing->intflags |= MIF_OVERUNDER;
 
@@ -671,7 +676,9 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 
       return true;
     }
-    else if (tmthing->z + tmthing->height <= thing->z) { // Under
+    else if (tmthing->z + tmthing->height <= thing->z)
+    {
+      // Under
       thing->intflags   |= MIF_OVERUNDER;
       tmthing->intflags |= MIF_OVERUNDER;
 
@@ -681,7 +688,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
       return true;
     }
     else {
-      thing->intflags   &= ~MIF_OVERUNDER;
+        thing->intflags &= ~MIF_OVERUNDER;
       tmthing->intflags &= ~MIF_OVERUNDER;
     }
   }
@@ -1553,17 +1560,20 @@ static boolean PTR_AimTraverse (intercept_t *in)
   return false;   // don't go any farther
 }
 
-// [Nugget] Explosive hitscan cheat
+// [Nugget] Explosive hitscan cheat /-----------------------------------------
+
 boolean boomshot = false;
+
 static void P_SpawnExplosion(fixed_t x, fixed_t y, fixed_t z)
 {
   mobj_t *mo = P_SpawnMobj(x, y, z, MT_ROCKET);
-  extern void P_SetTarget();
   
   mo->angle = shootthing->angle;
   P_SetTarget(&mo->target, shootthing);
   P_ExplodeMissile(mo);
 }
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // PTR_ShootTraverse
@@ -1651,7 +1661,7 @@ static boolean PTR_ShootTraverse(intercept_t *in)
 
       // [Nugget] Explosive hitscan cheat
       if (boomshot)
-      { P_SpawnExplosion(x, y, z); }
+        P_SpawnExplosion(x, y, z);
       else
     
       // Spawn bullet puffs.
@@ -1697,7 +1707,7 @@ static boolean PTR_ShootTraverse(intercept_t *in)
 
   // [Nugget] Explosive hitscan cheat
   if (boomshot)
-  { P_SpawnExplosion(x, y, z); }
+    P_SpawnExplosion(x, y, z);
   else
   // Spawn bullet puffs or blod spots,
   // depending on target type.
@@ -1859,7 +1869,7 @@ void P_UseLines(player_t *player)
       S_StartSound (usething, sfx_noway);
 }
 
-// [Nugget] Chasecam stuff ------------------
+// [Nugget] Chasecam stuff /--------------------------------------------------
 
 static boolean PTR_ChasecamTraverse(intercept_t *in)
 {
@@ -1868,21 +1878,26 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
     fixed_t dist, frac;
     sector_t *sec;
 
-    if (li->flags & ML_TWOSIDED) {
+    if (li->flags & ML_TWOSIDED)
+    {
       P_LineOpening(li);
       dist = FixedMul(attackrange, in->frac);
 
       if (li->backsector == NULL) {
         if (FixedDiv(openbottom+FRACUNIT - shootz, dist) <= aimslope
             && FixedDiv(opentop-FRACUNIT - shootz, dist) >= aimslope)
-        { return true; }
+        {
+          return true;
+        }
       }
       else
       if ((li->frontsector->floorheight == li->backsector->floorheight
            || FixedDiv(openbottom+FRACUNIT - shootz, dist) <= aimslope)
           && (li->frontsector->ceilingheight == li->backsector->ceilingheight
               || FixedDiv(opentop-FRACUNIT - shootz, dist) >= aimslope))
-      { return true; }
+      {
+        return true;
+      }
     }
 
     // Hit line
@@ -1928,7 +1943,7 @@ void P_PositionChasecam(fixed_t z, fixed_t dist, fixed_t slope)
   overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
 }
 
-// [Nugget] End of chasecam stuff ------------------
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // RADIUS ATTACK
@@ -2113,7 +2128,7 @@ boolean PIT_ChangeSector(mobj_t *thing)
 			thing->z + thing->height/2,
 			// [Nugget]
 			(STRICTMODE(comp_nonbleeders) && thing->flags & MF_NOBLOOD)
-                        ? MT_PUFF : MT_BLOOD);
+			? MT_PUFF : MT_BLOOD);
 
       // [Nugget] Fuzzy blood if applicable
       if (comp_fuzzyblood && thing->flags & MF_SHADOW)

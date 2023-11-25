@@ -36,6 +36,7 @@
 #include "dstrings.h"
 #include "m_misc2.h"
 #include "m_swap.h"
+#include "i_printf.h"
 #include "m_nughud.h" // [Nugget]
 
 // [crispy] immediately redraw status bar after help screens have been shown
@@ -123,13 +124,12 @@ static int lu_palette;
 // whether left-side main status bar is active
 static boolean st_statusbaron;
 
-// [Nugget]:
 // [crispy] distinguish classic status bar with background and player face from Crispy HUD
-       boolean st_crispyhud;
+int st_crispyhud; // [Nugget] Now an int
 static boolean st_classicstatusbar;
-static boolean st_statusbarface;
-       boolean st_crispyhudwide; // [Nugget] Widescreen Crispy HUD
-void ST_createWidgets(); // Prototype this
+static boolean st_statusbarface; // [Nugget] Face may still be drawn in NUGHUD
+
+void ST_createWidgets(); // [Nugget] Prototype this
 
 // !deathmatch
 static boolean st_notdeathmatch;
@@ -170,9 +170,9 @@ static patch_t *faceback[MAXPLAYERS]; // killough 3/7/98: make array
 static patch_t *armsbg;
 
 // weapon ownership patches
-static patch_t *arms[6+3][2]; // [Nugget] Extend array to accomodate 9 numbers
+static patch_t *arms[6+3][2]; // [Nugget] Extend array to accommodate 9 numbers
 
-// [Nugget] /----------------
+// [Nugget] /-----------------------------------------------------------------
 
 static patch_t *stbersrk;
 static int lu_berserk;
@@ -191,10 +191,12 @@ static patch_t *nhamnum[10];        // NHAMNUM#, from 0 to 9
 static patch_t *nhwpnum[9][2];      // NHW0NUM# and NHW1NUM#, from 1 to 9
 static patch_t *nhkeys[NUMCARDS+3]; // NHKEYS
 static patch_t *nhbersrk;           // NHBERSRK
+static patch_t *nhammo[4];          // NHAMMO#, from 0 to 3
+static patch_t *nhealth[2];         // NHEALTH#, from 0 to 1
 static patch_t *nharmor[3];         // NHARMOR#, from 0 to 2
 static patch_t *nhinfnty;           // NHINFNTY
 
-// [Nugget] ----------------/
+// [Nugget] ------------------------------------------------------------------/
 
 // ready-weapon widget
 static st_number_t w_ready;
@@ -224,7 +226,7 @@ static st_number_t w_frags;
 static st_percent_t w_health;
 
 // weapon ownership widgets
-static st_multicon_t w_arms[6+3]; // [Nugget] Extend array to accomodate 9 numbers
+static st_multicon_t w_arms[6+3]; // [Nugget] Extend array to accommodate 9 numbers
 static int st_berserk;  // [Nugget] Highlight Arms #1 if the player has Berserk
 static int st_shotguns; // [Nugget]: [crispy] show SSG availability in the Shotgun slot of the arms widget
 
@@ -291,7 +293,7 @@ void ST_refreshBackground(boolean force)
         {
           // [FG] calculate average color of the 16px left and right of the status bar
           const int vstep[][2] = {{0, 1}, {1, 2}, {2, ST_HEIGHT}};
-          const int hstep = SCREENWIDTH << (2 * hires);
+          const int hstep = SCREENWIDTH * hires*hires;
           const int lo = MAX(st_x + WIDESCREENDELTA - SHORT(sbar->leftoffset), 0);
           const int w = MIN(SHORT(sbar->width), SCREENWIDTH);
           const int depth = 16;
@@ -312,12 +314,12 @@ void ST_refreshBackground(boolean force)
             {
               for (x = 0; x < depth; x++)
               {
-                byte *c = dest + y * hstep + ((x + lo) << hires);
+                byte *c = dest + y * hstep + ((x + lo) * hires);
                 r += pal[3 * c[0] + 0];
                 g += pal[3 * c[0] + 1];
                 b += pal[3 * c[0] + 2];
 
-                c += (w - 2 * x - 1) << hires;
+                c += (w - 2 * x - 1) * hires;
                 r += pal[3 * c[0] + 0];
                 g += pal[3 * c[0] + 1];
                 b += pal[3 * c[0] + 2];
@@ -332,9 +334,9 @@ void ST_refreshBackground(boolean force)
             col = I_GetPaletteIndex(pal, r/2, g/2, b/2);
 
             // [FG] fill background buffer with average status bar color
-            for (y = (v0 << hires); y < (v1 << hires); y++)
+            for (y = (v0 * hires); y < (v1 * hires); y++)
             {
-              memset(dest + y * (SCREENWIDTH << hires), col, (SCREENWIDTH << hires));
+              memset(dest + y * (SCREENWIDTH * hires), col, (SCREENWIDTH * hires));
             }
           }
 
@@ -350,16 +352,15 @@ void ST_refreshBackground(boolean force)
 
           src = W_CacheLumpNum(firstflat + R_FlatNumForName(name), PU_CACHE);
 
-          if (hires)
+          if (hires > 1)
           {
             int i;
-            const int hires_size = 1 << hires;
-            for (y = ((SCREENHEIGHT - ST_HEIGHT) << hires); y < (SCREENHEIGHT << hires); y++)
+            for (y = ((SCREENHEIGHT - ST_HEIGHT) * hires); y < (SCREENHEIGHT * hires); y++)
             {
-              for (x = 0; x < (SCREENWIDTH << hires); x += hires_size)
+              for (x = 0; x < (SCREENWIDTH * hires); x += hires)
               {
-                const byte dot = src[(((y >> hires) & 63) << 6) + ((x >> hires) & 63)];
-                for (i = 0; i < hires_size; i++)
+                const byte dot = src[(((y / hires) & 63) << 6) + ((x / hires) & 63)];
+                for (i = 0; i < hires; i++)
                 {
                   *dest++ = dot;
                 }
@@ -659,12 +660,15 @@ void ST_blinkKeys(player_t* player, int blue, int yellow, int red)
 
   player->keyblinktics = KEYBLINKTICS;
 
-  for (i = 0;  i < 3;  i++) {
+  for (i = 0;  i < 3;  i++)
+  {
     if (   ((keys[i] == KEYBLINK_EITHER) && !(player->cards[i] || player->cards[i+3]))
         || ((keys[i] == KEYBLINK_CARD)   && !(player->cards[i]))
         || ((keys[i] == KEYBLINK_SKULL)  && !(player->cards[i+3]))
         || ((keys[i] == KEYBLINK_BOTH)   && !(player->cards[i] && player->cards[i+3])))
-    { player->keyblinkkeys[i] = keys[i]; }
+    {
+      player->keyblinkkeys[i] = keys[i];
+    }
     else
     { player->keyblinkkeys[i] = KEYBLINK_NONE; }
   }
@@ -736,8 +740,7 @@ void ST_updateWidgets(void)
                         : i
                     : -1;
 
-      if (!plyr->keyblinktics)
-      { w_keyboxes[i].oldinum = -1; }
+      if (!plyr->keyblinktics) { w_keyboxes[i].oldinum = -1; }
     }
   }
 
@@ -845,11 +848,11 @@ void ST_doPaletteStuff(void)
     {
       palette = (cnt+7)>>3;
       if (palette >= NUMREDPALS)
-        palette = NUMREDPALS-1;
+        palette = NUMREDPALS-1 + STRICTMODE(comp_unusedpals); // [Nugget]
       // [crispy] tune down a bit so the menu remains legible
       if (menuactive || paused)
         palette >>= 1;
-      palette += STARTREDPALS;
+      palette += STARTREDPALS - STRICTMODE(comp_unusedpals); // [Nugget]
     }
   }
   else
@@ -857,8 +860,8 @@ void ST_doPaletteStuff(void)
       {
         palette = (plyr->bonuscount+7)>>3;
         if (palette >= NUMBONUSPALS)
-          palette = NUMBONUSPALS-1;
-        palette += STARTBONUSPALS;
+          palette = NUMBONUSPALS-1 + STRICTMODE(comp_unusedpals); // [Nugget]
+        palette += STARTBONUSPALS - STRICTMODE(comp_unusedpals); // [Nugget]
       }
     else
       // killough 7/14/98: beta version did not cause green palette
@@ -881,6 +884,27 @@ void ST_doPaletteStuff(void)
     }
 }
 
+// [Nugget] NUGHUD
+static void NughudDrawPatch(nughud_vlignable_t *widget, patch_t *patch, boolean no_offsets)
+{
+  int x, y;
+
+  x = widget->x + NUGHUDWIDESHIFT(widget->wide)
+      - ((widget->align == 1) ? SHORT(patch->width)   :
+         (widget->align == 0) ? SHORT(patch->width)/2 : 0);
+
+  y = widget->y
+      - ((widget->vlign == -1) ? SHORT(patch->height)   :
+         (widget->vlign ==  0) ? SHORT(patch->height)/2 : 0);
+
+  if (no_offsets) {
+    x += SHORT(patch->leftoffset);
+    y += SHORT(patch->topoffset);
+  }
+
+  V_DrawPatch(x, y, FG, patch);
+}
+
 void ST_drawWidgets(void)
 {
   int i;
@@ -896,24 +920,107 @@ void ST_drawWidgets(void)
     V_CopyRect(WIDESCREENDELTA, 0, BG, ST_WIDTH, ST_HEIGHT, WIDESCREENDELTA, ST_Y, FG);
   }
 
-  // [Nugget] Draw NUGHUD patches and Armor icon
-  if (st_crispyhud) {
+  // [Nugget] Draw some NUGHUD graphics
+  if (st_crispyhud)
+  {
     for (i = 0;  i < NUMNUGHUDPATCHES;  i++)
     {
-      if (nughud_patchlump[i] >= 0) {
-        patch_t *const patch = W_CacheLumpNum(nughud_patchlump[i], PU_STATIC);
-
-        V_DrawPatch(nughud.patches[i].x + NUGHUDWIDESHIFT(nughud.patches[i].wide)
-                    - ((nughud.patches[i].align == 1) ? SHORT(patch->width)   :
-                       (nughud.patches[i].align == 0) ? SHORT(patch->width)/2 : 0),
-                    nughud.patches[i].y, FG, patch);
+      if (nughud_patchlump[i] >= 0)
+      {
+        NughudDrawPatch(
+          &nughud.patches[i],
+          W_CacheLumpNum(nughud_patchlump[i], PU_STATIC),
+          !nughud.patch_offsets
+        );
       }
     }
 
-    if (nughud.armoricon.x > -1 && nharmor[0]) {
-      V_DrawPatch(nughud.armoricon.x + NUGHUDWIDESHIFT(nughud.armoricon.wide),
-                  nughud.armoricon.y, FG,
-                  nharmor[BETWEEN(0, 2, plyr->armortype)]);
+    if (nughud.ammoicon.x > -1 && weaponinfo[w_ready.data].ammo != am_noammo)
+    {
+      patch_t *patch;
+      int lump;
+      boolean no_offsets = false;
+
+      if (nhammo[0])
+      { patch = nhammo[BETWEEN(0, 3, weaponinfo[w_ready.data].ammo)]; }
+      else {
+        char namebuf[32];
+        boolean big = nughud.ammoicon_big;
+
+        no_offsets = true;
+
+        switch (BETWEEN(0, 3, weaponinfo[w_ready.data].ammo))
+        {
+          case 0: sprintf(namebuf, big ? "AMMOA0" : "CLIPA0"); break;
+          case 1: sprintf(namebuf, big ? "SBOXA0" : "SHELA0"); break;
+          case 2: sprintf(namebuf, big ? "CELPA0" : "CELLA0"); break;
+          case 3: sprintf(namebuf, big ? "BROKA0" : "ROCKA0"); break;
+        }
+
+        if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
+        { patch = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
+        else
+        { patch = NULL; }
+      }
+
+      if (patch) { NughudDrawPatch(&nughud.ammoicon, patch, no_offsets); }
+    }
+
+    if (nughud.healthicon.x > -1)
+    {
+      patch_t *patch;
+      int lump;
+      boolean no_offsets = false;
+
+      if (nhealth[0])
+      { patch = nhealth[plyr->powers[pw_strength] ? 1 : 0]; }
+      else {
+        char namebuf[32];
+
+        no_offsets = true;
+
+        switch (plyr->powers[pw_strength] ? 1 : 0)
+        {
+          case 0: sprintf(namebuf, "MEDIA0"); break;
+          case 1: sprintf(namebuf, "PSTRA0"); break;
+        }
+
+        if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
+        { patch = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
+        else
+        { patch = NULL; }
+      }
+
+      if (patch) { NughudDrawPatch(&nughud.healthicon, patch, no_offsets); }
+    }
+
+    if (nughud.armoricon.x > -1)
+    {
+      patch_t *patch;
+      int lump;
+      boolean no_offsets = false;
+
+      if (nharmor[0])
+      { patch = nharmor[BETWEEN(0, 2, plyr->armortype)]; }
+      else {
+        char namebuf[32];
+
+        no_offsets = true;
+
+        switch (BETWEEN(0, 2, plyr->armortype))
+        {
+          case 0: sprintf(namebuf, "BON2A0"); break;
+          case 1: sprintf(namebuf, "ARM1A0"); break;
+          case 2: sprintf(namebuf, "ARM2A0"); break;
+        }
+
+        if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
+        { patch = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
+        else
+        { patch = NULL; }
+      }
+
+      if (patch) { NughudDrawPatch(&nughud.armoricon, patch, no_offsets); }
     }
   }
 
@@ -932,7 +1039,7 @@ void ST_drawWidgets(void)
     //jff 2/16/98 make color of ammo depend on amount
     // [Nugget] Make it gray if the player has infinite ammo
     if (plyr->cheats & CF_INFAMMO)
-    { STlib_updateNum(&w_ready, cr_gray); }
+      STlib_updateNum(&w_ready, cr_gray);
     else
     if (*w_ready.num*100 < ammo_red*maxammo)
       STlib_updateNum(&w_ready, cr_red);
@@ -983,18 +1090,19 @@ void ST_drawWidgets(void)
   // [Nugget] NUGHUD
   if (st_crispyhud) {
     for (i=0;i<4;i++) {
-      if (nughud.ammos[i].x > -1)     { STlib_updateNum(&w_ammo[i], NULL); }
-      if (nughud.maxammos[i].x > -1)  { STlib_updateNum(&w_maxammo[i], NULL); }
+      if (nughud.ammos[i].x    > -1) { STlib_updateNum(&w_ammo[i],    NULL); }
+      if (nughud.maxammos[i].x > -1) { STlib_updateNum(&w_maxammo[i], NULL); }
     }
   }
   else
     for (i=0;i<4;i++)
-    {
-      STlib_updateNum(&w_ammo[i], NULL); //jff 2/16/98 no xlation
-      STlib_updateNum(&w_maxammo[i], NULL);
-    }
+      {
+        STlib_updateNum(&w_ammo[i], NULL); //jff 2/16/98 no xlation
+        STlib_updateNum(&w_maxammo[i], NULL);
+      }
 
-  if (!st_crispyhud || nughud.health.x > -1) { // [Nugget] NUGHUD
+  if (!st_crispyhud || nughud.health.x > -1) // [Nugget] NUGHUD
+  {
     // [Alaux] Make color of health gray when invulnerable
     if (st_invul)
       STlib_updatePercent(&w_health, cr_gray);
@@ -1010,7 +1118,8 @@ void ST_drawWidgets(void)
       STlib_updatePercent(&w_health, cr_blue2); //killough 2/28/98
   }
 
-  if (!st_crispyhud || nughud.armor.x > -1) { // [Nugget] NUGHUD
+  if (!st_crispyhud || nughud.armor.x > -1) // [Nugget] NUGHUD
+  {
     // color of armor depends on type
     if (hud_armor_type)
     {
@@ -1050,22 +1159,21 @@ void ST_drawWidgets(void)
   // [Nugget] NUGHUD
   if (st_crispyhud) {
     for (i = 0;  i < 9;  i++)
-      if (nughud.arms[i].x > -1)
-      { STlib_updateMultIcon(&w_arms[i]); }
+      if (nughud.arms[i].x > -1) { STlib_updateMultIcon(&w_arms[i]); }
   }
   else
     for (i=0; i<6; i++)
-    { STlib_updateMultIcon(&w_arms[i]); }
+      STlib_updateMultIcon(&w_arms[i]);
 
   // [Nugget] This probably shouldn't go here, but it works
   if (st_crispyhud && (nughud.face.x > -1) && nughud.face_bg)
   {
-    V_DrawPatch(nughud.face.x + NUGHUDWIDESHIFT(nughud.face.wide), nughud.face.y+1,
-                FG, faceback[netgame ? displayplayer : 1]);
+    V_DrawPatch(nughud.face.x + NUGHUDWIDESHIFT(nughud.face.wide),
+                nughud.face.y+1, FG, faceback[netgame ? displayplayer : 1]);
   }
 
   if (!st_crispyhud || nughud.face.x > -1) // [Nugget] NUGHUD
-  { STlib_updateMultIcon(&w_faces); }
+    STlib_updateMultIcon(&w_faces);
 
   // [Nugget] NUGHUD
   if (st_crispyhud) {
@@ -1074,18 +1182,16 @@ void ST_drawWidgets(void)
   }
   else
     for (i=0;i<3;i++)
-    { STlib_updateMultIcon(&w_keyboxes[i]); }
+      STlib_updateMultIcon(&w_keyboxes[i]);
 
   if (!st_crispyhud || nughud.frags.x > -1) // [Nugget] NUGHUD
-  { STlib_updateNum(&w_frags, NULL); }
+    STlib_updateNum(&w_frags, NULL);
 }
-
-boolean oldcrispy; // [Nugget]
 
 void ST_Drawer(boolean fullscreen, boolean refresh)
 {
-  static boolean oldwide; // [Nugget]
-  
+  static boolean oldcrispy = 0; // [Nugget] NUGHUD
+
   st_statusbaron = !fullscreen || automap_on;
   // [crispy] immediately redraw status bar after help screens have been shown
   st_firsttime = st_firsttime || refresh || inhelpscreens;
@@ -1093,17 +1199,18 @@ void ST_Drawer(boolean fullscreen, boolean refresh)
   st_classicstatusbar = st_statusbaron && !st_crispyhud;
   st_statusbarface = st_classicstatusbar || (st_crispyhud && nughud.face.x > -1);
 
-  // [Nugget]
-  oldwide = st_crispyhudwide;
-  st_crispyhudwide = (screenblocks == CRISPY_HUD_WIDE) && (!automapactive || automapoverlay);
+  // [Nugget] NUGHUD /--------------------------------------------------------
 
-  // [Nugget]
-  if (oldcrispy != st_crispyhud || oldwide != st_crispyhudwide)
+  if (oldcrispy != st_crispyhud)
   {
     ST_createWidgets();
     ST_updateWidgets();
     HU_Start();
   }
+  
+  oldcrispy = st_crispyhud;
+
+  // [Nugget] ---------------------------------------------------------------/
 
   ST_doPaletteStuff();  // Do red-/gold-shifts from damage/items
 
@@ -1239,11 +1346,11 @@ void ST_loadGraphics(void)
     // Find NUGHUD patches
     for (i = 0;  i < NUMNUGHUDPATCHES;  i++)
     {
-      if (nughud.patches[i].name != NULL)
+      if (nughud.patchnames[i] != NULL)
       {
-        nughud_patchlump[i] = (W_CheckNumForName)(nughud.patches[i].name, ns_sprites);
+        nughud_patchlump[i] = (W_CheckNumForName)(nughud.patchnames[i], ns_sprites);
         if (nughud_patchlump[i] == -1)
-        { nughud_patchlump[i] = (W_CheckNumForName)(nughud.patches[i].name, ns_global); }
+        { nughud_patchlump[i] = (W_CheckNumForName)(nughud.patchnames[i], ns_global); }
       }
       else
       { nughud_patchlump[i] = -1; }
@@ -1254,8 +1361,10 @@ void ST_loadGraphics(void)
     // Tall Numbers -------------------
 
     // Load NHTNUM0 to NHTNUM9
-    for (i = 0;  i < 10;  i++) {
+    for (i = 0;  i < 10;  i++)
+    {
       sprintf(namebuf, "NHTNUM%d", i);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nhtnum[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1279,8 +1388,10 @@ void ST_loadGraphics(void)
     // Ready Ammo Numbers -------------
 
     // Load NHRNUM0 to NHRNUM9
-    for (i = 0;  i < 10;  i++) {
+    for (i = 0;  i < 10;  i++)
+    {
       sprintf(namebuf, "NHRNUM%d", i);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nhrnum[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1298,8 +1409,10 @@ void ST_loadGraphics(void)
     // Ammo numbers -------------------
 
     // Load NHAMNUM0 to NHAMNUM9
-    for (i = 0;  i < 10;  i++) {
-      M_snprintf(namebuf, sizeof(namebuf), "NHAMNUM%d", i);
+    for (i = 0;  i < 10;  i++)
+    {
+      sprintf(namebuf, "NHAMNUM%d", i);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nhamnum[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1310,9 +1423,11 @@ void ST_loadGraphics(void)
 
     // Arms numbers -------------------
 
-    // Load NHW0NUM1 to NHW0NUM9
-    for (i = 0;  i < 9;  i++) {
+    for (i = 0;  i < 9;  i++)
+    {
+      // Load NHW0NUM1 to NHW0NUM9
       sprintf(namebuf, "NHW0NUM%d", i+1);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nhwpnum[i][0] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1322,6 +1437,7 @@ void ST_loadGraphics(void)
 
       // Load NHW1NUM1 to NHW1NUM9
       sprintf(namebuf, "NHW1NUM%d", i+1);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nhwpnum[i][1] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1333,8 +1449,10 @@ void ST_loadGraphics(void)
     // Keys ---------------------------
 
     // Load NHKEYS
-    for (i = 0;  i < NUMCARDS+3;  i++) {
+    for (i = 0;  i < NUMCARDS+3;  i++)
+    {
       sprintf(namebuf, "NHKEYS%d", i);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nhkeys[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1351,11 +1469,43 @@ void ST_loadGraphics(void)
     else
     { nhbersrk = NULL; }
 
+    // Ammo icons ---------------------
+
+    // Load NHAMMO0 to NHAMMO3 if available
+    for (i = 0;  i < 4;  i++)
+    {
+      sprintf(namebuf, "NHAMMO%d", i);
+
+      if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+      { nhammo[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
+      else {
+        nhammo[0] = NULL;
+        break;
+      }
+    }
+
+    // Health icons -------------------
+
+    // Load NHEALTH0 to NHEALTH1 if available
+    for (i = 0;  i < 2;  i++)
+    {
+      sprintf(namebuf, "NHEALTH%d", i);
+
+      if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+      { nhealth[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
+      else {
+        nhealth[0] = NULL;
+        break;
+      }
+    }
+
     // Armor icons --------------------
 
-    // Load NHARMOR0 to NHARMOR2
-    for (i = 0;  i < 3;  i++) {
+    // Load NHARMOR0 to NHARMOR2 if available
+    for (i = 0;  i < 3;  i++)
+    {
       sprintf(namebuf, "NHARMOR%d", i);
+
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       { nharmor[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC); }
       else {
@@ -1411,7 +1561,7 @@ void ST_createWidgets(void)
 
   // [Nugget] NUGHUD
 
-  #define NUGHUDALIGN(a) (st_crispyhud ? a : 1)
+  #define NUGHUDALIGN(a) (st_crispyhud ? (a) : 1)
 
   // ready weapon ammo
   STlib_initNum(&w_ready,
@@ -1450,19 +1600,25 @@ void ST_createWidgets(void)
                          // [Nugget] Highlight Arms #1 only if the player has Berserk
                          ((i == wp_fist) ? &st_berserk : (int *) &plyr->weaponowned[i]),
                          &st_armson);
+
+    // [crispy] show SSG availability in the Shotgun slot of the arms widget
+    if (show_ssg && !(nughud.arms[8].x > -1)) { w_arms[2].inum = &st_shotguns; }
   }
   else {
-    for(i=0;i<6;i++) {
-      // [Nugget] Alternative Arms display (Saw/SSG instead of Pistol)
-      int alt = (alt_arms ? ((i==5 && have_ssg) ? 2 : 1) : 0);
-      STlib_initMultIcon(&w_arms[i],
-                         ST_ARMSX+(i%3)*ST_ARMSXSPACE,
-                         ST_ARMSY+(i/3)*ST_ARMSYSPACE,
-                         arms[i+1+alt], (int *) &plyr->weaponowned[i+1+alt],
-                         &st_armson);
-    }
+    for(i=0;i<6;i++)
+      {
+        // [Nugget] Alternative Arms display (Saw/SSG instead of Pistol)
+        const int alt = (alt_arms ? ((i==5 && have_ssg) ? 2 : 1) : 0);
+
+        STlib_initMultIcon(&w_arms[i],
+                           ST_ARMSX+(i%3)*ST_ARMSXSPACE,
+                           ST_ARMSY+(i/3)*ST_ARMSYSPACE,
+                           arms[i+1+alt], (int *) &plyr->weaponowned[i+1+alt],
+                           &st_armson);
+      }
+
     // [Nugget]: [crispy] show SSG availability in the Shotgun slot of the arms widget
-    if (!alt_arms) { w_arms[1].inum = &st_shotguns; }
+    if (show_ssg && !alt_arms) { w_arms[1].inum = &st_shotguns; }
   }
 
   // frags sum
@@ -1613,18 +1769,79 @@ void ST_Stop(void)
   st_stopped = true;
 }
 
+static int StatusBarBufferHeight(void)
+{
+  int i;
+  int st_height = ST_HEIGHT;
+  patch_t *const patch = W_CacheLumpName("brdr_b", PU_CACHE);
+
+  if (patch && patch->height > st_height)
+    st_height = patch->height;
+
+  if (sbar && sbar->height > st_height)
+    st_height = sbar->height;
+
+  if (armsbg && armsbg->height > st_height)
+    st_height = armsbg->height;
+
+  for (i = 0; i < MAXPLAYERS; i++)
+  {
+    if (faceback[i] && faceback[i]->height > st_height)
+      st_height = faceback[i]->height;
+  }
+
+  return st_height;
+}
+
 void ST_Init(void)
 {
-  const int size = SCREENWIDTH * (ST_HEIGHT << (2 * hires));
+  int st_height, size;
 
-  if(screens[4])
+  ST_loadData();
+
+  st_height = StatusBarBufferHeight();
+  size = SCREENWIDTH * (st_height * hires*hires);
+
+  if (screens[4])
   {
     Z_Free(screens[4]);
   }
 
-  ST_loadData();
   // killough 11/98: allocate enough for hires
   screens[4] = Z_Malloc(size, PU_STATIC, 0);
+}
+
+void ST_Warnings(void)
+{
+  int i;
+  patch_t *const patch = W_CacheLumpName("brdr_b", PU_CACHE);
+
+  if (patch && patch->height > ST_HEIGHT)
+  {
+    I_Printf(VB_WARNING, "ST_Init: Non-standard BRDR_B height of %d. "
+                         "Expected <= %d.", patch->height, ST_HEIGHT);
+  }
+
+  if (sbar && sbar->height != ST_HEIGHT)
+  {
+    I_Printf(VB_WARNING, "ST_Init: Non-standard STBAR height of %d. "
+                         "Expected %d.", sbar->height, ST_HEIGHT);
+  }
+
+  if (armsbg && armsbg->height > ST_HEIGHT)
+  {
+    I_Printf(VB_WARNING, "ST_Init: Non-standard STARMS height of %d. "
+                         "Expected <= %d.", armsbg->height, ST_HEIGHT);
+  }
+
+  for (i = 0; i < MAXPLAYERS; i++)
+  {
+    if (faceback[i] && faceback[i]->height > ST_HEIGHT)
+    {
+      I_Printf(VB_WARNING, "ST_Init: Non-standard STFB%d height of %d. "
+                           "Expected <= %d.", i, faceback[i]->height, ST_HEIGHT);
+    }
+  }
 }
 
 void ST_ResetPalette(void)

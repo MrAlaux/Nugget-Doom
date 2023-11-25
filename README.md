@@ -4,7 +4,7 @@ Nugget Doom is a fork of [Woof!](https://github.com/fabiangreffrath/woof), simpl
 
 **Note:** this README and the rest of documentation are updated on a per-commit basis,
 meaning that they may not correspond to the latest release of Nugget Doom.
-If you're seeking information on the version you're using, please refer to the README included with it.
+If you're seeking information on the version you're using, please refer to the documentation included with it.
 
 ### DISCLAIMER
 Although the new code has been written with the intention of not breaking demo compatibility, it has not been properly tested yet.
@@ -14,7 +14,7 @@ Although the new code has been written with the intention of not breaking demo c
 
 Note that this feature list is relative to [Woof!'s](https://github.com/fabiangreffrath/woof/blob/master/README.md#key-features);
 read the latter for more details.
-Some features were first introduced in Nugget Doom and later merged into Woof!, and so they're not listed here anymore.
+Some features were first implemented in Nugget Doom and later in Woof!, and so they're not listed here anymore.
 
 Most of Nugget Doom's features come from other sources, like source ports and mods;
 the initial implementations for some are **ported from (p.f.)** said sources, while others are just **inspired by (i.b.)** them.
@@ -25,12 +25,12 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 ### General
 
-- **Support for higher resolutions:** 4X (800p) and 8X (1600p)
+- **Support for higher resolutions:** 3X (600p), 4X (800p)... up to 9X (1800p) [by _ceski_]
 - **Selection of widescreen ratios** in the setup menu itself [i.b. Crispy Doom]
 - Toggle to **stretch viewport to fit window** (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Gamma Correction slider ranging from 0.50 to 2.0 in steps of 0.05**
 - Toggle for **Gamma Correction key cycling**, through either original or extended gamma levels (CFG-Only: `gammacycle`)
-- **Menu items for _Air Absorption_ and _Doppler Effect_**, both of which are set to 5 by default
+- **Menu items for _Air Absorption_ and _Doppler Effect_**, both of which are **now set to 5 by default**
 - **Tweaked _Stretch Short Skies_ algorithm**
 - _**Screen Wipe Style**_ selection:
   - _"Seizure"_ (**Warning**: this one might legitimately be seizure-inducing, use with caution);
@@ -38,6 +38,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **Fixed screen melt inconsistency across resolutions**
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **_"Direct + Auto"_ mode for Vertical Aiming**
+- **_Direct Vertical Aiming_ for melee attacks**
 - _**Things move over/under things**_ setting [p.f. Crispy Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>, must be enabled first) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>, must be enabled first) [i.b. ZDoom]
@@ -50,6 +51,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - _**Teleporter Zoom**_ setting [i.b. ZDoom]
 - _**Death Camera**_ setting [i.b. ZDoom]
 - _**Chasecam**_ [i.b. ZDoom]
+- _**Background for all menus**_ setting
 - _**Disable palette tint in menus**_ setting [i.b. Crispy Doom]
 - _**Disable Berserk Tint**_ setting
 - _**Disable Radiation Suit Tint**_ setting
@@ -75,7 +77,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **Always Bob** setting (CFG-Only: `always_bob`)
 - _**Weapon Bobbing Percentage**_ setting [i.b. Crispy Doom, ZDoom]
 - _**Bobbing Styles**_ selection [p.f. Zandronum]
-- _**Weapon Inertia**_ setting (scale determined by the CFG-Only `weapon_inertia_scale_pct` CVAR)
+- _**Weapon Inertia**_ setting (scale determined by the CFG-Only `weapon_inertia_scale_pct` CVAR) [by _ceski_]
 - _**Squat Weapon Down On Impact**_ setting [p.f. Crispy Doom]
 - _**Translucent Flashes**_ setting [i.b. Crispy Doom]
 - **Show Berserk availability** setting [partially p.f. Crispy Doom]
@@ -84,26 +86,28 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 ### Status Bar/HUD
 
 - **`NUGHUD` lump support**, making the Crispy HUD (now called Nugget HUD) customizable (see `docs/nughud.md`)
-- **SSG is accounted for on the Arms widget** [p.f. Crispy Doom]
-- **Blink Missing Keys** setting (CFG-Only: `blink_keys`) [partially p.f. Crispy Doom]
-- **Show Powerup Timers** setting
-- _**Alternative Arms Display**_ setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol (CFG-Only: `alt_arms`)
-- _**Smart Totals**_ setting [p.f. So Doom]
-- _**(In)Complete Milestone Color**_ choices, to customize the Stats text's colors
-- **Armor count is colored gray when in God Mode**
-- **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
-- **Event Timers:**
-  - _"Use" Button Timer_ [p.f. Crispy Doom]; 
-  - _Teleport Timer_ [i.b. the above];
-  - _Key Pickup Timer_ [same as above].
 - **Crosshair:**
   - Vertical-only target lock-on;
   - Horizontal autoaim indicators;
   - Option to account for fuzzy targets [i.b. From Doom With Love];
   - Dedicated toggle key.
+- _**Show Powerup Timers**_ setting
+- **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-Only: `show_ssg`) [p.f. Crispy Doom]
+- _**Alternative Arms Display**_ setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
+- **Blink Missing Keys** setting (CFG-Only: `blink_keys`) [partially p.f. Crispy Doom]
+- _**Smart Totals**_ setting [p.f. So Doom]
+- _**Show Kills Percentage [in Stats display]**_ setting
+- **Event Timers:**
+  - _"Use" Button Timer_ [p.f. Crispy Doom]; 
+  - _Teleport Timer_ [i.b. the above];
+  - _Key Pickup Timer_ [same as above].
+- **Extended HUD color customization**
+- **Armor count is colored gray when in God Mode**
+- **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
 
 ### Automap
 
+- **Minimap mode** [i.b. DSDA-Doom]
 - **Automap color for unrevealed secret sectors**
 - Key to _**Blink [Automap] Marks**_ (default: <kbd>B</kbd>)
 - _**Tag Finder**_: Position the Automap pointer over a sector and press the _Tag Finder_ key to highlight its activator line(s), and vice versa [p.f. PrBoomX]
@@ -114,17 +118,20 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - _**Extra Gibbing**_ setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-Only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
 - _**Bloodier Gibbing**_ setting [i.b. Smooth Doom]
 - _**ZDoom-like item drops**_ setting [of course, i.b. ZDoom]
-- _**Selective Fuzz Darkening**_ setting
+- **Improved vanilla fuzz effect** [by _ceski_]
+- _**Selective Fuzz Darkening**_ setting [by _ceski_]
 
 ### Messages
 
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
+- **Show Save Messages** setting (CFG-Only: `show_save_messages`)
 - _**Announce Milestone Completion**_ setting, to report completion of milestones (e.g. all items acquired)
 - Restored _**Message Listing Scrolls Upwards**_ setting, and enabled it by default
 
-### Doom Compatibility
+### Doom Compatibility settings
 
 - Bruiser attack (A_BruisAttack) doesn't face target
+- Disable Melee Snapping
 - Double Autoaim range
 - Fix Lost Soul colliding with items
 - Lost Soul forgets target upon impact
@@ -139,6 +146,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - Chaingunner uses pistol/chaingun sound
 - Arch-Vile fire plays flame start sound [p.f. Crispy Doom]
 - Dead players can still play "oof" sound [p.f. Crispy Doom]
+- Use unused pain/bonus palettes
 - Key pickup resets palette
 
 ### Cheats
@@ -176,6 +184,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
   - `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`;
   - `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS`.
 - **Customizable darkening level for dark menu background and Automap overlay** (CFG-Only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+- **Tweaked dark menu background and Automap overlay algorithm**
 - The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
 - Toggle to **allow chat in singleplayer** (CFG-Only: `sp_chat`)
 - Restored `-cdrom` command-line parameter
@@ -253,8 +262,8 @@ Help was provided by:
 - [_atsb_ (a.k.a. _Gibbon_)](https://github.com/atsb);
 - [_Brad Harding_](https://github.com/bradharding);
 - [_ceski_](https://github.com/ceski-1);
-- [_melak47_](https://github.com/melak47);
 - [_Fabian Greffrath_](https://github.com/fabiangreffrath);
+- [_melak47_](https://github.com/melak47);
 - [_Roman Fomin_ (a.k.a. _rfomin_)](https://github.com/rfomin);
 - [_Ryan Krafnick_ (a.k.a. _kraflab_)](https://github.com/kraflab).
 
@@ -271,10 +280,14 @@ Copyright:
  © 2005-2018 Simon Howard;  
  © 2006 Ben Ryves;  
  © 2017 Christoph Oelckers;  
+ © 2017-2022 Brad Harding;  
  © 2019 Fernando Carmona Varo;  
  © 2019 Jonathan Dowland;  
  © 2020 Alex Mayfield;  
+ © 2020 JadingTsunami;  
  © 2021 Ryan Krafnick;  
+ © 2022 Julia Nechaevskaya;  
+ © 2022 Vladislav Melnichuk;  
  © 2022-2023 ceski;  
  © 2023 liPillON;  
  © 2020-2023 Fabian Greffrath;  

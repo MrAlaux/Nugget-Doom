@@ -31,7 +31,9 @@
 #include "r_bmaps.h" // [crispy] R_BrightmapForTexName()
 #include "m_swap.h"
 #include "hu_stuff.h" // [Alaux] Lock crosshair on target
-#include "m_nughud.h" // [Nugget]
+// [Nugget]
+#include "m_nughud.h"
+#include "st_stuff.h"
 
 #define MINZ        (FRACUNIT*4)
 #define BASEYCENTER 100
@@ -635,7 +637,7 @@ void R_ProjectSprite (mobj_t* thing)
     vis->colormap[0] = vis->colormap[1] = fullcolormap;       // full bright  // killough 3/20/98
   else
     {      // diminished light
-      int index = (int) (xscale/fovdiff)>>(LIGHTSCALESHIFT+hires);  // killough 11/98
+      int index = (int) (xscale/fovdiff) / ((1 << LIGHTSCALESHIFT) * hires);  // killough 11/98
       if (index >= MAXLIGHTSCALE)
         index = MAXLIGHTSCALE-1;
       vis->colormap[0] = spritelights[index];
@@ -714,7 +716,6 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   boolean       flip;
   vissprite_t   *vis;
   vissprite_t   avis;
-  extern boolean st_crispyhud, oldcrispy; // [Nugget]
 
   // decide which patch to use
 
@@ -765,9 +766,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
                     (psp->sy2-spritetopoffset[lump]) // [FG] centered weapon sprite
                     // [Nugget]
                     - (STRICTMODE(weapon_inertia) ? psp->wiy : 0) // Weapon inertia
-                    + (STRICTMODE(st_crispyhud && screenblocks < 13)
-                       ? nughud.weapheight*FRACUNIT : 0) // Nugget HUD
-                    + MIN(0, R_GetFOVFX(FOVFX_ZOOM)*FRACUNIT/2); // Lower weapon based on zoom
+                    + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
@@ -823,9 +822,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
     x1_saved = vis->x1;
     texturemid_saved = vis->texturemid;
 
-    if (lump == oldlump && pspr_interp
-        // [Nugget]
-        && (st_crispyhud == oldcrispy || STRICTMODE(!nughud.weapheight)))
+    if (lump == oldlump && pspr_interp)
     {
       int deltax = x2 - vis->x1;
       vis->x1 = oldx1 + FixedMul(vis->x1 - oldx1, fractionaltic);
@@ -844,7 +841,8 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   }
 
   // [crispy] free look
-  vis->texturemid += (centery - viewheight/2) * pspriteiscale;
+  vis->texturemid += (centery - viewheight/2) * pspriteiscale
+                     + (STRICTMODE(st_crispyhud) ? nughud.weapheight*FRACUNIT : 0); // [Nugget] NUGHUD
 
   if (STRICTMODE(hide_weapon || chasecam_on)) // [Nugget] Chasecam
     return;

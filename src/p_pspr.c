@@ -167,6 +167,7 @@ static void P_BringUpWeapon(player_t *player)
   player->psprites[ps_weapon].sy  = demo_version >= 203
                                     ? WEAPONBOTTOM+FRACUNIT*2
                                     : WEAPONBOTTOM;
+
   // [Nugget]: [crispy] squat down weapon sprite
   player->psprites[ps_weapon].dy = 0;
   // [Nugget] Reset offsets for weapon inertia
@@ -490,48 +491,52 @@ static void P_NuggetBobbing(player_t* player)
 
   if ((player->attackdown && STRICTMODE(center_weapon) != WEAPON_BOBBING) // [FG] not attacking means idle
       || !psp->state || psp->state->misc1 || player->switching)
-  { return; }
+  {
+    return;
+  }
 
   // [Nugget] Weapon bobbing percentage setting
   if (weapon_bobbing_percentage != 100)
   { bob = FixedDiv(FixedMul(bob, weapon_bobbing_percentage), 100); }
 
   // sx - Default, differs in a few styles
-  psp->sx2 = ((1 - STRICTMODE(sx_fix))*FRACUNIT) + FixedMul(bob, finecosine[angle]);
+  psp->sx2 = ((1 - STRICTMODE(sx_fix)) * FRACUNIT) + FixedMul(bob, finecosine[angle]);
+
   // sy - Used for all styles, their specific values are added to this one right after
   psp->sy2 = WEAPONTOP + abs(psp->dy); // Squat weapon down on impact
 
   // Bobbing Styles, ported from Zandronum
-  switch (style) {
+  switch (style)
+  {
     case BOBSTYLE_VANILLA:
-      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_INVVANILLA:
-      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_ALPHA:
       psp->sx2 = FixedMul(bob, finesine[angle]);
-      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_INVALPHA:
       psp->sx2 = FixedMul(bob, finesine[angle]);
-      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += bob - FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
 
     case BOBSTYLE_SMOOTH:
-      psp->sy2 += (bob - FixedMul(bob, finecosine[angle*2 & (FINEANGLES-1)])) / 2;
+      psp->sy2 += (bob - FixedMul(bob, finecosine[angle*2 & (FINEANGLES - 1)])) / 2;
       break;
 
     case BOBSTYLE_INVSMOOTH:
-      psp->sy2 += (FixedMul(bob, finecosine[angle*2 & (FINEANGLES-1)]) + bob) / 2;
+      psp->sy2 += (bob + FixedMul(bob, finecosine[angle*2 & (FINEANGLES - 1)])) / 2;
       break;
 
     case BOBSTYLE_QUAKE:
       psp->sx2 = 0;
-      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2-1)]);
+      psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
       break;
   }
 }
@@ -584,7 +589,7 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
 
   P_ApplyBobbing(&psp->sx, &psp->sy, player->bob);
   
-  // [Nugget] Calculate sx2 and sy2 alongside sx and sy
+  // [Nugget] Calculate `sx2` and `sy2` alongside `sx` and `sy`
   if (!always_bob) { P_NuggetBobbing(player); }
 }
 
@@ -746,41 +751,30 @@ void A_Punch(player_t *player, pspdef_t *psp)
   // [Nugget] MDK Fist, basically an absurdly high damage sniper
   if (player->cheats & CF_SAITAMA)
   {
+    int i = 10;
+    boolean once = true;
+
     // Alt Fire, basically an overpowered BFG
-    if (M_InputGameActive(input_strafe)) {
-      for (int i=0; i<21; i++) {
-        angle = player->mo->angle + ANG20 - (ANG2*i);
+    if (M_InputGameActive(input_strafe)) { i = once = 0; }
 
-        if (vertical_aiming == VERTAIM_DIRECT)
-        { slope = PLAYER_SLOPE(player); }
-        else {
-          slope = P_AimLineAttack(player->mo, angle, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), 0);
-          if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
-          { slope = PLAYER_SLOPE(player); }
-        }
-
-        if (player->cheats & CF_BOOMCAN)
-        { boomshot = true; }
-
-        P_LineAttack(player->mo, angle, MISSILERANGE, slope, 1000000);
-      }
-    }
-    else { // Just one bullet
-      angle = player->mo->angle;
+    do {
+      // killough 8/2/98: make autoaiming prefer enemies
+      const int mask = demo_version < 203 ? 0 : MF_FRIEND;
+      angle = player->mo->angle + ANG20 - (ANG2*i);
 
       if (vertical_aiming == VERTAIM_DIRECT)
-      { slope = PLAYER_SLOPE(player); }
+      { slope = player->slope; }
       else {
-        slope = P_AimLineAttack(player->mo, angle, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), 0);
+        slope = P_AimLineAttack(player->mo, angle, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+
         if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
-        { slope = PLAYER_SLOPE(player); }
+        { slope = player->slope; }
       }
 
-      if (player->cheats & CF_BOOMCAN)
-      { boomshot = true; }
+      if (player->cheats & CF_BOOMCAN) { boomshot = true; }
 
       P_LineAttack(player->mo, angle, MISSILERANGE, slope, 1000000);
-    }
+    } while (++i < 21 && !once);
 
     return;
   }
@@ -796,11 +790,21 @@ void A_Punch(player_t *player, pspdef_t *psp)
 
   range = (mbf21 ? player->mo->info->meleerange : MELEERANGE);
 
-  // killough 8/2/98: make autoaiming prefer enemies
-  if (demo_version<203 ||
-      (slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND),
-       !linetarget))
-    slope = P_AimLineAttack(player->mo, angle, range, 0);
+  // [Nugget] Direct Vertical Aiming for melee
+  if (vertical_aiming == VERTAIM_DIRECT)
+  { slope = player->slope; }
+  else {
+    // killough 8/2/98: make autoaiming prefer enemies
+    if (demo_version<203 ||
+        (slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND),
+         !linetarget))
+    {
+      slope = P_AimLineAttack(player->mo, angle, range, 0);
+
+      if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
+      { slope = player->slope; }
+    }
+  }
 
   P_LineAttack(player->mo, angle, range, slope, damage);
 
@@ -810,9 +814,12 @@ void A_Punch(player_t *player, pspdef_t *psp)
   S_StartSound(player->mo, sfx_punch);
 
   // turn to face target
-
-  player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y,
-                                      linetarget->x, linetarget->y);
+  // [Nugget]
+  if (NOTSTRICTMODE(!comp_nomeleesnap))
+  {
+    player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y,
+                                        linetarget->x, linetarget->y);
+  }
 }
 
 //
@@ -833,11 +840,21 @@ void A_Saw(player_t *player, pspdef_t *psp)
   // Use meleerange + 1 so that the puff doesn't skip the flash
   range = (mbf21 ? player->mo->info->meleerange : MELEERANGE) + 1;
 
-  // killough 8/2/98: make autoaiming prefer enemies
-  if (demo_version<203 ||
-      (slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND),
-       !linetarget))
-    slope = P_AimLineAttack(player->mo, angle, range, 0);
+  // [Nugget] Direct Vertical Aiming for melee
+  if (vertical_aiming == VERTAIM_DIRECT)
+  { slope = player->slope; }
+  else {
+    // killough 8/2/98: make autoaiming prefer enemies
+    if (demo_version<203 ||
+        (slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND),
+         !linetarget))
+    {
+      slope = P_AimLineAttack(player->mo, angle, range, 0);
+
+      if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
+      { slope = player->slope; }
+    }
+  }
 
   P_LineAttack(player->mo, angle, range, slope, damage);
 
@@ -852,21 +869,25 @@ void A_Saw(player_t *player, pspdef_t *psp)
   S_StartSound(player->mo, sfx_sawhit);
 
   // turn to face target
-  angle = R_PointToAngle2(player->mo->x, player->mo->y,
-                          linetarget->x, linetarget->y);
+  // [Nugget]
+  if (NOTSTRICTMODE(!comp_nomeleesnap))
+  {
+    angle = R_PointToAngle2(player->mo->x, player->mo->y,
+                            linetarget->x, linetarget->y);
 
-  if (angle - player->mo->angle > ANG180)
-    if ((signed int) (angle - player->mo->angle) < -ANG90/20)
-      player->mo->angle = angle + ANG90/21;
+    if (angle - player->mo->angle > ANG180)
+      if ((signed int) (angle - player->mo->angle) < -ANG90/20)
+        player->mo->angle = angle + ANG90/21;
+      else
+        player->mo->angle -= ANG90/20;
     else
-      player->mo->angle -= ANG90/20;
-  else
-    if (angle - player->mo->angle > ANG90/20)
-      player->mo->angle = angle - ANG90/21;
-    else
-      player->mo->angle += ANG90/20;
+      if (angle - player->mo->angle > ANG90/20)
+        player->mo->angle = angle - ANG90/21;
+      else
+        player->mo->angle += ANG90/20;
 
-  player->mo->flags |= MF_JUSTATTACKED;
+    player->mo->flags |= MF_JUSTATTACKED;
+  }
 }
 
 //
@@ -928,7 +949,7 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
       // Taken outside of code block after this one
       // to allow direct vertical aiming in Beta
       if (vertical_aiming == VERTAIM_DIRECT)
-      { slope = PLAYER_SLOPE(mo->player); }
+      { slope = player->slope; }
       else
       if (autoaim || !beta_emulation)
 	{
@@ -946,7 +967,7 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
 	      if (!linetarget)
 		an = mo->angle,
 		// [Nugget] Vertical aiming
-		slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? PLAYER_SLOPE(player) : 0;
+		slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? player->slope : 0;
 	    }
 	  while (mask && (mask=0, !linetarget));     // killough 8/2/98
 	}
@@ -1017,7 +1038,7 @@ static void P_BulletSlope(mobj_t *mo)
         bulletslope = P_AimLineAttack(mo, an -= 2<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
       // [Nugget] Vertical aiming
       if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
-        bulletslope = PLAYER_SLOPE(mo->player);
+        bulletslope = mo->player->slope;
     }
   while (mask && (mask=0, !linetarget));  // killough 8/2/98
 }
@@ -1124,7 +1145,7 @@ void A_FireShotgun2(player_t *player, pspdef_t *psp)
 
 void A_FireCGun(player_t *player, pspdef_t *psp)
 {
-  // [Nugget] use DSCHGUN if available
+  // [Nugget] Use DSCHGUN if available
   static int sound = -1;
   if (sound == -1)
   { sound = (W_CheckNumForName("dschgun") > -1 ? sfx_chgun : sfx_pistol); }
@@ -1214,7 +1235,9 @@ void A_BFGSpray(mobj_t *mo)
       shake++; // [Nugget] Explosion shake effect
     }
 
-  R_ExplosionShake(mo->target->x, mo->target->y, 2*shake, 16*64); // [Nugget] Explosion shake effect
+  // [Nugget] Explosion shake effect
+  if (mo->target->player == &players[displayplayer])
+  { R_ExplosionShake(mo->target->x, mo->target->y, 2*shake, 16*64); }
 }
 
 //
@@ -1406,7 +1429,8 @@ void P_MovePsprites(player_t *player)
   }
 
   // [Nugget]: [crispy] squat down weapon sprite a bit after hitting the ground
-  if (psp->dy) {
+  if (psp->dy)
+  {
     if (psp->dy > 24*FRACUNIT)
     { psp->dy = 24*FRACUNIT; }
     else
@@ -1556,10 +1580,20 @@ void A_WeaponMeleeAttack(player_t *player, pspdef_t *psp)
   t = P_Random(pr_mbf21);
   angle += (t - P_Random(pr_mbf21))<<18;
 
-  // make autoaim prefer enemies
-  slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND);
-  if (!linetarget)
-    slope = P_AimLineAttack(player->mo, angle, range, 0);
+  // [Nugget] Direct Vertical Aiming for melee
+  if (vertical_aiming == VERTAIM_DIRECT)
+  { slope = player->slope; }
+  else {
+    // make autoaim prefer enemies
+    slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND);
+    if (!linetarget)
+    {
+      slope = P_AimLineAttack(player->mo, angle, range, 0);
+
+      if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
+      { slope = player->slope; }
+    }
+  }
 
   // attack, dammit!
   P_LineAttack(player->mo, angle, range, slope, damage);
@@ -1574,7 +1608,11 @@ void A_WeaponMeleeAttack(player_t *player, pspdef_t *psp)
   S_StartSound(player->mo, hitsound);
 
   // turn to face target
-  player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, linetarget->x, linetarget->y);
+  // [Nugget]
+  if (NOTSTRICTMODE(!comp_nomeleesnap))
+  {
+    player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, linetarget->x, linetarget->y);
+  }
 }
 
 //

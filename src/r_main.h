@@ -117,7 +117,7 @@ void R_RenderPlayerView(player_t *player);   // Called by G_Drawer.
 void R_Init(void);                           // Called by startup code.
 void R_SetViewSize(int blocks);              // Called by M_Responder.
 
-// [Nugget] FOV from Doom Retro /------
+// [Nugget] FOV from Doom Retro /---------------------------------------------
 
 extern boolean fovchange;
 extern float   fovdiff;
@@ -145,7 +145,7 @@ extern void R_SetFOVFX(int fx);
 extern int  R_GetZoom(void);
 extern void R_SetZoom(const int state);
 
-// [Nugget] --------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
 // [Nugget] Explosion shake effect
 extern void R_SetShake(int value);

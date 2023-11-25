@@ -58,21 +58,21 @@ static int wipe_doColorXForm(int width, int height, int ticks)
   byte *e   = wipe_scr_end;
   byte *end = wipe_scr+width*height;
 
-  // [Nugget] Speed it up
-  ticks <<= 3;
-  ticks >>= hires;
-  ticks = MAX(1, ticks);
+  ticks *= 8; // [Nugget] Speed it up, to match "Melt" wipe speed
 
-  for (;w != end; w++, e++) {
-    if (*w != *e) {
-      int newval;
-      unchanged = false;
-      *w = *w > *e ? (newval = *w - ticks) < *e
-                     ? *e : newval
-                   : (newval = *w + ticks) > *e
-                     ? *e : newval ;
-    }
-  }
+  // [Nugget] Screen Wipe speed
+  if (!strictmode && wipe_speed_percentage != 100)
+  { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
+
+  for (;w != end; w++, e++)
+    if (*w != *e)
+      {
+        int newval;
+        unchanged = false;
+        *w = *w > *e ?
+          (newval = *w - ticks) < *e ? *e : newval :
+          (newval = *w + ticks) > *e ? *e : newval ;
+      }
   return unchanged;
 }
 
@@ -86,7 +86,6 @@ static int *y;
 static int wipe_initMelt(int width, int height, int ticks)
 {
   int i;
-  const int hires_size = 1 << hires;
 
   // copy start screen to main screen
   memcpy(wipe_scr, wipe_scr_start, width*height);
@@ -98,16 +97,16 @@ static int wipe_initMelt(int width, int height, int ticks)
 
   // setup initial column positions (y<0 => not ready to scroll yet)
   y = (int *) Z_Malloc(width*sizeof(int), PU_STATIC, 0);
-  y[0] = -(M_Random()%16) * hires_size;
+  y[0] = -(M_Random()%16) * hires;
   for (i=1;i<width;i++)
     {
-      int r = ((M_Random()%3) - 1) * hires_size;
+      int r = ((M_Random()%3) - 1) * hires;
       y[i] = y[i-1] + r;
       if (y[i] > 0)
         y[i] = 0;
       else
-        if (y[i] == -16 * hires_size)
-          y[i] = -15 * hires_size;
+        if (y[i] == -16 * hires)
+          y[i] = -15 * hires;
     }
   return 0;
 }
@@ -118,6 +117,12 @@ static int wipe_doMelt(int width, int height, int ticks)
   int i;
 
   width /= 2;
+
+  ticks *= hires; // [Nugget] Hires support: brought from `wipe_ScreenWipe()`
+
+  // [Nugget] Screen Wipe speed
+  if (!strictmode && wipe_speed_percentage != 100)
+  { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
 
   while (ticks--)
     for (i=0;i<width;i++)
@@ -163,7 +168,7 @@ static int wipe_exitMelt(int width, int height, int ticks)
   return 0;
 }
 
-// [Nugget] "Fade" wipe
+// [Nugget] "Fade" wipe /-----------------------------------------------------
 
 static boolean fadeIn;
 
@@ -179,17 +184,21 @@ static int wipe_doFade(int width, int height, int ticks)
   static int screenshade = 1;
   static const int targshade = 31;
   
-  // [Nugget] Speed it up
-  ticks <<= 1;
-  ticks >>= hires;
-  ticks = MAX(1, ticks);
+  ticks *= 2; // Speed it up, to match "Melt" wipe speed
+
+  // [Nugget] Screen Wipe speed
+  if (!strictmode && wipe_speed_percentage != 100)
+  { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
 
   memcpy(wipe_scr, fadeIn ? wipe_scr_end : wipe_scr_start, width * height);
 
-  for (y = 0; y < width * height; y++)
-  { wipe_scr[y] = colormaps[0][screenshade * 256 + wipe_scr[y]]; }
+  for (y = 0;  y < width * height;  y++)
+  { wipe_scr[y] = colormaps[0][(screenshade * 256) + wipe_scr[y]]; }
 
-  if (!fadeIn) { // Fade out to black
+  if (!fadeIn)
+  {
+    // Fade out to black
+
     screenshade += ticks;
 
     if (screenshade > targshade) {
@@ -197,7 +206,10 @@ static int wipe_doFade(int width, int height, int ticks)
       fadeIn = true;
     }
   }
-  else { // Fade in from black
+  else
+  {
+    // Fade in from black
+
     screenshade -= ticks;
 
     if (screenshade < 1) {
@@ -214,6 +226,8 @@ static int wipe_exitFade(int width, int height, int ticks)
   return 0;
 }
 
+// [Nugget] -----------------------------------------------------------------/
+
 int wipe_StartScreen(int x, int y, int width, int height)
 {
   I_ReadScreen(wipe_scr_start = screens[2]);
@@ -229,17 +243,18 @@ int wipe_EndScreen(int x, int y, int width, int height)
 
 // [Nugget] Rearranged for convenience
 static int (*const wipes[])(int, int, int) = {
-  0, 0, 0, // [Nugget]
+  0, 0, 0, // [Nugget] Dummies for "no wipe"
   wipe_initMelt,
   wipe_doMelt,
   wipe_exitMelt,
   wipe_initColorXForm,
   wipe_doColorXForm,
   wipe_exitColorXForm,
-  // [Nugget] All of the following:
+  // [Nugget] "Fade" wipe /------------
   wipe_initFade,
   wipe_doFade,
   wipe_exitFade
+  // [Nugget] ------------------------/
 };
 
 // killough 3/5/98: reformatted and cleaned up
@@ -247,12 +262,10 @@ int wipe_ScreenWipe(int wipeno, int x, int y, int width, int height, int ticks)
 {
   static boolean go;                               // when zero, stop the wipe
 
-  if (hires)     // killough 11/98: hires support
-    width <<= hires, height <<= hires, ticks <<= hires;
-
-  // [Nugget] Screen Wipe speed
-  if (!strictmode && wipe_speed_percentage != 100)
-  { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
+  // killough 11/98: hires support
+  // [Nugget] `ticks` is now calculated in `wipe_doMelt()`,
+  // since that's the only wipe style where it matters
+  width *= hires, height *= hires;
 
   if (!go)                                         // initial stuff
     {

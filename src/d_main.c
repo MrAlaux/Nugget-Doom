@@ -44,7 +44,6 @@
 #include "m_argv.h"
 #include "m_misc.h"
 #include "m_misc2.h" // [FG] M_StringDuplicate()
-#include "m_nughud.h" // [Nugget]
 #include "m_menu.h"
 #include "m_swap.h"
 #include "i_printf.h"
@@ -69,6 +68,7 @@
 #include "i_endoom.h"
 #include "d_quit.h"
 #include "r_bmaps.h"
+#include "m_nughud.h" // [Nugget]
 
 #include "dsdhacked.h"
 
@@ -267,7 +267,7 @@ void D_Display (void)
           || (inhelpscreensstate && !inhelpscreens))
         redrawsbar = true;              // just put away the help screen
       // [Nugget] Moved ST_Drawer() call below,
-      // to ensure it is called AFTER AM_Drawer()
+      // to ensure it is called *after* AM_Drawer()
       fullscreen = scaledviewheight == 200;               // killough 11/98
       break;
     case GS_INTERMISSION:
@@ -287,7 +287,7 @@ void D_Display (void)
     R_RenderPlayerView (&players[displayplayer]);
 
   // [Nugget] Moved HU_Drawer() call below,
-  // to ensure it is called AFTER AM_Drawer() and ST_Drawer()
+  // to ensure it is called *after* AM_Drawer() and ST_Drawer()
 
   // clean up border stuff
   if (gamestate != oldgamestate && gamestate != GS_LEVEL)
@@ -329,19 +329,14 @@ void D_Display (void)
       inhelpscreensstate = true;
     }
 
-  // [Nugget] Moved here, as to be called after AM_Drawer()
+  // [Nugget] Moved here, as to be run *after* AM_Drawer()
   if (gamestate == GS_LEVEL && gametic)
   {
-    // [Nugget]:
-    // [crispy] distinguish classic status bar with background and player face from Crispy HUD
-    oldcrispy = st_crispyhud; // [Nugget]
-    st_crispyhud = (CRISPY_HUD <= screenblocks && screenblocks <= CRISPY_HUD_WIDE) && automap_off;
-
-    ST_Drawer(scaledviewheight == 200 && !st_crispyhud, // [Nugget]
+    ST_Drawer(scaledviewheight == 200 && !st_crispyhud, // [Nugget] NUGHUD
               redrawsbar);
 
-    // Moved here too, as to be called
-    // after AM_Drawer() and ST_Drawer()
+    // Moved here too, as to be run
+    // *after* AM_Drawer() and ST_Drawer()
     HU_Drawer();
   }
 
@@ -349,11 +344,11 @@ void D_Display (void)
   if (paused)
     {
       int y = 4;
-      int x = (viewwindowx>>hires);
+      int x = (viewwindowx/hires);
       patch_t *patch = W_CacheLumpName("M_PAUSE", PU_CACHE);
 
       if (!automapactive)
-        y += (viewwindowy>>hires);
+        y += (viewwindowy/hires);
       V_DrawPatchDirect(x + (scaledviewwidth - SHORT(patch->width)) / 2 - WIDESCREENDELTA,
                         y, 0, patch);
     }
@@ -2557,9 +2552,9 @@ void D_DoomMain(void)
 
   D_ProcessInWads("BRGHTMPS", R_ParseBrightmaps, false);
 
-  M_NughudLoadOptions(); // [Nugget]
-
   I_PutChar(VB_INFO, '\n');     // killough 3/6/98: add a newline, by popular demand :)
+
+  M_NughudLoadOptions(); // [Nugget]
 
   // Moved after WAD initialization because we are checking the COMPLVL lump
   G_ReloadDefaults(false); // killough 3/4/98: set defaults just loaded.
@@ -2681,6 +2676,7 @@ void D_DoomMain(void)
 
   I_Printf(VB_INFO, "ST_Init: Init status bar.");
   ST_Init();
+  ST_Warnings();
 
   I_PutChar(VB_INFO, '\n');
 
