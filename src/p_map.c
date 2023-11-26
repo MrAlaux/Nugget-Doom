@@ -2548,7 +2548,9 @@ mobj_t *P_CheckOnmobj(mobj_t *thing)
 {
   int xl, xh, yl, yh, bx, by;
   subsector_t *newsubsec;
-  mobj_t oldmo = *thing; // Save the old mobj before the fake movement
+  const mobj_t oldmo = *thing; // Save the old mobj before the fake movement
+
+  if (!(casual_play && over_under)) { return NULL; }
 
   tmx = thing->x;
   tmy = thing->y;
