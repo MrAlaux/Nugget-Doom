@@ -414,7 +414,7 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
               actor->z += FLOATSPEED;
 
               // [Nugget]
-              if ((onmo = P_CheckOnmobj(actor)))
+              if ((onmo = P_CheckOnmobj(actor, false)))
               { actor->z = onmo->z - actor->height; }
           }
           else
@@ -422,7 +422,7 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
             actor->z -= FLOATSPEED;
 
             // [Nugget]
-            if ((onmo = P_CheckOnmobj(actor)))
+            if ((onmo = P_CheckOnmobj(actor, false)))
             { actor->z = onmo->z + onmo->height; }
           }
 

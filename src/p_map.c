@@ -2544,7 +2544,7 @@ static void P_FakeZMovement(mobj_t *mo)
 }
 
 // Checks if the new Z position is legal
-mobj_t *P_CheckOnmobj(mobj_t *thing)
+mobj_t *P_CheckOnmobj(mobj_t *thing, boolean fakemove)
 {
   int xl, xh, yl, yh, bx, by;
   subsector_t *newsubsec;
@@ -2584,7 +2584,7 @@ mobj_t *P_CheckOnmobj(mobj_t *thing)
   yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
   yh = (tmbbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
-  P_FakeZMovement(tmthing);
+  if (fakemove) { P_FakeZMovement(tmthing); }
 
   for (bx = xl; bx <= xh; bx++)
     for (by = yl; by <= yh; by++)

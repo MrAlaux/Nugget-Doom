@@ -794,7 +794,7 @@ void P_MobjThinker (mobj_t* mobj)
       {
         mobj_t *onmo;
 
-        if (!(onmo = P_CheckOnmobj(mobj)))
+        if (!(onmo = P_CheckOnmobj(mobj, true)))
         {
           P_ZMovement(mobj);
           mobj->intflags &= ~MIF_ONMOBJ;
