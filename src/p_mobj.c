@@ -789,7 +789,7 @@ void P_MobjThinker (mobj_t* mobj)
 
   if (mobj->z != mobj->floorz || mobj->momz)
     {
-      // [Nugget]
+      // [Nugget]: [DSDA]
       if (casual_play && over_under && (mobj->flags & MF_SOLID))
       {
         mobj_t *onmo;
