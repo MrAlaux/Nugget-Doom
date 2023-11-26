@@ -111,46 +111,46 @@ Toggle infinite ammo.
 
 `VALIANT`  
 Toggle fast weapons.
-    
+
 `BOBBERS`  
 Shortcut to toggle the two cheats mentioned above, and IDFA.
-        
+
 `GIBBERS`  
 Force gibbing on dying enemies, independently of damage dealt.
-    
+
 `IDFLY`  
 Toggle Fly Mode (uses jumping/crouching keys).
-    
+
 `SUMMON`  
 Spawn a hostile or friendly actor based on its mobjtype index.
-    
+
 `RESURRECT` / `IDRES`  
 Resurrect the player without toggling IDDQD.
-    
+
 `LINETARGET`  
 Toggle Linetarget Query Mode, which gives some info on the player's linetarget.
-    
+
 `MDK`  
 Perform a hitscan attack with 1 million damage.
-    
+
 `SAITAMA`  
 Toggle MDK Fist (replaces A_Punch's melee attack with the MDK attack, featuring an alternate multishot attack when holding down Strafe On).
-    
-`BOOMCAN`
+
+`BOOMCAN`  
 Toggle explosive hitscan attacks for the player's ranged hitscan weapons
-    
+
 `NEXTMAP`  
 Exit the level.
-    
+
 `NEXTSECRET`  
 Exit the level as if using a secret exit.
-    
+
 `TURBO`  
 Change the player speed in-game.
 
 `NOMOMENTUM`  
 Toggle No Momentum mode; reenabled debugging cheat.
-    
+
 ## Beta cheats
 
 These cheats only work in MBF `-beta` emulation mode.

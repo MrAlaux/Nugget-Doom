@@ -165,9 +165,10 @@ default_t defaults[] = {
   //
 
   { // killough 11/98: hires
+    // [Nugget] Now a multiplier
     "hires", (config_t *) &default_hires, NULL,
-    {1}, {0,MAX_HIRES}, number, ss_none, wad_no,
-    "Renderer resolution (0 = 200p, 1 = 400p, 2 = 800p, 3 = 1600p)"
+    {2}, {1,MAX_HIRES}, number, ss_none, wad_no,
+    "Renderer resolution multiplier (1 = 200p, 2 = 400p, 3 = 600p...)"
   },
 
   {
@@ -182,6 +183,13 @@ default_t defaults[] = {
     (config_t *) &stretch_to_fit, NULL,
     {0}, {0, 1}, number, ss_none, wad_no,
     "1 to stretch viewport to fit window"
+  },
+
+  { // [Nugget]
+    "no_downscaling",
+    (config_t *) &no_downscaling, NULL,
+    {0}, {0, 1}, number, ss_none, wad_no,
+    "1 to prevent auto-downscaling of window if it exceeds the display boundaries"
   },
 
   // [FG] save fullscren mode
@@ -379,7 +387,7 @@ default_t defaults[] = {
     "menu_background",
     (config_t *) &menu_background, NULL,
     {background_on}, {background_on,background_dark}, number, ss_gen, wad_no,
-    "draw menu background (0 = on, 1 = off, 2 = dark)"
+    "menu background style (0 = solid, 1 = none, 2 = dark)" // [Nugget] Changed description
   },
 
   { // [Nugget]
@@ -481,14 +489,14 @@ default_t defaults[] = {
   {
     "snd_absorption",
     (config_t *) &snd_absorption, NULL,
-    {5}, {0, 10}, number, ss_none, wad_no, // [Nugget] Enabled by default
+    {5}, {0, 10}, number, ss_gen, wad_no, // [Nugget] Enabled by default
     "[OpenAL 3D] Air absorption effect (0 = Off, 10 = Max)"
   },
 
   {
     "snd_doppler",
     (config_t *) &snd_doppler, NULL,
-    {5}, {0, 10}, number, ss_none, wad_no, // [Nugget] Enabled by default
+    {5}, {0, 10}, number, ss_gen, wad_no, // [Nugget] Enabled by default
     "[OpenAL 3D] Doppler effect (0 = Off, 10 = Max)"
   },
 
@@ -660,11 +668,11 @@ default_t defaults[] = {
     "0 to disable palette tint changes"
   },
 
-  { // [Nugget] Replace screen melt toggle
+  { // [Nugget] Replaces screen melt toggle
     "wipe_type",
     (config_t *) &wipe_type, NULL,
     {1}, {0,3}, number, ss_gen, wad_yes,
-    "Screen wipe type (0 = None, 1 = Melt, 2 = ColorXForm, 3 = Fade)"
+    "Screen wipe style (0 = None, 1 = Melt, 2 = Seizure (ColorXForm), 3 = Fade)"
   },
 
   {
@@ -706,7 +714,7 @@ default_t defaults[] = {
     "1 to enable pistol start"
   },
 
-  // [Nugget] /-----------------------------------------------------------
+  // [Nugget] /---------------------------------------------------------------
 
   {
     "over_under",
@@ -804,6 +812,13 @@ default_t defaults[] = {
     (config_t *) &chasecam_crosshair, NULL,
     {0}, {0,1}, number, ss_none, wad_no,
     "1 to allow crosshair when using Chasecam"
+  },
+
+  {
+    "menu_background_all",
+    (config_t *) &menu_background_all, NULL,
+    {0}, {0,1}, number, ss_gen, wad_no,
+    "1 to draw background for all menus"
   },
 
   {
@@ -913,7 +928,7 @@ default_t defaults[] = {
     "0 to disable the Invulnerability colormap"
   },
 
-  // [Nugget] -----------------------------------------------------------/
+  // [Nugget] ---------------------------------------------------------------/
 
   //
   // Weapons options
@@ -972,7 +987,7 @@ default_t defaults[] = {
     "1 to center the weapon sprite during attack, 2 to keep it bobbing, 3 to center it horizontally"
   },
 
-  // [Nugget] /-----------------------------------------------------------
+  // [Nugget] /---------------------------------------------------------------
 
   {
     "no_hor_autoaim",
@@ -1051,7 +1066,7 @@ default_t defaults[] = {
     "1 to correct first person sprite centering"
   },
 
-  // [Nugget] -----------------------------------------------------------/
+  // [Nugget] ---------------------------------------------------------------/
 
   {  // killough 2/8/98: weapon preferences set by user:
     "weapon_choice_1",
@@ -1190,7 +1205,7 @@ default_t defaults[] = {
     "1 to enable dogs to jump"
   },
 
-  // [Nugget] /-----------------------------------------------------------
+  // [Nugget] /---------------------------------------------------------------
 
   {
     "extra_gibbing",
@@ -1234,7 +1249,7 @@ default_t defaults[] = {
     "1 to enable ZDoom-like item drops for dying enemies"
   },
 
-  // [Nugget] -----------------------------------------------------------/
+  // [Nugget] ---------------------------------------------------------------/
 
   {
     "colored_blood",
@@ -1483,7 +1498,7 @@ default_t defaults[] = {
     "1 to enable donut overrun emulation"
   },
 
-  // [Nugget] /-----------------------------------------------------------
+  // [Nugget] /---------------------------------------------------------------
 
   {
     "comp_bruistarget",
@@ -1611,7 +1626,7 @@ default_t defaults[] = {
     "Key pickup resets palette"
   },
 
-  // [Nugget] -----------------------------------------------------------/
+  // [Nugget] ---------------------------------------------------------------/
 
   // default compatibility
   {
@@ -2545,7 +2560,7 @@ default_t defaults[] = {
     "1 to invert gamepad look axis"
   },
 
-  // [Nugget] /-----------------------------------------------------------
+  // [Nugget] /---------------------------------------------------------------
 
   {
     "input_jump",
@@ -2595,6 +2610,14 @@ default_t defaults[] = {
   },
 
   {
+    "input_map_mini",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to activate minimap mode",
+    input_map_mini, { {0, 0} }
+  },
+
+  {
     "input_map_blink",
     NULL, NULL,
     {0}, {UL,UL}, input, ss_keys, wad_no,
@@ -2625,7 +2648,7 @@ default_t defaults[] = {
     "Use effects when teleporting to pointer (fog, sound and zoom)"
   },
 
-  // [Nugget] -----------------------------------------------------------/
+  // [Nugget] ---------------------------------------------------------------/
 
   { //jff 4/3/98 allow unlimited sensitivity
     "mouse_sensitivity",
@@ -3107,11 +3130,18 @@ default_t defaults[] = {
     "1 to enable obituaries"
   },
 
+  { // [Nugget]
+    "show_save_messages",
+    (config_t *) &show_save_messages, NULL,
+    {1}, {0,1}, number, ss_none, wad_no,
+    "1 to enable save messages"
+  },
+
   // "A secret is revealed!" message
   {
     "hud_secret_message",
     (config_t *) &hud_secret_message, NULL,
-    {0}, {0,2}, number, ss_mess, wad_no, // [Nugget]
+    {0}, {0,2}, number, ss_mess, wad_no, // [Nugget] "Count" mode from Crispy
     "\"A secret is revealed!\" message"
   },
 
@@ -3343,19 +3373,79 @@ default_t defaults[] = {
     "1 to enable Smart Totals"
   },
 
-  { // [Nugget] Incomplete milestone color
+  { // [Nugget]
+    "hud_kills_percentage",
+    (config_t *) &hud_kills_percentage, NULL,
+    {1}, {0,1}, number, ss_stat, wad_no,
+    "1 to show Kills percentage in Stats display"
+  },
+
+  // [Nugget] Extended HUD colors /-------------------------------------------
+
+  {
+    "hudcolor_time_scale",
+    (config_t *) &hudcolor_time_scale, NULL,
+    {CR_BLUE1}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for time scale (game speed percentage) in Time display"
+  },
+
+  {
+    "hudcolor_total_time",
+    (config_t *) &hudcolor_total_time, NULL,
+    {CR_GREEN}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for total level time in Time display"
+  },
+
+  {
+    "hudcolor_time",
+    (config_t *) &hudcolor_time, NULL,
+    {CR_GRAY}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for level time in Time display"
+  },
+
+  {
+    "hudcolor_event_timer",
+    (config_t *) &hudcolor_event_timer, NULL,
+    {CR_GOLD}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for event timer in Time display"
+  },
+
+  {
+    "hudcolor_kills",
+    (config_t *) &hudcolor_kills, NULL,
+    {CR_RED}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for Kills label in Stats display"
+  },
+
+  {
+    "hudcolor_items",
+    (config_t *) &hudcolor_items, NULL,
+    {CR_RED}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for Items label in Stats display"
+  },
+
+  {
+    "hudcolor_secrets",
+    (config_t *) &hudcolor_secrets, NULL,
+    {CR_RED}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
+    "Color used for Secrets label in Stats display"
+  },
+
+  {
     "hudcolor_ms_incomp",
     (config_t *) &hudcolor_ms_incomp, NULL,
-    {CR_GRAY}, {CR_BRICK,CR_NONE}, number, ss_mess, wad_yes,
+    {CR_GRAY}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
     "Color used for incomplete milestones in Stats display"
   },
 
-  { // [Nugget] Complete milestone color
+  {
     "hudcolor_ms_comp",
     (config_t *) &hudcolor_ms_comp, NULL,
-    {CR_BLUE1}, {CR_BRICK,CR_NONE}, number, ss_mess, wad_yes,
+    {CR_BLUE1}, {CR_BRICK,CR_NONE}, number, ss_stat, wad_yes,
     "Color used for complete milestones in Stats display"
   },
+
+  // [Nugget] ---------------------------------------------------------------/
 
   { // no secrets/items/kills HUD line
     "hud_level_time",

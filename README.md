@@ -25,7 +25,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 ### General
 
-- **Support for higher resolutions:** 4X (800p) and 8X (1600p) [by _ceski_]
+- **Support for higher resolutions:** 3X (600p), 4X (800p)... up to 9X (1800p) [by _ceski_]
 - **Selection of widescreen ratios** in the setup menu itself [i.b. Crispy Doom]
 - Toggle to **stretch viewport to fit window** (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Gamma Correction slider ranging from 0.50 to 2.0 in steps of 0.05**
@@ -51,6 +51,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - _**Teleporter Zoom**_ setting [i.b. ZDoom]
 - _**Death Camera**_ setting [i.b. ZDoom]
 - _**Chasecam**_ [i.b. ZDoom]
+- _**Background for all menus**_ setting
 - _**Disable palette tint in menus**_ setting [i.b. Crispy Doom]
 - _**Disable Berserk Tint**_ setting
 - _**Disable Radiation Suit Tint**_ setting
@@ -85,26 +86,28 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 ### Status Bar/HUD
 
 - **`NUGHUD` lump support**, making the Crispy HUD (now called Nugget HUD) customizable (see `docs/nughud.md`)
-- **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-Only: `show_ssg`) [p.f. Crispy Doom]
-- **Blink Missing Keys** setting (CFG-Only: `blink_keys`) [partially p.f. Crispy Doom]
-- **Show Powerup Timers** setting
-- _**Alternative Arms Display**_ setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol (CFG-Only: `alt_arms`)
-- _**Smart Totals**_ setting [p.f. So Doom]
-- _**(In)Complete Milestone Color**_ choices, to customize the Stats text's colors
-- **Armor count is colored gray when in God Mode**
-- **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
-- **Event Timers:**
-  - _"Use" Button Timer_ [p.f. Crispy Doom]; 
-  - _Teleport Timer_ [i.b. the above];
-  - _Key Pickup Timer_ [same as above].
 - **Crosshair:**
   - Vertical-only target lock-on;
   - Horizontal autoaim indicators;
   - Option to account for fuzzy targets [i.b. From Doom With Love];
   - Dedicated toggle key.
+- _**Show Powerup Timers**_ setting
+- **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-Only: `show_ssg`) [p.f. Crispy Doom]
+- _**Alternative Arms Display**_ setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
+- **Blink Missing Keys** setting (CFG-Only: `blink_keys`) [partially p.f. Crispy Doom]
+- _**Smart Totals**_ setting [p.f. So Doom]
+- _**Show Kills Percentage [in Stats display]**_ setting
+- **Event Timers:**
+  - _"Use" Button Timer_ [p.f. Crispy Doom]; 
+  - _Teleport Timer_ [i.b. the above];
+  - _Key Pickup Timer_ [same as above].
+- **Extended HUD color customization**
+- **Armor count is colored gray when in God Mode**
+- **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
 
 ### Automap
 
+- **Minimap mode** [i.b. DSDA-Doom]
 - **Automap color for unrevealed secret sectors**
 - Key to _**Blink [Automap] Marks**_ (default: <kbd>B</kbd>)
 - _**Tag Finder**_: Position the Automap pointer over a sector and press the _Tag Finder_ key to highlight its activator line(s), and vice versa [p.f. PrBoomX]
@@ -121,6 +124,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 ### Messages
 
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
+- **Show Save Messages** setting (CFG-Only: `show_save_messages`)
 - _**Announce Milestone Completion**_ setting, to report completion of milestones (e.g. all items acquired)
 - Restored _**Message Listing Scrolls Upwards**_ setting, and enabled it by default
 
@@ -180,6 +184,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
   - `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`;
   - `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS`.
 - **Customizable darkening level for dark menu background and Automap overlay** (CFG-Only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+- **Tweaked dark menu background and Automap overlay algorithm**
 - The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
 - Toggle to **allow chat in singleplayer** (CFG-Only: `sp_chat`)
 - Restored `-cdrom` command-line parameter
@@ -275,10 +280,14 @@ Copyright:
  © 2005-2018 Simon Howard;  
  © 2006 Ben Ryves;  
  © 2017 Christoph Oelckers;  
+ © 2017-2022 Brad Harding;  
  © 2019 Fernando Carmona Varo;  
  © 2019 Jonathan Dowland;  
  © 2020 Alex Mayfield;  
+ © 2020 JadingTsunami;  
  © 2021 Ryan Krafnick;  
+ © 2022 Julia Nechaevskaya;  
+ © 2022 Vladislav Melnichuk;  
  © 2022-2023 ceski;  
  © 2023 liPillON;  
  © 2020-2023 Fabian Greffrath;  

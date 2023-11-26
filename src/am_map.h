@@ -46,6 +46,18 @@ void AM_Stop (void);
 
 extern void AM_Start(void);
 
+// [Nugget] /-----------------------------------------------------------------
+
+typedef enum {
+  AM_OFF,
+  AM_FULL,
+  AM_MINI, // Minimap
+} automapmode_t;
+
+extern void AM_ChangeMode(automapmode_t mode);
+
+// [Nugget] -----------------------------------------------------------------/
+
 //jff 4/16/98 make externally available
 
 extern void AM_clearMarks(void);

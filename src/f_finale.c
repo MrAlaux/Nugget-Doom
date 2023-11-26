@@ -902,21 +902,20 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col)
     (const column_t *)((byte *) patch + LONG(patch->columnofs[col]));
 
   // step through the posts in a column
-  if (hires)
+  if (hires > 1)
     while (column->topdelta != 0xff)
       {
 	int i, pos;
-	const int hires_size = 1 << hires;
-	byte *desttop = screens[0] + (x << hires);
+	byte *desttop = screens[0] + (x * hires);
 	const byte *source = (byte *) column + 3;
-	byte *dest = desttop + column->topdelta * (SCREENWIDTH << (2 * hires));
+	byte *dest = desttop + column->topdelta * (SCREENWIDTH * hires*hires);
 	int count = column->length;
-	for ( ; count--; dest += (SCREENWIDTH << (2 * hires)))
+	for ( ; count--; dest += (SCREENWIDTH * hires*hires))
 	{
-	  for (pos = 0, i = 0; i < hires_size; i++)
+	  for (pos = 0, i = 0; i < hires; i++)
 	  {
-	    memset(&dest[pos], *source, hires_size);
-	    pos += SCREENWIDTH << hires;
+	    memset(&dest[pos], *source, hires);
+	    pos += (SCREENWIDTH * hires);
 	  }
 	  source++;
 	}
@@ -964,7 +963,7 @@ void F_BunnyScroll (void)
   if (pillar_width > 0)
   {
     // [crispy] fill pillarboxes in widescreen mode
-    memset(screens[0], 0, (SCREENWIDTH<<hires) * (SCREENHEIGHT<<hires));
+    memset(screens[0], 0, (SCREENWIDTH * hires) * (SCREENHEIGHT * hires));
   }
   else
   {

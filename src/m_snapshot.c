@@ -103,7 +103,7 @@ char *M_GetSavegameTime (int i)
 
 static void M_TakeSnapshot (void)
 {
-  const int inc = 1 << hires;
+  const int inc = hires;
   int x, y;
   byte *p;
   const byte *s = screens[0];
@@ -119,11 +119,11 @@ static void M_TakeSnapshot (void)
   }
   p = current_snapshot;
 
-  for (y = 0; y < (SCREENHEIGHT << hires); y += inc)
+  for (y = 0; y < (SCREENHEIGHT * hires); y += inc)
   {
-    for (x = 0; x < (NONWIDEWIDTH << hires); x += inc)
+    for (x = 0; x < (NONWIDEWIDTH * hires); x += inc)
     {
-      *p++ = s[y * (SCREENWIDTH << hires) + (WIDESCREENDELTA << hires) + x];
+      *p++ = s[y * (SCREENWIDTH * hires) + (WIDESCREENDELTA * hires) + x];
     }
   }
 
@@ -146,34 +146,34 @@ void M_WriteSnapshot (byte *p)
 
 boolean M_DrawSnapshot (int n, int x, int y, int w, int h)
 {
-  byte *dest = screens[0] + y * (SCREENWIDTH << (2 * hires)) + (x << hires);
+  byte *dest = screens[0] + y * (SCREENWIDTH * hires*hires) + (x * hires);
 
   if (!snapshots[n])
   {
     int desty;
 
-    for (desty = 0; desty < (h << hires); desty++)
+    for (desty = 0; desty < (h * hires); desty++)
     {
-      memset(dest, 0, w << hires);
-      dest += SCREENWIDTH << hires;
+      memset(dest, 0, w * hires);
+      dest += (SCREENWIDTH * hires);
     }
 
     return false;
   }
   else
   {
-    const fixed_t step_x = (ORIGWIDTH << FRACBITS) / (w << hires);
-    const fixed_t step_y = (ORIGHEIGHT << FRACBITS) / (h << hires);
+    const fixed_t step_x = (ORIGWIDTH << FRACBITS) / (w * hires);
+    const fixed_t step_y = (ORIGHEIGHT << FRACBITS) / (h * hires);
     int destx, desty;
     fixed_t srcx, srcy;
     byte *destline, *srcline;
 
-    for (desty = 0, srcy = 0; desty < (h << hires); desty++, srcy += step_y)
+    for (desty = 0, srcy = 0; desty < (h * hires); desty++, srcy += step_y)
     {
-      destline = dest + desty * (SCREENWIDTH << hires);
+      destline = dest + desty * (SCREENWIDTH * hires);
       srcline = snapshots[n] + (srcy >> FRACBITS) * ORIGWIDTH;
 
-      for (destx = 0, srcx = 0; destx < (w << hires); destx++, srcx += step_x)
+      for (destx = 0, srcx = 0; destx < (w * hires); destx++, srcx += step_x)
       {
         *destline++ = srcline[srcx >> FRACBITS];
       }

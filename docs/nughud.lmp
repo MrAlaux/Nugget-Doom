@@ -20,6 +20,13 @@ nughud_health_y     171
 nughud_health_wide  -1
 nughud_health_align 1
 
+; Health icon
+nughud_healthicon_x     -1
+nughud_healthicon_y     0
+nughud_healthicon_wide  0
+nughud_healthicon_align -1
+nughud_healthicon_vlign 1
+
 ; Arms numbers
 
 nughud_arms1_x    -1

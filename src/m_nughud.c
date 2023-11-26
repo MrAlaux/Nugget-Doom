@@ -70,6 +70,7 @@ default_t nughud_defaults[] = {
   WIDGET3(   "nughud_ammoicon",    nughud.ammoicon,    -1,            0,             0, -1,  1 ),
   TOGGLE(    "nughud_ammoicon_big",nughud.ammoicon_big, 0                                      ),
   WIDGET2(   "nughud_health",      nughud.health,       ST_HEALTHX,   ST_HEALTHY,   -1,  1     ),
+  WIDGET3(   "nughud_healthicon",  nughud.healthicon,  -1,            0,             0, -1,  1 ),
   WIDGET(    "nughud_arms1",       nughud.arms[0],     -1,            0,             0         ),
   WIDGET(    "nughud_arms2",       nughud.arms[1],      111,          172,          -1         ),
   WIDGET(    "nughud_arms3",       nughud.arms[2],      119,          172,          -1         ),

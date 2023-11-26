@@ -151,7 +151,7 @@ boolean P_GiveAmmo(player_t *player, ammotype_t ammo, int num)
     return P_GiveAmmoAutoSwitch(player, ammo, oldammo);
 
   // If non zero ammo, don't change up weapons, player was lower on purpose.
-  if (oldammo || P_AutoswitchWeapon()) // [Nugget]
+  if (oldammo || !P_AutoswitchWeapon()) // [Nugget]
     return true;
 
   // We were down to zero, so select a new weapon.
@@ -722,9 +722,11 @@ static boolean P_NuggetExtraGibbing(mobj_t *source, mobj_t *target)
                < ((128*FRACUNIT) + target->info->radius)))
       )
      )
-  { return true; }
-  else
-  { return false; }
+  {
+    return true;
+  }
+
+  return false;
 }
 
 // [Nugget] Bloodier Gibbing
@@ -733,8 +735,7 @@ static void P_NuggetGib(mobj_t *mo)
   int quantity;
   extern boolean idgaf;
 
-  if (!casual_play || !bloodier_gibbing)
-  { return; }
+  if (!casual_play || !bloodier_gibbing) { return; }
   
   quantity = 20 + (Woof_Random() % 21); // Spawn 20-40 blood splats
 
@@ -872,9 +873,9 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod)
       // [crispy] center view when dying
       target->player->centering = true;
 
-      if (target->player == &players[consoleplayer] && automapactive)
+      if (target->player == &players[consoleplayer] && automapactive == AM_FULL)
 	if (!demoplayback) // killough 11/98: don't switch out in demos, though
-	  AM_Stop();    // don't die in auto map; switch view prior to dying
+	  AM_ChangeMode(AM_OFF); // don't die in auto map; switch view prior to dying
 
       HU_Obituary(target, source, mod);
     }
@@ -888,7 +889,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod)
     P_NuggetGib(target); // [Nugget] Bloodier Gibbing
   }
   else
-  { P_SetMobjState (target, target->info->deathstate); }
+    P_SetMobjState (target, target->info->deathstate);
 
   target->tics -= P_Random(pr_killtics)&3;
 
@@ -916,6 +917,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod)
 
   mo = P_SpawnMobj (target->x,target->y,ONFLOORZ, item);
   mo->flags |= MF_DROPPED;    // special versions of items
+
   // [Nugget] ZDoom-like item drops
   if (casual_play && zdoom_item_drops)
   {

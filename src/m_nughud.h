@@ -50,6 +50,7 @@ typedef struct nughud_s {
   nughud_vlignable_t ammoicon;
   boolean            ammoicon_big;
   nughud_alignable_t health;
+  nughud_vlignable_t healthicon;
   nughud_widget_t    arms[9];
   nughud_alignable_t frags;
   nughud_widget_t    face;

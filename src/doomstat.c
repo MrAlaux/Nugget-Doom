@@ -132,13 +132,14 @@ char *MAPNAME(int e, int m)
 }
 
 
-// [Nugget] /--------------------------
+// [Nugget] /-----------------------------------------------------------------
 
 boolean fauxdemo;    // Checked for in `casual_play`, for debugging
 boolean casual_play; // Like `critical`, with different checks and functionality
 
-// General ------------------
+// General ----------------------------
 
+int gammacycle; // CFG-Only
 int wipe_type;
 int over_under;
 int jump_crouch;
@@ -154,7 +155,9 @@ int death_camera;
 int chasecam_mode;
 int chasecam_distance;
 int chasecam_height;
+int chasecam_crosshair; // CFG-Only
 
+int menu_background_all;
 int no_menu_tint;
 int no_berserk_tint;
 int no_radsuit_tint;
@@ -166,61 +169,70 @@ int s_clipping_dist_x2;
 int one_key_saveload;
 int no_page_ticking;
 int quick_quitgame;
+
 //int a11y_sector_lighting;
 int a11y_weapon_flash;
 int a11y_weapon_pspr;
 int a11y_invul_colormap;
 
-// Weapons ------------------
+// Weapons ----------------------------
 
 int no_hor_autoaim;
 int switch_on_pickup;
+int always_bob; // CFG-Only
 int weapon_bobbing_percentage;
 int bobbing_style;
 int weapon_inertia;
+int weapon_inertia_scale_pct; // CFG-Only
 int weaponsquat;
 int translucent_pspr;
 int show_berserk;
+int sx_fix; // CFG-Only
 
-// Status Bar/HUD -----------
+// Status Bar/HUD ---------------------
 
+int show_ssg; // CFG-Only
+int alt_arms;
+int blink_keys; // CFG-Only
 int smarttotals;
-int hudcolor_ms_incomp;
-int hudcolor_ms_comp;
+int hud_kills_percentage;
 int event_timers[NUMTIMERS];
 
-// Enemies ------------------
+int hudcolor_time_scale;
+int hudcolor_total_time;
+int hudcolor_time;
+int hudcolor_event_timer;
+int hudcolor_kills;
+int hudcolor_items;
+int hudcolor_secrets;
+int hudcolor_ms_incomp;
+int hudcolor_ms_comp;
+
+// Enemies ----------------------------
 
 int extra_gibbing_on;
+int extra_gibbing[NUMEXGIBS]; // CFG-Only
 int bloodier_gibbing;
 int zdoom_item_drops;
 
-// Messages -----------------
+// Messages ---------------------------
 
+int show_save_messages; // CFG-Only
 int announce_milestones;
 
-// Key Bindings -------------
+// Key Bindings -----------------------
 
 int zoom_fov;
 int fancy_teleport;
 
-// CFG only -----------------
+// Miscellaneous (CFG-Only) -----------
 
-int gammacycle;
-int menu_background_darkening;
-int chasecam_crosshair;
-int always_bob;
-int weapon_inertia_scale_pct;
-int sx_fix;
-int blink_keys;
-int show_ssg;
-int alt_arms;
-int automap_overlay_darkening;
-int extra_gibbing[NUMEXGIBS];
-int sp_chat;
 int screenshot_palette;
+int menu_background_darkening;
+int automap_overlay_darkening;
+int sp_chat;
 
-// Doom Compatibility -------
+// Doom Compatibility -----------------
 
 int comp_bruistarget;
 int comp_nomeleesnap;
@@ -242,7 +254,7 @@ int comp_deadoof;
 int comp_unusedpals;
 int comp_keypal;
 
-// [Nugget] --------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
 
 //----------------------------------------------------------------------------

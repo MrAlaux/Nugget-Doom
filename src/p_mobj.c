@@ -40,7 +40,7 @@
 
 // [FG] colored blood and gibs
 boolean colored_blood;
-int vertical_aiming, default_vertical_aiming; // [Nugget] Replace `direct_vertical_aiming`
+int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
 
 void P_UpdateDirectVerticalAiming(void)
 {
@@ -156,9 +156,9 @@ void P_XYMovement (mobj_t* mo)
 
         // [Nugget] Fix forgetful lost soul
         if (casual_play && !comp_lsamnesia)
-        { P_SetMobjState(mo, mo->info->seestate); }
+          P_SetMobjState(mo, mo->info->seestate);
         else
-        { P_SetMobjState(mo, mo->info->spawnstate); }
+          P_SetMobjState(mo, mo->info->spawnstate);
       }
       return;
     }
@@ -547,7 +547,10 @@ floater:
 
 		// [Nugget]: [crispy] squat down weapon sprite as well
 		if (STRICTMODE(weaponsquat))
-		{ mo->player->psprites[ps_weapon].dy = ((-mo->momz>>1) > 24*FRACUNIT) ? (24*FRACUNIT) : (-mo->momz>>1); }
+		{
+		  mo->player->psprites[ps_weapon].dy = ((-mo->momz >> 1) > 24*FRACUNIT)
+		                                       ? (24*FRACUNIT) : (-mo->momz >> 1);
+		}
 
 		// [Nugget] Pitch view down on impact
 		if (STRICTMODE(impact_pitch & IMPACTPITCH_FALL))
@@ -1512,9 +1515,10 @@ mobj_t* P_SpawnMissile(mobj_t* source,mobj_t* dest,mobjtype_t type)
 
   // [Nugget] Check for crouching player
   if (dest->player && dest->player->crouchoffset)
-  { th->momz = ((dest->z - dest->player->crouchoffset) - source->z) / dist; }
+    th->momz = ((dest->z - dest->player->crouchoffset) - source->z) / dist;
   else
-  { th->momz = (dest->z - source->z) / dist; }
+    th->momz = (dest->z - source->z) / dist;
+
   P_CheckMissileSpawn(th);
   return th;
 }
@@ -1571,11 +1575,10 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
 
   x = source->x;
   y = source->y;
+  z = source->z + 4*8*FRACUNIT;
+
   // [Nugget] Check for crouching
-  if (source->player && source->player->crouchoffset)
-    z = source->z + ((4*8*FRACUNIT) - source->player->crouchoffset);
-  else
-    z = source->z + 4*8*FRACUNIT;
+  if (source->player) { z -= source->player->crouchoffset; }
 
   th = P_SpawnMobj (x,y,z, type);
 

@@ -135,6 +135,8 @@ boolean         pistolstart, default_pistolstart;
 boolean         strictmode, default_strictmode;
 boolean         critical;
 
+boolean         minimap_was_on = false; // [Nugget] Minimap: keep it when advancing through levels
+
 // [crispy] store last cmd to track joins
 static ticcmd_t* last_cmd = NULL;
 
@@ -826,6 +828,12 @@ static void G_DoLoadLevel(void)
           first=0;
         }
     }
+
+  // [Nugget] Minimap
+  if (minimap_was_on) {
+    AM_ChangeMode(AM_MINI);
+    minimap_was_on = false;
+  }
 }
 
 extern int ddt_cheating;
@@ -900,13 +908,16 @@ static boolean G_StrictModeSkipEvent(event_t *ev)
 
 boolean G_Responder(event_t* ev)
 {
+  extern boolean chat_on; // [Nugget]
+
   // allow spy mode changes even during the demo
   // killough 2/22/98: even during DM demo
   //
   // killough 11/98: don't autorepeat spy mode switch
 
   if (M_InputActivated(input_spy) && netgame && (demoplayback || !deathmatch) &&
-      gamestate == GS_LEVEL)
+      gamestate == GS_LEVEL
+      && !chat_on) // [Nugget]
     {
 	  do                                          // spy mode
 	    if (++displayplayer >= MAXPLAYERS)
@@ -924,7 +935,8 @@ boolean G_Responder(event_t* ev)
 
   if (M_InputActivated(input_menu_reloadlevel) &&
       (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) &&
-      !menuactive)
+      !menuactive
+      && !chat_on) // [Nugget]
   {
     sendreload = true;
     return true;
@@ -967,7 +979,7 @@ boolean G_Responder(event_t* ev)
       // Don't suck up keys, which may be cheats
 
       return gamestate == GS_DEMOSCREEN &&
-	!(paused & 2) && !automapactive &&
+	!(paused & 2) && automapactive != AM_FULL &&
 	((ev->type == ev_keydown) ||
 	 (ev->type == ev_mouseb_down) ||
 	 (ev->type == ev_joyb_down)) ?
@@ -1152,7 +1164,8 @@ static void G_ReadDemoTiccmd(ticcmd_t *cmd)
 	  cmd->buttons & BTS_SAVEGAME)
 	{
 	  cmd->buttons &= ~BT_SPECIALMASK;
-	  displaymsg("Game Saved (Suppressed)");
+	  if (show_save_messages) // [Nugget]
+	  { displaymsg("Game Saved (Suppressed)"); }
 	}
     }
 }
@@ -1346,8 +1359,10 @@ static void G_DoCompleted(void)
     if (playeringame[i])
       G_PlayerFinishLevel(i);        // take away cards and stuff
 
-  if (automapactive)
-    AM_Stop();
+  if (automapactive) {
+    if (automapactive == AM_MINI) { minimap_was_on = true; }
+    AM_ChangeMode(AM_OFF);
+  }
 
   wminfo.nextep = wminfo.epsd = gameepisode -1;
   wminfo.last = gamemap -1;
@@ -2057,7 +2072,7 @@ static void G_DoSaveGame(void)
 
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
-  else
+  else if (show_save_messages) // [Nugget]
     displaymsg("%s", s_GGSAVED);  // Ty 03/27/98 - externalized
 
   Z_Free(savebuffer);  // killough
@@ -2696,6 +2711,10 @@ static boolean G_CheckSpot(int playernum, mapthing_t *mthing)
     mo = P_SpawnMobj(x + 20 * xa, y + 20 * ya,
                      ss->sector->floorheight, MT_TFOG);
   }
+
+  // [Nugget] Teleporter zoom
+  if (&players[playernum] == &players[displayplayer])
+  { R_SetFOVFX(FOVFX_TELEPORT); }
 
   if (players[consoleplayer].viewz != 1)
     S_StartSound(mo, sfx_telept);  // don't start sound on first frame
