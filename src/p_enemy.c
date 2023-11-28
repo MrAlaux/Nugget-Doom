@@ -407,13 +407,15 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
 
       if (actor->flags & MF_FLOAT && floatok)
         {
-          const mobj_t *onmo; // [Nugget]
+          // [Nugget] Over/Under
+          const mobj_t *onmo;
+          const fixed_t oldz = actor->z;
 
           if (actor->z < tmfloorz)          // must adjust height
           {
               actor->z += FLOATSPEED;
 
-              // [Nugget]
+              // [Nugget] Don't ascend into other things
               if ((onmo = P_CheckOnmobj(actor, false)))
               { actor->z = onmo->z - actor->height; }
           }
@@ -421,14 +423,17 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
           {
             actor->z -= FLOATSPEED;
 
-            // [Nugget]
+            // [Nugget] Don't descend into other things
             if ((onmo = P_CheckOnmobj(actor, false)))
             { actor->z = onmo->z + onmo->height; }
           }
 
-          actor->flags |= MF_INFLOAT;
-
-	  return true;
+          // [Nugget] Conditions: only if we actually moved
+          if (casual_play && actor->z != oldz)
+          {
+            actor->flags |= MF_INFLOAT;
+            return true;
+          }
         }
 
       if (!numspechit)
