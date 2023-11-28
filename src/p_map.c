@@ -546,6 +546,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   // [Nugget]: [DSDA] check if a mobj passed over/under another object
   if (casual_play && over_under
       && (tmthing->flags & MF_SOLID) && !(thing->flags & MF_SPECIAL)
+      && ((over_under == 2) || tmthing->player || thing->player)
       && (   (  thing->z +   thing->height <= tmthing->z)   // Over
           || (tmthing->z + tmthing->height <=   thing->z))) // Under
   {

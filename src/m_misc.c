@@ -719,8 +719,8 @@ default_t defaults[] = {
   {
     "over_under",
     (config_t *) &over_under, NULL,
-    {0}, {0,1}, number, ss_gen, wad_yes,
-    "1 to allow things to move over/under other things"
+    {0}, {0,2}, number, ss_gen, wad_yes,
+    "Allow movement over/under things (1 = Player only, 2 = All things)"
   },
 
   {

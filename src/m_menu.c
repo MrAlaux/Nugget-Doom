@@ -4840,6 +4840,10 @@ setup_menu_t gen_settings5[] = { // General Settings screen5
 
 // [Nugget] /-----------------------------------------------------------------
 
+static const char *over_under_str[] = {
+  "Off", "Player Only", "All Things", NULL
+};
+
 static const char *impact_pitch_str[] = {
   "Off", "Fall", "Damage", "Both", NULL
 };
@@ -4852,8 +4856,8 @@ setup_menu_t gen_settings6[] = {
 
   {"Nugget - Gameplay", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen6_title1 * M_SPC},
 
-    {"Things Move Over/Under Things", S_YESNO|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen6_overunder   * M_SPC, {"over_under"}},
-    {"Allow Jumping/Crouching",       S_YESNO|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen6_jump_crouch * M_SPC, {"jump_crouch"}},
+    {"Move Over/Under Things",        S_CHOICE|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen6_overunder   * M_SPC, {"over_under"}, 0, NULL, over_under_str},
+    {"Allow Jumping/Crouching",       S_YESNO |S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen6_jump_crouch * M_SPC, {"jump_crouch"}},
 
   {"",              S_SKIP,         m_null, M_X, M_Y + gen6_stub1  * M_SPC},
   {"Nugget - View", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen6_title2 * M_SPC},
