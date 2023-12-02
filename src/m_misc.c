@@ -717,6 +717,13 @@ default_t defaults[] = {
   // [Nugget] /---------------------------------------------------------------
 
   {
+    "potato_factor",
+    (config_t *) &potato_factor, NULL,
+    {1}, {1,8}, number, ss_gen, wad_yes,
+    "Apply blocky filter to world rendering"
+  },
+
+  {
     "over_under",
     (config_t *) &over_under, NULL,
     {0}, {0,1}, number, ss_gen, wad_yes,

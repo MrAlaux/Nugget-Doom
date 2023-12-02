@@ -454,6 +454,8 @@ extern boolean casual_play;
 #define    CASUALPLAY(x) (casual_play ? (x) : 0)
 #define NOTCASUALPLAY(x) (casual_play ? (x) : 1)
 
+extern int potato_factor;
+
 // General ----------------------------
 
 extern int gammacycle; // CFG-Only

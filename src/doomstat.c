@@ -137,6 +137,8 @@ char *MAPNAME(int e, int m)
 boolean fauxdemo;    // Checked for in `casual_play`, for debugging
 boolean casual_play; // Like `critical`, with different checks and functionality
 
+int potato_factor;
+
 // General ----------------------------
 
 int gammacycle; // CFG-Only

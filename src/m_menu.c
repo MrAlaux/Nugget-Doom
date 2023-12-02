@@ -4970,6 +4970,8 @@ setup_menu_t gen_settings8[] = { // [Nugget]
     {"Weapon Flash Sprite",        S_YESNO|S_STRICT, m_null, M_X, M_Y + gen8_a11y_pspr     * M_SPC, {"a11y_weapon_pspr"}},
     {"Invulnerability Colormap",   S_YESNO|S_STRICT, m_null, M_X, M_Y + gen8_a11y_invul    * M_SPC, {"a11y_invul_colormap"}},
 
+    {"Potato Factor", S_NUM, m_null, M_X, M_Y + 4 * M_SPC, {"potato_factor"}},
+
   {"<- PREV", S_SKIP|S_PREV, m_null, M_X_PREV, M_Y_PREVNEXT, {gen_settings7}},
 
   // Final entry

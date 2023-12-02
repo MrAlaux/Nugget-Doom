@@ -911,6 +911,26 @@ void V_ShadeScreen(const int targshade) // [Nugget] Parameterized
   oldtic = gametic;
 }
 
+// [Nugget]
+void V_Blockify(void)
+{
+  int y, x, y2;
+  const int width = (SCREENWIDTH * hires), height = (SCREENHEIGHT * hires);
+  const int chunk = (potato_factor * hires);
+  byte *const dest = screens[0];
+
+  if (potato_factor <= 1) { return; }
+
+  for (y = 0;  y < height;  y += chunk)
+    for (x = 0;  x < width;  x += chunk)
+      for (y2 = 0;  y2 < MIN(chunk, height - y);  y2++)
+        memset(
+          dest + ((y + y2) * width) + x,
+          dest[(y * width) + x],
+          MIN(chunk, width - x)
+        );
+}
+
 //
 // V_Init
 //

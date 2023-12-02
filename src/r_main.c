@@ -1176,6 +1176,8 @@ void R_RenderPlayerView (player_t* player)
   R_SetFuzzPosDraw();
   R_DrawMasked ();
 
+  V_Blockify(); // [Nugget]
+
   // Check for new console commands.
   NetUpdate ();
 }

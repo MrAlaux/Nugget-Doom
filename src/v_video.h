@@ -128,6 +128,8 @@ void V_DrawHorizLine(int x, int y, int scrn, int width, byte color);
 
 void V_ShadeScreen(const int targshade); // [Nugget] Parameterized
 
+void V_Blockify(void); // [Nugget]
+
 // [FG] colored blood and gibs
 
 int V_BloodColor(int blood);
