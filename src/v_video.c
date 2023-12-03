@@ -916,18 +916,42 @@ void V_Blockify(void)
 {
   int y, x, y2;
   const int chunk = (potato_factor * hires);
+  int first_y = ((viewheight % chunk) / 2), first_x;
   byte *const dest = screens[0];
 
   if (potato_factor <= 1) { return; }
 
-  for (y = viewwindowy;  y < (viewwindowy + viewheight);  y += chunk)
-    for (x = viewwindowx;  x < (viewwindowx + viewwidth);  x += chunk)
-      for (y2 = 0;  y2 < MIN(chunk, (viewwindowy + viewheight) - y);  y2++)
+  for (y = viewwindowy;  y < (viewwindowy + viewheight);)
+  {
+    first_x = (viewwidth % chunk) / 2;
+
+    for (x = viewwindowx;  x < (viewwindowx + viewwidth);)
+    {
+      for (y2 = 0;  y2 < (first_y ? first_y : MIN(chunk, (viewwindowy + viewheight) - y));  y2++)
         memset(
           dest + ((y + y2) * (SCREENWIDTH * hires)) + x,
-          dest[(y * (SCREENWIDTH * hires)) + x],
-          MIN(chunk, (viewwindowx + viewwidth) - x)
+          dest[
+            ( (first_y ? viewwindowy + first_y
+                       : y + ((y < viewwindowy + viewheight/2) ? chunk-1 : 0)) * (SCREENWIDTH * hires))
+            + (first_x ? viewwindowx + first_x
+                       : x + ((x < viewwindowx + viewwidth/2)  ? chunk-1 : 0))
+          ],
+          first_x ? first_x : MIN(chunk, (viewwindowx + viewwidth) - x)
         );
+
+      if (first_x) {
+        x += first_x;
+        first_x = 0;
+      }
+      else { x += chunk; }
+    }
+
+    if (first_y) {
+      y += first_y;
+      first_y = 0;
+    }
+    else { y += chunk; }
+  }
 }
 
 //
