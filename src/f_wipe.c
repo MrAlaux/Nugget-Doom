@@ -228,6 +228,93 @@ static int wipe_exitFade(int width, int height, int ticks)
 
 // [Nugget] -----------------------------------------------------------------/
 
+// [Nugget] "Pixelate" wipe /-------------------------------------------------
+
+static boolean depixelate;
+
+static int wipe_initPixelate(int width, int height, int ticks)
+{
+  depixelate = false;
+  return 0;
+}
+
+static int wipe_doPixelate(int width, int height, int ticks)
+{
+  static int pixelation = 2;
+  static const int target = 128;
+  int y, x, y2;
+  const int chunk = (pixelation * hires);
+  int first_y = ((height % chunk) / 2), first_x;
+  
+  ticks *= 6; // Speed it up, to match "Melt" wipe speed
+
+  // [Nugget] Screen Wipe speed
+  if (!strictmode && wipe_speed_percentage != 100)
+  { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
+
+  memcpy(wipe_scr, depixelate ? wipe_scr_end : wipe_scr_start, width * height);
+
+  for (y = 0;  y < height;)
+  {
+    first_x = (width % chunk) / 2;
+
+    for (x = 0;  x < width;)
+    {
+      for (y2 = 0;  y2 < (first_y ? first_y : MIN(chunk, height - y));  y2++)
+        memset(
+          wipe_scr + ((y + y2) * (SCREENWIDTH * hires)) + x,
+          wipe_scr[
+            ( (first_y ? first_y
+                       : y + ((y < height/2) ? chunk-1 : 0)) * (SCREENWIDTH * hires))
+            + (first_x ? first_x
+                       : x + ((x < width/2)  ? chunk-1 : 0))
+          ],
+          first_x ? first_x : MIN(chunk, width - x)
+        );
+
+      if (first_x) {
+        x += first_x;
+        first_x = 0;
+      }
+      else { x += chunk; }
+    }
+
+    if (first_y) {
+      y += first_y;
+      first_y = 0;
+    }
+    else { y += chunk; }
+  }
+
+  if (!depixelate)
+  {
+    pixelation += ticks;
+
+    if (pixelation > target) {
+      pixelation = target;
+      depixelate = true;
+    }
+  }
+  else
+  {
+    pixelation -= ticks;
+
+    if (pixelation < 2) {
+      pixelation = 2;
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+static int wipe_exitPixelate(int width, int height, int ticks)
+{
+  return 0;
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 int wipe_StartScreen(int x, int y, int width, int height)
 {
   I_ReadScreen(wipe_scr_start = screens[2]);
@@ -250,10 +337,13 @@ static int (*const wipes[])(int, int, int) = {
   wipe_initColorXForm,
   wipe_doColorXForm,
   wipe_exitColorXForm,
-  // [Nugget] "Fade" wipe /------------
+  // [Nugget] New wipes /--------------
   wipe_initFade,
   wipe_doFade,
-  wipe_exitFade
+  wipe_exitFade,
+  wipe_initPixelate,
+  wipe_doPixelate,
+  wipe_exitPixelate
   // [Nugget] ------------------------/
 };
 

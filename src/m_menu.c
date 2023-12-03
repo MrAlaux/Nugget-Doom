@@ -4776,7 +4776,7 @@ setup_menu_t gen_settings3[] = { // General Settings screen3
 
 // [Nugget]
 static const char *wipe_types[] = {
-  "None", "Melt", "Seizure", "Fade", NULL
+  "None", "Melt", "Seizure", "Fade", "Pixelate", NULL
 };
 
 // [Nugget]

@@ -671,8 +671,8 @@ default_t defaults[] = {
   { // [Nugget] Replaces screen melt toggle
     "wipe_type",
     (config_t *) &wipe_type, NULL,
-    {1}, {0,3}, number, ss_gen, wad_yes,
-    "Screen wipe style (0 = None, 1 = Melt, 2 = Seizure (ColorXForm), 3 = Fade)"
+    {1}, {0,4}, number, ss_gen, wad_yes,
+    "Screen wipe style (0 = None, 1 = Melt, 2 = Seizure (ColorXForm), 3 = Fade, 4 = Pixelate)"
   },
 
   {
