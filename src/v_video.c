@@ -915,19 +915,18 @@ void V_ShadeScreen(const int targshade) // [Nugget] Parameterized
 void V_Blockify(void)
 {
   int y, x, y2;
-  const int width = (SCREENWIDTH * hires), height = (SCREENHEIGHT * hires);
   const int chunk = (potato_factor * hires);
   byte *const dest = screens[0];
 
   if (potato_factor <= 1) { return; }
 
-  for (y = 0;  y < height;  y += chunk)
-    for (x = 0;  x < width;  x += chunk)
-      for (y2 = 0;  y2 < MIN(chunk, height - y);  y2++)
+  for (y = viewwindowy;  y < (viewwindowy + viewheight);  y += chunk)
+    for (x = viewwindowx;  x < (viewwindowx + viewwidth);  x += chunk)
+      for (y2 = 0;  y2 < MIN(chunk, (viewwindowy + viewheight) - y);  y2++)
         memset(
-          dest + ((y + y2) * width) + x,
-          dest[(y * width) + x],
-          MIN(chunk, width - x)
+          dest + ((y + y2) * (SCREENWIDTH * hires)) + x,
+          dest[(y * (SCREENWIDTH * hires)) + x],
+          MIN(chunk, (viewwindowx + viewwidth) - x)
         );
 }
 
