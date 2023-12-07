@@ -408,28 +408,33 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
       if (actor->flags & MF_FLOAT && floatok)
         {
           // [Nugget] Over/Under
-          const mobj_t *onmo;
           const fixed_t oldz = actor->z;
 
           if (actor->z < tmfloorz)          // must adjust height
           {
               actor->z += FLOATSPEED;
 
-              // [Nugget] Don't ascend into other things
-              if ((onmo = P_CheckOnmobj(actor, false)))
-              { actor->z = onmo->z - actor->height; }
+              // [Nugget] Over/Under: don't ascend into other things
+              if (actor->above_thing
+                  && (actor->above_thing->z < (actor->z + actor->height)))
+              {
+                actor->z = actor->above_thing->z - actor->height;
+              }
           }
           else
           {
             actor->z -= FLOATSPEED;
 
-            // [Nugget] Don't descend into other things
-            if ((onmo = P_CheckOnmobj(actor, false)))
-            { actor->z = onmo->z + onmo->height; }
+            // [Nugget] Over/Under: don't descend into other things
+            if (actor->below_thing
+                && (actor->z < (actor->below_thing->z + actor->below_thing->height)))
+            {
+              actor->z = actor->below_thing->z + actor->below_thing->height;
+            }
           }
 
           // [Nugget] Conditions: only if we actually moved
-          if (casual_play && actor->z != oldz)
+          if (NOTCASUALPLAY(actor->z != oldz))
           {
             actor->flags |= MF_INFLOAT;
             return true;
@@ -479,7 +484,13 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
 
   // killough 11/98: fall more slowly, under gravity, if felldown==true
   if (!(actor->flags & MF_FLOAT) && (!felldown || demo_version < 203))
+  {
     actor->z = actor->floorz;
+
+    // [Nugget] Over/Under
+    if (actor->below_thing)
+    { actor->z = MAX(actor->floorz, actor->below_thing->z + actor->below_thing->height); }
+  }
 
   return true;
 }

@@ -295,7 +295,8 @@ void P_XYMovement (mobj_t* mo)
       // [Nugget] Do apply friction if...
       || ((mo->z > mo->floorz)                        
           && !(   (player && player->cheats & CF_FLY) // ... using flight cheat
-               || (mo->intflags & MIF_ONMOBJ))))      // ... on top of a mobj
+               || (mo->below_thing                    // ... on top of a mobj
+                   && (mo->z == (mo->below_thing->z + mo->below_thing->height))))))
     return;
 
   // killough 8/11/98: add bouncers
@@ -729,6 +730,7 @@ static inline void MusInfoThinker (mobj_t *thing)
 void P_MobjThinker (mobj_t* mobj)
 {
   extern boolean cheese; // [Nugget] cheese :)
+  boolean oucheck = false; // [Nugget] Over/Under
 
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (mobj->type == MT_MUSICSOURCE)
@@ -785,6 +787,8 @@ void P_MobjThinker (mobj_t* mobj)
       mobj->intflags &= ~MIF_SCROLLING;
       if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
         return;       // mobj was removed
+
+      oucheck = true; // [Nugget] Over/Under
     }
 
   if (mobj->z != mobj->floorz || mobj->momz)
@@ -792,28 +796,20 @@ void P_MobjThinker (mobj_t* mobj)
       // [Nugget]: [DSDA]
       if (casual_play && over_under && (mobj->flags & MF_SOLID))
       {
-        mobj_t *onmo;
+        overunder_t zdir;
 
-        if (!(onmo = P_CheckOnmobj(mobj, true)))
+        if (!(zdir = P_CheckOverUnderMobj(mobj, true)))
         {
           P_ZMovement(mobj);
-          mobj->intflags &= ~MIF_ONMOBJ;
         }
         else
         {
           mobj->momz = 0;
 
-          if (onmo->z + onmo->height - mobj->z <= 24 * FRACUNIT)
-          {
-            if (mobj->player) {
-              mobj->player->viewheight -= onmo->z + onmo->height - mobj->z;
-              mobj->player->deltaviewheight = ((!strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT)
-                                               - mobj->player->viewheight) >> 3;
-            }
-
-            mobj->z = onmo->z + onmo->height;
-            mobj->intflags |= MIF_ONMOBJ;
-          }
+          if (zdir == OU_UNDER && mobj->below_thing)
+          { mobj->z = mobj->below_thing->z + mobj->below_thing->height; }
+          else if (mobj->above_thing)
+          { mobj->z = mobj->above_thing->z - mobj->height; }
         }
       }
       else
@@ -821,6 +817,8 @@ void P_MobjThinker (mobj_t* mobj)
 
       if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
         return;       // mobj was removed
+
+      oucheck = true; // [Nugget] Over/Under
     }
   else
     if (!(mobj->momx | mobj->momy) && !sentient(mobj))
@@ -837,6 +835,37 @@ void P_MobjThinker (mobj_t* mobj)
         else
           mobj->intflags &= ~MIF_FALLING, mobj->gear = 0;  // Reset torque
       }
+
+  // [Nugget] Over/Under: if we didn't check for over/under mobjs already,
+  // it means that this mobj is immobile, and its over/under mobjs, if any,
+  // were set by other mobj(s); check if they're still valid
+  if (casual_play && over_under && !oucheck)
+  {
+    mobj_t *oumobj;
+    fixed_t blockdist;
+
+    if ((oumobj = mobj->below_thing))
+    {
+      blockdist = mobj->radius + oumobj->radius;
+
+      if (   abs(mobj->x - oumobj->x) >= blockdist
+          || abs(mobj->y - oumobj->y) >= blockdist)
+      {
+        mobj->below_thing = NULL;
+      }
+    }
+
+    if ((oumobj = mobj->above_thing))
+    {
+      blockdist = mobj->radius + oumobj->radius;
+
+      if (   abs(mobj->x - oumobj->x) >= blockdist
+          || abs(mobj->y - oumobj->y) >= blockdist)
+      {
+        mobj->above_thing = NULL;
+      }
+    }
+  }
 
   if (mbf21)
   {
