@@ -806,9 +806,9 @@ void P_MobjThinker (mobj_t* mobj)
         {
           mobj->momz = 0;
 
-          if (zdir == OU_UNDER && mobj->below_thing)
+          if (mobj->below_thing && zdir == OU_UNDER)
           { mobj->z = mobj->below_thing->z + mobj->below_thing->height; }
-          else if (mobj->above_thing)
+          else if (mobj->above_thing) // zdir == OU_OVER
           { mobj->z = mobj->above_thing->z - mobj->height; }
         }
       }
@@ -841,15 +841,15 @@ void P_MobjThinker (mobj_t* mobj)
   // were set by other mobj(s); check if they're still valid
   if (casual_play && over_under && !oucheck)
   {
-    mobj_t *oumobj;
+    const mobj_t *oumobj;
     fixed_t blockdist;
 
     if ((oumobj = mobj->below_thing))
     {
       blockdist = mobj->radius + oumobj->radius;
 
-      if (   abs(mobj->x - oumobj->x) >= blockdist
-          || abs(mobj->y - oumobj->y) >= blockdist)
+      if (   (abs(mobj->x - oumobj->x) >= blockdist)
+          || (abs(mobj->y - oumobj->y) >= blockdist))
       {
         mobj->below_thing = NULL;
       }
@@ -859,8 +859,8 @@ void P_MobjThinker (mobj_t* mobj)
     {
       blockdist = mobj->radius + oumobj->radius;
 
-      if (   abs(mobj->x - oumobj->x) >= blockdist
-          || abs(mobj->y - oumobj->y) >= blockdist)
+      if (   (abs(mobj->x - oumobj->x) >= blockdist)
+          || (abs(mobj->y - oumobj->y) >= blockdist))
       {
         mobj->above_thing = NULL;
       }

@@ -494,10 +494,40 @@ static boolean P_ProjectileImmune(mobj_t *target, mobj_t *source)
     );
 }
 
-// [Nugget] Over/Under: potential over/under mobjs
+// [Nugget] Over/Under /------------------------------------------------------
+
+// Potential over/under mobjs
 static mobj_t *p_below_tmthing, *p_above_tmthing, // For `tmthing`
               *p_below_thing_s, *p_above_thing_s, // For `thing`    ("setter")
               *p_below_thing_g, *p_above_thing_g; // `thing` itself ("getter")
+
+static void P_SetOverUnderMobjs(mobj_t *thing)
+{
+  if (casual_play && over_under)
+  {
+    mobj_t *pbtg = p_below_thing_g ? p_below_thing_g->below_thing : NULL,
+           *pbts = p_below_thing_s,
+           *patg = p_above_thing_g ? p_above_thing_g->above_thing : NULL,
+           *pats = p_above_thing_s;
+
+    thing->below_thing = p_below_tmthing;
+    thing->above_thing = p_above_tmthing;
+
+    if (p_below_thing_g
+        && ((!pbtg) || ((pbtg->z + pbtg->height) < (pbts->z + pbts->height))))
+    {
+      p_below_thing_g->below_thing = p_below_thing_s;
+    }
+
+    if (p_above_thing_g
+        && ((!patg) || (pats->z < patg->z)))
+    {
+      p_above_thing_g->above_thing = p_above_thing_s;
+    }
+  }
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 {
@@ -901,28 +931,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean dropoff)
     return false;   // solid wall or thing
 
   // [Nugget] Over/Under: if move was valid, set new over/under mobjs
-  if (casual_play && over_under)
-  {
-    mobj_t *pbtg = p_below_thing_g ? p_below_thing_g->below_thing : NULL,
-           *pbts = p_below_thing_s,
-           *patg = p_above_thing_g ? p_above_thing_g->above_thing : NULL,
-           *pats = p_above_thing_s;
-
-    thing->below_thing = p_below_tmthing;
-    thing->above_thing = p_above_tmthing;
-
-    if (p_below_thing_g
-        && ((!pbtg) || ((pbtg->z + pbtg->height) < (pbts->z + pbts->height))))
-    {
-      p_below_thing_g->below_thing = p_below_thing_s;
-    }
-
-    if (p_above_thing_g
-        && ((!patg) || (pats->z < patg->z)))
-    {
-      p_above_thing_g->above_thing = p_above_thing_s;
-    }
-  }
+  P_SetOverUnderMobjs(thing);
 
   if (!(thing->flags & MF_NOCLIP))
     {
@@ -1169,11 +1178,11 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
   if (onfloor)  // walking monsters rise and fall with the floor
     {
-      // [Nugget] Over/Under
-      const fixed_t oldz = thing->z;
+      const fixed_t oldz = thing->z; // [Nugget] Over/Under
 
       thing->z = thing->floorz;
 
+      // [Nugget] Over/Under
       if (casual_play && over_under)
       {
         if (thing->z < oldz && thing->below_thing)
@@ -1193,11 +1202,11 @@ static boolean P_ThingHeightClip(mobj_t *thing)
         else if (thing->z < oldz)
         {
           mobj_t *below_thing = thing,  *above_thing;
-          const fixed_t diff = oldz - thing->z;
+          const fixed_t zdiff = oldz - thing->z;
 
           do {
             if ((above_thing = below_thing->above_thing)
-                && ((above_thing->z - diff) == (below_thing->z + below_thing->height)))
+                && ((above_thing->z - zdiff) == (below_thing->z + below_thing->height)))
             {
               above_thing->z = below_thing->z + below_thing->height;
             }
@@ -2735,26 +2744,7 @@ overunder_t P_CheckOverUnderMobj(mobj_t *thing, boolean fakemove)
     for (by = yl; by <= yh; by++)
       if (!P_BlockThingsIterator(bx, by, PIT_CheckOverUnderMobjZ))
       {
-        mobj_t *pbtg = p_below_thing_g ? p_below_thing_g->below_thing : NULL,
-               *pbts = p_below_thing_s,
-               *patg = p_above_thing_g ? p_above_thing_g->above_thing : NULL,
-               *pats = p_above_thing_s;
-
-        tmthing->below_thing = p_below_tmthing;
-        tmthing->above_thing = p_above_tmthing;
-
-        if (p_below_thing_g
-            && ((!pbtg) || ((pbtg->z + pbtg->height) < (pbts->z + pbts->height))))
-        {
-          p_below_thing_g->below_thing = p_below_thing_s;
-        }
-
-        if (p_above_thing_g
-            && ((!patg) || (pats->z < patg->z)))
-        {
-          p_above_thing_g->above_thing = p_above_thing_s;
-        }
-
+        P_SetOverUnderMobjs(tmthing);
         ret = zdir;
       }
 
