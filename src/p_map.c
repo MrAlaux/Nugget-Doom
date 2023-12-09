@@ -1169,6 +1169,8 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
   P_CheckPosition(thing, thing->x, thing->y);
 
+  P_SetOverUnderMobjs(tmthing); // [Nugget] Over/Under
+
   // what about stranding a monster partially off an edge?
   // killough 11/98: Answer: see below (upset balance if hanging off ledge)
 
