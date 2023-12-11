@@ -168,6 +168,7 @@ void T_VerticalDoor (vldoor_t *door)
 
             // [Nugget]: [crispy] fix "fast doors reopening with wrong sound"
             case blazeRaise:
+            case genBlazeRaise:
                 if (STRICTMODE(!comp_blazing2))
                 {
                     door->direction = 1;

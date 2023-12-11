@@ -73,7 +73,7 @@ typedef enum
   CF_RENDERSTATS      = 64,
   CF_SHOWFPS          = 128,
 
-  // [Nugget] All of the following:
+  // [Nugget] ----------------------------------------------------------------
 
   CF_INFAMMO          = 0x00010000, // Infinite ammo
   CF_FASTWEAPS        = 0x00020000, // Fast Weapons
@@ -81,7 +81,7 @@ typedef enum
   CF_LINETARGET       = 0x00080000, // Give info on the current linetarget
   CF_SAITAMA          = 0x00100000, // MDK Fist
   CF_BOOMCAN          = 0x00200000, // Explosive Hitscan
-  
+
 } cheat_t;
 
 
@@ -215,15 +215,15 @@ typedef struct player_s
 
   weapswitch_t switching;
 
-  // [Nugget] All of the following:
-  
+  // [Nugget] ----------------------------------------------------------------
+
   weapontype_t        lastweapon;
 
   int                 jumptics; // Jumping delay
   fixed_t             crouchoffset; // How many units the player is crouched
 
   fixed_t             impactpitch, oldimpactpitch; // Pitch view on impact
-  
+
   // [crispy] blinking key or skull in the status bar
   int                 keyblinkkeys[3], keyblinktics;
 

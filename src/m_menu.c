@@ -2821,7 +2821,10 @@ setup_menu_t keys_settings6[];
 setup_menu_t keys_settings7[];
 setup_menu_t keys_settings8[];
 setup_menu_t keys_settings9[];
-setup_menu_t keys_settings10[], keys_settings11[]; // [Nugget]
+// [Nugget]
+setup_menu_t keys_settings10[];
+setup_menu_t keys_settings11[];
+setup_menu_t keys_settings12[];
 
 // The table which gets you from one screen table to the next.
 setup_menu_t* keys_settings[] =
@@ -2838,6 +2841,7 @@ setup_menu_t* keys_settings[] =
   // [Nugget]
   keys_settings10,
   keys_settings11,
+  keys_settings12,
   NULL
 };
 
@@ -3208,6 +3212,42 @@ setup_menu_t keys_settings11[] =
     {"Fancy Teleport",  S_YESNO|S_STRICT|S_CRITICAL, m_null, KB_X, M_Y + keys11_fancytp  * M_SPC, {"fancy_teleport"}},
 
   {"<- PREV", S_SKIP|S_PREV, m_null, M_X_PREV, M_Y_PREVNEXT, {keys_settings10}},
+  {"NEXT ->", S_SKIP|S_NEXT, m_null, M_X_NEXT, M_Y_PREVNEXT, {keys_settings12}},
+
+  // Final entry
+
+  {0,S_SKIP|S_END,m_null}
+
+};
+
+enum {
+  keys12_title1,
+  keys12_infammo,
+  keys12_fastweaps,
+  keys12_resurrect,
+  keys12_fly,
+  keys12_summonr,
+  keys12_linetarg,
+  keys12_mdk,
+  keys12_saitama,
+  keys12_boomcan,
+};
+
+setup_menu_t keys_settings12[] =
+{
+  {"Nugget - Cheats", S_SKIP|S_TITLE, m_null, CHEAT_X, M_Y + keys12_title1 * M_SPC},
+
+  {"Infinite Ammo",      S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_infammo   * M_SPC, {0}, input_infammo},
+  {"Fast Weapons",       S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_fastweaps * M_SPC, {0}, input_fastweaps},
+  {"Resurrect",          S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_resurrect * M_SPC, {0}, input_resurrect},
+  {"Flight Mode",        S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_fly       * M_SPC, {0}, input_fly},
+  {"Repeat Last Summon", S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_summonr   * M_SPC, {0}, input_summonr},
+  {"Linetarget Query",   S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_linetarg  * M_SPC, {0}, input_linetarget},
+  {"MDK Attack",         S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_mdk       * M_SPC, {0}, input_mdk},
+  {"MDK Fist",           S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_saitama   * M_SPC, {0}, input_saitama},
+  {"Explosive Hitscan",  S_INPUT, m_scrn, CHEAT_X, M_Y + keys12_boomcan   * M_SPC, {0}, input_boomcan},
+
+  {"<- PREV",S_SKIP|S_PREV,m_null,M_X_PREV,M_Y_PREVNEXT, {keys_settings11}},
 
   // Final entry
 
@@ -3672,7 +3712,7 @@ setup_menu_t stat_settings4[] =
   {"Nugget - Extended HUD", S_SKIP|S_TITLE, m_null, M_X, M_Y + stat4_title1 * M_SPC},
 
     {"Show Powerup Timers",      S_YESNO|S_COSMETIC, m_null, M_X, M_Y + stat4_powers   * M_SPC, {"hud_power_timers"}},
-    {"Alternative Arms Display", S_YESNO,            m_null, M_X, M_Y + stat4_altarms  * M_SPC, {"alt_arms"}},
+    {"Alternative Arms Display", S_YESNO,            m_null, M_X, M_Y + stat4_altarms  * M_SPC, {"alt_arms"}, 0, ST_createWidgets},
     {"Smart Totals",             S_YESNO,            m_null, M_X, M_Y + stat4_smart    * M_SPC, {"smarttotals"}},
     {"Show Kills Percentage",    S_YESNO,            m_null, M_X, M_Y + stat4_killspct * M_SPC, {"hud_kills_percentage"}},
 
@@ -4840,6 +4880,17 @@ setup_menu_t gen_settings5[] = { // General Settings screen5
 
 // [Nugget] /-----------------------------------------------------------------
 
+static void M_ChangeViewHeight(void)
+{
+  static int oldviewheight = 0;
+  
+  for (int i = 0;  i < MAXPLAYERS;  i++)
+    if (playeringame[i] && players[i].playerstate == PST_LIVE)
+    { players[i].viewheight += (viewheight_value - oldviewheight) * FRACUNIT; }
+
+  oldviewheight = viewheight_value;
+}
+
 static const char *over_under_str[] = {
   "Off", "Player Only", "All Things", NULL
 };
@@ -4863,7 +4914,7 @@ setup_menu_t gen_settings6[] = {
   {"Nugget - View", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen6_title2 * M_SPC},
 
     {"Field of View",                 S_NUM   |S_STRICT, m_null, M_X, M_Y + gen6_fov         * M_SPC, {"fov"}, 0, M_SetFOV},
-    {"View Height",                   S_NUM   |S_STRICT, m_null, M_X, M_Y + gen6_viewheight  * M_SPC, {"viewheight_value"}},
+    {"View Height",                   S_NUM   |S_STRICT, m_null, M_X, M_Y + gen6_viewheight  * M_SPC, {"viewheight_value"}, 0, M_ChangeViewHeight},
     {"View Bobbing Percentage",       S_NUM,             m_null, M_X, M_Y + gen6_viewbobbing * M_SPC, {"view_bobbing_percentage"}},
     {"Impact Pitch",                  S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen6_impactpitch * M_SPC, {"impact_pitch"}, 0, NULL, impact_pitch_str},
     {"Explosion Shake Effect",        S_YESNO |S_STRICT, m_null, M_X, M_Y + gen6_expshake    * M_SPC, {"explosion_shake"}},
@@ -4882,6 +4933,10 @@ setup_menu_t gen_settings6[] = {
   {0,S_SKIP|S_END,m_null}
 };
 
+static const char *fake_contrast_styles[] = {
+  "Off", "Smooth", "Vanilla", NULL
+};
+
 static const char *s_clipping_dists[] = {
   "1200", "2400", NULL
 };
@@ -4894,14 +4949,14 @@ setup_menu_t gen_settings7[] = {
 
   {"Nugget - Display", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title1 * M_SPC},
 
-    {"Background For All Menus",      S_YESNO,          m_null, M_X, M_Y + gen7_menubgall    * M_SPC, {"menu_background_all"}},
-    {"Disable Palette Tint in Menus", S_YESNO|S_STRICT, m_null, M_X, M_Y + gen7_menutint     * M_SPC, {"no_menu_tint"}},
-    {"Disable Berserk Tint",          S_YESNO|S_STRICT, m_null, M_X, M_Y + gen7_berserktint  * M_SPC, {"no_berserk_tint"}},
-    {"Disable Radiation Suit Tint",   S_YESNO|S_STRICT, m_null, M_X, M_Y + gen7_radsuittint  * M_SPC, {"no_radsuit_tint"}},
-    {"Damage Tint Cap",               S_NUM  |S_STRICT, m_null, M_X, M_Y + gen7_dmgcountcap  * M_SPC, {"damagecount_cap"}},
-    {"Bonus Tint Cap",                S_NUM  |S_STRICT, m_null, M_X, M_Y + gen7_boncountcap  * M_SPC, {"bonuscount_cap"}},
-    {"Fake Contrast",                 S_YESNO|S_STRICT, m_null, M_X, M_Y + gen7_fakecontrast * M_SPC, {"fake_contrast"}},
-    {"Screen Wipe Speed Percentage",  S_NUM  |S_STRICT, m_null, M_X, M_Y + gen7_wipespeed    * M_SPC, {"wipe_speed_percentage"}},
+    {"Background For All Menus",      S_YESNO,           m_null, M_X, M_Y + gen7_menubgall    * M_SPC, {"menu_background_all"}},
+    {"Disable Palette Tint in Menus", S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_menutint     * M_SPC, {"no_menu_tint"}},
+    {"Disable Berserk Tint",          S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_berserktint  * M_SPC, {"no_berserk_tint"}},
+    {"Disable Radiation Suit Tint",   S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_radsuittint  * M_SPC, {"no_radsuit_tint"}},
+    {"Damage Tint Cap",               S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_dmgcountcap  * M_SPC, {"damagecount_cap"}},
+    {"Bonus Tint Cap",                S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_boncountcap  * M_SPC, {"bonuscount_cap"}},
+    {"Fake Contrast",                 S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen7_fakecontrast * M_SPC, {"fake_contrast"}, 0, NULL, fake_contrast_styles},
+    {"Screen Wipe Speed Percentage",  S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_wipespeed    * M_SPC, {"wipe_speed_percentage"}},
 
   {"",                       S_SKIP,         m_null, M_X, M_Y + gen7_stub1  * M_SPC},
   {"Nugget - Miscellaneous", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title2 * M_SPC},

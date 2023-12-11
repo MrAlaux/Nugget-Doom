@@ -129,8 +129,6 @@ int st_crispyhud; // [Nugget] Now an int
 static boolean st_classicstatusbar;
 static boolean st_statusbarface; // [Nugget] Face may still be drawn in NUGHUD
 
-void ST_createWidgets(); // [Nugget] Prototype this
-
 // !deathmatch
 static boolean st_notdeathmatch;
 
@@ -1199,18 +1197,15 @@ void ST_Drawer(boolean fullscreen, boolean refresh)
   st_classicstatusbar = st_statusbaron && !st_crispyhud;
   st_statusbarface = st_classicstatusbar || (st_crispyhud && nughud.face.x > -1);
 
-  // [Nugget] NUGHUD /--------------------------------------------------------
-
+  // [Nugget] NUGHUD
   if (oldcrispy != st_crispyhud)
   {
     ST_createWidgets();
     ST_updateWidgets();
     HU_Start();
-  }
-  
-  oldcrispy = st_crispyhud;
 
-  // [Nugget] ---------------------------------------------------------------/
+    oldcrispy = st_crispyhud;
+  }
 
   ST_doPaletteStuff();  // Do red-/gold-shifts from damage/items
 

@@ -109,7 +109,7 @@ default_t nughud_defaults[] = {
   {          "nughud_message_y",     (config_t *)&nughud.message.y,     NULL, {  0 }, {  0, 200 }, number },
   {          "nughud_message_wide",  (config_t *)&nughud.message.wide,  NULL, { -2 }, { -2, 2 },   number },
   {          "nughud_message_align", (config_t *)&nughud.message.align, NULL, { -1 }, { -1, 1 },   number },
-  TEXTLINE(  "nughud_secret",      nughud.secret,       160,          86,            0,  0     ),
+  TEXTLINE(  "nughud_secret",      nughud.secret,       160,          84,            0,  0     ),
   PATCH(     "nughud_patch1",      0                                                           ),
   PATCH(     "nughud_patch2",      1                                                           ),
   PATCH(     "nughud_patch3",      2                                                           ),
@@ -121,7 +121,8 @@ default_t nughud_defaults[] = {
 
   TOGGLE(    "nughud_percents",       nughud.percents,       1                                 ),
   TOGGLE(    "nughud_patch_offsets",  nughud.patch_offsets,  1                                 ),
-  {          "nughud_weapheight",     (config_t *)&nughud.weapheight, NULL, { 0 }, { 0, 200 }, number },
+  {          "nughud_weapheight",     (config_t *)&nughud.weapheight, NULL, {  0 }, { -32, 32 }, number },
+  {          "nughud_viewoffset",     (config_t *)&nughud.viewoffset, NULL, {  0 }, { -16, 16 }, number },
 
   { NULL }         // last entry
 };

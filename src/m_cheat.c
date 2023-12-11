@@ -106,8 +106,8 @@ static void cheat_gibbers();    // Everything gibs
 
 static void cheat_resurrect();
 static void cheat_fly();
-static void cheat_nextmap();    // Emulate level exit
-static void cheat_nextsecret(); // Emulate secret level exit
+static void cheat_normalexit(); // Emulate normal level exit
+static void cheat_secretexit(); // Emulate secret level exit
 static void cheat_turbo(char *buf);
 
 // Summon a mobj
@@ -367,8 +367,8 @@ struct cheat_s cheat[] = {
   {"resurrect",  NULL, not_net | not_demo, {cheat_resurrect}      },
   {"idres",      NULL, not_net | not_demo, {cheat_resurrect}      }, // 'RESURRECT' alternative
   {"idfly",      NULL, not_net | not_demo, {cheat_fly}            },
-  {"nextmap",    NULL, not_net | not_demo, {cheat_nextmap}        },
-  {"nextsecret", NULL, not_net | not_demo, {cheat_nextsecret}     },
+  {"nextmap",    NULL, not_net | not_demo, {cheat_normalexit}     },
+  {"nextsecret", NULL, not_net | not_demo, {cheat_secretexit}     },
   {"turbo",      NULL, not_net | not_demo, {cheat_turbo},      -3 },
   {"summon",     NULL, not_net | not_demo, {cheat_summon}         }, // Summon "Menu"
   {"summone",    NULL, not_net | not_demo, {cheat_summone0}       }, // Summon Enemy "Menu"
@@ -492,12 +492,12 @@ static void cheat_fly()
   displaymsg("Fly Mode %s", (plyr->cheats & CF_FLY) ? "ON" : "OFF");
 }
 
-static void cheat_nextmap()
+static void cheat_normalexit()
 {
   G_ExitLevel();
 }
 
-static void cheat_nextsecret()
+static void cheat_secretexit()
 {
   G_SecretExitLevel();
 }
@@ -1696,6 +1696,16 @@ static const struct {
   { input_notarget,  not_net|not_demo, {cheat_notarget}, 0 },
   { input_freeze,    not_net|not_demo, {cheat_freeze},   0 },
   { input_avj,       not_net|not_demo, {cheat_avj},      0 },
+  // [Nugget] ----------------------------------------------------------------
+  { input_infammo,    not_net|not_demo, {cheat_infammo},    0 },
+  { input_fastweaps,  not_net|not_demo, {cheat_fastweaps},  0 },
+  { input_resurrect,  not_net|not_demo, {cheat_resurrect},  0 },
+  { input_fly,        not_net|not_demo, {cheat_fly},        0 },
+  { input_summonr,    not_net|not_demo, {cheat_summonr},    0 },
+  { input_linetarget, not_net|not_demo, {cheat_linetarget}, 0 },
+  { input_mdk,        not_net|not_demo, {cheat_mdk},        0 },
+  { input_saitama,    not_net|not_demo, {cheat_saitama},    0 },
+  { input_boomcan,    not_net|not_demo, {cheat_boomcan},    0 },
 };
 
 boolean M_CheatResponder(event_t *ev)

@@ -113,15 +113,19 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
               ->lightlevel >> LIGHTSEGSHIFT)+extralight;
 
   // [crispy] smoother fake contrast
-  if (NOTSTRICTMODE(fake_contrast)) // [Nugget]
-  { lightnum += curline->fakecontrast; }
-#if 0
-  if (curline->v1->y == curline->v2->y)
-    lightnum--;
-  else
-    if (curline->v1->x == curline->v2->x)
-      lightnum++;
-#endif
+  if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
+  {
+    lightnum += curline->fakecontrast;
+  }
+  // [Nugget] Vanilla effect
+  else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
+  {
+    if (curline->v1->y == curline->v2->y)
+      lightnum--;
+    else
+      if (curline->v1->x == curline->v2->x)
+        lightnum++;
+  }
 
   walllights = lightnum >= LIGHTLEVELS ? scalelight[LIGHTLEVELS-1] :
     lightnum <  0           ? scalelight[0] : scalelight[lightnum];
@@ -163,6 +167,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
             if (index >=  MAXLIGHTSCALE )
               index = MAXLIGHTSCALE-1;
+
+            if (STRICTMODE(!diminished_lighting)) { index = 0; } // [Nugget]
 
             dc_colormap[0] = dc_colormap[1] = walllights[index];
           }
@@ -381,6 +387,9 @@ static void R_RenderSegLoop (void)
 
           if (index >=  MAXLIGHTSCALE )
             index = MAXLIGHTSCALE-1;
+
+          if (STRICTMODE(!diminished_lighting)) { index = 0; } // [Nugget]
+
           dc_colormap[0] = walllights[index];
           dc_colormap[1] = (!fixedcolormap && STRICTMODE(brightmaps)) ?
                            fullcolormap : dc_colormap[0];
@@ -777,14 +786,19 @@ void R_StoreWallRange(const int start, const int stop)
           int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
 
           // [crispy] smoother fake contrast
-          if (NOTSTRICTMODE(fake_contrast)) // [Nugget]
-          { lightnum += curline->fakecontrast; }
-#if 0
-          if (curline->v1->y == curline->v2->y)
-            lightnum--;
-          else if (curline->v1->x == curline->v2->x)
-            lightnum++;
-#endif
+          if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
+          {
+            lightnum += curline->fakecontrast;
+          }
+          // [Nugget] Vanilla effect
+          else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
+          {
+            if (curline->v1->y == curline->v2->y)
+              lightnum--;
+            else if (curline->v1->x == curline->v2->x)
+              lightnum++;
+          }
+
           if (lightnum < 0)
             walllights = scalelight[0];
           else if (lightnum >= LIGHTLEVELS)

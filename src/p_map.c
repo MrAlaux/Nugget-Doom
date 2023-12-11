@@ -2014,8 +2014,8 @@ void P_PositionChasecam(fixed_t z, fixed_t dist, fixed_t slope)
   const boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
 
   dist += FRACUNIT;
-  x2 = viewx + (dist >> FRACBITS) * finecosine[angle];
-  y2 = viewy + (dist >> FRACBITS) * finesine[angle];
+  x2 = viewx + FixedMul(dist, finecosine[angle]);
+  y2 = viewy + FixedMul(dist, finesine[angle]);
   shootz = z;
   attackrange = dist;
   aimslope = slope;

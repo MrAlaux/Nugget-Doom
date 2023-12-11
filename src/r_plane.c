@@ -165,6 +165,9 @@ static void R_MapPlane(int y, int x1, int x2)
       index = distance >> LIGHTZSHIFT;
       if (index >= MAXLIGHTZ )
         index = MAXLIGHTZ-1;
+
+      if (STRICTMODE(!diminished_lighting)) { index = MAXLIGHTZ-1; } // [Nugget]
+
       ds_colormap[0] = planezlight[index];
       ds_colormap[1] = fullcolormap;
     }

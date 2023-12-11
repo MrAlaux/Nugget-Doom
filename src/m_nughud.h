@@ -77,6 +77,7 @@ typedef struct nughud_s {
 
   boolean            percents;
   fixed_t            weapheight;
+  int                viewoffset;
 } nughud_t;
 
 extern nughud_t nughud;

@@ -108,10 +108,10 @@ enum
   input_map_zoomout,
   input_map_mark,
   input_map_clear,
-  input_map_mini, // [Nugget] Minimap
   input_map_blink, // [Nugget] Blink marks
   input_map_tagfinder, // [Nugget] Tag Finder from PrBoomX
   input_map_teleport, // [Nugget] Teleport to Automap pointer
+  input_map_mini, // [Nugget] Minimap
   input_map_gobig,
   input_map_grid,
   input_map_overlay,
@@ -141,6 +141,17 @@ enum
   input_notarget,
   input_freeze,
   input_avj,
+  // [Nugget] /------------------------
+  input_infammo,
+  input_fastweaps,
+  input_resurrect,
+  input_fly,
+  input_summonr,
+  input_linetarget,
+  input_mdk,
+  input_saitama,
+  input_boomcan,
+  // [Nugget] ------------------------/
 
   NUM_INPUT_ID
 };

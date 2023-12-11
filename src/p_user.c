@@ -179,7 +179,7 @@ void P_CalcHeight (player_t* player)
 
         player->viewheight += breathing_val;
       }
-            
+
       if (player->viewheight > view)
         {
           player->viewheight = view;
@@ -201,9 +201,20 @@ void P_CalcHeight (player_t* player)
         }
     }
 
-  // [Nugget] Account for crouching
-  player->viewz = player->mo->z + player->viewheight + bob - player->crouchoffset;
-  
+  player->viewz = player->mo->z + player->viewheight + bob;
+
+  // [Nugget] Account for crouching, but don't clip view through the floor
+  if (player->crouchoffset)
+  {
+    fixed_t crouchoffset = player->crouchoffset;
+
+    if ((player->viewz - crouchoffset) < (player->mo->floorz + FRACUNIT))
+    { crouchoffset = player->viewz - (player->mo->floorz + FRACUNIT); }
+
+    // Do clip view through the floor if not because of crouching
+    player->viewz -= MAX(0, crouchoffset);
+  }
+
   if (player->viewz > player->mo->ceilingz-4*FRACUNIT)
     player->viewz = player->mo->ceilingz-4*FRACUNIT;
 }
@@ -219,9 +230,7 @@ void P_MovePlayer (player_t* player)
 {
   ticcmd_t *cmd = &player->cmd;
   mobj_t *mo = player->mo;
-  // [Nugget]
-  static boolean crouchKeyDown = false;
-  int cforwardmove, csidemove;
+  static boolean crouchKeyDown = false; // [Nugget]
 
   mo->angle += cmd->angleturn << 16;
   onground = (mo->z <= mo->floorz
@@ -378,23 +387,26 @@ void P_MovePlayer (player_t* player)
           int bobfactor =
             friction < ORIG_FRICTION ? movefactor : ORIG_FRICTION_FACTOR;
 
-          // [Nugget]
-          cforwardmove = cmd->forwardmove;
-          csidemove = cmd->sidemove;
-          // Check for crouching
+          // [Nugget] /-------------------------------------------------------
+
+          char forwardmove = cmd->forwardmove,
+               sidemove    = cmd->sidemove;
+                  
           if (player->mo->intflags & MIF_CROUCHING)
-          { cforwardmove /= 2; csidemove /= 2; }
+          { forwardmove /= 2;  sidemove /= 2; }
+
+          // [Nugget] -------------------------------------------------------/
 
           if (cmd->forwardmove)
             {
-              P_Bob(player,mo->angle,cforwardmove*bobfactor);
-              P_Thrust(player,mo->angle,cforwardmove*movefactor);
+              P_Bob(player,mo->angle,forwardmove*bobfactor);
+              P_Thrust(player,mo->angle,forwardmove*movefactor);
             }
 
           if (cmd->sidemove)
             {
-              P_Bob(player,mo->angle-ANG90,csidemove*bobfactor);
-              P_Thrust(player,mo->angle-ANG90,csidemove*movefactor);
+              P_Bob(player,mo->angle-ANG90,sidemove*bobfactor);
+              P_Thrust(player,mo->angle-ANG90,sidemove*movefactor);
             }
         }
       // [Nugget] Allow minimal mid-air movement if Jumping is enabled

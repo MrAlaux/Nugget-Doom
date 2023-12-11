@@ -1544,6 +1544,9 @@ static void HU_UpdateCrosshair(void)
 {
   crosshair.x = ORIGWIDTH/2;
   crosshair.y = (screenblocks <= 10) ? (ORIGHEIGHT-ST_HEIGHT)/2 : ORIGHEIGHT/2;
+
+  // [Nugget]
+  crosshair.y += STRICTMODE(st_crispyhud) ? nughud.viewoffset : 0;
   crosshair.side = 0;
 
   if (STRICTMODE(hud_crosshair_target || hud_crosshair_lockon))

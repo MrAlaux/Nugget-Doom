@@ -866,8 +866,15 @@ default_t defaults[] = {
   {
     "fake_contrast",
     (config_t *) &fake_contrast, NULL,
+    {1}, {0,2}, number, ss_gen, wad_yes,
+    "Fake contrast for walls (0 = Off, 1 = Smooth, 2 = Vanilla)"
+  },
+
+  {
+    "diminished_lighting",
+    (config_t *) &diminished_lighting, NULL,
     {1}, {0,1}, number, ss_gen, wad_yes,
-    "1 to apply fake contrast to walls"
+    "1 to enable diminished lighting (light emitted by player)"
   },
 
   {
@@ -1688,6 +1695,37 @@ default_t defaults[] = {
     input_mouselook, { {0, 0} }
   },
 
+  { // [Nugget] 
+    "input_crosshair",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle crosshair",
+    input_crosshair, { {0, 0} }
+  },
+
+  { // [Nugget] 
+    "input_zoom",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle zoom",
+    input_zoom, { {0, 0} }
+  },
+
+  { // [Nugget] 
+    "zoom_fov",
+    (config_t *) &zoom_fov, NULL,
+    {MINFOV}, {MINFOV,MAXFOV}, number, ss_keys, wad_no,
+    "Field of View when zoom is enabled"
+  },
+
+  { // [Nugget] 
+    "input_chasecam",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to cycle through chasecam modes",
+    input_chasecam, { {0, 0} }
+  },
+
   { // phares 3/7/98
     "input_menu_right",
     NULL, NULL,
@@ -1878,6 +1916,22 @@ default_t defaults[] = {
     {0}, {UL,UL}, input, ss_keys, wad_no,
     "key to run (move fast)",
     input_speed, { {input_type_key, KEY_RSHIFT} }
+  },
+
+  { // [Nugget] 
+    "input_jump",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to jump",
+    input_jump, { {input_type_key, KEY_RALT} }
+  },
+
+  { // [Nugget] 
+    "input_crouch",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to crouch/duck",
+    input_crouch, { {input_type_key, 'c'} }
   },
 
   {
@@ -2083,6 +2137,14 @@ default_t defaults[] = {
                          {input_type_mouseb, MOUSE_BUTTON_WHEELDOWN} }
   },
 
+  { // [Nugget] 
+    "input_map_mini",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to activate minimap mode",
+    input_map_mini, { {0, 0} }
+  },
+
   {
     "input_map_gobig",
     NULL, NULL,
@@ -2113,6 +2175,37 @@ default_t defaults[] = {
     {0}, {UL,UL}, input, ss_keys, wad_no,
     "key to clear all markers on automap",
     input_map_clear, { {input_type_key, 'c'} }
+  },
+
+  { // [Nugget] 
+    "input_map_blink",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to make automap markers blink",
+    input_map_blink, { {input_type_key, 'b'} }
+  },
+
+  { // [Nugget] 
+    "input_map_tagfinder",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to find associated sectors and lines",
+    input_map_tagfinder, { {0, 0} }
+  },
+
+  { // [Nugget] 
+    "input_map_teleport",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to teleport to automap pointer",
+    input_map_teleport, { {0, 0} }
+  },
+
+  { // [Nugget] 
+    "fancy_teleport",
+    (config_t *) &fancy_teleport, NULL,
+    {1}, {0,1}, number, ss_keys, wad_no,
+    "Use effects when teleporting to pointer (fog, sound and zoom)"
   },
 
   {
@@ -2290,6 +2383,82 @@ default_t defaults[] = {
     "key to perform Fake Archvile Jump",
     input_avj, { {0, 0} }
   },
+
+  // [Nugget] /---------------------------------------------------------------
+
+  {
+    "input_infammo",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle infinite ammo",
+    input_infammo, { {0, 0} }
+  },
+
+  {
+    "input_fastweaps",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle fast weapons",
+    input_fastweaps, { {0, 0} }
+  },
+
+  {
+    "input_resurrect",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to resurrect",
+    input_resurrect, { {0, 0} }
+  },
+
+  {
+    "input_fly",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle fly mode",
+    input_fly, { {0, 0} }
+  },
+
+  {
+    "input_summonr",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to summon last summoned mobj",
+    input_summonr, { {0, 0} }
+  },
+
+  {
+    "input_linetarget",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle linetarget query mode",
+    input_linetarget, { {0, 0} }
+  },
+
+  {
+    "input_mdk",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to perform MDK attack",
+    input_mdk, { {0, 0} }
+  },
+
+  {
+    "input_saitama",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle MDK Fist",
+    input_saitama, { {0, 0} }
+  },
+
+  {
+    "input_boomcan",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to toggle explosive hitscan attacks",
+    input_boomcan, { {0, 0} }
+  },
+
+  // [Nugget] ---------------------------------------------------------------/
 
   {
     "input_chat_dest0",
@@ -2559,96 +2728,6 @@ default_t defaults[] = {
     {0}, {0, 1}, number, ss_keys, wad_no,
     "1 to invert gamepad look axis"
   },
-
-  // [Nugget] /---------------------------------------------------------------
-
-  {
-    "input_jump",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to jump",
-    input_jump, { {input_type_key, KEY_RALT} }
-  },
-
-  {
-    "input_crouch",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to crouch/duck",
-    input_crouch, { {input_type_key, 'c'} }
-  },
-
-  {
-    "input_crosshair",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to toggle crosshair",
-    input_crosshair, { {0, 0} }
-  },
-
-  {
-    "input_zoom",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to toggle zoom",
-    input_zoom, { {0, 0} }
-  },
-
-  {
-    "input_chasecam",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to cycle through chasecam modes",
-    input_chasecam, { {0, 0} }
-  },
-
-  {
-    "zoom_fov",
-    (config_t *) &zoom_fov, NULL,
-    {MINFOV}, {MINFOV,MAXFOV}, number, ss_keys, wad_no,
-    "Field of View when zoom is enabled"
-  },
-
-  {
-    "input_map_mini",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to activate minimap mode",
-    input_map_mini, { {0, 0} }
-  },
-
-  {
-    "input_map_blink",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to make automap markers blink",
-    input_map_blink, { {input_type_key, 'b'} }
-  },
-
-  {
-    "input_map_tagfinder",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to find associated sectors and lines",
-    input_map_tagfinder, { {0, 0} }
-  },
-
-  {
-    "input_map_teleport",
-    NULL, NULL,
-    {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to teleport to automap pointer",
-    input_map_teleport, { {0, 0} }
-  },
-
-  {
-    "fancy_teleport",
-    (config_t *) &fancy_teleport, NULL,
-    {1}, {0,1}, number, ss_keys, wad_no,
-    "Use effects when teleporting to pointer (fog, sound and zoom)"
-  },
-
-  // [Nugget] ---------------------------------------------------------------/
 
   { //jff 4/3/98 allow unlimited sensitivity
     "mouse_sensitivity",

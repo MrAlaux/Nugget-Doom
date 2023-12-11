@@ -27,9 +27,9 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 - **Support for higher resolutions:** 3X (600p), 4X (800p)... up to 9X (1800p) [by _ceski_]
 - **Selection of widescreen ratios** in the setup menu itself [i.b. Crispy Doom]
-- Toggle to **stretch viewport to fit window** (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
+- **Stretch viewport to fit window** setting (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Gamma Correction slider ranging from 0.50 to 2.0 in steps of 0.05**
-- Toggle for **Gamma Correction key cycling**, through either original or extended gamma levels (CFG-Only: `gammacycle`)
+- **Gamma Correction key cycling** setting, to cycle through either original or extended gamma levels (CFG-Only: `gammacycle`)
 - **Menu items for _Air Absorption_ and _Doppler Effect_**, both of which are **now set to 5 by default**
 - **Tweaked _Stretch Short Skies_ algorithm**
 - _**Screen Wipe Style**_ selection:
@@ -57,15 +57,16 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - _**Disable Radiation Suit Tint**_ setting
 - _**Damage Tint Cap**_ and _**Bonus Tint Cap**_, to attenuate or disable the red and yellow screen tints
 - _**Fake Contrast**_ setting
+- Toggle for **Diminished Lighting** (CFG-Only: `diminished_lighting`)
 - _**Screen Wipe speed percentage**_ setting
 - _**Sound Clipping Distance**_ selection, to optionally double the distance at which SFX become audible
 - **_Organize Saves by IWAD_** setting
 - _**One-Key Quick Save/Load**_ setting, to skip the confirmation prompt
 - _**Play Internal Demos**_ setting
 - _**Quick "Quit Game"**_ setting, to skip the confirmation prompt [p.f. Crispy Doom]
-- Toggling of _**Weapon Flash Lighting**_ [p.f. Crispy Doom]
-- Toggling of _**Weapon Flash Sprite**_ [p.f. Crispy Doom]
-- Toggling of _**Invulnerability Colormap**_ [p.f. Crispy Doom]
+- Toggle for _**Weapon Flash Lighting**_ [p.f. Crispy Doom]
+- Toggle for _**Weapon Flash Sprite**_ [p.f. Crispy Doom]
+- Toggle for _**Invulnerability Colormap**_ [p.f. Crispy Doom]
 
 ### Weapons
 

@@ -978,7 +978,7 @@ boolean AM_Responder
     else if (M_InputActivated(input_map_blink) && markpointnum)
     {
       markblinktimer = 4*TICRATE;
-      plr->message = "Blinking marks...";
+      displaymsg("Blinking %i mark%s...", markpointnum, (1 < markpointnum) ? "s" : "");
     }
     // Minimap
     else if (M_InputActivated(input_map_mini))
@@ -999,7 +999,7 @@ boolean AM_Responder
 
       P_TeleportMove(mo, (m_x+m_w/2)<<FRACTOMAPBITS, (m_y+m_h/2)<<FRACTOMAPBITS, false);
       mo->z = mo->floorz;
-      plr->viewz = mo->z + plr->viewheight;
+      plr->viewz = mo->z + plr->viewheight - plr->crouchoffset;
 
       if (fancy_teleport) {
         R_SetFOVFX(FOVFX_TELEPORT); // Teleporter zoom

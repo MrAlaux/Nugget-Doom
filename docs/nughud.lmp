@@ -200,7 +200,7 @@ nughud_message_align -1
 
 ; Secret Message/Milestone Completion display
 nughud_secret_x     160
-nughud_secret_y     86
+nughud_secret_y     84
 nughud_secret_wide  0
 nughud_secret_align 0
 
@@ -219,5 +219,8 @@ nughud_percents 1
 ; Apply graphic offsets when drawing Patches
 nughud_patch_offsets 1
 
-; Upwards offset to apply to weapon sprites
+; Vertical offset for weapon sprites
 nughud_weapheight 0
+
+; Vertical offset for view window
+nughud_viewoffset 0

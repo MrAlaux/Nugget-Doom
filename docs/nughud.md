@@ -202,10 +202,10 @@ nughud_patch2_wide 0
 nughud_patch2_name "STARMS"
 ```
 
-### Miscellaneous
+### Additional integer properties
 
-**There is an additional fixed-point property, `nughud_weapheight`, to increase the height at which weapon sprites are drawn**.
-It can be any value between `0` and `200` (inclusive).
+- `nughud_weapheight`: **vertical offset for weapon sprites**, in the [-32, 32] range; greater values shift the sprites upwards.
+- `nughud_viewoffset`: **vertical offset for the view window**, in the [-16, 16] range; greater values shift the view downwards.
 
 ---
 
