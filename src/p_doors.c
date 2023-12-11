@@ -259,7 +259,7 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
     case 133:
       if (!p->cards[it_bluecard] && !p->cards[it_blueskull])
         {
-          displaymsg("%s", s_PD_BLUEO);  // Ty 03/27/98 - externalized
+          doomprintf(p, MESSAGES_NONE, "%s", s_PD_BLUEO);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
           // [Nugget]: [crispy] blinking key or skull in the status bar
           ST_blinkKeys(p, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
@@ -271,7 +271,7 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
     case 135:
       if (!p->cards[it_redcard] && !p->cards[it_redskull])
         {
-          displaymsg("%s", s_PD_REDO); // Ty 03/27/98 - externalized
+          doomprintf(p, MESSAGES_NONE, "%s", s_PD_REDO); // Ty 03/27/98 - externalized
           S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
           // [Nugget]: [crispy] blinking key or skull in the status bar
           ST_blinkKeys(p, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
@@ -283,7 +283,7 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
     case 137:
       if (!p->cards[it_yellowcard] && !p->cards[it_yellowskull])
         {
-          displaymsg("%s", s_PD_YELLOWO);  // Ty 03/27/98 - externalized
+          doomprintf(p, MESSAGES_NONE, "%s", s_PD_YELLOWO);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
           // [Nugget]: [crispy] blinking key or skull in the status bar
           ST_blinkKeys(p, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
@@ -412,7 +412,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
         return 0;
       if (!player->cards[it_bluecard] && !player->cards[it_blueskull])
         {
-          displaymsg("%s", s_PD_BLUEK);  // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, "%s", s_PD_BLUEK);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
           // [Nugget]: [crispy] blinking key or skull in the status bar
           ST_blinkKeys(player, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
@@ -426,7 +426,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
         return 0;
       if (!player->cards[it_yellowcard] && !player->cards[it_yellowskull])
         {
-          displaymsg("%s", s_PD_YELLOWK);  // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, "%s", s_PD_YELLOWK);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
           // [Nugget]: [crispy] blinking key or skull in the status bar
           ST_blinkKeys(player, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
@@ -440,7 +440,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
         return 0;
       if (!player->cards[it_redcard] && !player->cards[it_redskull])
         {
-          displaymsg("%s", s_PD_REDK); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, "%s", s_PD_REDK); // Ty 03/27/98 - externalized
           S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
           // [Nugget]: [crispy] blinking key or skull in the status bar
           ST_blinkKeys(player, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);

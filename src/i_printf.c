@@ -58,11 +58,11 @@ verbosity_t cfg_verbosity;
 #ifdef _WIN32
 static HANDLE hConsole;
 static DWORD OldMode;
-static boolean restore_mode = false;
+static boolean vt_mode_enabled = false;
 
 static void EnableVTMode(void)
 {
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hConsole == INVALID_HANDLE_VALUE)
     {
         return;
@@ -74,17 +74,17 @@ static void EnableVTMode(void)
     }
 
     if (!SetConsoleMode(hConsole, ENABLE_PROCESSED_OUTPUT |
-                                  ENABLE_VIRTUAL_TERMINAL_PROCESSING));
+                                  ENABLE_VIRTUAL_TERMINAL_PROCESSING))
     {
         return;
     }
 
-    restore_mode = true;
+    vt_mode_enabled = true;
 }
 
 static void RestoreOldMode(void)
 {
-    if (!restore_mode)
+    if (!vt_mode_enabled)
     {
         return;
     }
@@ -142,7 +142,11 @@ void I_Printf(verbosity_t prio, const char *msg, ...)
             break;
     }
 
-    if (I_ConsoleStdout())
+    if (I_ConsoleStdout()
+#ifdef _WIN32
+        && vt_mode_enabled
+#endif
+        )
     {
         switch (prio)
         {

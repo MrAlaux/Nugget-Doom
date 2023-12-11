@@ -341,6 +341,7 @@ static void do_draw_plane(visplane_t *pl)
       {
 	int texture;
 	angle_t an, flip;
+	boolean vertically_scrolling = false;
 	int skyheight_target; // [Nugget] Adjust sky stretching based on FOV
 
 	// killough 10/98: allow skies to come from sidedefs.
@@ -357,6 +358,9 @@ static void do_draw_plane(visplane_t *pl)
 
 	    // Sky transferred from first sidedef
 	    const side_t *s = *l->sidenum + sides;
+
+	    if (s->baserowoffset - s->oldrowoffset)
+	      vertically_scrolling = true;
 
 	    // Texture comes from upper texture of reference sidedef
 	    texture = texturetranslation[s->toptexture];
@@ -411,7 +415,7 @@ static void do_draw_plane(visplane_t *pl)
           dc_texturemid = dc_texturemid * dc_texheight / skyheight_target;
           colfunc = R_DrawColumn;
         }
-        else
+        else if (!vertically_scrolling)
         {
           // Make sure the fade-to-color effect doesn't happen too early
           fixed_t diff = dc_texturemid - ORIGHEIGHT / 2 * FRACUNIT;
@@ -429,8 +433,8 @@ static void do_draw_plane(visplane_t *pl)
         for (x = pl->minx; (dc_x = x) <= pl->maxx; x++)
           if ((dc_yl = pl->top[x]) != USHRT_MAX && dc_yl <= (dc_yh = pl->bottom[x]))
             {
-              dc_source = R_GetColumn(texture, ((an + xtoskyangle[x])^flip) >>
-				      ANGLETOSKYSHIFT);
+              dc_source = R_GetColumnMod(texture, ((an + xtoskyangle[x])^flip) >>
+				         ANGLETOSKYSHIFT);
               colfunc();
             }
 

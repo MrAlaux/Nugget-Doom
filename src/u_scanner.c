@@ -166,7 +166,7 @@ boolean U_CheckToken(u_scanner_t* s, char token)
   if(s->needNext)
   {
     if(!U_GetNextToken(s, false))
-    return false;
+      return false;
   }
 
   // An int can also be a float.
@@ -214,6 +214,46 @@ static void U_RestoreState(u_scanner_t* s, u_scanner_t savedstate)
     U_SaveState(&savedstate, *s);
     s->data = saveddata;
   }
+}
+
+boolean U_GetString(u_scanner_t* scanner)
+{
+  unsigned int start;
+  char cur;
+  u_parserstate_t* nextState = &scanner->nextState;
+
+  if(!scanner->needNext)
+  {
+    scanner->needNext = true;
+    U_ExpandState(scanner);
+    return true;
+  }
+
+  nextState->tokenLine = scanner->line;
+  nextState->tokenLinePosition = scanner->scanPos - scanner->lineStart;
+  nextState->token = TK_NoToken;
+  if(scanner->scanPos >= scanner->length)
+  {
+    U_ExpandState(scanner);
+    return false;
+  }
+
+  start = scanner->scanPos;
+  cur   = scanner->data[scanner->scanPos++];
+
+  while(scanner->scanPos < scanner->length)
+  {
+    cur = scanner->data[scanner->scanPos];
+
+    if(cur == ' ' || cur == '\t' || cur == '\n' || cur == '\r' || cur == 0)
+      break;
+    else
+      scanner->scanPos++;
+  }
+
+  U_SetString(&(nextState->string), scanner->data + start, scanner->scanPos - start);
+  U_ExpandState(scanner);
+  return true;
 }
 
 boolean U_GetNextToken(u_scanner_t* scanner, boolean   expandState)
@@ -464,7 +504,6 @@ boolean U_GetNextLineToken(u_scanner_t* scanner)
   return retval;
 }
 
-
 void U_ErrorToken(u_scanner_t* s, int token)
 {
   if (token < TK_NumSpecialTokens && s->token >= TK_Identifier && s->token < TK_NumSpecialTokens)
@@ -494,7 +533,7 @@ void PRINTF_ATTR(2, 0) U_Error(u_scanner_t* s, const char *msg, ...)
   va_start(ap, msg);
   M_vsnprintf(buffer, 1024, msg, ap);
   va_end(ap);
-  I_Error("%s:%d:%d:%s.", s->name, s->tokenLine, s->tokenLinePosition, buffer);
+  I_Error("%s:%d:%d:%s", s->name, s->tokenLine, s->tokenLinePosition, buffer);
 }
 
 boolean U_MustGetToken(u_scanner_t* s, char token)

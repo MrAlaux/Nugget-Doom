@@ -79,9 +79,12 @@ static boolean update_volume = false;
 
 typedef enum
 {
+    STATE_STARTUP,
+    STATE_SHUTDOWN,
+    STATE_EXIT,
+    STATE_STOPPING,
     STATE_STOPPED,
     STATE_PLAYING,
-    STATE_PAUSING,
     STATE_PAUSED
 } win_midi_state_t;
 
@@ -94,8 +97,11 @@ static UINT MidiDevice;
 static HMIDISTRM hMidiStream;
 static MIDIHDR MidiStreamHdr;
 static HANDLE hBufferReturnEvent;
-static HANDLE hExitEvent;
+static HANDLE hStoppedEvent;
 static HANDLE hPlayerThread;
+static CRITICAL_SECTION CriticalSection;
+
+#define EMIDI_DEVICE (1U << EMIDI_DEVICE_GENERAL_MIDI)
 
 static char **winmm_devices;
 static int winmm_devices_num;
@@ -141,13 +147,14 @@ static win_midi_song_t song;
 
 #define BUFFER_INITIAL_SIZE 8192
 
-#define PLAYER_THREAD_WAIT_TIME 3000
+#define PLAYER_THREAD_WAIT_TIME 4000
 
 typedef struct
 {
     byte *data;
     unsigned int size;
     unsigned int position;
+    boolean prepared;
 } buffer_t;
 
 static buffer_t buffer;
@@ -161,11 +168,9 @@ static buffer_t buffer;
 
 #define PADDED_SIZE(x) (((x) + sizeof(DWORD) - 1) & ~(sizeof(DWORD) - 1))
 
-static boolean initial_playback = false;
-
 // Check for midiStream errors.
 
-static void MidiError(verbosity_t severity, const char *prefix, DWORD dwError)
+static void MidiError(const char *prefix, DWORD dwError)
 {
     wchar_t werror[MAXERRORLENGTH];
     MMRESULT mmr;
@@ -174,12 +179,12 @@ static void MidiError(verbosity_t severity, const char *prefix, DWORD dwError)
     if (mmr == MMSYSERR_NOERROR)
     {
         char *error = M_ConvertWideToUtf8(werror);
-        I_Printf(severity, "%s: %s.", prefix, error);
+        I_Printf(VB_ERROR, "%s: %s.", prefix, error);
         free(error);
     }
     else
     {
-        I_Printf(severity, "%s: Unknown midiStream error.", prefix);
+        I_Printf(VB_ERROR, "%s: Unknown midiStream error.", prefix);
     }
 }
 
@@ -195,41 +200,44 @@ static void CALLBACK MidiStreamProc(HMIDIOUT hMidi, UINT uMsg,
     }
 }
 
-static void PrepareHeader(void)
+// Unprepare MIDI header. The calling thread must have exclusive access to the
+// shared resources in this function.
+
+static void UnprepareHeader(void)
 {
+    // Avoid ASan detection. Commentary by Microsoft: "It looks like
+    // midiOutPrepareHeader() allocates with HeapAlloc(), and then
+    // midiOutUnprepareHeader() deallocates with GlobalFree(GlobalHandle
+    // (...)). By design, this kind of allocator mismatch is an issue that ASan
+    // is designed to catch. It is theoretically possible for us to support
+    // this kind of code, but it’s not very high priority since it is undefined
+    // behavior, though it happens to work right now outside of ASan."
+    // https://developercommunity.visualstudio.com/t/1597288
+
+#ifndef __SANITIZE_ADDRESS__
     MIDIHDR *hdr = &MidiStreamHdr;
     MMRESULT mmr;
 
-    hdr->lpData = (LPSTR)buffer.data;
-    hdr->dwBytesRecorded = 0;
-    hdr->dwBufferLength = buffer.size;
-    mmr = midiOutPrepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
+    mmr = midiOutUnprepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
     if (mmr != MMSYSERR_NOERROR)
     {
-        MidiError(VB_ERROR, "midiOutPrepareHeader", mmr);
+        MidiError("midiOutUnprepareHeader", mmr);
     }
+#endif
 }
+
+// Allocate buffer. The calling thread must have exclusive access to the shared
+// resources in this function.
 
 static void AllocateBuffer(const unsigned int size)
 {
-    if (buffer.data)
-    {
-        MIDIHDR *hdr = &MidiStreamHdr;
-        MMRESULT mmr;
-
-        hdr->dwFlags &= ~MHDR_INQUEUE;
-        mmr = midiOutUnprepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
-        if (mmr != MMSYSERR_NOERROR)
-        {
-            MidiError(VB_ERROR, "midiOutUnprepareHeader", mmr);
-        }
-    }
-
     buffer.size = PADDED_SIZE(size);
     buffer.data = I_Realloc(buffer.data, buffer.size);
-
-    PrepareHeader();
 }
+
+// Pads the buffer with zeros so that an integral number of DWORDs are stored.
+// Required for long messages (SysEx). Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
 
 static void WriteBufferPad(void)
 {
@@ -238,8 +246,17 @@ static void WriteBufferPad(void)
     buffer.position = padding;
 }
 
+// Writes message data to buffer. Call this function from the MIDI thread only,
+// with exclusive access to shared resources.
+
 static void WriteBuffer(const byte *ptr, unsigned int size)
 {
+    if (buffer.prepared)
+    {
+        UnprepareHeader();
+        buffer.prepared = false;
+    }
+
     if (buffer.position + size >= buffer.size)
     {
         AllocateBuffer(size + buffer.size * 2);
@@ -249,20 +266,40 @@ static void WriteBuffer(const byte *ptr, unsigned int size)
     buffer.position += size;
 }
 
+// Streams out the current buffer. Call this function from the MIDI thread only,
+// with exclusive access to shared resources.
+
 static void StreamOut(void)
 {
     MIDIHDR *hdr = &MidiStreamHdr;
     MMRESULT mmr;
 
+    memset(hdr, 0, sizeof(*hdr));
     hdr->lpData = (LPSTR)buffer.data;
     hdr->dwBytesRecorded = buffer.position;
+    hdr->dwBufferLength = buffer.size;
+
+    // Reset buffer position even if midiStreamOut fails.
+    buffer.position = 0;
+
+    mmr = midiOutPrepareHeader((HMIDIOUT)hMidiStream, hdr, sizeof(MIDIHDR));
+    if (mmr != MMSYSERR_NOERROR)
+    {
+        MidiError("midiOutPrepareHeader", mmr);
+        return;
+    }
+
+    buffer.prepared = true;
 
     mmr = midiStreamOut(hMidiStream, hdr, sizeof(MIDIHDR));
     if (mmr != MMSYSERR_NOERROR)
     {
-        MidiError(VB_ERROR, "midiStreamOut", mmr);
+        MidiError("midiStreamOut", mmr);
     }
 }
+
+// Writes a short MIDI message. Call this function from the MIDI thread only,
+// with exclusive access to shared resources.
 
 static void SendShortMsg(unsigned int delta_time, byte status, byte channel,
                          byte param1, byte param2)
@@ -274,6 +311,9 @@ static void SendShortMsg(unsigned int delta_time, byte status, byte channel,
     WriteBuffer((byte *)&native_event, sizeof(native_event_t));
 }
 
+// Writes a short MIDI message (from an event). Call this function from the MIDI
+// thread only, with exclusive access to shared resources.
+
 static void SendChannelMsg(unsigned int delta_time, const midi_event_t *event,
                            boolean use_param2)
 {
@@ -281,6 +321,9 @@ static void SendChannelMsg(unsigned int delta_time, const midi_event_t *event,
                  event->data.channel.param1,
                  use_param2 ? event->data.channel.param2 : 0);
 }
+
+// Writes a long MIDI message (SysEx). Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
 
 static void SendLongMsg(unsigned int delta_time, const byte *ptr,
                         unsigned int length)
@@ -294,6 +337,10 @@ static void SendLongMsg(unsigned int delta_time, const byte *ptr,
     WriteBufferPad();
 }
 
+// Writes an RPN message set to NULL (0x7F). Prevents accidental data entry.
+// Call this function from the MIDI thread only, with exclusive access to shared
+// resources.
+
 static void SendNullRPN(unsigned int delta_time, const midi_event_t *event)
 {
     const byte channel = event->data.channel.channel;
@@ -302,6 +349,9 @@ static void SendNullRPN(unsigned int delta_time, const midi_event_t *event)
     SendShortMsg(0, MIDI_EVENT_CONTROLLER, channel,
                  MIDI_CONTROLLER_RPN_MSB, MIDI_RPN_NULL);
 }
+
+// Writes a NOP message (ticks). Call this function from the MIDI thread only,
+// with exclusive access to shared resources.
 
 static void SendNOPMsg(unsigned int delta_time)
 {
@@ -312,12 +362,18 @@ static void SendNOPMsg(unsigned int delta_time)
     WriteBuffer((byte *)&native_event, sizeof(native_event_t));
 }
 
+// Writes a NOP message (milliseconds). Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
+
 static void SendDelayMsg(unsigned int time_ms)
 {
     // Convert ms to ticks (see "Standard MIDI Files 1.0" page 14).
     const unsigned int ticks = (float)time_ms * 1000 * timediv / tempo + 0.5f;
     SendNOPMsg(ticks);
 }
+
+// Writes a tempo MIDI meta message. Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
 
 static void UpdateTempo(unsigned int delta_time, const midi_event_t *event)
 {
@@ -331,6 +387,10 @@ static void UpdateTempo(unsigned int delta_time, const midi_event_t *event)
     native_event.dwEvent = MAKE_EVT(tempo, 0, 0, MEVT_TEMPO);
     WriteBuffer((byte *)&native_event, sizeof(native_event_t));
 }
+
+// Writes a MIDI volume message. The value is scaled by the volume slider. Call
+// this function from the MIDI thread only, with exclusive access to shared
+// resources.
 
 static void SendManualVolumeMsg(unsigned int delta_time, byte channel,
                                 byte volume)
@@ -350,11 +410,19 @@ static void SendManualVolumeMsg(unsigned int delta_time, byte channel,
     channel_volume[channel] = volume;
 }
 
+// Writes a MIDI volume message (from an event). The value is scaled by the
+// volume slider. Call this function from the MIDI thread only, with exclusive
+// access to shared resources.
+
 static void SendVolumeMsg(unsigned int delta_time, const midi_event_t *event)
 {
     SendManualVolumeMsg(delta_time, event->data.channel.channel,
                         event->data.channel.param2);
 }
+
+// Sets each channel to its saved volume level, scaled by the volume slider.
+// Call this function from the MIDI thread only, with exclusive access to shared
+// resources.
 
 static void UpdateVolume(void)
 {
@@ -366,6 +434,10 @@ static void UpdateVolume(void)
     }
 }
 
+// Sets each channel to the default volume level, scaled by the volume slider.
+// Call this function from the MIDI thread only, with exclusive access to shared
+// resources.
+
 static void ResetVolume(void)
 {
     int i;
@@ -375,6 +447,11 @@ static void ResetVolume(void)
         SendManualVolumeMsg(0, i, DEFAULT_VOLUME);
     }
 }
+
+// Writes "notes off" and "sound off" messages for each channel. Some devices
+// may support only one or the other. Held notes (sustained, etc.) are released
+// to prevent hanging notes. Call this function from the MIDI thread only, with
+// exclusive access to shared resources.
 
 static void SendNotesSoundOff(void)
 {
@@ -386,6 +463,10 @@ static void SendNotesSoundOff(void)
         SendShortMsg(0, MIDI_EVENT_CONTROLLER, i, MIDI_CONTROLLER_ALL_SOUND_OFF, 0);
     }
 }
+
+// Resets commonly used controllers. This is only for a reset type of "none" for
+// devices that don't support SysEx resets. Call this function from the MIDI
+// thread only, with exclusive access to shared resources.
 
 static void ResetControllers(void)
 {
@@ -403,6 +484,10 @@ static void ResetControllers(void)
         SendShortMsg(0, MIDI_EVENT_CONTROLLER, i, MIDI_CONTROLLER_CHORUS, 0);
     }
 }
+
+// Resets the pitch bend sensitivity for each channel. This must be sent during
+// a reset due to an MS GS Wavetable Synth bug. Call this function from the MIDI
+// thread only, with exclusive access to shared resources.
 
 static void ResetPitchBendSensitivity(void)
 {
@@ -424,11 +509,12 @@ static void ResetPitchBendSensitivity(void)
     }
 }
 
+// Resets the MIDI device. Call this function before each song starts and once
+// at shut down. Call this function from the MIDI thread only, with exclusive
+// access to shared resources.
+
 static void ResetDevice(void)
 {
-    // Send notes/sound off prior to reset to prevent volume spikes.
-    SendNotesSoundOff();
-
     MIDI_ResetFallback();
     use_fallback = false;
 
@@ -456,10 +542,14 @@ static void ResetDevice(void)
     ResetPitchBendSensitivity();
 
     // Reset volume (initial playback or on shutdown if no SysEx reset).
-    if (initial_playback || winmm_reset_type == RESET_TYPE_NONE)
+    // Scale by slider on initial playback, max on shutdown.
+    if (win_midi_state == STATE_STARTUP)
     {
-        // Scale by slider on initial playback, max on shutdown.
-        volume_factor = initial_playback ? volume_factor : 1.0f;
+        ResetVolume();
+    }
+    else if (winmm_reset_type == RESET_TYPE_NONE)
+    {
+        volume_factor = 1.0f;
         ResetVolume();
     }
 
@@ -469,6 +559,12 @@ static void ResetDevice(void)
         SendDelayMsg(winmm_reset_delay);
     }
 }
+
+// Normally, volume is controlled by channel volume messages. Roland defined a
+// special SysEx message called "part level" that is equivalent to this. MS GS
+// Wavetable Synth ignores these messages, but other MIDI devices support them.
+// Returns true if there is a match. Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
 
 static boolean IsPartLevel(const byte *msg, unsigned int length)
 {
@@ -494,6 +590,10 @@ static boolean IsPartLevel(const byte *msg, unsigned int length)
 
     return false;
 }
+
+// Checks if the current SysEx message matches any known SysEx reset message.
+// Returns true if there is a match. Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
 
 static boolean IsSysExReset(const byte *msg, unsigned int length)
 {
@@ -598,6 +698,9 @@ static boolean IsSysExReset(const byte *msg, unsigned int length)
     return false;
 }
 
+// Writes a MIDI SysEx message. Call this function from the MIDI thread only,
+// with exclusive access to shared resources.
+
 static void SendSysExMsg(unsigned int delta_time, const midi_event_t *event)
 {
     native_event_t native_event;
@@ -654,6 +757,10 @@ static void SendSysExMsg(unsigned int delta_time, const midi_event_t *event)
     }
 }
 
+// Writes a MIDI program change message. If applicable, emulates capital tone
+// fallback to fix invalid instruments. Call this function from the MIDI thread
+// only, with exclusive access to shared resources.
+
 static void SendProgramMsg(unsigned int delta_time, byte channel, byte program,
                            const midi_fallback_t *fallback)
 {
@@ -677,6 +784,9 @@ static void SendProgramMsg(unsigned int delta_time, byte channel, byte program,
     }
 }
 
+// Sets a Final Fantasy or RPG Maker loop point. Call this function from the
+// MIDI thread only, with exclusive access to shared resources.
+
 static void SetLoopPoint(void)
 {
     unsigned int i;
@@ -689,6 +799,10 @@ static void SetLoopPoint(void)
     }
     song.saved_elapsed_time = song.elapsed_time;
 }
+
+// Checks if the MIDI meta message contains a Final Fantasy loop marker. Call
+// this function from the MIDI thread only, with exclusive access to shared
+// resources.
 
 static void CheckFFLoop(const midi_event_t *event)
 {
@@ -705,6 +819,9 @@ static void CheckFFLoop(const midi_event_t *event)
     }
 }
 
+// Writes an EMIDI message. Call this function from the MIDI thread only, with
+// exclusive access to shared resources.
+
 static void SendEMIDI(unsigned int delta_time, const midi_event_t *event,
                       win_midi_track_t *track, const midi_fallback_t *fallback)
 {
@@ -712,7 +829,7 @@ static void SendEMIDI(unsigned int delta_time, const midi_event_t *event,
     unsigned int flag;
     int count;
 
-    switch ((int)event->event_type)
+    switch (event->data.channel.param1)
     {
         case EMIDI_CONTROLLER_TRACK_DESIGNATION:
             if (track->elapsed_time < timediv)
@@ -726,7 +843,7 @@ static void SendEMIDI(unsigned int delta_time, const midi_event_t *event,
                 }
                 else if (flag <= EMIDI_DEVICE_ULTRASOUND)
                 {
-                    track->emidi_device_flags |= 1 << flag;
+                    track->emidi_device_flags |= 1U << flag;
                     track->emidi_designated = true;
                 }
             }
@@ -750,7 +867,7 @@ static void SendEMIDI(unsigned int delta_time, const midi_event_t *event,
 
                 if (flag <= EMIDI_DEVICE_ULTRASOUND)
                 {
-                    track->emidi_device_flags &= ~(1 << flag);
+                    track->emidi_device_flags &= ~(1U << flag);
                 }
             }
             SendNOPMsg(delta_time);
@@ -840,12 +957,11 @@ static void SendEMIDI(unsigned int delta_time, const midi_event_t *event,
             }
             SendNOPMsg(delta_time);
             break;
-
-        default:
-            SendNOPMsg(delta_time);
-            break;
     }
 }
+
+// Writes a MIDI meta message. Call this function from the MIDI thread only,
+// with exclusive access to shared resources.
 
 static void SendMetaMsg(unsigned int delta_time, const midi_event_t *event,
                         win_midi_track_t *track)
@@ -874,6 +990,9 @@ static void SendMetaMsg(unsigned int delta_time, const midi_event_t *event,
             break;
     }
 }
+
+// AddToBuffer function for vanilla (DMX MPU-401) compatibility level. Do not
+// call this function directly. See the AddToBuffer function pointer.
 
 static boolean AddToBuffer_Vanilla(unsigned int delta_time,
                                    const midi_event_t *event,
@@ -943,6 +1062,9 @@ static boolean AddToBuffer_Vanilla(unsigned int delta_time,
     return true;
 }
 
+// AddToBuffer function for standard and full MIDI compatibility levels. Do not
+// call this function directly. See the AddToBuffer function pointer.
+
 static boolean AddToBuffer_Standard(unsigned int delta_time,
                                     const midi_event_t *event,
                                     win_midi_track_t *track)
@@ -972,8 +1094,7 @@ static boolean AddToBuffer_Standard(unsigned int delta_time,
             return true;
     }
 
-    if (track->emidi_designated &&
-        (EMIDI_DEVICE_GENERAL_MIDI & ~track->emidi_device_flags))
+    if (track->emidi_designated && (EMIDI_DEVICE & ~track->emidi_device_flags))
     {
         // Send NOP if this device has been excluded from this track.
         SendNOPMsg(delta_time);
@@ -1158,9 +1279,18 @@ static boolean AddToBuffer_Standard(unsigned int delta_time,
     return true;
 }
 
+// Function pointer determined by the desired MIDI compatibility level. Set
+// during initialization by the main thread, then called from the MIDI thread
+// only. The calling thread must have exclusive access to the shared resources
+// in this function.
+
 static boolean (*AddToBuffer)(unsigned int delta_time,
                               const midi_event_t *event,
                               win_midi_track_t *track) = AddToBuffer_Standard;
+
+// Restarts a song that uses a Final Fantasy or RPG Maker loop point. Call this
+// function from the MIDI thread only, with exclusive access to shared
+// resources.
 
 static void RestartLoop(void)
 {
@@ -1174,6 +1304,9 @@ static void RestartLoop(void)
     }
     song.elapsed_time = song.saved_elapsed_time;
 }
+
+// Restarts a song that uses standard looping. Call this function from the MIDI
+// thread only, with exclusive access to shared resources.
 
 static void RestartTracks(void)
 {
@@ -1192,6 +1325,12 @@ static void RestartTracks(void)
     }
     song.elapsed_time = 0;
 }
+
+// The controllers "EMIDI track exclusion" and "RPG Maker loop point" share the
+// same number (CC#111) and are not compatible with each other. As a workaround,
+// allow an RPG Maker loop point only if no other EMIDI events are present. Call
+// this function from the MIDI thread only, before the song starts, with
+// exclusive access to shared resources.
 
 static boolean IsRPGLoop(void)
 {
@@ -1231,51 +1370,14 @@ static boolean IsRPGLoop(void)
     return (num_rpg_events == 1 && num_emidi_events == 0);
 }
 
+// Fills the output buffer with events from the current song and then streams it
+// out. Call this function from the MIDI thread only, with exclusive access to
+// shared resources.
+
 static void FillBuffer(void)
 {
     unsigned int i;
     int num_events;
-
-    buffer.position = 0;
-
-    if (initial_playback)
-    {
-        ResetDevice();
-        StreamOut();
-        song.rpg_loop = IsRPGLoop();
-        initial_playback = false;
-        return;
-    }
-
-    if (update_volume)
-    {
-        update_volume = false;
-        UpdateVolume();
-        StreamOut();
-        return;
-    }
-
-    switch (win_midi_state)
-    {
-        case STATE_PLAYING:
-            break;
-
-        case STATE_PAUSING:
-            // Send notes/sound off to prevent hanging notes.
-            SendNotesSoundOff();
-            StreamOut();
-            win_midi_state = STATE_PAUSED;
-            return;
-
-        case STATE_PAUSED:
-            // Send a NOP every 100 ms while paused.
-            SendDelayMsg(100);
-            StreamOut();
-            return;
-
-        case STATE_STOPPED:
-            return;
-    }
 
     for (num_events = 0; num_events < STREAM_MAX_EVENTS; )
     {
@@ -1358,25 +1460,109 @@ static void FillBuffer(void)
 
 // The Windows API documentation states: "Applications should not call any
 // multimedia functions from inside the callback function, as doing so can
-// cause a deadlock." We use thread to avoid possible deadlocks.
+// cause a deadlock." We use a thread to avoid possible deadlocks.
 
 static DWORD WINAPI PlayerProc(void)
 {
-    HANDLE events[2] = { hBufferReturnEvent, hExitEvent };
+    boolean keep_going = true;
 
-    while (1)
+    while (keep_going)
     {
-        switch (WaitForMultipleObjects(2, events, FALSE, INFINITE))
+        if (WaitForSingleObject(hBufferReturnEvent, INFINITE) != WAIT_OBJECT_0)
         {
-            case WAIT_OBJECT_0:
+            continue;
+        }
+
+        // The MIDI thread must have exclusive access to shared resources until
+        // the end of the current loop iteration or when the thread exits.
+        EnterCriticalSection(&CriticalSection);
+
+        switch (win_midi_state)
+        {
+            case STATE_STARTUP:
+                ResetDevice();
+                StreamOut();
+                song.rpg_loop = IsRPGLoop();
+                win_midi_state = STATE_PLAYING;
+                break;
+
+            case STATE_SHUTDOWN:
+                // Send notes/sound off prior to reset to prevent volume spikes.
+                SendNotesSoundOff();
+                ResetDevice();
+                StreamOut();
+                win_midi_state = STATE_EXIT;
+                break;
+
+            case STATE_EXIT:
+                keep_going = false;
+                break;
+
+            case STATE_PLAYING:
+                if (update_volume)
+                {
+                    UpdateVolume();
+                    StreamOut();
+                    update_volume = false;
+                    break;
+                }
                 FillBuffer();
                 break;
 
-            case WAIT_OBJECT_0 + 1:
-                return 0;
+            case STATE_STOPPING:
+                // Send notes/sound off to prevent hanging notes.
+                SendNotesSoundOff();
+                StreamOut();
+                win_midi_state = STATE_STOPPED;
+                break;
+
+            case STATE_STOPPED:
+                SetEvent(hStoppedEvent);
+                break;
+
+            case STATE_PAUSED:
+                break;
         }
+
+        LeaveCriticalSection(&CriticalSection);
     }
+
     return 0;
+}
+
+// Restarts the MIDI stream. Call this function from the main thread only, with
+// exclusive access to shared resources.
+
+static void StreamStart(void)
+{
+    MMRESULT mmr;
+
+    SetEvent(hBufferReturnEvent);
+
+    mmr = midiStreamRestart(hMidiStream);
+    if (mmr != MMSYSERR_NOERROR)
+    {
+        MidiError("midiStreamRestart", mmr);
+    }
+}
+
+// Turns off notes but does not release all held ones (use SendNotesSoundOff()
+// to prevent hanging notes). The output buffer is returned to the callback
+// function and flagged as MHDR_DONE. Call this function from the main thread
+// only, with exclusive access to shared resources.
+
+static void StreamStop(void)
+{
+    MMRESULT mmr;
+
+    mmr = midiStreamStop(hMidiStream);
+    if (mmr != MMSYSERR_NOERROR)
+    {
+        MidiError("midiStreamStop", mmr);
+    }
+
+    ResetEvent(hBufferReturnEvent);
+    ResetEvent(hStoppedEvent);
 }
 
 static void GetDevices(void)
@@ -1419,7 +1605,7 @@ static boolean I_WIN_InitMusic(int device)
 
         for (i = 0; i < winmm_devices_num; ++i)
         {
-            if (!strcasecmp(winmm_devices[i], winmm_device))
+            if (!strncasecmp(winmm_devices[i], winmm_device, MAXPNAMELEN))
             {
                 device = i;
                 break;
@@ -1446,28 +1632,23 @@ static boolean I_WIN_InitMusic(int device)
                          CALLBACK_FUNCTION);
     if (mmr != MMSYSERR_NOERROR)
     {
-        MidiError(VB_ERROR, "midiStreamOpen", mmr);
+        MidiError("midiStreamOpen", mmr);
         hMidiStream = NULL;
         return false;
     }
 
-    if (buffer.data == NULL)
-    {
-        AllocateBuffer(BUFFER_INITIAL_SIZE);
-    }
-    else
-    {
-        PrepareHeader();
-    }
+    AllocateBuffer(BUFFER_INITIAL_SIZE);
 
     hBufferReturnEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    hExitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    hStoppedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    hPlayerThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PlayerProc,
+                                 0, 0, 0);
+    SetThreadPriority(hPlayerThread, THREAD_PRIORITY_TIME_CRITICAL);
+    InitializeCriticalSectionAndSpinCount(&CriticalSection, 1024);
 
     AddToBuffer = (winmm_complevel == COMP_VANILLA) ? AddToBuffer_Vanilla
                                                     : AddToBuffer_Standard;
     MIDI_InitFallback();
-
-    win_midi_state = STATE_STOPPED;
 
     I_Printf(VB_INFO, "Windows MIDI Init: Using '%s'.", winmm_device);
 
@@ -1483,66 +1664,43 @@ static void I_WIN_SetMusicVolume(int volume)
         // Ignore holding key down in volume menu.
         return;
     }
-
     last_volume = volume;
 
+    EnterCriticalSection(&CriticalSection);
     volume_factor = sqrtf((float)volume / 15);
-
     update_volume = (song.file != NULL);
+    LeaveCriticalSection(&CriticalSection);
 }
 
 static void I_WIN_StopSong(void *handle)
 {
-    MMRESULT mmr;
-
-    if (!hPlayerThread)
-    {
-        return;
-    }
-
-    SetEvent(hExitEvent);
-    WaitForSingleObject(hPlayerThread, PLAYER_THREAD_WAIT_TIME);
-    CloseHandle(hPlayerThread);
-    hPlayerThread = NULL;
-    win_midi_state = STATE_STOPPED;
-
     if (!hMidiStream)
     {
         return;
     }
 
-    mmr = midiStreamStop(hMidiStream);
-    if (mmr != MMSYSERR_NOERROR)
-    {
-        MidiError(VB_ERROR, "midiStreamStop", mmr);
-    }
+    EnterCriticalSection(&CriticalSection);
+    StreamStop();
+    win_midi_state = STATE_STOPPING;
+    StreamStart();
+    LeaveCriticalSection(&CriticalSection);
+
+    WaitForSingleObject(hStoppedEvent, PLAYER_THREAD_WAIT_TIME);
+    StreamStop();
 }
 
 static void I_WIN_PlaySong(void *handle, boolean looping)
 {
-    MMRESULT mmr;
-
     if (!hMidiStream)
     {
         return;
     }
 
+    EnterCriticalSection(&CriticalSection);
     song.looping = looping;
-
-    hPlayerThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PlayerProc,
-                                 0, 0, 0);
-    SetThreadPriority(hPlayerThread, THREAD_PRIORITY_TIME_CRITICAL);
-
-    initial_playback = true;
-    win_midi_state = STATE_PLAYING;
-
-    SetEvent(hBufferReturnEvent);
-
-    mmr = midiStreamRestart(hMidiStream);
-    if (mmr != MMSYSERR_NOERROR)
-    {
-        MidiError(VB_ERROR, "midiStreamRestart", mmr);
-    }
+    win_midi_state = STATE_STARTUP;
+    StreamStart();
+    LeaveCriticalSection(&CriticalSection);
 }
 
 static void I_WIN_PauseSong(void *handle)
@@ -1552,7 +1710,11 @@ static void I_WIN_PauseSong(void *handle)
         return;
     }
 
-    win_midi_state = STATE_PAUSING;
+    I_WIN_StopSong(NULL);
+
+    EnterCriticalSection(&CriticalSection);
+    win_midi_state = STATE_PAUSED;
+    LeaveCriticalSection(&CriticalSection);
 }
 
 static void I_WIN_ResumeSong(void *handle)
@@ -1562,7 +1724,13 @@ static void I_WIN_ResumeSong(void *handle)
         return;
     }
 
-    win_midi_state = STATE_PLAYING;
+    EnterCriticalSection(&CriticalSection);
+    if (win_midi_state == STATE_PAUSED)
+    {
+        win_midi_state = STATE_PLAYING;
+        StreamStart();
+    }
+    LeaveCriticalSection(&CriticalSection);
 }
 
 static void *I_WIN_RegisterSong(void *data, int len)
@@ -1619,7 +1787,7 @@ static void *I_WIN_RegisterSong(void *data, int len)
                              MIDIPROP_SET | MIDIPROP_TIMEDIV);
     if (mmr != MMSYSERR_NOERROR)
     {
-        MidiError(VB_ERROR, "midiStreamProperty", mmr);
+        MidiError("midiStreamProperty", mmr);
         return NULL;
     }
     timediv = prop_timediv.dwTimeDiv;
@@ -1631,7 +1799,7 @@ static void *I_WIN_RegisterSong(void *data, int len)
                              MIDIPROP_SET | MIDIPROP_TEMPO);
     if (mmr != MMSYSERR_NOERROR)
     {
-        MidiError(VB_ERROR, "midiStreamProperty", mmr);
+        MidiError("midiStreamProperty", mmr);
         return NULL;
     }
     tempo = prop_tempo.dwTempo;
@@ -1642,9 +1810,6 @@ static void *I_WIN_RegisterSong(void *data, int len)
     {
         song.tracks[i].iter = MIDI_IterateTrack(song.file, i);
     }
-
-    ResetEvent(hBufferReturnEvent);
-    ResetEvent(hExitEvent);
 
     return (void *)1;
 }
@@ -1690,36 +1855,41 @@ static void I_WIN_ShutdownMusic(void)
         return;
     }
 
-    I_WIN_StopSong(NULL);
+    EnterCriticalSection(&CriticalSection);
+    StreamStop();
     I_WIN_UnRegisterSong(NULL);
+    win_midi_state = STATE_SHUTDOWN;
+    StreamStart();
+    LeaveCriticalSection(&CriticalSection);
 
-    // Reset device at shutdown.
-    buffer.position = 0;
-    ResetDevice();
-    StreamOut();
-    mmr = midiStreamRestart(hMidiStream);
-    if (mmr != MMSYSERR_NOERROR)
+    if (WaitForSingleObject(hPlayerThread, PLAYER_THREAD_WAIT_TIME) == WAIT_OBJECT_0)
     {
-        MidiError(VB_WARNING, "midiStreamRestart", mmr);
+        CloseHandle(hPlayerThread);
+        hPlayerThread = NULL;
     }
-    WaitForSingleObject(hBufferReturnEvent, PLAYER_THREAD_WAIT_TIME);
-    mmr = midiStreamStop(hMidiStream);
-    if (mmr != MMSYSERR_NOERROR)
-    {
-        MidiError(VB_WARNING, "midiStreamStop", mmr);
-    }
+    StreamStop();
 
-    buffer.position = 0;
+    if (buffer.prepared)
+    {
+        UnprepareHeader();
+        buffer.prepared = false;
+    }
 
     mmr = midiStreamClose(hMidiStream);
     if (mmr != MMSYSERR_NOERROR)
     {
-        MidiError(VB_WARNING, "midiStreamClose", mmr);
+        MidiError("midiStreamClose", mmr);
     }
     hMidiStream = NULL;
 
+    free(buffer.data);
+    buffer.data = NULL;
+    buffer.size = 0;
+    buffer.position = 0;
+
     CloseHandle(hBufferReturnEvent);
-    CloseHandle(hExitEvent);
+    CloseHandle(hStoppedEvent);
+    DeleteCriticalSection(&CriticalSection);
 }
 
 static int I_WIN_DeviceList(const char *devices[], int size, int *current_device)
@@ -1730,10 +1900,16 @@ static int I_WIN_DeviceList(const char *devices[], int size, int *current_device
 
     GetDevices();
 
+    if (winmm_devices_num == 0 && size > 0)
+    {
+        devices[0] = "Microsoft MIDI Mapper";
+        return 1;
+    }
+
     for (i = 0; i < winmm_devices_num && i < size; ++i)
     {
         devices[i] = winmm_devices[i];
-        if (!strcasecmp(winmm_devices[i], winmm_device))
+        if (!strncasecmp(winmm_devices[i], winmm_device, MAXPNAMELEN))
         {
             *current_device = i;
         }

@@ -27,6 +27,7 @@
 
 ## Changes
 
+- **Merged changes from [Woof! 12.0.1](https://github.com/fabiangreffrath/woof/releases/tag/woof_12.0.1)**
 - **NUGHUD:**
   - Let Ammo, Health and Armor icons fall back to vanilla sprites;
   - Made Patches and icons alignable horizontally and vertically;
