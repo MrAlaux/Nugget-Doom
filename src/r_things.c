@@ -848,7 +848,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // [crispy] free look
   vis->texturemid += (centery - viewheight/2) * pspriteiscale
-                     + (STRICTMODE(st_crispyhud) ? nughud.weapheight*FRACUNIT : 0); // [Nugget] NUGHUD
+                     - (STRICTMODE(st_crispyhud) ? nughud.weapheight*FRACUNIT : 0); // [Nugget] NUGHUD
 
   if (STRICTMODE(hide_weapon || chasecam_on)) // [Nugget] Chasecam
     return;

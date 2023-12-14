@@ -204,7 +204,7 @@ nughud_patch2_name "STARMS"
 
 ### Additional integer properties
 
-- `nughud_weapheight`: **vertical offset for weapon sprites**, in the [-32, 32] range; greater values shift the sprites upwards.
+- `nughud_weapheight`: **vertical offset for weapon sprites**, in the [-32, 32] range; greater values shift the sprites downwards.
 - `nughud_viewoffset`: **vertical offset for the view window**, in the [-16, 16] range; greater values shift the view downwards.
 
 ---

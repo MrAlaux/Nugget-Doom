@@ -27,12 +27,15 @@
 
 ## Changes
 
-- **Merged changes from [Woof! 12.0.1](https://github.com/fabiangreffrath/woof/releases/tag/woof_12.0.1)**
+- **Merged changes from the following Woof! releases:**
+  - [**12.0.1**](https://github.com/fabiangreffrath/woof/releases/tag/woof_12.0.1);
+  - [**12.0.2**](https://github.com/fabiangreffrath/woof/releases/tag/woof_12.0.2).
 - **NUGHUD:**
   - Let Ammo, Health and Armor icons fall back to vanilla sprites;
   - Made Patches and icons alignable horizontally and vertically;
   - Disabled Armor icon by default;
   - Changed `weapheight` range from [0, 200] to [-32, 32].
+  - Inverted effect of `weapheight` (greater values now shift the sprites downwards)¹ for consistency with other properties;
   - Changed `secret_y` default to 84, to match Woof!.
 - **Speed of non-Melt wipes is now independent of resolution**
 - **Implemented Teleporter Zoom for multiplayer respawning**
@@ -42,10 +45,13 @@
 - **Current resolution is now reported by some video-related menu items**
 - **Disabled `input_spy` and `input_menu_reloadlevel` when typing in Chat**
 
+**1\.** This change will affect existing NUGHUDs. Negating the value of `weapheight` will restore the intended effect.
+
 ## Bug Fixes
 
 - **Further corrected view pitch as FOV changes**
 - **Disabled teleport-to-Automap-pointer during non-Casual Play**
+- **Corrupted screenshots with integer scaling enabled** [by @ceski-1]
 - **Excess speed when airborne with noclip enabled** [thanks @kitchen-ace]
 - **Blazing door sound fix not applying to Boom doors**
 - **Teleporter Zoom and BFG "explosion" shake affecting all players in multiplayer**

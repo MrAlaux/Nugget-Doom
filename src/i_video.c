@@ -56,6 +56,7 @@ boolean fullscreen;
 boolean exclusive_fullscreen;
 int widescreen; // widescreen mode
 boolean integer_scaling; // [FG] force integer scales
+static boolean use_scale; // [Nugget]
 boolean vga_porch_flash; // emulate VGA "porch" behaviour
 boolean smooth_scaling;
 
@@ -830,9 +831,9 @@ boolean I_WritePNGfile(char *filename)
   // [FG] adjust cropping rectangle if necessary
   SDL_GetRendererOutputSize(renderer, &rect.w, &rect.h);
   // [Nugget] Check for stretch-to-fit
-  if (!stretch_to_fit || integer_scaling)
+  if (!stretch_to_fit || use_scale)
   {
-    if (integer_scaling)
+    if (use_scale)
     {
       int temp1, temp2, scale;
       temp1 = rect.w;
@@ -1242,7 +1243,7 @@ static void I_ResetGraphicsMode(void)
     // [FG] force integer scales
     if (SDL_GetCurrentDisplayMode(video_display, &mode) == 0)
     {
-        const boolean use_scale = integer_scaling && w <= mode.w && actualheight <= mode.h;
+        use_scale = integer_scaling && w <= mode.w && actualheight <= mode.h;
         SDL_RenderSetIntegerScale(renderer, use_scale ? SDL_TRUE : SDL_FALSE);
     }
 
