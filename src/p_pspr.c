@@ -792,7 +792,10 @@ void A_Punch(player_t *player, pspdef_t *psp)
 
   // [Nugget] Direct Vertical Aiming for melee
   if (vertical_aiming == VERTAIM_DIRECT)
-  { slope = player->slope; }
+  {
+    slope = player->slope;
+    linetarget = NULL;
+  }
   else {
     // killough 8/2/98: make autoaiming prefer enemies
     if (demo_version<203 ||
@@ -842,7 +845,10 @@ void A_Saw(player_t *player, pspdef_t *psp)
 
   // [Nugget] Direct Vertical Aiming for melee
   if (vertical_aiming == VERTAIM_DIRECT)
-  { slope = player->slope; }
+  {
+    slope = player->slope;
+    linetarget = NULL;
+  }
   else {
     // killough 8/2/98: make autoaiming prefer enemies
     if (demo_version<203 ||
@@ -1582,7 +1588,10 @@ void A_WeaponMeleeAttack(player_t *player, pspdef_t *psp)
 
   // [Nugget] Direct Vertical Aiming for melee
   if (vertical_aiming == VERTAIM_DIRECT)
-  { slope = player->slope; }
+  {
+    slope = player->slope;
+    linetarget = NULL;
+  }
   else {
     // make autoaim prefer enemies
     slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND);

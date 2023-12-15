@@ -1933,7 +1933,7 @@ void HU_Ticker(void)
   if (plr->eventtics) { plr->eventtics--; }
 
   // update crosshair properties
-  if (hud_crosshair)
+  if (hud_crosshair_on) // [Nugget] Use crosshair toggle
     HU_UpdateCrosshair();
 }
 

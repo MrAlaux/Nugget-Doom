@@ -3623,7 +3623,7 @@ default_t defaults[] = {
   { // [Nugget] Crosshair type
     "hud_crosshair",
     (config_t *) &hud_crosshair, NULL,
-    {0}, {1,HU_CROSSHAIRS-1}, number, ss_stat, wad_no,
+    {1}, {1,HU_CROSSHAIRS-1}, number, ss_stat, wad_no,
     "crosshair type"
   },
 
