@@ -930,8 +930,16 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean dropoff)
   if (!P_CheckPosition(thing, x, y))
     return false;   // solid wall or thing
 
-  // [Nugget] Over/Under: if move was valid, set new over/under mobjs
-  P_SetOverUnderMobjs(thing);
+  // [Nugget] Over/Under
+  if (casual_play && over_under)
+  {
+    // `tmfloorz` may have changed, so make sure the thing fits
+    if (p_above_tmthing && (p_above_tmthing->z < (tmfloorz + thing->height)))
+    { return false; }
+
+    // If move was valid, set new over/under mobjs
+    P_SetOverUnderMobjs(thing);
+  }
 
   if (!(thing->flags & MF_NOCLIP))
     {
