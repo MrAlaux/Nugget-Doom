@@ -627,9 +627,10 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   mousex = mousex2 = mousey = mousey2 = 0;
   
   // [Nugget] Decrease the intensity of some movements if zoomed in
-  if (!strictmode) {
+  if (!strictmode)
+  {
     const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-  
+
     if (zoom) {
       const float divisor = fov / MAX(1, fov + zoom);
       if (divisor > 1) {
@@ -829,10 +830,19 @@ static void G_DoLoadLevel(void)
         }
     }
 
-  // [Nugget] Minimap
+  // [Nugget] ----------------------------------------------------------------
+
+  // Minimap
   if (minimap_was_on) {
     AM_ChangeMode(AM_MINI);
     minimap_was_on = false;
+  }
+
+  // Alt. intermission background
+  if (WI_UsingAltInterpic()) {
+    fovchange = true;
+    R_SetViewSize(screenblocks);
+    R_ExecuteSetViewSize();
   }
 }
 
@@ -1234,7 +1244,6 @@ static void G_PlayerFinishLevel(int player)
   player_t *p = &players[player];
   memset(p->powers, 0, sizeof p->powers);
   memset(p->cards, 0, sizeof p->cards);
-  memset(p->keyblinkkeys, 0, sizeof (p->keyblinkkeys)); // [Nugget]: [crispy] blinking key or skull in the status bar
   p->mo->flags &= ~MF_SHADOW;   // cancel invisibility
   p->extralight = 0;      // cancel gun flashes
   p->fixedcolormap = 0;   // cancel ir gogles
@@ -1245,11 +1254,14 @@ static void G_PlayerFinishLevel(int player)
   p->centering = false;
   p->slope = 0;
   p->recoilpitch = p->oldrecoilpitch = 0;
-  // [Nugget] Reset more additional player properties
+
+  // [Nugget] Reset more additional player properties ------------------------
+
   p->mo->height = p->mo->info->height;
   p->mo->intflags &= ~MIF_CROUCHING;
   p->jumptics = p->crouchoffset = 0;
   p->oldimpactpitch = p->impactpitch = 0;
+  memset(p->keyblinkkeys, 0, sizeof (p->keyblinkkeys)); // [crispy] blinking key or skull in the status bar
 }
 
 // [crispy] format time for level statistics
@@ -1359,8 +1371,10 @@ static void G_DoCompleted(void)
     if (playeringame[i])
       G_PlayerFinishLevel(i);        // take away cards and stuff
 
-  if (automapactive) {
+  if (automapactive)
+  {
     if (automapactive == AM_MINI) { minimap_was_on = true; }
+
     AM_ChangeMode(AM_OFF);
   }
 
@@ -1543,6 +1557,10 @@ frommapinfo:
   }
 
   WI_Start (&wminfo);
+
+  // [Nugget] Clear visual effects
+  R_ClearFOVFX();
+  R_SetShake(-1);
 }
 
 static void G_DoWorldDone(void)
@@ -3440,8 +3458,8 @@ void G_InitNew(skill_t skill, int episode, int map)
   gameskill = skill;
   gamemapinfo = G_LookupMapinfo(gameepisode, gamemap);
 
-  // [Nugget] Reset some stuff
-  if (R_GetZoom() == 1) { R_SetZoom(ZOOM_RESET); } // Only if necessary
+  // [Nugget] Clear visual effects
+  R_ClearFOVFX();
   R_SetShake(-1);
 
   // [FG] total time for all completed levels

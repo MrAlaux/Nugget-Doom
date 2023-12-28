@@ -2795,7 +2795,7 @@ int G_GotoNextLevel(int *pEpi, int *pMap)
 // [Nugget]
 static void M_SetFOV(void)
 {
-  fovchange = true;
+  R_SetFOV(fov);
 }
 
 /////////////////////////////
@@ -4595,17 +4595,18 @@ enum {
   gen7_boncountcap,
   gen7_fakecontrast,
   gen7_wipespeed,
-  gen7_stub1,
-  gen7_title2,
-  gen7_sclipdist,
-  gen7_organizesaves,
-  gen7_quicksaveload,
-  gen7_nopagetic,
-  gen7_quickexit,
+  gen7_altinterpic,
 };
 
 enum {
   gen8_title1,
+  gen8_sclipdist,
+  gen8_organizesaves,
+  gen8_quicksaveload,
+  gen8_nopagetic,
+  gen8_quickexit,
+  gen8_stub1,
+  gen8_title2,
 #if 0 // For future use, hopefully
   gen8_a11y_seclight,
 #endif
@@ -4937,14 +4938,6 @@ static const char *fake_contrast_styles[] = {
   "Off", "Smooth", "Vanilla", NULL
 };
 
-static const char *s_clipping_dists[] = {
-  "1200", "2400", NULL
-};
-
-static const char *page_ticking_conds[] = {
-  "Always", "Not In Menus", "Never", NULL
-};
-
 setup_menu_t gen_settings7[] = {
 
   {"Nugget - Display", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title1 * M_SPC},
@@ -4957,15 +4950,7 @@ setup_menu_t gen_settings7[] = {
     {"Bonus Tint Cap",                S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_boncountcap  * M_SPC, {"bonuscount_cap"}},
     {"Fake Contrast",                 S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen7_fakecontrast * M_SPC, {"fake_contrast"}, 0, NULL, fake_contrast_styles},
     {"Screen Wipe Speed Percentage",  S_NUM   |S_STRICT, m_null, M_X, M_Y + gen7_wipespeed    * M_SPC, {"wipe_speed_percentage"}},
-
-  {"",                       S_SKIP,         m_null, M_X, M_Y + gen7_stub1  * M_SPC},
-  {"Nugget - Miscellaneous", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen7_title2 * M_SPC},
-
-    {"Sound Hearing Distance",  S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen7_sclipdist     * M_SPC, {"s_clipping_dist_x2"}, 0, M_SetSoundModule, s_clipping_dists},
-    {"Organize Saves by IWAD",  S_YESNO|S_PRGWARN, m_null, M_X, M_Y + gen7_organizesaves * M_SPC, {"organize_saves"}},
-    {"One-Key Quick Save/Load", S_YESNO,           m_null, M_X, M_Y + gen7_quicksaveload * M_SPC, {"one_key_saveload"}},
-    {"Play Internal Demos",     S_CHOICE,          m_null, M_X, M_Y + gen7_nopagetic     * M_SPC, {"no_page_ticking"}, 0, NULL, page_ticking_conds},
-    {"Quick \"Quit Game\"",     S_YESNO,           m_null, M_X, M_Y + gen7_quickexit     * M_SPC, {"quick_quitgame"}},
+    {"Alt. Intermission Background",  S_YESNO |S_STRICT, m_null, M_X, M_Y + gen7_altinterpic  * M_SPC, {"alt_interpic"}},
 
   {"<- PREV", S_SKIP|S_PREV, m_null, M_X_PREV, M_Y_PREVNEXT, {gen_settings6}},
   {"NEXT ->", S_SKIP|S_NEXT, m_null, M_X_NEXT, M_Y_PREVNEXT, {gen_settings8}},
@@ -4975,10 +4960,27 @@ setup_menu_t gen_settings7[] = {
   {0,S_SKIP|S_END,m_null}
 };
 
+static const char *s_clipping_dists[] = {
+  "1200", "2400", NULL
+};
+
+static const char *page_ticking_conds[] = {
+  "Always", "Not In Menus", "Never", NULL
+};
+
 setup_menu_t gen_settings8[] = { // [Nugget]
 
-  {"Nugget - Accessibility", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen8_title1 * M_SPC},
-#if 0 // [Nugget] For future use, hopefully
+  {"Nugget - Miscellaneous", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen8_title1 * M_SPC},
+
+    {"Sound Hearing Distance",  S_CHOICE|S_STRICT, m_null, M_X, M_Y + gen8_sclipdist     * M_SPC, {"s_clipping_dist_x2"}, 0, M_SetSoundModule, s_clipping_dists},
+    {"Organize Saves by IWAD",  S_YESNO|S_PRGWARN, m_null, M_X, M_Y + gen8_organizesaves * M_SPC, {"organize_saves"}},
+    {"One-Key Quick Save/Load", S_YESNO,           m_null, M_X, M_Y + gen8_quicksaveload * M_SPC, {"one_key_saveload"}},
+    {"Play Internal Demos",     S_CHOICE,          m_null, M_X, M_Y + gen8_nopagetic     * M_SPC, {"no_page_ticking"}, 0, NULL, page_ticking_conds},
+    {"Quick \"Quit Game\"",     S_YESNO,           m_null, M_X, M_Y + gen8_quickexit     * M_SPC, {"quick_quitgame"}},
+
+  {"",                       S_SKIP,         m_null, M_X, M_Y + gen8_stub1  * M_SPC},
+  {"Nugget - Accessibility", S_SKIP|S_TITLE, m_null, M_X, M_Y + gen8_title2 * M_SPC},
+#if 0 // For future use, hopefully
     {"Flickering Sector Lighting", S_YESNO|S_STRICT, m_null, M_X, M_Y + gen8_a11y_seclight * M_SPC, {"a11y_sector_lighting"}},
 #endif
     {"Weapon Flash Lighting",      S_YESNO|S_STRICT, m_null, M_X, M_Y + gen8_a11y_flash    * M_SPC, {"a11y_weapon_flash"}},

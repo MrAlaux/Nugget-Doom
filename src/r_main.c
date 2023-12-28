@@ -35,6 +35,7 @@
 #include "m_random.h"
 #include "p_map.h"
 #include "p_mobj.h"
+#include "wi_stuff.h"
 
 // [Nugget]
 #ifndef M_PI
@@ -60,12 +61,17 @@ player_t *viewplayer;
 extern lighttable_t **walllights;
 fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
 
-// [Nugget] Chasecam
+// [Nugget] Chasecam /--------------------------------------------------------
+
 chasecam_t chasecam;
+
 boolean chasecam_on;
+
 // For Automap
 fixed_t  chasexofs, chaseyofs;
 angle_t  chaseaofs;
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // precalculated math tables
@@ -128,17 +134,37 @@ static int     pitchmax;
 static fovfx_t fovfx[NUMFOVFX]; // FOV effects (recoil, teleport)
 static int     zoomed = 0;      // Current zoom state
 
+void R_SetFOV(const int value)
+{
+  fov = value;
+  fovchange = true;
+}
+
 int R_GetBFOV(void)
 {
   return bfov;
 }
 
-int R_GetFOVFX(int fx)
+void R_ClearFOVFX(void)
+{
+  R_SetZoom(ZOOM_RESET);
+
+  for (int i = FOVFX_ZOOM+1;  i < NUMFOVFX;  i++)
+  {
+    // Note: the `R_SetZoom()` call above sets `fovchange = true` already,
+    // but we'll do it here anyways for future-proofing
+    if (fovfx[i].current != 0) { fovchange = true; }
+
+    fovfx[i] = (fovfx_t) { .target = 0, .current = 0, .old = 0 };
+  }
+}
+
+int R_GetFOVFX(const int fx)
 {
   return fovfx[fx].current;
 }
 
-void R_SetFOVFX(int fx)
+void R_SetFOVFX(const int fx)
 {
   if (strictmode) { return; }
 
@@ -566,6 +592,10 @@ void R_ExecuteSetViewSize (void)
 
   setsizeneeded = false;
 
+  // [Nugget] Alt. intermission background
+  if (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
+  { setblocks = 11; }
+
   if (setblocks >= 11) // [Nugget] Crispy minimalistic HUD
     {
       scaledviewwidth_nonwide = NONWIDEWIDTH;
@@ -626,9 +656,12 @@ void R_ExecuteSetViewSize (void)
       { fovfx[FOVFX_ZOOM] = (fovfx_t) { .target = zoomtarget, .current = zoomtarget, .old = zoomtarget }; }
     }
 
-    if (!strictmode) {
+    if (!strictmode)
+    {
       if (fovfx[FOVFX_ZOOM].target != zoomtarget)
-      { fovchange = true; }
+      {
+        fovchange = true;
+      }
       else for (i = 0;  i < NUMFOVFX;  i++)
         if (fovfx[i].target || fovfx[i].current)
         {
@@ -650,7 +683,7 @@ void R_ExecuteSetViewSize (void)
           // Special handling for zoom
           int step = zoomtarget - fovfx[FOVFX_ZOOM].target;
           const int sign = ((step > 0) ? 1 : -1);
-          step = BETWEEN(2, 16, abs(step) / 4);
+          step = BETWEEN(1, 16, round(abs(step) / 3.0));
 
           fovfx[FOVFX_ZOOM].target += step*sign;
 
@@ -684,7 +717,9 @@ void R_ExecuteSetViewSize (void)
     for (i = 0;  i < NUMFOVFX;  i++)
     { fx += fovfx[i].current; }
 
-    rfov = bfov + fx;
+    rfov = (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
+           ? 150 : bfov + fx;
+
     fovdiff = (float) ORIGFOV / rfov;
     pitchmax = PITCHMAX * FOVDIFF2; // Mitigate `PLAYER_SLOPE()` and `lookdir` misalignment
   }
@@ -847,6 +882,7 @@ void R_SetupFrame (player_t *player)
   int tempCentery, pitch;
   // [Nugget]
   int playerz, lookdir;
+  static angle_t old_interangle, target_interangle;
   static fixed_t chasecamheight;
 
   viewplayer = player;
@@ -884,10 +920,29 @@ void R_SetupFrame (player_t *player)
   pitch = lookdir + player->recoilpitch + player->impactpitch; // [Nugget]
   }
 
-  // [Nugget] Mitigate `PLAYER_SLOPE()` and `lookdir` misalignment
-  pitch *= FOVDIFF2;
+  // [Nugget]
+  // Alt. intermission background
+  if (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
+  {
+    static int oldtic = -1;
 
-  if (STRICTMODE(st_crispyhud)) { pitch += nughud.viewoffset; } // [Nugget] NUGHUD
+    if (oldtic != gametic) {
+      old_interangle = viewangle = target_interangle + viewangleoffset;
+      target_interangle += ANG1;
+    }
+    else if (uncapped) // Currently not functional, since the framerate is capped during intermissions
+    { viewangle = R_InterpolateAngle(old_interangle, target_interangle, fractionaltic) + viewangleoffset; }
+
+    oldtic = gametic;
+
+    pitch = 0;
+  }
+  else {
+    target_interangle = viewangle + viewangleoffset;
+
+    pitch *= FOVDIFF2; // Mitigate `PLAYER_SLOPE()` and `lookdir` misalignment
+    if (STRICTMODE(st_crispyhud)) { pitch += nughud.viewoffset; } // NUGHUD
+  }
 
   // [Nugget] Explosion shake effect
   chasecamheight = chasecam_height * FRACUNIT;
@@ -916,8 +971,11 @@ void R_SetupFrame (player_t *player)
     chasecamheight += zofs;
   }
 
-  // [Nugget] Chasecam
-  chasecam_on = STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0 && player->playerstate == PST_DEAD));
+  // [Nugget] Chasecam /------------------------------------------------------
+
+  chasecam_on = STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0 && player->playerstate == PST_DEAD))
+                && !(WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION));
+
   if (chasecam_on)
   {
     static fixed_t oldextradist = 0, extradist = 0;
@@ -988,6 +1046,8 @@ void R_SetupFrame (player_t *player)
     chaseaofs = viewangle - oldviewangle;
   }
   else { chasexofs = chaseyofs = chaseaofs = 0; }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   // [Nugget]: [crispy] A11Y
   if (!NOTSTRICTMODE(a11y_weapon_flash))

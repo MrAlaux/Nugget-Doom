@@ -866,6 +866,13 @@ default_t defaults[] = {
   },
 
   {
+    "alt_interpic",
+    (config_t *) &alt_interpic, NULL,
+    {0}, {0,1}, number, ss_gen, wad_yes,
+    "Alternative intermission background (spinning camera view)"
+  },
+
+  {
     "fake_contrast",
     (config_t *) &fake_contrast, NULL,
     {1}, {0,2}, number, ss_gen, wad_yes,

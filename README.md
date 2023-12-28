@@ -20,7 +20,7 @@ Most of Nugget Doom's features come from other sources, like source ports and mo
 the initial implementations for some are **ported from (p.f.)** said sources, while others are just **inspired by (i.b.)** them.
 These acknowledgements are included in the feature lists below; be aware that some might be inaccurate or outright missing.
 
-A few settings are labeled as _**CFG-Only**_: they can only be toggled by editing `nugget-doom.cfg`.
+A few settings are labeled as **_CFG-Only_**: they can only be toggled by editing `nugget-doom.cfg`.
 For these settings, their CVAR names are provided alongside the _CFG-Only_ label as guidance.
 
 ### General
@@ -32,55 +32,56 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **Gamma Correction key cycling** setting, to cycle through either original or extended gamma levels (CFG-Only: `gammacycle`)
 - **Menu items for _Air Absorption_ and _Doppler Effect_**, both of which are **now set to 5 by default**
 - **Tweaked _Stretch Short Skies_ algorithm**
-- _**Screen Wipe Style**_ selection:
+- **_Screen Wipe Style_** selection:
   - _"Seizure"_ (**Warning**: this one might legitimately be seizure-inducing, use with caution);
   - _"Fade"_.
 - **Fixed screen melt inconsistency across resolutions**
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **_"Direct + Auto"_ mode for Vertical Aiming**
 - **_Direct Vertical Aiming_ for melee attacks**
-- _**Things move over/under things**_ setting [p.f. Crispy Doom]
+- **_Things move over/under things_** setting [p.f. Crispy Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>, must be enabled first) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>, must be enabled first) [i.b. ZDoom]
-- _**Field of View**_ setting [p.f. Doom Retro]
-- _**View Height**_ setting, which allows to enter a custom height value between 32 and 56 for the player's POV [i.b. Brutal Doom]
-- _**View Bobbing Percentage**_ setting [i.b. Crispy Doom, ZDoom]
-- _**Impact Pitch**_ setting, to flinch upon hitting a floor and/or taking damage
-- _**Explosion Shake Effect**_ setting [i.b. Doom Retro]
-- _**Subtle Idle Bobbing/Breathing**_ setting [p.f. International Doom]
-- _**Teleporter Zoom**_ setting [i.b. ZDoom]
-- _**Death Camera**_ setting [i.b. ZDoom]
-- _**Chasecam**_ [i.b. ZDoom]
-- _**Background for all menus**_ setting
-- _**Disable palette tint in menus**_ setting [i.b. Crispy Doom]
-- _**Disable Berserk Tint**_ setting
-- _**Disable Radiation Suit Tint**_ setting
-- _**Damage Tint Cap**_ and _**Bonus Tint Cap**_, to attenuate or disable the red and yellow screen tints
-- _**Fake Contrast**_ setting
+- **_Field of View_** setting [p.f. Doom Retro]
+- **_View Height_** setting, which allows to enter a custom height value between 32 and 56 for the player's POV [i.b. Brutal Doom]
+- **_View Bobbing Percentage_** setting [i.b. Crispy Doom, ZDoom]
+- **_Impact Pitch_** setting, to flinch upon hitting a floor and/or taking damage
+- **_Explosion Shake Effect_** setting [i.b. Doom Retro]
+- **_Subtle Idle Bobbing/Breathing_** setting [p.f. International Doom]
+- **_Teleporter Zoom_** setting [i.b. ZDoom]
+- **_Death Camera_** setting [i.b. ZDoom]
+- **_Chasecam_** [i.b. ZDoom]
+- **_Background for all menus_** setting
+- **_Disable palette tint in menus_** setting [i.b. Crispy Doom]
+- **_Disable Berserk Tint_** setting
+- **_Disable Radiation Suit Tint_** setting
+- **_Damage Tint Cap_** and **_Bonus Tint Cap_**, to attenuate or disable the red and yellow screen tints
+- **_Fake Contrast_** setting
 - Toggle for **Diminished Lighting** (CFG-Only: `diminished_lighting`)
-- _**Screen Wipe speed percentage**_ setting
-- _**Sound Clipping Distance**_ selection, to optionally double the distance at which SFX become audible
+- **_Screen Wipe speed percentage_** setting
+- **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened spinning camera view
+- **_Sound Clipping Distance_** selection, to optionally double the distance at which SFX become audible
 - **_Organize Saves by IWAD_** setting
-- _**One-Key Quick Save/Load**_ setting, to skip the confirmation prompt
-- _**Play Internal Demos**_ setting
-- _**Quick "Quit Game"**_ setting, to skip the confirmation prompt [p.f. Crispy Doom]
-- Toggle for _**Weapon Flash Lighting**_ [p.f. Crispy Doom]
-- Toggle for _**Weapon Flash Sprite**_ [p.f. Crispy Doom]
-- Toggle for _**Invulnerability Colormap**_ [p.f. Crispy Doom]
+- **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
+- **_Play Internal Demos_** setting
+- **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
+- Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
+- Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
+- Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
 
 ### Weapons
 
-- Restored _**Weapon Recoil**_ menu item
-- _**Disable Horizontal Autoaim**_ setting
-- _**Switch [Weapon] on Pickup**_ setting
+- Restored **_Weapon Recoil_** menu item
+- **_Disable Horizontal Autoaim_** setting
+- **_Switch [Weapon] on Pickup_** setting
 - Key to **equip last used weapon** [i.b. Cherry Doom]
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
 - **Always Bob** setting (CFG-Only: `always_bob`)
-- _**Weapon Bobbing Percentage**_ setting [i.b. Crispy Doom, ZDoom]
-- _**Bobbing Styles**_ selection [p.f. Zandronum]
-- _**Weapon Inertia**_ setting (scale determined by the CFG-Only `weapon_inertia_scale_pct` CVAR) [by _ceski_]
-- _**Squat Weapon Down On Impact**_ setting [p.f. Crispy Doom]
-- _**Translucent Flashes**_ setting [i.b. Crispy Doom]
+- **_Weapon Bobbing Percentage_** setting [i.b. Crispy Doom, ZDoom]
+- **_Bobbing Styles_** selection [p.f. Zandronum]
+- **_Weapon Inertia_** setting (scale determined by the CFG-Only `weapon_inertia_scale_pct` CVAR) [by _ceski_]
+- **_Squat Weapon Down On Impact_** setting [p.f. Crispy Doom]
+- **_Translucent Flashes_** setting [i.b. Crispy Doom]
 - **Show Berserk availability** setting [partially p.f. Crispy Doom]
 - **"Correct" first person sprite centering** setting, to toggle the 1px first person sprite misalignment (CFG-Only: `sx_fix`)
 
@@ -92,12 +93,12 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
   - Horizontal autoaim indicators;
   - Option to account for fuzzy targets [i.b. From Doom With Love];
   - Dedicated toggle key.
-- _**Show Powerup Timers**_ setting
+- **_Show Powerup Timers_** setting
 - **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-Only: `show_ssg`) [p.f. Crispy Doom]
-- _**Alternative Arms Display**_ setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
+- **_Alternative Arms Display_** setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
 - **Blink Missing Keys** setting (CFG-Only: `blink_keys`) [partially p.f. Crispy Doom]
-- _**Smart Totals**_ setting [p.f. So Doom]
-- _**Show Kills Percentage [in Stats display]**_ setting
+- **_Smart Totals_** setting [p.f. So Doom]
+- **_Show Kills Percentage [in Stats display]_** setting
 - **Event Timers:**
   - _"Use" Button Timer_ [p.f. Crispy Doom]; 
   - _Teleport Timer_ [i.b. the above];
@@ -110,24 +111,24 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 - **Minimap mode** [i.b. DSDA-Doom]
 - **Automap color for unrevealed secret sectors**
-- Key to _**Blink [Automap] Marks**_ (default: <kbd>B</kbd>)
-- _**Tag Finder**_: Position the Automap pointer over a sector and press the _Tag Finder_ key to highlight its activator line(s), and vice versa [p.f. PrBoomX]
-- Key to _**Teleport to Automap pointer**_
+- Key to **_Blink [Automap] Marks_** (default: <kbd>B</kbd>)
+- **_Tag Finder_**: Position the Automap pointer over a sector and press the _Tag Finder_ key to highlight its activator line(s), and vice versa [p.f. PrBoomX]
+- Key to **_Teleport to Automap pointer_**
 
 ### Enemies
 
-- _**Extra Gibbing**_ setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-Only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
-- _**Bloodier Gibbing**_ setting [i.b. Smooth Doom]
-- _**ZDoom-like item drops**_ setting [of course, i.b. ZDoom]
+- **_Extra Gibbing_** setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-Only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
+- **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
+- **_ZDoom-like item drops_** setting [of course, i.b. ZDoom]
 - **Improved vanilla fuzz effect** [by _ceski_]
-- _**Selective Fuzz Darkening**_ setting [by _ceski_]
+- **_Selective Fuzz Darkening_** setting [by _ceski_]
 
 ### Messages
 
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
 - **Show Save Messages** setting (CFG-Only: `show_save_messages`)
-- _**Announce Milestone Completion**_ setting, to report completion of milestones (e.g. all items acquired)
-- Restored _**Message Listing Scrolls Upwards**_ setting, and enabled it by default
+- **_Announce Milestone Completion_** setting, to report completion of milestones (e.g. all items acquired)
+- Restored **_Message Listing Scrolls Upwards_** setting, and enabled it by default
 
 ### Doom Compatibility settings
 
@@ -152,24 +153,24 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 ### Cheats
 
-- _**'FULLCLIP'**_ for infinite ammo
-- _**'VALIANT'**_ for fast weapons [i.b. ZDoom]
-  - _**'BOBBERS'**_ serves as a shortcut to toggle the two cheats mentioned above, plus IDFA
-- _**'GIBBERS'**_ to force gibbing on dying enemies, independently of damage dealt
-- _**'IDFLY'**_ to fly (uses jumping/crouching keys) [i.b. PrBoom+, ZDoom]
-- _**'SUMMON'**_ to spawn a hostile or friendly actor based on its mobjtype index [i.b. ZDoom]
-- _**'RESURRECT' / 'IDRES'**_ to resurrect the player without toggling IDDQD [i.b. ZDoom]
-- _**'LINETARGET'**_ to give some info on the player's linetarget [i.b. ZDoom]
-- _**'MDK'**_ [i.b. ZDoom]
-- _**'SAITAMA'**_ to enable the MDK Fist (replaces A_Punch's melee attack with the MDK attack, featuring an alternate multishot attack when holding down Strafe On)
-- _**'BOOMCAN'**_ for explosive hitscan attacks
-- _**'NEXTMAP'**_ to exit the level [i.b. ZDoom]
-- _**'NEXTSECRET'**_ to exit the level as if using a secret exit [i.b. ZDoom]
-- _**'TURBO'**_ to change the player speed in-game
-- _**'TNTEM'**_ as an alternative to _'KILLEM'_
-- _**'FPS'**_ as a replacement for _'SHOWFPS'_
+- **_'FULLCLIP'_** for infinite ammo
+- **_'VALIANT'_** for fast weapons [i.b. ZDoom]
+  - **_'BOBBERS'_** serves as a shortcut to toggle the two cheats mentioned above, plus IDFA
+- **_'GIBBERS'_** to force gibbing on dying enemies, independently of damage dealt
+- **_'IDFLY'_** to fly (uses jumping/crouching keys) [i.b. PrBoom+, ZDoom]
+- **_'SUMMON'_** to spawn a hostile or friendly actor based on its mobjtype index [i.b. ZDoom]
+- **_'RESURRECT' / 'IDRES'_** to resurrect the player without toggling IDDQD [i.b. ZDoom]
+- **_'LINETARGET'_** to give some info on the player's linetarget [i.b. ZDoom]
+- **_'MDK'_** [i.b. ZDoom]
+- **_'SAITAMA'_** to enable the MDK Fist (replaces A_Punch's melee attack with the MDK attack, featuring an alternate multishot attack when holding down Strafe On)
+- **_'BOOMCAN'_** for explosive hitscan attacks
+- **_'NEXTMAP'_** to exit the level [i.b. ZDoom]
+- **_'NEXTSECRET'_** to exit the level as if using a secret exit [i.b. ZDoom]
+- **_'TURBO'_** to change the player speed in-game
+- **_'TNTEM'_** as an alternative to _'KILLEM'_
+- **_'FPS'_** as a replacement for _'SHOWFPS'_
 - **Mid-air control while in noclipping mode** [p.f. Crispy Doom]
-- Reenabled _**'NOMOMENTUM'**_ cheat [p.f. Crispy Doom]
+- Reenabled **_'NOMOMENTUM'_** cheat [p.f. Crispy Doom]
 
 ### Miscellaneous
 

@@ -1994,7 +1994,7 @@ void D_NuggetUpdateCasual()
   if (old_casual != casual_play) {
     old_casual = casual_play;
     
-    I_SetPalette(W_CacheLumpName("PLAYPAL",PU_CACHE)), // Reset Gamma
+    I_SetPalette(W_CacheLumpName("PLAYPAL",PU_CACHE)); // Reset Gamma
     R_SetZoom(ZOOM_RESET); // Reset FOV
     
     M_ResetSetupMenu();

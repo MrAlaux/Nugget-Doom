@@ -41,13 +41,18 @@ extern int      linecount;
 extern int      loopcount;
 extern fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
 
-// [Nugget]
+// [Nugget] Chasecam /--------------------------------------------------------
+
 typedef struct chasecam_s {
   fixed_t x, y, z;
   boolean hit;
 } chasecam_t;
+
 extern chasecam_t chasecam;
+
 extern boolean chasecam_on;
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // Rendering stats
@@ -139,9 +144,11 @@ enum {
   ZOOM_ON    =  1,
 };
 
+extern void R_SetFOV(const int value);
 extern int  R_GetBFOV(void);
-extern int  R_GetFOVFX(int fx);
-extern void R_SetFOVFX(int fx);
+extern void R_ClearFOVFX(void);
+extern int  R_GetFOVFX(const int fx);
+extern void R_SetFOVFX(const int fx);
 extern int  R_GetZoom(void);
 extern void R_SetZoom(const int state);
 

@@ -48,6 +48,8 @@ void WI_checkForAccelerate(void);      // killough 11/98
 
 void WI_DrawBackground(void);          // killough 11/98
 
+extern boolean WI_UsingAltInterpic(void); // [Nugget] Alt. intermission background
+
 #endif
 
 //----------------------------------------------------------------------------

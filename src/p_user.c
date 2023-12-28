@@ -641,7 +641,7 @@ void P_PlayerThink (player_t* player)
   if (player->playerstate == PST_DEAD)
     {
       // [Nugget] Disable zoom upon death
-      if (R_GetZoom() == 1) { R_SetZoom(ZOOM_OFF); }
+      if (R_GetZoom() == ZOOM_ON) { R_SetZoom(ZOOM_OFF); }
 
       player->slope = PLAYER_SLOPE(player); // For 3D audio pitch angle.
       P_DeathThink (player);
