@@ -291,13 +291,23 @@ void P_XYMovement (mobj_t* mo)
   }
 
   // no friction for missiles or skulls ever, no friction when airborne
-  if (mo->flags & (MF_MISSILE | MF_SKULLFLY)
-      // [Nugget] Do apply friction if...
-      || ((mo->z > mo->floorz)                        
-          && !(   (player && player->cheats & CF_FLY) // ... using flight cheat
-               || (mo->below_thing                    // ... on top of a mobj
-                   && (mo->z == (mo->below_thing->z + mo->below_thing->height))))))
+  if (mo->flags & (MF_MISSILE | MF_SKULLFLY))
     return;
+
+  // [Nugget] Do apply friction if airborne...
+  if (
+    (mo->z > mo->floorz)
+    && !(casual_play
+         && (   // ... using noclip or flight cheat
+                (player && player->cheats & (CF_NOCLIP|CF_FLY))
+                // ... on top of a mobj
+             || (mo->below_thing && (mo->z == (mo->below_thing->z + mo->below_thing->height)))
+         )
+    )
+  )
+  {
+    return;
+  }
 
   // killough 8/11/98: add bouncers
   // killough 9/15/98: add objects falling off ledges

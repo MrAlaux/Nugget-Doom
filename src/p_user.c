@@ -233,12 +233,16 @@ void P_MovePlayer (player_t* player)
   static boolean crouchKeyDown = false; // [Nugget]
 
   mo->angle += cmd->angleturn << 16;
-  onground = (mo->z <= mo->floorz
-              // [Nugget]
-              // On top of a mobj
-              || (mo->below_thing && (mo->z == (mo->below_thing->z + mo->below_thing->height)))
-              // Mid-air control with noclip or flight cheat enabled
-              || (player->mo->flags & MF_NOCLIP) || (player->cheats & CF_FLY));
+  onground = mo->z <= mo->floorz;
+
+  // [Nugget] Allow movement if...
+  if (casual_play) {
+    onground |= 
+         // ... using noclip or flight cheat
+         (player->cheats & (CF_NOCLIP|CF_FLY))
+         // ... on top of a mobj
+      || (mo->below_thing && (mo->z == (mo->below_thing->z + mo->below_thing->height)));
+  }
 
   // [Nugget]
   if (player->cheats & CF_FLY)
