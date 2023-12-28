@@ -39,7 +39,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **_"Direct + Auto"_ mode for Vertical Aiming**
 - **_Direct Vertical Aiming_ for melee attacks**
-- **_Things move over/under things_** setting [p.f. Crispy Doom]
+- **_Move Over/Under Things_** setting [partially p.f. Crispy Doom, DSDA-Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>, must be enabled first) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>, must be enabled first) [i.b. ZDoom]
 - **_Field of View_** setting [p.f. Doom Retro]
