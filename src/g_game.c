@@ -73,6 +73,26 @@ static size_t   maxdemosize;
 static byte     *demo_p;
 static byte     consistancy[MAXPLAYERS][BACKUPTICS];
 
+// [Nugget] Rewind /----------------------------------------------------------
+
+#define rewind_interval 1
+#define rewind_depth    60
+
+static int rewind_countdown = 0;
+
+typedef struct keyframe_s
+{
+  struct keyframe_s *prev, *next;
+  byte *frame;
+  size_t length;
+} keyframe_t;
+
+static keyframe_t *keyframe_list_head = NULL, *keyframe_list_tail = NULL;
+
+static int keyframe_index = 0;
+
+// [Nugget] -----------------------------------------------------------------/
+
 static int G_GameOptionSize(void);
 
 gameaction_t    gameaction;
@@ -761,7 +781,7 @@ static void G_DoLoadLevel(void)
   if (!demo_compatibility && demo_version < 203)   // killough 9/29/98
     basetic = gametic;
 
-  if (wipegamestate == GS_LEVEL)
+  if (wipegamestate == GS_LEVEL && gameaction != 11)
     wipegamestate = -1;             // force a wipe
 
   gamestate = GS_LEVEL;
@@ -1879,6 +1899,12 @@ void G_ForcedLoadGame(void)
 
 void G_LoadGame(char *name, int slot, boolean command)
 {
+  if (keyframe_index)
+  {
+    gameaction = 11;
+    return;
+  }
+
   if (savename) free(savename);
   savename = M_StringDuplicate(name);
   savegameslot = slot;
@@ -1979,7 +2005,7 @@ static uint64_t G_Signature(int sig_epi, int sig_map)
   return s;
 }
 
-static void G_DoSaveGame(void)
+static void G_DoSaveGame(const boolean frame) // [Nugget] Rewind
 {
   char *name = NULL;
   char name2[VERSIONSIZE];
@@ -2088,6 +2114,49 @@ static void G_DoSaveGame(void)
 
   length = save_p - savebuffer;
 
+  if (frame)
+  {
+    if (!keyframe_list_head)
+    {
+      keyframe_list_head =
+      keyframe_list_tail = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
+
+      keyframe_list_tail->prev = NULL;
+    }
+    else
+    {
+      keyframe_list_tail->next = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
+
+      keyframe_list_tail->next->prev = keyframe_list_tail;
+
+      keyframe_list_tail = keyframe_list_tail->next;
+    }
+
+    keyframe_list_tail->next = NULL;
+
+    keyframe_list_tail->frame = Z_Malloc(length, PU_STATIC, NULL);
+    memcpy(keyframe_list_tail->frame, savebuffer, length);
+
+    keyframe_list_tail->length = length;
+
+    if (rewind_depth - 1 == keyframe_index)
+    {
+      Z_Free(keyframe_list_head->frame);
+
+      keyframe_list_head = keyframe_list_head->next;
+      Z_Free(keyframe_list_head->prev);
+
+      keyframe_list_head->prev = NULL;
+    }
+    else { keyframe_index++; }
+
+    Z_Free(savebuffer);
+    savebuffer = save_p = NULL;
+    if (name) { free(name); }
+
+    return;
+  }
+
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
   else if (show_save_messages) // [Nugget]
@@ -2104,7 +2173,7 @@ static void G_DoSaveGame(void)
   M_SetQuickSaveSlot(savegameslot);
 }
 
-static void G_DoLoadGame(void)
+static void G_DoLoadGame(const boolean frame) // [Nugget] Rewind
 {
   int  length, i;
   char vcheck[VERSIONSIZE];
@@ -2123,9 +2192,15 @@ static void G_DoLoadGame(void)
     deathmatch = false;
   }
 
-  gameaction = ga_nothing;
+  if (frame) {
+    length = keyframe_list_tail->length;
+    savebuffer = keyframe_list_tail->frame;
+  }
+  else {
+    gameaction = ga_nothing;
+    length = M_ReadFile(savename, &savebuffer);
+  }
 
-  length = M_ReadFile(savename, &savebuffer);
   save_p = savebuffer + SAVESTRINGSIZE;
 
   // skip the description field
@@ -2301,6 +2376,30 @@ static void G_DoLoadGame(void)
   // draw the pattern into the back screen
   R_FillBackScreen();
 
+  if (frame)
+  {
+    if (--keyframe_index)
+    {
+      keyframe_list_tail = keyframe_list_tail->prev;
+
+      Z_Free(keyframe_list_tail->next);
+
+      keyframe_list_tail->next = NULL;
+    }
+    else
+    {
+      Z_Free(keyframe_list_tail);
+
+      keyframe_list_head = keyframe_list_tail = NULL;
+    }
+
+    rewind_countdown = rewind_interval * TICRATE;
+
+    displaymsg("Restored key frame %i", keyframe_index + 1);
+
+    return;
+  }
+
   // killough 12/98: support -recordfrom and -loadgame -playdemo
   if (!command_loadgame)
     singledemo = false;         // Clear singledemo flag if loading from menu
@@ -2375,10 +2474,10 @@ void G_Ticker(void)
 	G_DoNewGame();
 	break;
       case ga_loadgame:
-	G_DoLoadGame();
+	G_DoLoadGame(false);
 	break;
       case ga_savegame:
-	G_DoSaveGame();
+	G_DoSaveGame(false);
 	break;
       case ga_playdemo:
 	G_DoPlayDemo();
@@ -2410,10 +2509,24 @@ void G_Ticker(void)
       case ga_reloadlevel:
 	G_ReloadLevel();
 	break;
+      case 11:
+	G_DoLoadGame(true);
+	break;
       default:  // killough 9/29/98
 	gameaction = ga_nothing;
 	break;
     }
+
+  if (gamestate == GS_LEVEL)
+  {
+    if (!rewind_countdown)
+    {
+      rewind_countdown = rewind_interval * TICRATE;
+      G_DoSaveGame(true);
+      displaymsg("Saved key frame %i", keyframe_index);
+    }
+    else { rewind_countdown--; }
+  }
 
   // killough 10/6/98: allow games to be saved during demo
   // playback, by the playback user (not by demo itself)
