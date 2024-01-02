@@ -75,9 +75,7 @@ static byte     consistancy[MAXPLAYERS][BACKUPTICS];
 
 // [Nugget] Rewind /----------------------------------------------------------
 
-#define rewind_interval 1
-#define rewind_depth    60
-
+static boolean rewind_on = true;
 static int rewind_countdown = 0;
 
 typedef struct keyframe_s
@@ -726,6 +724,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
 static void G_DoLoadLevel(void)
 {
   int i;
+  int old_gameaction = gameaction; // [Nugget]
 
   // Set the sky map.
   // First thing, we have a dummy sky texture name,
@@ -825,13 +824,16 @@ static void G_DoLoadLevel(void)
   S_InitListener(players[displayplayer].mo);
 
   // clear cmd building stuff
-  memset (gamekeydown, 0, sizeof(gamekeydown));
-  mousex = mousex2 = mousey = mousey2 = 0;
-  sendpause = sendsave = paused = false;
-  // [FG] array size!
-  memset (mousearray, 0, sizeof(mousearray));
-  memset (joyarray, 0, sizeof(joyarray));
-  memset (controller_axes, 0, sizeof(controller_axes));
+  // [Nugget] Rewind: unless we just rewound
+  if (old_gameaction != ga_rewind) {
+    memset (gamekeydown, 0, sizeof(gamekeydown));
+    mousex = mousex2 = mousey = mousey2 = 0;
+    sendpause = sendsave = paused = false;
+    // [FG] array size!
+    memset (mousearray, 0, sizeof(mousearray));
+    memset (joyarray, 0, sizeof(joyarray));
+    memset (controller_axes, 0, sizeof(controller_axes));
+  }
 
   //jff 4/26/98 wake up the status bar in case were coming out of a DM demo
   // killough 5/13/98: in case netdemo has consoleplayer other than green
@@ -2349,7 +2351,7 @@ static void G_DoLoadGame(void)
 
 // [Nugget] Rewind /----------------------------------------------------------
 
-static void G_ResetRewindCountdown(void)
+void G_ResetRewindCountdown(void)
 {
   rewind_countdown = rewind_interval * TICRATE;
 }
@@ -2357,6 +2359,7 @@ static void G_ResetRewindCountdown(void)
 static void G_SaveKeyFrame(void)
 {
   int length, i;
+  const int start_time = I_GetTimeMS();
 
   save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, NULL);
 
@@ -2462,7 +2465,12 @@ static void G_SaveKeyFrame(void)
     keyframe_index--;
   }
 
-  displaymsg("Saved key frame %i", keyframe_index);
+  if (rewind_timeout && (rewind_timeout < (I_GetTimeMS() - start_time)))
+  {
+    displaymsg("Slow key-framing: storing stopped");
+    rewind_on = false;
+  }
+
   goto cleanup;
 
 frame_alloc_error:
@@ -2487,16 +2495,6 @@ cleanup:
 
   Z_Free(savebuffer);
   savebuffer = save_p = NULL;
-}
-
-void G_Rewind(void)
-{
-  if (!casual_play) { return; }
-
-  if (0 <= keyframe_index)
-  { gameaction = ga_rewind; }
-  else
-  { displaymsg("No key frame found"); }
 }
 
 static void G_DoRewind(void)
@@ -2640,6 +2638,33 @@ static void G_DoRewind(void)
   G_ResetRewindCountdown();
 }
 
+void G_Rewind(void)
+{
+  if (!casual_play) { return; }
+
+  rewind_on = true;
+
+  if (0 <= keyframe_index)
+  { gameaction = ga_rewind; }
+  else
+  { displaymsg("No key frame found"); }
+}
+
+void G_ClearExcessKeyFrames(void)
+{
+  while (rewind_depth <= keyframe_index)
+  {
+    Z_Free(keyframe_list_head->frame);
+
+    keyframe_list_head = keyframe_list_head->next;
+    Z_Free(keyframe_list_head->prev);
+
+    keyframe_list_head->prev = NULL;
+
+    keyframe_index--;
+  }
+}
+
 // [Nugget] -----------------------------------------------------------------/
 
 boolean clean_screenshot;
@@ -2736,7 +2761,7 @@ void G_Ticker(void)
     }
 
   // [Nugget] Rewind
-  if (gamestate == GS_LEVEL && oldleveltime < leveltime)
+  if (CASUALPLAY(rewind_on) && gamestate == GS_LEVEL && oldleveltime < leveltime)
   {
     if (!rewind_countdown)
     { G_SaveKeyFrame(); }

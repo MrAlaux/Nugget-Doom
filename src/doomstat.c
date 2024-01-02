@@ -169,6 +169,9 @@ int wipe_speed_percentage;
 int alt_interpic;
 int s_clipping_dist_x2;
 int one_key_saveload;
+int rewind_interval;
+int rewind_depth;
+int rewind_timeout;
 int no_page_ticking;
 int quick_quitgame;
 
