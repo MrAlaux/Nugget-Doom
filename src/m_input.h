@@ -76,6 +76,7 @@ enum
   input_escape,
   input_savegame,
   input_loadgame,
+  input_rewind, // [Nugget]
   input_soundvolume,
   input_quicksave,
   input_endgame,

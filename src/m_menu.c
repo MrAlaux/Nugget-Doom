@@ -3157,6 +3157,8 @@ enum {
   keys10_xhair,
   keys10_stub4,
   keys10_lastweap,
+  keys10_stub5,
+  keys10_rewind,
 };
 
 setup_menu_t keys_settings10[] =
@@ -3174,6 +3176,8 @@ setup_menu_t keys_settings10[] =
     {"Toggle Crosshair", S_INPUT,                     m_scrn, KB_X, M_Y + keys10_xhair    * M_SPC, {0}, input_crosshair},
     {"",                 S_SKIP,                      m_null, KB_X, M_Y + keys10_stub4    * M_SPC},
     {"Last Used Weapon", S_INPUT,                     m_scrn, KB_X ,M_Y + keys10_lastweap * M_SPC, {0}, input_lastweapon},
+    {"",                 S_SKIP,                      m_null, KB_X, M_Y + keys10_stub5    * M_SPC},
+    {"Rewind",           S_INPUT|S_STRICT|S_CRITICAL, m_scrn, KB_X ,M_Y + keys10_rewind   * M_SPC, {0}, input_rewind},
 
   {"<- PREV", S_SKIP|S_PREV, m_null, M_X_PREV, M_Y_PREVNEXT, {keys_settings9}},
   {"NEXT ->", S_SKIP|S_NEXT, m_null, M_X_NEXT, M_Y_PREVNEXT, {keys_settings11}},
@@ -6320,7 +6324,8 @@ boolean M_Responder (event_t* ev)
     {                                                         //  |
       static boolean fastdemo_timer = false;                  //  V
 
-      // [Nugget]
+      // [Nugget] /-----------------------------------------------------------
+
       if (M_InputActivated(input_crosshair))
 	{
 	  extern void HU_StartCrosshair(void);
@@ -6330,11 +6335,18 @@ boolean M_Responder (event_t* ev)
 	  togglemsg("Crosshair %s", hud_crosshair_on ? "Enabled" : "Disabled");
 	}
 
-      // [Nugget]
       if (STRICTMODE(M_InputActivated(input_chasecam)))
 	{
 	  if (++chasecam_mode > CHASECAMMODE_FRONT) { chasecam_mode = CHASECAMMODE_OFF; }
 	}
+
+      if (STRICTMODE(M_InputActivated(input_rewind)))
+	{
+	  G_Rewind();
+	  return true;
+	}
+
+      // [Nugget] -----------------------------------------------------------/
 
       if (M_InputActivated(input_autorun)) // Autorun         //  V
 	{

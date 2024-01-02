@@ -781,7 +781,8 @@ static void G_DoLoadLevel(void)
   if (!demo_compatibility && demo_version < 203)   // killough 9/29/98
     basetic = gametic;
 
-  if (wipegamestate == GS_LEVEL && gameaction != 11)
+  if (wipegamestate == GS_LEVEL
+      && gameaction != ga_rewind) // [Nugget] Rewind
     wipegamestate = -1;             // force a wipe
 
   gamestate = GS_LEVEL;
@@ -1899,12 +1900,6 @@ void G_ForcedLoadGame(void)
 
 void G_LoadGame(char *name, int slot, boolean command)
 {
-  if (keyframe_index)
-  {
-    gameaction = 11;
-    return;
-  }
-
   if (savename) free(savename);
   savename = M_StringDuplicate(name);
   savegameslot = slot;
@@ -2005,7 +2000,7 @@ static uint64_t G_Signature(int sig_epi, int sig_map)
   return s;
 }
 
-static void G_DoSaveGame(const boolean frame) // [Nugget] Rewind
+static void G_DoSaveGame(void)
 {
   char *name = NULL;
   char name2[VERSIONSIZE];
@@ -2114,49 +2109,6 @@ static void G_DoSaveGame(const boolean frame) // [Nugget] Rewind
 
   length = save_p - savebuffer;
 
-  if (frame)
-  {
-    if (!keyframe_list_head)
-    {
-      keyframe_list_head =
-      keyframe_list_tail = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
-
-      keyframe_list_tail->prev = NULL;
-    }
-    else
-    {
-      keyframe_list_tail->next = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
-
-      keyframe_list_tail->next->prev = keyframe_list_tail;
-
-      keyframe_list_tail = keyframe_list_tail->next;
-    }
-
-    keyframe_list_tail->next = NULL;
-
-    keyframe_list_tail->frame = Z_Malloc(length, PU_STATIC, NULL);
-    memcpy(keyframe_list_tail->frame, savebuffer, length);
-
-    keyframe_list_tail->length = length;
-
-    if (rewind_depth - 1 == keyframe_index)
-    {
-      Z_Free(keyframe_list_head->frame);
-
-      keyframe_list_head = keyframe_list_head->next;
-      Z_Free(keyframe_list_head->prev);
-
-      keyframe_list_head->prev = NULL;
-    }
-    else { keyframe_index++; }
-
-    Z_Free(savebuffer);
-    savebuffer = save_p = NULL;
-    if (name) { free(name); }
-
-    return;
-  }
-
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
   else if (show_save_messages) // [Nugget]
@@ -2173,7 +2125,7 @@ static void G_DoSaveGame(const boolean frame) // [Nugget] Rewind
   M_SetQuickSaveSlot(savegameslot);
 }
 
-static void G_DoLoadGame(const boolean frame) // [Nugget] Rewind
+static void G_DoLoadGame(void)
 {
   int  length, i;
   char vcheck[VERSIONSIZE];
@@ -2192,15 +2144,9 @@ static void G_DoLoadGame(const boolean frame) // [Nugget] Rewind
     deathmatch = false;
   }
 
-  if (frame) {
-    length = keyframe_list_tail->length;
-    savebuffer = keyframe_list_tail->frame;
-  }
-  else {
-    gameaction = ga_nothing;
-    length = M_ReadFile(savename, &savebuffer);
-  }
+  gameaction = ga_nothing;
 
+  length = M_ReadFile(savename, &savebuffer);
   save_p = savebuffer + SAVESTRINGSIZE;
 
   // skip the description field
@@ -2376,30 +2322,6 @@ static void G_DoLoadGame(const boolean frame) // [Nugget] Rewind
   // draw the pattern into the back screen
   R_FillBackScreen();
 
-  if (frame)
-  {
-    if (--keyframe_index)
-    {
-      keyframe_list_tail = keyframe_list_tail->prev;
-
-      Z_Free(keyframe_list_tail->next);
-
-      keyframe_list_tail->next = NULL;
-    }
-    else
-    {
-      Z_Free(keyframe_list_tail);
-
-      keyframe_list_head = keyframe_list_tail = NULL;
-    }
-
-    rewind_countdown = rewind_interval * TICRATE;
-
-    displaymsg("Restored key frame %i", keyframe_index + 1);
-
-    return;
-  }
-
   // killough 12/98: support -recordfrom and -loadgame -playdemo
   if (!command_loadgame)
     singledemo = false;         // Clear singledemo flag if loading from menu
@@ -2424,6 +2346,382 @@ static void G_DoLoadGame(const boolean frame) // [Nugget] Rewind
 
   M_SetQuickSaveSlot(savegameslot);
 }
+
+// [Nugget] Rewind /----------------------------------------------------------
+
+static void G_SaveKeyFrame(void)
+{
+  char *name = NULL;
+  char name2[VERSIONSIZE];
+  char *description;
+  int  length, i;
+
+  name = G_SaveGameName(savegameslot);
+
+  description = savedescription;
+
+  save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, 0);
+
+  CheckSaveGame(SAVESTRINGSIZE+VERSIONSIZE+sizeof(uint64_t));
+  memcpy (save_p, description, SAVESTRINGSIZE);
+  save_p += SAVESTRINGSIZE;
+  memset (name2,0,sizeof(name2));
+
+  // killough 2/22/98: "proprietary" version string :-)
+  strcpy(name2, CURRENT_SAVE_VERSION);
+  saveg_compat = saveg_current;
+
+  memcpy (save_p, name2, VERSIONSIZE);
+  save_p += VERSIONSIZE;
+
+  *save_p++ = demo_version;
+
+  // killough 2/14/98: save old compatibility flag:
+  *save_p++ = compatibility;
+
+  *save_p++ = gameskill;
+  *save_p++ = gameepisode;
+  *save_p++ = gamemap;
+
+  {  // killough 3/16/98, 12/98: store lump name checksum
+    uint64_t checksum = G_Signature(gameepisode, gamemap);
+    saveg_write64(checksum);
+  }
+
+  // killough 3/16/98: store pwad filenames in savegame
+  {
+    char **w = wadfiles;
+    for (*save_p = 0; *w; w++)
+      {
+        const char *basename = M_BaseName(*w);
+        CheckSaveGame(strlen(basename)+2);
+        strcat(strcat((char *) save_p, basename), "\n");
+      }
+    save_p += strlen((char *) save_p)+1;
+  }
+
+  CheckSaveGame(G_GameOptionSize()+MIN_MAXPLAYERS+10);
+
+  for (i=0 ; i<MAXPLAYERS ; i++)
+    *save_p++ = playeringame[i];
+
+  for (;i<MIN_MAXPLAYERS;i++)         // killough 2/28/98
+    *save_p++ = 0;
+
+  *save_p++ = idmusnum;               // jff 3/17/98 save idmus state
+
+  save_p = G_WriteOptions(save_p);    // killough 3/1/98: save game options
+
+  // [FG] fix copy size and pointer progression
+  saveg_write32(leveltime); //killough 11/98: save entire word
+
+  // killough 11/98: save revenant tracer state
+  *save_p++ = (gametic-basetic) & 255;
+
+  P_ArchivePlayers();
+  P_ArchiveWorld();
+  P_ArchiveThinkers();
+  P_ArchiveSpecials();
+  P_ArchiveRNG();    // killough 1/18/98: save RNG information
+  P_ArchiveMap();    // killough 1/22/98: save automap information
+
+  *save_p++ = 0xe6;   // consistancy marker
+
+  // [FG] save total time for all completed levels
+  CheckSaveGame(sizeof totalleveltimes);
+  saveg_write32(totalleveltimes);
+
+  // save lump name for current MUSINFO item
+  CheckSaveGame(8);
+  if (musinfo.current_item > 0)
+    memcpy(save_p, lumpinfo[musinfo.current_item].name, 8);
+  else
+    memset(save_p, 0, 8);
+  save_p += 8;
+
+  // [Nugget] Save extraspawns
+  CheckSaveGame(sizeof extraspawns);
+  saveg_write32(extraspawns);
+
+  // save extrakills
+  CheckSaveGame(sizeof extrakills);
+  saveg_write32(extrakills);
+
+  // [Nugget] Save milestones
+  CheckSaveGame(sizeof complete_milestones);
+  saveg_write_enum(complete_milestones);
+
+  // [FG] save snapshot
+  CheckSaveGame(M_SnapshotDataSize());
+  M_WriteSnapshot(save_p);
+  save_p += M_SnapshotDataSize();
+
+  length = save_p - savebuffer;
+
+  if (!keyframe_list_head)
+  {
+    keyframe_list_head =
+    keyframe_list_tail = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
+
+    keyframe_list_tail->prev = NULL;
+  }
+  else
+  {
+    keyframe_list_tail->next = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
+
+    keyframe_list_tail->next->prev = keyframe_list_tail;
+
+    keyframe_list_tail = keyframe_list_tail->next;
+  }
+
+  keyframe_list_tail->next = NULL;
+
+  keyframe_list_tail->frame = Z_Malloc(length, PU_STATIC, NULL);
+  memcpy(keyframe_list_tail->frame, savebuffer, length);
+
+  keyframe_list_tail->length = length;
+
+  if (rewind_depth - 1 == keyframe_index)
+  {
+    Z_Free(keyframe_list_head->frame);
+
+    keyframe_list_head = keyframe_list_head->next;
+    Z_Free(keyframe_list_head->prev);
+
+    keyframe_list_head->prev = NULL;
+  }
+  else { keyframe_index++; }
+
+  Z_Free(savebuffer);
+  savebuffer = save_p = NULL;
+  if (name) { free(name); }
+}
+
+void G_Rewind(void)
+{
+  if (!casual_play) { return; }
+
+  if (keyframe_index) { gameaction = ga_rewind; }
+  else                { displaymsg("No key frame found"); }
+}
+
+static void G_DoRewind(void)
+{
+  int  length, i;
+  char vcheck[VERSIONSIZE];
+  uint64_t checksum;
+  int tmp_compat, tmp_skill, tmp_epi, tmp_map;
+
+  I_SetFastdemoTimer(false);
+
+  // [crispy] loaded game must always be single player.
+  // Needed for ability to use a further game loading, as well as
+  // cheat codes and other single player only specifics.
+  if (!command_loadgame)
+  {
+    netdemo = false;
+    netgame = false;
+    deathmatch = false;
+  }
+
+  length = keyframe_list_tail->length;
+  savebuffer = keyframe_list_tail->frame;
+  save_p = savebuffer + SAVESTRINGSIZE;
+
+  // skip the description field
+
+  // killough 2/22/98: "proprietary" version string :-)
+  sprintf (vcheck,VERSIONID,MBFVERSION);
+
+  if (strncmp((char *) save_p, CURRENT_SAVE_VERSION, strlen(CURRENT_SAVE_VERSION)) == 0)
+  {
+    saveg_compat = saveg_current;
+  }
+  // [Nugget]
+  #define SAVEIS(str) (strncmp((char *) save_p, str, strlen(CURRENT_SAVE_VERSION)) == 0)
+  else if (SAVEIS("Nugget 2.0.0")) { saveg_compat = saveg_nugget200; }
+  else if (SAVEIS("Woof 6.0.0"))   { saveg_compat = saveg_woof600; }
+  #undef SAVEIS
+
+  // killough 2/22/98: Friendly savegame version difference message
+  if (!forced_loadgame && strncmp((char *) save_p, vcheck, VERSIONSIZE) &&
+                          saveg_compat != saveg_current)
+    {
+      G_LoadGameErr("Different Savegame Version!!!\n\nAre you sure?");
+      return;
+    }
+
+  save_p += VERSIONSIZE;
+
+  if (saveg_compat > saveg_woof510)
+  {
+    demo_version = *save_p++;
+  }
+  else
+  {
+    demo_version = 203;
+  }
+
+  // killough 2/14/98: load compatibility mode
+  tmp_compat = *save_p++;
+
+  tmp_skill = *save_p++;
+  tmp_epi = *save_p++;
+  tmp_map = *save_p++;
+
+  checksum = saveg_read64();
+
+  if (!forced_loadgame)
+   {  // killough 3/16/98, 12/98: check lump name checksum
+     if (checksum != G_Signature(tmp_epi, tmp_map))
+       {
+	 char *msg = malloc(strlen((char *) save_p) + 128);
+	 strcpy(msg,"Incompatible Savegame!!!\n");
+	 if (save_p[sizeof checksum])
+	   strcat(strcat(msg,"Wads expected:\n\n"), (char *) save_p);
+	 strcat(msg, "\nAre you sure?");
+	 G_LoadGameErr(msg);
+	 free(msg);
+	 return;
+       }
+   }
+
+  while (*save_p++);
+
+  compatibility = tmp_compat;
+  gameskill = tmp_skill;
+  gameepisode = tmp_epi;
+  gamemap = tmp_map;
+  gamemapinfo = G_LookupMapinfo(gameepisode, gamemap);
+
+  for (i=0 ; i<MAXPLAYERS ; i++)
+    playeringame[i] = *save_p++;
+  save_p += MIN_MAXPLAYERS-MAXPLAYERS;         // killough 2/28/98
+
+  // jff 3/17/98 restore idmus music
+  // jff 3/18/98 account for unsigned byte
+  // killough 11/98: simplify
+  idmusnum = *(signed char *) save_p++;
+
+  /* cph 2001/05/23 - Must read options before we set up the level */
+  if (mbf21)
+    G_ReadOptionsMBF21(save_p);
+  else
+    G_ReadOptions(save_p);
+
+  // load a base level
+  G_InitNew(gameskill, gameepisode, gamemap);
+
+  // killough 3/1/98: Read game options
+  // killough 11/98: move down to here
+  /* cph - MBF needs to reread the savegame options because G_InitNew
+   * rereads the WAD options. The demo playback code does this too. */
+  if (mbf21)
+    save_p = G_ReadOptionsMBF21(save_p);
+  else
+    save_p = G_ReadOptions(save_p);
+
+  // get the times
+  // killough 11/98: save entire word
+  // [FG] fix copy size and pointer progression
+  leveltime = saveg_read32();
+
+  // killough 11/98: load revenant tracer state
+  basetic = gametic - (int) *save_p++;
+
+  // dearchive all the modifications
+  P_MapStart();
+  P_UnArchivePlayers();
+  P_UnArchiveWorld();
+  P_UnArchiveThinkers();
+  P_UnArchiveSpecials();
+  P_UnArchiveRNG();    // killough 1/18/98: load RNG information
+  P_UnArchiveMap();    // killough 1/22/98: load automap information
+  P_MapEnd();
+
+  if (*save_p != 0xe6)
+    I_Error ("Bad savegame");
+
+  // [FG] restore total time for all completed levels
+  if (save_p++ - savebuffer < length - sizeof totalleveltimes)
+  {
+    totalleveltimes = saveg_read32();
+  }
+
+  // restore MUSINFO music
+  if (save_p - savebuffer <= length - 8)
+  {
+    char lump[9] = {0};
+    int i;
+
+    memcpy(lump, save_p, 8);
+
+    i = W_CheckNumForName(lump);
+
+    if (lump[0] && i > 0)
+    {
+      musinfo.mapthing = NULL;
+      musinfo.lastmapthing = NULL;
+      musinfo.tics = 0;
+      musinfo.current_item = i;
+      musinfo.from_savegame = true;
+      S_ChangeMusInfoMusic(i, true);
+    }
+
+    save_p += 8;
+  }
+
+  // [Nugget] -------------------------
+  
+  // Restore extraspawns
+  if (save_p - savebuffer <= length - sizeof extraspawns)
+  { extraspawns = saveg_read32(); }
+  
+  // Restore extrakills
+  if (saveg_compat > saveg_woof600 && save_p - savebuffer <= length - sizeof extrakills)
+  { extrakills = saveg_read32(); }
+
+  // Restore milestones
+  if (saveg_compat > saveg_nugget200 && save_p - savebuffer <= length - sizeof complete_milestones)
+  { complete_milestones = saveg_read_enum(); }
+
+  // ----------------------------------
+  
+  // done
+  Z_Free(savebuffer);
+
+  // [Alaux] Update smooth count values;
+  // the same procedure is done in G_LoadLevel, but we have to repeat it here
+  st_health = players[displayplayer].health;
+  st_armor  = players[displayplayer].armorpoints;
+
+  if (setsizeneeded)
+    R_ExecuteSetViewSize();
+
+  // draw the pattern into the back screen
+  R_FillBackScreen();
+
+  if (--keyframe_index)
+  {
+    keyframe_list_tail = keyframe_list_tail->prev;
+
+    Z_Free(keyframe_list_tail->next);
+
+    keyframe_list_tail->next = NULL;
+  }
+  else
+  {
+    Z_Free(keyframe_list_tail);
+
+    keyframe_list_head = keyframe_list_tail = NULL;
+  }
+
+  rewind_countdown = rewind_interval * TICRATE;
+
+  displaymsg("Restored key frame %i", keyframe_index + 1);
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 boolean clean_screenshot;
 extern void ST_ResetPalette(void); // [Nugget] Taken out of `G_CleanScreenshot()`
@@ -2474,10 +2772,10 @@ void G_Ticker(void)
 	G_DoNewGame();
 	break;
       case ga_loadgame:
-	G_DoLoadGame(false);
+	G_DoLoadGame();
 	break;
       case ga_savegame:
-	G_DoSaveGame(false);
+	G_DoSaveGame();
 	break;
       case ga_playdemo:
 	G_DoPlayDemo();
@@ -2509,20 +2807,22 @@ void G_Ticker(void)
       case ga_reloadlevel:
 	G_ReloadLevel();
 	break;
-      case 11:
-	G_DoLoadGame(true);
+      // [Nugget] Rewind
+      case ga_rewind:
+	G_DoRewind();
 	break;
       default:  // killough 9/29/98
 	gameaction = ga_nothing;
 	break;
     }
 
-  if (gamestate == GS_LEVEL)
+  // [Nugget] Rewind
+  if (gamestate == GS_LEVEL && oldleveltime < leveltime)
   {
     if (!rewind_countdown)
     {
       rewind_countdown = rewind_interval * TICRATE;
-      G_DoSaveGame(true);
+      G_SaveKeyFrame();
       displaymsg("Saved key frame %i", keyframe_index);
     }
     else { rewind_countdown--; }

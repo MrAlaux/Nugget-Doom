@@ -1959,6 +1959,14 @@ default_t defaults[] = {
     input_loadgame, { {input_type_key, KEY_F3} }
   },
 
+  { // [Nugget] 
+    "input_rewind",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to rewind",
+    input_rewind, { {0, 0} }
+  },
+
   {
     "input_soundvolume",
     NULL, NULL,
