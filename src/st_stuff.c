@@ -480,14 +480,16 @@ void ST_updateFaceWidget(void)
   static int  lastattackdown = -1;
   static int  priority = 0;
   boolean     doevilgrin;
+  // [Nugget]
+  const boolean invul = (plyr->cheats & CF_GODMODE) || plyr->powers[pw_invulnerability];
 
   if (priority < 10)
     {
       // dead
-      if (!plyr->health)
+      if (!plyr->health || STRICTMODE(comp_godface && invul)) // [Nugget]
         {
           priority = 9;
-          st_faceindex = ST_DeadFace();
+          st_faceindex = plyr->health ? ST_GODFACE : ST_DeadFace(); // [Nugget]
           st_facecount = 1;
         }
     }
@@ -622,8 +624,7 @@ void ST_updateFaceWidget(void)
   if (priority < 5)
     {
       // invulnerability
-      if ((plyr->cheats & CF_GODMODE)
-          || plyr->powers[pw_invulnerability])
+      if (invul && !STRICTMODE(comp_godface)) // [Nugget]
         {
           priority = 4;
 

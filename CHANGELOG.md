@@ -2,6 +2,7 @@
 
 - **_Alternative Intermission Background_** setting
 - **Support for optional health-based player pain sounds**
+- **_Higher god-mode face priority_** setting
 
 ## Changes
 

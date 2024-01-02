@@ -133,8 +133,8 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 ### Doom Compatibility settings
 
 - Bruiser attack (A_BruisAttack) doesn't face target
-- Disable Melee Snapping
-- Double Autoaim range
+- Disable melee snapping
+- Double autoaim range
 - Fix Lost Soul colliding with items
 - Lost Soul forgets target upon impact
 - Fuzzy things bleed fuzzy blood [i.b. Crispy Doom]
@@ -142,11 +142,12 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - Fix lopsided Icon of Sin explosions
 - Permanent IDCHOPPERS invulnerability
 - Blazing doors reopen with wrong sound [p.f. Crispy Doom]
-- Manually reactivated moving doors are silent [p.f. Crispy Doom]
+- Manually-toggled moving doors are silent [p.f. Crispy Doom]
 - Corrected switch sound source [p.f. Crispy Doom]
 - Chaingun makes two sounds with one bullet
 - Chaingunner uses pistol/chaingun sound
 - Arch-Vile fire plays flame start sound [p.f. Crispy Doom]
+- Higher god-mode face priority [p.f. International Doom]
 - Dead players can still play "oof" sound [p.f. Crispy Doom]
 - Use unused pain/bonus palettes
 - Key pickup resets palette
