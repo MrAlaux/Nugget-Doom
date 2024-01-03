@@ -2656,10 +2656,17 @@ void G_ClearExcessKeyFrames(void)
   {
     Z_Free(keyframe_list_head->frame);
 
-    keyframe_list_head = keyframe_list_head->next;
-    Z_Free(keyframe_list_head->prev);
+    if (keyframe_list_head->next)
+    {
+      keyframe_list_head = keyframe_list_head->next;
+      Z_Free(keyframe_list_head->prev);
 
-    keyframe_list_head->prev = NULL;
+      keyframe_list_head->prev = NULL;
+    }
+    else {
+      Z_Free(keyframe_list_head);
+      keyframe_list_head = keyframe_list_tail = NULL;
+    }
 
     keyframe_index--;
   }
@@ -2761,12 +2768,17 @@ void G_Ticker(void)
     }
 
   // [Nugget] Rewind
-  if (CASUALPLAY(rewind_on) && gamestate == GS_LEVEL && oldleveltime < leveltime)
+  if (CASUALPLAY(rewind_depth && rewind_on)
+      && gamestate == GS_LEVEL && oldleveltime < leveltime)
   {
     if (!rewind_countdown)
     { G_SaveKeyFrame(); }
     else
     { rewind_countdown--; }
+  }
+  else if (!CASUALPLAY(rewind_depth) || gamestate != GS_LEVEL)
+  {
+    rewind_countdown = 0;
   }
 
   // killough 10/6/98: allow games to be saved during demo

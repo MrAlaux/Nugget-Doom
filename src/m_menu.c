@@ -4982,9 +4982,9 @@ setup_menu_t gen_settings8[] = { // [Nugget]
     {"Sound Hearing Distance",  S_CHOICE|S_STRICT,         m_null, M_X, M_Y + gen8_sclipdist     * M_SPC, {"s_clipping_dist_x2"}, 0, M_SetSoundModule, s_clipping_dists},
     {"Organize Saves by IWAD",  S_YESNO |S_PRGWARN,        m_null, M_X, M_Y + gen8_organizesaves * M_SPC, {"organize_saves"}},
     {"One-Key Quick Save/Load", S_YESNO,                   m_null, M_X, M_Y + gen8_quicksaveload * M_SPC, {"one_key_saveload"}},
-    {"Rewind Interval",         S_NUM|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen8_rwinterval    * M_SPC, {"rewind_interval"}, 0, G_ResetRewindCountdown},
+    {"Rewind Interval (S)",     S_NUM|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen8_rwinterval    * M_SPC, {"rewind_interval"}, 0, G_ResetRewindCountdown},
     {"Rewind Depth",            S_NUM|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen8_rwdepth       * M_SPC, {"rewind_depth"}, 0, G_ClearExcessKeyFrames},
-    {"Rewind Timeout",          S_NUM|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen8_rwtimeout     * M_SPC, {"rewind_timeout"}},
+    {"Rewind Timeout (MS)",     S_NUM|S_STRICT|S_CRITICAL, m_null, M_X, M_Y + gen8_rwtimeout     * M_SPC, {"rewind_timeout"}},
     {"Play Internal Demos",     S_CHOICE,                  m_null, M_X, M_Y + gen8_nopagetic     * M_SPC, {"no_page_ticking"}, 0, NULL, page_ticking_conds},
     {"Quick \"Quit Game\"",     S_YESNO,                   m_null, M_X, M_Y + gen8_quickexit     * M_SPC, {"quick_quitgame"}},
 
