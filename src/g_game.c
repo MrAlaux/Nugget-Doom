@@ -2638,11 +2638,16 @@ static void G_DoRewind(void)
   G_ResetRewindCountdown();
 }
 
+void G_EnableRewind(void)
+{
+  rewind_on = true;
+}
+
 void G_Rewind(void)
 {
   if (!casual_play) { return; }
 
-  rewind_on = true;
+  G_EnableRewind();
 
   if (0 <= keyframe_index)
   { gameaction = ga_rewind; }
@@ -2769,7 +2774,8 @@ void G_Ticker(void)
 
   // [Nugget] Rewind
   if (CASUALPLAY(rewind_depth && rewind_on)
-      && gamestate == GS_LEVEL && oldleveltime < leveltime)
+      && gamestate == GS_LEVEL && oldleveltime < leveltime
+      && players[consoleplayer].playerstate != PST_DEAD)
   {
     if (!rewind_countdown)
     { G_SaveKeyFrame(); }
