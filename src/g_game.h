@@ -93,6 +93,7 @@ extern void G_ResetRewindCountdown(void);
 extern void G_EnableRewind(void);
 extern void G_Rewind(void);
 extern void G_ClearExcessKeyFrames(void);
+extern boolean G_KeyFrameRW(void);
 
 #endif
 

@@ -75,6 +75,8 @@ static byte     consistancy[MAXPLAYERS][BACKUPTICS];
 
 // [Nugget] Rewind /----------------------------------------------------------
 
+static boolean keyframe_rw = false;
+
 static boolean rewind_on = true;
 static int rewind_countdown = 0;
 
@@ -2009,6 +2011,8 @@ static void G_DoSaveGame(void)
   char *description;
   int  length, i;
 
+  keyframe_rw = false; // [Nugget] Make sure endian-unsafe R/W is disabled
+
   name = G_SaveGameName(savegameslot);
 
   description = savedescription;
@@ -2133,6 +2137,8 @@ static void G_DoLoadGame(void)
   char vcheck[VERSIONSIZE];
   uint64_t checksum;
   int tmp_compat, tmp_skill, tmp_epi, tmp_map;
+
+  keyframe_rw = false; // [Nugget] Make sure endian-unsafe R/W is disabled
 
   I_SetFastdemoTimer(false);
 
@@ -2365,6 +2371,8 @@ static void G_SaveKeyFrame(void)
 
   saveg_compat = saveg_current;
 
+  keyframe_rw = true;
+
   *save_p++ = demo_version;
 
   // killough 2/14/98: save old compatibility flag:
@@ -2424,6 +2432,8 @@ static void G_SaveKeyFrame(void)
   // [Nugget] Save milestones
   CheckSaveGame(sizeof complete_milestones);
   saveg_write_enum(complete_milestones);
+
+  keyframe_rw = false;
 
   length = save_p - savebuffer;
 
@@ -2514,6 +2524,8 @@ static void G_DoRewind(void)
   save_p = savebuffer = keyframe_list_tail->frame;
 
   saveg_compat = saveg_current;
+
+  keyframe_rw = true;
 
   demo_version = *save_p++; // saveg_woof510 < saveg_compat
 
@@ -2613,6 +2625,8 @@ static void G_DoRewind(void)
 
   // [Nugget] ---------------------------------------------------------------/
 
+  keyframe_rw = false;
+
   // [Alaux] Update smooth count values;
   // the same procedure is done in G_LoadLevel, but we have to repeat it here
   st_health = players[displayplayer].health;
@@ -2675,6 +2689,11 @@ void G_ClearExcessKeyFrames(void)
 
     keyframe_index--;
   }
+}
+
+boolean G_KeyFrameRW(void)
+{
+  return keyframe_rw;
 }
 
 // [Nugget] -----------------------------------------------------------------/

@@ -27,6 +27,7 @@
 #include "am_map.h"
 #include "p_enemy.h"
 #include "w_wad.h" // [FG] W_LumpLength()
+#include "g_game.h" // [Nugget]
 
 byte *save_p;
 
@@ -48,64 +49,106 @@ static short saveg_read16(void)
 {
     int result;
 
-    result = saveg_read8();
-    result |= saveg_read8() << 8;
+    // [Nugget] Rewind
+    if (G_KeyFrameRW()) {
+      memcpy(&result, save_p, sizeof(short));
+      save_p += sizeof(short);
+    }
+    else {
+      result = saveg_read8();
+      result |= saveg_read8() << 8;
+    }
 
     return result;
 }
 
 static void saveg_write16(short value)
 {
-    saveg_write8(value & 0xff);
-    saveg_write8((value >> 8) & 0xff);
+    // [Nugget] Rewind
+    if (G_KeyFrameRW()) {
+      memcpy(save_p, &value, sizeof(short));
+      save_p += sizeof(short);
+    }
+    else {
+      saveg_write8(value & 0xff);
+      saveg_write8((value >> 8) & 0xff);
+    }
 }
 
 int saveg_read32(void)
 {
     int result;
 
-    result = saveg_read8();
-    result |= saveg_read8() << 8;
-    result |= saveg_read8() << 16;
-    result |= saveg_read8() << 24;
+    // [Nugget] Rewind
+    if (G_KeyFrameRW()) {
+      memcpy(&result, save_p, sizeof(int));
+      save_p += sizeof(int);
+    }
+    else {
+      result = saveg_read8();
+      result |= saveg_read8() << 8;
+      result |= saveg_read8() << 16;
+      result |= saveg_read8() << 24;
+    }
 
     return result;
 }
 
 void saveg_write32(int value)
 {
-    saveg_write8(value & 0xff);
-    saveg_write8((value >> 8) & 0xff);
-    saveg_write8((value >> 16) & 0xff);
-    saveg_write8((value >> 24) & 0xff);
+    // [Nugget] Rewind
+    if (G_KeyFrameRW()) {
+      memcpy(save_p, &value, sizeof(int));
+      save_p += sizeof(int);
+    }
+    else {
+      saveg_write8(value & 0xff);
+      saveg_write8((value >> 8) & 0xff);
+      saveg_write8((value >> 16) & 0xff);
+      saveg_write8((value >> 24) & 0xff);
+    }
 }
 
 int64_t saveg_read64(void)
 {
     int64_t result;
 
-    result =  (int64_t)(saveg_read8());
-    result |= (int64_t)(saveg_read8()) << 8;
-    result |= (int64_t)(saveg_read8()) << 16;
-    result |= (int64_t)(saveg_read8()) << 24;
-    result |= (int64_t)(saveg_read8()) << 32;
-    result |= (int64_t)(saveg_read8()) << 40;
-    result |= (int64_t)(saveg_read8()) << 48;
-    result |= (int64_t)(saveg_read8()) << 56;
+    // [Nugget] Rewind
+    if (G_KeyFrameRW()) {
+      memcpy(&result, save_p, sizeof(int64_t));
+      save_p += sizeof(int64_t);
+    }
+    else {
+      result =  (int64_t)(saveg_read8());
+      result |= (int64_t)(saveg_read8()) << 8;
+      result |= (int64_t)(saveg_read8()) << 16;
+      result |= (int64_t)(saveg_read8()) << 24;
+      result |= (int64_t)(saveg_read8()) << 32;
+      result |= (int64_t)(saveg_read8()) << 40;
+      result |= (int64_t)(saveg_read8()) << 48;
+      result |= (int64_t)(saveg_read8()) << 56;
+    }
 
     return result;
 }
 
 void saveg_write64(int64_t value)
 {
-    saveg_write8(value & 0xff);
-    saveg_write8((value >> 8) & 0xff);
-    saveg_write8((value >> 16) & 0xff);
-    saveg_write8((value >> 24) & 0xff);
-    saveg_write8((value >> 32) & 0xff);
-    saveg_write8((value >> 40) & 0xff);
-    saveg_write8((value >> 48) & 0xff);
-    saveg_write8((value >> 56) & 0xff);
+    // [Nugget] Rewind
+    if (G_KeyFrameRW()) {
+      memcpy(save_p, &value, sizeof(int64_t));
+      save_p += sizeof(int64_t);
+    }
+    else {
+      saveg_write8(value & 0xff);
+      saveg_write8((value >> 8) & 0xff);
+      saveg_write8((value >> 16) & 0xff);
+      saveg_write8((value >> 24) & 0xff);
+      saveg_write8((value >> 32) & 0xff);
+      saveg_write8((value >> 40) & 0xff);
+      saveg_write8((value >> 48) & 0xff);
+      saveg_write8((value >> 56) & 0xff);
+    }
 }
 
 // Pad to 4-byte boundaries
