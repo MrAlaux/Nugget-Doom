@@ -1,7 +1,7 @@
 ## New Features
 
 - **_Alternative Intermission Background_** setting
-- **Rewinding**
+- **Rewinding** [thanks @rfomin]
 - **Support for optional health-based player pain sounds**
 - **_Higher god-mode face priority_** setting
 
