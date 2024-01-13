@@ -63,6 +63,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which SFX become audible
 - **_Organize Saves by IWAD_** setting
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
+- **Rewinding** [i.b. DSDA-Doom]
 - **_Play Internal Demos_** setting
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]

@@ -2441,14 +2441,12 @@ static void G_SaveKeyFrame(void)
   {
     keyframe_list_head =
     keyframe_list_tail = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
-    if (!keyframe_list_tail) { goto alloc_error; }
 
     keyframe_list_tail->prev = NULL;
   }
   else
   {
     keyframe_list_tail->next = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
-    if (!keyframe_list_tail->next) { goto alloc_error; }
 
     keyframe_list_tail->next->prev = keyframe_list_tail;
     keyframe_list_tail = keyframe_list_tail->next;
@@ -2457,7 +2455,6 @@ static void G_SaveKeyFrame(void)
   keyframe_list_tail->next = NULL;
 
   keyframe_list_tail->frame = Z_Malloc(length, PU_STATIC, NULL);
-  if (!keyframe_list_tail->frame) { goto frame_alloc_error; }
 
   memcpy(keyframe_list_tail->frame, savebuffer, length);
 
@@ -2480,26 +2477,6 @@ static void G_SaveKeyFrame(void)
     displaymsg("Slow key-framing: storing stopped");
     rewind_on = false;
   }
-
-  goto cleanup;
-
-frame_alloc_error:
-
-  if (keyframe_list_tail->prev) {
-    keyframe_list_tail = keyframe_list_tail->prev;
-    Z_Free(keyframe_list_tail->next);
-    keyframe_list_tail->next = NULL;
-  }
-  else {
-    Z_Free(keyframe_list_tail);
-    keyframe_list_head = keyframe_list_tail = NULL;
-  }
-
-alloc_error:
-
-  I_Printf(VB_ERROR, "G_SaveKeyFrame: Failed to allocate memory for key frame.");
-
-cleanup:
 
   G_ResetRewindCountdown();
 

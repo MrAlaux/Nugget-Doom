@@ -918,7 +918,7 @@ default_t defaults[] = {
     "rewind_timeout",
     (config_t *) &rewind_timeout, NULL,
     {10}, {0,25}, number, ss_gen, wad_no,
-    "Max. time to store a key frame; if exceeded, storing will stop (0 = No limit)"
+    "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)"
   },
 
   {
