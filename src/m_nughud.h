@@ -43,20 +43,31 @@ typedef struct nughud_vlignable_s {
   int vlign;
 } nughud_vlignable_t;
 
+typedef struct nughud_bar_s {
+  int x, y;
+  int wide;
+  int align;
+  int ups; // Units per slice
+  int gap;
+} nughud_bar_t;
+
 #define NUMNUGHUDPATCHES 8
 
 typedef struct nughud_s {
   nughud_alignable_t ammo;
   nughud_vlignable_t ammoicon;
   boolean            ammoicon_big;
+  nughud_bar_t       ammobar;
   nughud_alignable_t health;
   nughud_vlignable_t healthicon;
+  nughud_bar_t       healthbar;
   nughud_widget_t    arms[9];
   nughud_alignable_t frags;
   nughud_widget_t    face;
   boolean            face_bg;
   nughud_alignable_t armor;
   nughud_vlignable_t armoricon;
+  nughud_bar_t       armorbar;
   nughud_widget_t    keys[3];
   nughud_alignable_t ammos[4];
   nughud_alignable_t maxammos[4];

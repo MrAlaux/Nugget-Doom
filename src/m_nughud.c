@@ -1,7 +1,7 @@
 //  Copyright (C) 1999 by
 //  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
 //  Copyright(C) 2020-2021 Fabian Greffrath
-//  Copyright(C) 2021-2023 Alaux
+//  Copyright(C) 2021-2024 Alaux
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -49,6 +49,11 @@ nughud_t nughud; // Behold!!!
  WIDGET2(n, m, vx, vy, vw, va),                                            \
  { n "_vlign", (config_t *)&(m).vlign, NULL, { vv }, { -1, 1   }, number }
 
+#define BAR(n, m, vx, vy, vw, va, vp, vg)                                   \
+ WIDGET2(n, m, vx, vy, vw, va),                                             \
+ { n "_ups", (config_t *)&(m).ups, NULL, { vp }, {  100, 10000 }, number }, \
+ { n "_gap", (config_t *)&(m).gap, NULL, { vg }, { -4,   4     }, number }
+
 #define TEXTLINE(n, m, vx, vy, vw, va)                                      \
  { n "_x",     (config_t *)&(m).x,     NULL, { vx }, {  0, 320 }, number }, \
  { n "_y",     (config_t *)&(m).y,     NULL, { vy }, {  0, 200 }, number }, \
@@ -69,8 +74,10 @@ default_t nughud_defaults[] = {
   WIDGET2(   "nughud_ammo",        nughud.ammo,         ST_AMMOX,     ST_AMMOY,     -1,  1     ),
   WIDGET3(   "nughud_ammoicon",    nughud.ammoicon,    -1,            0,             0, -1,  1 ),
   TOGGLE(    "nughud_ammoicon_big",nughud.ammoicon_big, 0                                      ),
+  BAR(       "nughud_ammobar",     nughud.ammobar,     -1, 0, 0, 0, 100, 0                     ),
   WIDGET2(   "nughud_health",      nughud.health,       ST_HEALTHX,   ST_HEALTHY,   -1,  1     ),
   WIDGET3(   "nughud_healthicon",  nughud.healthicon,  -1,            0,             0, -1,  1 ),
+  BAR(       "nughud_healthbar",   nughud.healthbar,   -1, 0, 0, 0, 100, 0                     ),
   WIDGET(    "nughud_arms1",       nughud.arms[0],     -1,            0,             0         ),
   WIDGET(    "nughud_arms2",       nughud.arms[1],      111,          172,          -1         ),
   WIDGET(    "nughud_arms3",       nughud.arms[2],      119,          172,          -1         ),
@@ -85,6 +92,7 @@ default_t nughud_defaults[] = {
   TOGGLE(    "nughud_face_bg",     nughud.face_bg,      1                                      ),
   WIDGET2(   "nughud_armor",       nughud.armor,        ST_ARMORX,    ST_ARMORY,     1,  1     ),
   WIDGET3(   "nughud_armoricon",   nughud.armoricon,   -1,            0,             0, -1,  1 ),
+  BAR(       "nughud_armorbar",    nughud.armorbar,    -1, 0, 0, 0, 100, 0                     ),
   WIDGET(    "nughud_key0",        nughud.keys[0],      ST_KEY0X,     ST_KEY0Y,      1         ),
   WIDGET(    "nughud_key1",        nughud.keys[1],      ST_KEY1X,     ST_KEY1Y,      1         ),
   WIDGET(    "nughud_key2",        nughud.keys[2],      ST_KEY2X,     ST_KEY2Y,      1         ),

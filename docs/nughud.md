@@ -46,13 +46,16 @@ The following widgets are available:
 | :-----------------: | :---------: | :-------: | :---------- |
 | `nughud_ammo`       | Yes         | Yes       | Ammo count for the currently-equipped weapon |
 | `nughud_ammoicon`   | Yes         | Yes       | Ammo icon, which changes depending on ammo type of current weapon |
+| `nughud_ammobar`    | Yes         | Yes       | Ammo bar |
 | `nughud_health`     | Yes         | Yes       | Health count |
 | `nughud_healthicon` | Yes         | Yes       | Health icon, which changes depending on whether the player has Berserk |
+| `nughud_healthbar`  | Yes         | Yes       | Health bar |
 | `nughud_arms#`      | Yes         | No        | Arms (weapon) number, where # is a number between `1` and `9` (inclusive) |
 | `nughud_frags`      | Yes         | Yes       | Frags count, only shown during Deathmatch games |
 | `nughud_face`       | Yes         | No        | Face (Mugshot) |
 | `nughud_armor`      | Yes         | Yes       | Armor count |
 | `nughud_armoricon`  | Yes         | Yes       | Armor icon, which changes depending on current armor type |
+| `nughud_armorbar`   | Yes         | Yes       | Armor bar |
 | `nughud_key#`       | Yes         | No        | Key display, where # is a number between `0` and `2` (in order: Blue Key; Yellow Key; Red Key) |
 | `nughud_ammo#`      | Yes         | Yes       | Ammo count for each type, where # is a number between `0` and `3` (in order: Bullets; Shells; Cells; Rockets) |
 | `nughud_maxammo#`   | Yes         | Yes       | Same as the above, but for Max Ammo |
@@ -70,6 +73,15 @@ The following widgets are available:
   - ` 0` for center alignment;
   - `-1` for bottom alignment.
 Additionally, **the offsets of the graphics used by these icons will be ignored, unless a custom font is being used** (see details below).
+
+**The _Ammo_, _Health_ and _Armor bars_ support additional properties:**
+
+- `_ups`: Percentage of units per slice (e.g. a value of `200` would make a slice be drawn every 2 units), which can be any number between `100` and `10000`;
+- `_gap`: Additional space between slices (kerning), which can be any number between `-4` and `4`.
+
+**Bars also require slice graphics.** Respectively: `NHAMBAR#`, `NHHLBAR#` and `NHARBAR#`, where `#` stands for either `0` or `1`.
+If both slice graphics for a widget are provided, a second bar will be drawn on top of the first when the player has extra units (e.g. health over 100%).
+Otherwise, if only the first slice graphic is provided, the bars will continue to grow normally.
 
 **Arms number 1 is lit up when the player has Berserk.**
 
@@ -171,8 +183,9 @@ Infinity, drawn in place of the Ammo count when using weapons with no ammo type 
 
 ### Patches
 
-**Patches are static graphics that can be drawn anywhere on the screen**, behind the rest of widgets.
+**Patches are static graphics that can be drawn anywhere on the screen.**
 Up to 8 patches can be drawn. They are drawn in increasing order; `patch1` is drawn below `patch2`, which is drawn below `patch3`, and so on.
+Patches are mostly drawn behind widgets, with the exception of bars: the first 4 patches are drawn behind bars, while the rest are drawn over them.
 
 Aside from the shared properties, **patches make use of an additional property, `_name`, that determines the name of the graphic lump to be used**, which can either be a sprite (i.e. a lump between `S_START` and `S_END` markers, like `MEDIA0`) or a graphic (like `STBAR`).
 **Custom lumps CAN be used** (for example, a graphic called `NEWPATCH`). The names used in the `NUGHUD` lump MUST be enclosed between quotation marks.
