@@ -324,6 +324,7 @@ enum
     str_bobbing_style,
     str_crosshair_lockon,
     str_secret_message,
+    str_stats_format,
     str_vertical_aiming,
     str_over_under,
     str_flinching,
@@ -1727,13 +1728,18 @@ static setup_menu_t stat_settings4[] = {
 
 // [Nugget] /-----------------------------------------------------------------
 
+static const char *stats_format_strings[] = {
+  "Match HUD", "Ratio", "Boolean", "Percentage", "Remaining", NULL
+};
+
 static setup_menu_t stat_settings5[] =
 {
   {"Nugget - Extended HUD", S_SKIP|S_TITLE, M_X, M_SPC},
 
-    {"Show Powerup Timers",      S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_power_timers"}, m_null, input_null, str_show_widgets},
-    {"Kills % in Stats display", S_ONOFF,             M_X, M_SPC, {"hud_kills_percentage"}},
-    {"Alternative Arms Display", S_ONOFF,             M_X, M_SPC, {"alt_arms"}, m_null, input_null, str_empty, ST_createWidgets},
+    {"Show Powerup Timers",        S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_power_timers"}, m_null, input_null, str_show_widgets},
+    {"HUD Level Stats Format",     S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format"}, m_null, input_null, str_stats_format},
+    {"Automap Level Stats Format", S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format_map"}, m_null, input_null, str_stats_format},
+    {"Alternative Arms Display",   S_ONOFF,             M_X, M_SPC, {"alt_arms"}, m_null, input_null, str_empty, ST_createWidgets},
 
   MI_GAP,
   {"Nugget - Event Timers", S_SKIP|S_TITLE, M_X, M_SPC},
@@ -4233,6 +4239,7 @@ static const char **selectstrings[] = {
     bobbing_style_strings,
     crosshair_lockon_strings,
     secret_message_strings,
+    stats_format_strings,
     vertical_aiming_strings,
     over_under_strings,
     flinching_strings,

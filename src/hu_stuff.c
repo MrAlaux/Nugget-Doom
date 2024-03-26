@@ -1349,19 +1349,40 @@ static void HU_widget_build_monsec(void)
 
   char killlabelcolor, itemlabelcolor, secretlabelcolor;
 
-  killcolor = (fullkillcount >= max_kill_requirement) ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
-  secretcolor = (fullsecretcount >= totalsecret) ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
-  itemcolor = (fullitemcount >= totalitems) ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
+  killcolor   = (fullkillcount >= max_kill_requirement) ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
+  itemcolor   = (fullitemcount >= totalitems)           ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
+  secretcolor = (fullsecretcount >= totalsecret)        ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
 
-  // [Nugget] Restore kills percentage /--------------------------------------
+  // [Nugget] Stats formats from Crispy /-------------------------------------
 
-  char kill_percent_str[16];
+  char kill_str[32], item_str[32], secret_str[32];
 
-  M_snprintf(
-    kill_percent_str, sizeof(kill_percent_str), " \x1b%c%d%%",
-    (kill_percent_count >= totalkills) ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp,
-    (!totalkills) ? 100 : kill_percent_count * 100 / totalkills
-  );
+  switch ((automapactive == AM_FULL && hud_stats_format_map) ? hud_stats_format_map : hud_stats_format)
+  {
+    case STATSFORMAT_RATIO:
+      M_snprintf(kill_str,   sizeof(kill_str),   "%d/%d", fullkillcount,   max_kill_requirement);
+      M_snprintf(item_str,   sizeof(item_str),   "%d/%d", fullitemcount,   totalitems);
+      M_snprintf(secret_str, sizeof(secret_str), "%d/%d", fullsecretcount, totalsecret);
+      break;
+
+    case STATSFORMAT_BOOLEAN:
+      M_snprintf(kill_str,   sizeof(kill_str),   "%s", (fullkillcount   >= max_kill_requirement) ? "YES" : "NO");
+      M_snprintf(item_str,   sizeof(item_str),   "%s", (fullitemcount   >= totalitems)           ? "YES" : "NO");
+      M_snprintf(secret_str, sizeof(secret_str), "%s", (fullsecretcount >= totalsecret)          ? "YES" : "NO");
+      break;
+
+    case STATSFORMAT_PERCENTAGE:
+      M_snprintf(kill_str,   sizeof(kill_str),   "%d%%", (!max_kill_requirement) ? 100 : fullkillcount   * 100 / max_kill_requirement);
+      M_snprintf(item_str,   sizeof(item_str),   "%d%%", (!totalitems)           ? 100 : fullitemcount   * 100 / totalitems);
+      M_snprintf(secret_str, sizeof(secret_str), "%d%%", (!totalsecret)          ? 100 : fullsecretcount * 100 / totalsecret);
+      break;
+
+    case STATSFORMAT_REMAINING:
+      M_snprintf(kill_str,   sizeof(kill_str),   "%d", max_kill_requirement - fullkillcount);
+      M_snprintf(item_str,   sizeof(item_str),   "%d", totalitems           - fullitemcount);
+      M_snprintf(secret_str, sizeof(secret_str), "%d", totalsecret          - fullsecretcount);
+      break;
+  }
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -1404,31 +1425,29 @@ static void HU_widget_build_monsec(void)
   if ((hud_widget_layout && !st_crispyhud) || (st_crispyhud && nughud.sts_ml)) // [Nugget] NUGHUD
   {
     // [Nugget] Stats icons
+    // [Nugget] Stats formats from Crispy
 
-    // [Nugget] Restore kills percentage
     M_snprintf(hud_monsecstr, sizeof(hud_monsecstr),
-      "\x1b%c%c\t\x1b%c%d/%d%s", killlabelcolor, killlabel, killcolor, fullkillcount, max_kill_requirement,
-      hud_kills_percentage ? kill_percent_str : "");
+      "\x1b%c%c\t\x1b%c%s", killlabelcolor, killlabel, killcolor, kill_str);
     HUlib_add_string_to_cur_line(&w_monsec, hud_monsecstr);
 
     M_snprintf(hud_monsecstr, sizeof(hud_monsecstr),
-      "\x1b%c%c\t\x1b%c%d/%d", itemlabelcolor, itemlabel, itemcolor, fullitemcount, totalitems);
+      "\x1b%c%c\t\x1b%c%s", itemlabelcolor, itemlabel, itemcolor, item_str);
     HUlib_add_string_to_cur_line(&w_monsec, hud_monsecstr);
 
     M_snprintf(hud_monsecstr, sizeof(hud_monsecstr),
-      "\x1b%c%c\t\x1b%c%d/%d", secretlabelcolor, secretlabel, secretcolor, fullsecretcount, totalsecret);
+      "\x1b%c%c\t\x1b%c%s", secretlabelcolor, secretlabel, secretcolor, secret_str);
     HUlib_add_string_to_cur_line(&w_monsec, hud_monsecstr);
   }
   else
   {
     // [Nugget] Stats icons
-    // [Nugget] Restore kills percentage
+    // [Nugget] Stats formats from Crispy
     M_snprintf(hud_monsecstr, sizeof(hud_monsecstr),
-      "\x1b%c%c \x1b%c%d/%d%s \x1b%c%c \x1b%c%d/%d \x1b%c%c \x1b%c%d/%d",
-      killlabelcolor, killlabel, killcolor, fullkillcount, max_kill_requirement,
-      hud_kills_percentage ? kill_percent_str : "",
-      itemlabelcolor, itemlabel, itemcolor, fullitemcount, totalitems,
-      secretlabelcolor, secretlabel, secretcolor, fullsecretcount, totalsecret);
+      "\x1b%c%c \x1b%c%s \x1b%c%c \x1b%c%s \x1b%c%c \x1b%c%s",
+      killlabelcolor, killlabel, killcolor, kill_str,
+      itemlabelcolor, itemlabel, itemcolor, item_str,
+      secretlabelcolor, secretlabel, secretcolor, secret_str);
 
     HUlib_add_string_to_cur_line(&w_monsec, hud_monsecstr);
   }

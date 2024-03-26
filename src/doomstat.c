@@ -201,7 +201,8 @@ int sx_fix; // CFG-Only
 int announce_milestones;
 int show_save_messages; // CFG-Only
 int show_ssg; // CFG-Only
-int hud_kills_percentage;
+int hud_stats_format;
+int hud_stats_format_map;
 int alt_arms;
 int hud_time_teleport;
 int hud_time_keypickup;

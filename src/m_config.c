@@ -3525,12 +3525,23 @@ default_t defaults[] = {
     "show level stats (kill, items and secrets) widget (1 = on Automap, 2 = on HUD, 3 = always)"
   },
 
-  { // [Nugget] Restore kills percentage
-    "hud_kills_percentage",
-    (config_t *) &hud_kills_percentage, NULL,
-    {0}, {0,1}, number, ss_stat, wad_no,
-    "1 to show Kills percentage in Stats display"
+  // [Nugget] Stats formats from Crispy /-------------------------------------
+
+  {
+    "hud_stats_format",
+    (config_t *) &hud_stats_format, NULL,
+    {STATSFORMAT_RATIO}, {STATSFORMAT_RATIO,STATSFORMAT_REMAINING}, number, ss_stat, wad_no,
+    "level stats format (1 = ratio, 2 = boolean, 3 = percentage, 4 = remaining)"
   },
+
+  {
+    "hud_stats_format_map",
+    (config_t *) &hud_stats_format_map, NULL,
+    {0}, {0,STATSFORMAT_REMAINING}, number, ss_stat, wad_no,
+    "level stats format in Automap (0 = match HUD)"
+  },
+
+  // [Nugget] ---------------------------------------------------------------/
 
   // [FG] level time widget
   {

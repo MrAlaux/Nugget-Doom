@@ -544,7 +544,16 @@ extern int sx_fix; // CFG-Only
 extern int announce_milestones;
 extern int show_save_messages; // CFG-Only
 extern int show_ssg; // CFG-Only
-extern int hud_kills_percentage;
+
+enum {
+  STATSFORMAT_RATIO = 1,
+  STATSFORMAT_BOOLEAN,
+  STATSFORMAT_PERCENTAGE,
+  STATSFORMAT_REMAINING,
+};
+extern int hud_stats_format;
+extern int hud_stats_format_map;
+
 extern int alt_arms;
 
 typedef enum {
