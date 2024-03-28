@@ -94,7 +94,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **_Show Powerup Timers_** setting
 - **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-Only: `show_ssg`) [p.f. Crispy Doom]
 - **Support for Stats icons**, to be used in place of the "K/I/S" letter-labels: `HUDKILLS`, `HUDITEMS` and `HUDSCRTS` graphic lumps
-- **_[Show] Kills percentage in Stats display_** setting
+- **_Level Stats Format_** settings [i.b. Crispy Doom]
 - **_Alternative Arms Display_** setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
 - **Event Timers:**
   - _Teleport Timer_ [i.b. Crispy Doom];
