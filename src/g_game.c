@@ -2822,6 +2822,24 @@ static void G_SaveKeyFrame(void)
 
 static void G_DoRewind(void)
 {
+  static int last_rewind_time = 0;
+
+  if ((0 <= keyframe_index - 1)
+      && (gametic - last_rewind_time <= 21)) // 0.6 seconds
+  {
+    keyframe_index--;
+
+    Z_Free(keyframe_list_tail->frame);
+
+    keyframe_list_tail = keyframe_list_tail->prev;
+    Z_Free(keyframe_list_tail->next);
+    keyframe_list_tail->next = NULL;
+  }
+
+  last_rewind_time = gametic;
+
+  G_ResetRewindCountdown();
+
   int length, i;
 
   I_SetFastdemoTimer(false);
@@ -2943,19 +2961,6 @@ static void G_DoRewind(void)
   R_FillBackScreen(); // draw the pattern into the back screen
 
   displaymsg("Restored key frame %i", keyframe_index);
-
-  if (0 <= keyframe_index - 1)
-  {
-    keyframe_index--;
-
-    Z_Free(savebuffer);
-
-    keyframe_list_tail = keyframe_list_tail->prev;
-    Z_Free(keyframe_list_tail->next);
-    keyframe_list_tail->next = NULL;
-  }
-
-  G_ResetRewindCountdown();
 }
 
 void G_EnableRewind(void)
