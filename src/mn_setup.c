@@ -2733,7 +2733,7 @@ setup_menu_t gen_settings8[] = {
 static void UpdateRewindInterval(void)
 {
   G_EnableRewind();
-  G_ResetRewindCountdown();
+  G_SetRewindCountdown((rewind_interval * TICRATE) - ((leveltime - 1) % (rewind_interval * TICRATE)));
 }
 
 static void UpdateRewindDepth(void)

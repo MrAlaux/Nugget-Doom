@@ -1058,6 +1058,9 @@ static void G_DoLoadLevel(void)
 
   // [Nugget] ----------------------------------------------------------------
 
+  // Rewind
+  G_SetRewindCountdown(0);
+
   // Minimap
   if (minimap_was_on) {
     AM_ChangeMode(AM_MINI);
@@ -2665,6 +2668,12 @@ static void G_DoLoadGame(void)
   st_health = players[displayplayer].health;
   st_armor  = players[displayplayer].armorpoints;
 
+  // [Nugget] Rewind:
+  // Just like with `G_DoRewind`,
+  // this is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
+
   if (setsizeneeded)
     R_ExecuteSetViewSize();
 
@@ -2697,9 +2706,9 @@ static void G_DoLoadGame(void)
 
 // [Nugget] Rewind /----------------------------------------------------------
 
-void G_ResetRewindCountdown(void)
+void G_SetRewindCountdown(int value)
 {
-  rewind_countdown = rewind_interval * TICRATE;
+  rewind_countdown = value;
 }
 
 static void G_SaveKeyFrame(void)
@@ -2814,7 +2823,7 @@ static void G_SaveKeyFrame(void)
     rewind_on = false;
   }
 
-  G_ResetRewindCountdown();
+  G_SetRewindCountdown(rewind_interval * TICRATE);
 
   Z_Free(savebuffer);
   savebuffer = save_p = NULL;
@@ -2837,8 +2846,6 @@ static void G_DoRewind(void)
   }
 
   last_rewind_time = gametic;
-
-  G_ResetRewindCountdown();
 
   int length, i;
 
@@ -2961,6 +2968,10 @@ static void G_DoRewind(void)
   R_FillBackScreen(); // draw the pattern into the back screen
 
   displaymsg("Restored key frame %i", keyframe_index);
+
+  // This is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  G_SetRewindCountdown((rewind_interval * TICRATE) + 1);
 }
 
 void G_EnableRewind(void)
