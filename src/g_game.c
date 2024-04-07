@@ -3107,10 +3107,8 @@ void G_Ticker(void)
       && gamestate == GS_LEVEL && oldleveltime < leveltime
       && players[consoleplayer].playerstate != PST_DEAD)
   {
-    if (!rewind_countdown)
+    if (--rewind_countdown <= 0)
     { G_SaveKeyFrame(); }
-    else
-    { rewind_countdown--; }
   }
   else if (!CASUALPLAY(rewind_depth) || gamestate != GS_LEVEL)
   {
