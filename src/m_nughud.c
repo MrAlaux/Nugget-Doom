@@ -37,24 +37,24 @@ nughud_t nughud; // Behold!!!
  { _cvar_ "_y",    (config_t *) &(_struct_).y,    NULL, { _y_    }, {  0, 200 }, number }, \
  { _cvar_ "_wide", (config_t *) &(_struct_).wide, NULL, { _wide_ }, { -2, 2   }, number }
 
- 
+
 #define WIDGET2(_cvar_, _struct_, _x_, _y_, _wide_, _align_)                               \
  WIDGET(_cvar_, _struct_, _x_, _y_, _wide_),                                               \
  { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1 }, number }
 
- 
+
 #define WIDGET3(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _vlign_)                      \
  WIDGET2(_cvar_, _struct_, _x_, _y_, _wide_, _align_),                                     \
  { _cvar_ "_vlign", (config_t *) &(_struct_).vlign, NULL, { _vlign_ }, { -1, 1 }, number }
 
- 
+
 #define TEXTLINE(_cvar_, _struct_, _x_, _y_, _wide_, _align_)                                 \
  { _cvar_ "_x",     (config_t *) &(_struct_).x,     NULL, { _x_     }, {  0, 320 }, number }, \
  { _cvar_ "_y",     (config_t *) &(_struct_).y,     NULL, { _y_     }, {  0, 200 }, number }, \
  { _cvar_ "_wide",  (config_t *) &(_struct_).wide,  NULL, { _wide_  }, { -2, 2   }, number }, \
  { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1   }, number }
 
- 
+
 #define PATCH(_cvar_, _i_)                                                                               \
  { _cvar_ "_x",     (config_t *) &nughud.patches[_i_].x,     NULL, {  0        }, {  0, 320 }, number }, \
  { _cvar_ "_y",     (config_t *) &nughud.patches[_i_].y,     NULL, {  0        }, {  0, 200 }, number }, \
@@ -63,7 +63,14 @@ nughud_t nughud; // Behold!!!
  { _cvar_ "_vlign", (config_t *) &nughud.patches[_i_].vlign, NULL, {  1        }, { -1, 1   }, number }, \
  { _cvar_ "_name",  (config_t *) &nughud.patchnames[_i_],    NULL, { .s = NULL }, {  0      }, string }
 
- 
+#define SBCHUNK(_cvar_, _i_)                                                                \
+ WIDGET(_cvar_, nughud.sbchunks[_i_], -1, 0, 0),                                            \
+ { _cvar_ "_sx", (config_t *) &nughud.sbchunks[_i_].sx, NULL, { 0 },  { 0, 319 }, number }, \
+ { _cvar_ "_sy", (config_t *) &nughud.sbchunks[_i_].sy, NULL, { 0 },  { 0, 31  }, number }, \
+ { _cvar_ "_sw", (config_t *) &nughud.sbchunks[_i_].sw, NULL, { 1 },  { 1, 320 }, number }, \
+ { _cvar_ "_sh", (config_t *) &nughud.sbchunks[_i_].sh, NULL, { 32 }, { 1, 32  }, number }
+
+
 #define TOGGLE(_cvar_, _struct_, _value_) { _cvar_, (config_t *) &(_struct_), NULL, { _value_ }, { 0, 1 }, number }
 
 
@@ -143,6 +150,15 @@ default_t nughud_defaults[] = {
   PATCH( "nughud_patch6", 5 ),
   PATCH( "nughud_patch7", 6 ),
   PATCH( "nughud_patch8", 7 ),
+
+  SBCHUNK( "nughud_sbchunk1", 0 ),
+  SBCHUNK( "nughud_sbchunk2", 1 ),
+  SBCHUNK( "nughud_sbchunk3", 2 ),
+  SBCHUNK( "nughud_sbchunk4", 3 ),
+  SBCHUNK( "nughud_sbchunk5", 4 ),
+  SBCHUNK( "nughud_sbchunk6", 5 ),
+  SBCHUNK( "nughud_sbchunk7", 6 ),
+  SBCHUNK( "nughud_sbchunk8", 7 ),
 
   TOGGLE( "nughud_percents",      nughud.percents,      1 ),
   TOGGLE( "nughud_patch_offsets", nughud.patch_offsets, 1 ),

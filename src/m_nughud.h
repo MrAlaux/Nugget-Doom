@@ -46,7 +46,14 @@ typedef struct nughud_vlignable_s {
   int vlign;
 } nughud_vlignable_t;
 
+typedef struct nughud_sbchunk_s {
+  int x, y;
+  int wide;
+  int sx, sy, sw, sh;
+} nughud_sbchunk_t;
+
 #define NUMNUGHUDPATCHES 8
+#define NUMSBCHUNKS 8
 
 typedef struct nughud_s {
   nughud_alignable_t ammo;
@@ -80,6 +87,8 @@ typedef struct nughud_s {
   nughud_vlignable_t patches[NUMNUGHUDPATCHES];
   char               *patchnames[NUMNUGHUDPATCHES];
   boolean            patch_offsets;
+
+  nughud_sbchunk_t   sbchunks[NUMSBCHUNKS];
 
   boolean percents;
   fixed_t weapheight;

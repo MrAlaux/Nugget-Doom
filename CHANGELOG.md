@@ -3,6 +3,8 @@
 - **_Level Stats Format_** settings
   - Removed _Kills % in Stats display_ setting in favor of them
 - **Minimap zooming** (keyboard only)
+- **NUGHUD:**
+  - Status-Bar chunks
 
 ## Changes
 

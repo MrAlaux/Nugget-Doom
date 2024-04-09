@@ -219,6 +219,16 @@ nughud_patch1_align -1
 nughud_patch1_vlign 1
 nughud_patch1_name  ""
 
+; Example Status-Bar Chunk
+; (All other Chunks up to and including sbchunk8 have the same properties)
+nughud_sbchunk1_x     -1
+nughud_sbchunk1_y     0
+nughud_sbchunk1_wide  0
+nughud_sbchunk1_sx    0
+nughud_sbchunk1_sy    0
+nughud_sbchunk1_sw    1
+nughud_sbchunk1_sh    32
+
 ; Draw percentage signs
 nughud_percents 1
 

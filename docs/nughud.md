@@ -211,6 +211,24 @@ nughud_patch2_wide 0
 nughud_patch2_name "STARMS"
 ```
 
+### Status-Bar Chunks
+
+**Status-Bar chunks** are square regions of the Status Bar, taken from the currently-loaded `STBAR`.
+Up to 8 chunks can be drawn. They are drawn in the left-to-right order in which they appear in the traditional Status Bar.
+
+Apart from the shared properties, **chunks make use of the following additional properties**:
+
+- `_sx`: **X origin** (left end, absolute) of the chunk, which can be any integer in the [0, 319] range.
+- `_sy`: **Y origin** (top end, absolute) of the chunk, which can be any integer in the [0, 31] range.
+- `_sw`: **Width** (right end, relative to left end) of the chunk, which can be any integer in the [1, 320] range.
+- `_sh`: **Height** (bottom end, relative to top end) of the chunk, which can be any integer in the [1, 32] range.
+
+Chunks can only be taken from the original 320x200 region of the Status Bar;
+this keeps the feature functional with wide Status Bars, whose extended borders are ignored.
+
+**Note:** The `STBAR` graphic itself features the _Frags_ widget instead of the _Arms_ widget.
+The latter can be drawn as a patch.
+
 ### Additional integer properties
 
 - `nughud_weapheight`: **vertical offset for weapon sprites**, in the [-32, 32] range; greater values shift the sprites downwards.

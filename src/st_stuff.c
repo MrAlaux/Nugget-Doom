@@ -123,6 +123,9 @@
 // graphics are drawn to a backing screen and blitted to the real screen
 static pixel_t *st_backing_screen = NULL;
 
+// [Nugget] NUGHUD: Used for Status-Bar chunks
+static pixel_t *st_bar = NULL;
+
 // main player in game
 static player_t *plyr = NULL; // [Nugget] Initialize
 
@@ -960,6 +963,24 @@ static void NughudDrawPatch(nughud_vlignable_t *widget, patch_t *patch, boolean 
   V_DrawPatch(x, y, patch);
 }
 
+static void NughudDrawSBChunk(nughud_sbchunk_t *chunk)
+{
+  int x  = chunk->x + NUGHUDWIDESHIFT(chunk->wide) + video.deltaw,
+      y  = chunk->y,
+      sx = chunk->sx + video.deltaw,
+      sy = chunk->sy,
+      sw = chunk->sw,
+      sh = chunk->sh;
+
+  sw = MIN(ST_WIDTH - chunk->sx, sw);
+  sw = MIN(video.unscaledw - x,  sw);
+
+  sh = MIN(ST_HEIGHT - chunk->sy, sh);
+  sh = MIN(SCREENHEIGHT - y,      sh);
+
+  V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
+}
+
 // [Nugget] -----------------------------------------------------------------/
 
 void ST_drawWidgets(void)
@@ -993,6 +1014,13 @@ void ST_drawWidgets(void)
           !nughud.patch_offsets
         );
       }
+    }
+
+    // Status-Bar chunks -----------------------------------------------------
+
+    for (i = 0;  i < NUMSBCHUNKS;  i++)
+    {
+      if (nughud.sbchunks[i].x > -1) { NughudDrawSBChunk(&nughud.sbchunks[i]); }
     }
 
     // Icons -----------------------------------------------------------------
@@ -1916,6 +1944,21 @@ static int StatusBarBufferHeight(void)
 void ST_Init(void)
 {
   ST_loadData();
+}
+
+// [Nugget] NUGHUD: Status-Bar chunks
+void ST_InitChunkBar(void)
+{
+  if (st_bar) { Z_Free(st_bar); }
+
+  // More than necessary, but so be it
+  st_bar = Z_Malloc((video.pitch * V_ScaleY(ST_HEIGHT)) * sizeof(*st_bar), PU_STATIC, 0);
+
+  V_UseBuffer(st_bar);
+
+  V_DrawPatch(0, 0, sbar);
+
+  V_RestoreBuffer();
 }
 
 void ST_InitRes(void)
