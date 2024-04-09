@@ -1956,7 +1956,7 @@ void ST_InitChunkBar(void)
 
   V_UseBuffer(st_bar);
 
-  V_DrawPatch(0, 0, sbar);
+  V_DrawPatch(ST_X + (SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
 
   V_RestoreBuffer();
 }
