@@ -28,100 +28,127 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 
+
 nughud_t nughud; // Behold!!!
+
+
+#define WIDGET(_cvar_, _struct_, _x_, _y_, _wide_)                                         \
+ { _cvar_ "_x",    (config_t *) &(_struct_).x,    NULL, { _x_    }, { -1, 320 }, number }, \
+ { _cvar_ "_y",    (config_t *) &(_struct_).y,    NULL, { _y_    }, {  0, 200 }, number }, \
+ { _cvar_ "_wide", (config_t *) &(_struct_).wide, NULL, { _wide_ }, { -2, 2   }, number }
+
+ 
+#define WIDGET2(_cvar_, _struct_, _x_, _y_, _wide_, _align_)                               \
+ WIDGET(_cvar_, _struct_, _x_, _y_, _wide_),                                               \
+ { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1 }, number }
+
+ 
+#define WIDGET3(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _vlign_)                      \
+ WIDGET2(_cvar_, _struct_, _x_, _y_, _wide_, _align_),                                     \
+ { _cvar_ "_vlign", (config_t *) &(_struct_).vlign, NULL, { _vlign_ }, { -1, 1 }, number }
+
+ 
+#define TEXTLINE(_cvar_, _struct_, _x_, _y_, _wide_, _align_)                                 \
+ { _cvar_ "_x",     (config_t *) &(_struct_).x,     NULL, { _x_     }, {  0, 320 }, number }, \
+ { _cvar_ "_y",     (config_t *) &(_struct_).y,     NULL, { _y_     }, {  0, 200 }, number }, \
+ { _cvar_ "_wide",  (config_t *) &(_struct_).wide,  NULL, { _wide_  }, { -2, 2   }, number }, \
+ { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1   }, number }
+
+ 
+#define PATCH(_cvar_, _i_)                                                                               \
+ { _cvar_ "_x",     (config_t *) &nughud.patches[_i_].x,     NULL, {  0        }, {  0, 320 }, number }, \
+ { _cvar_ "_y",     (config_t *) &nughud.patches[_i_].y,     NULL, {  0        }, {  0, 200 }, number }, \
+ { _cvar_ "_wide",  (config_t *) &nughud.patches[_i_].wide,  NULL, {  0        }, { -2, 2   }, number }, \
+ { _cvar_ "_align", (config_t *) &nughud.patches[_i_].align, NULL, { -1        }, { -1, 1   }, number }, \
+ { _cvar_ "_vlign", (config_t *) &nughud.patches[_i_].vlign, NULL, {  1        }, { -1, 1   }, number }, \
+ { _cvar_ "_name",  (config_t *) &nughud.patchnames[_i_],    NULL, { .s = NULL }, {  0      }, string }
+
+ 
+#define TOGGLE(_cvar_, _struct_, _value_) { _cvar_, (config_t *) &(_struct_), NULL, { _value_ }, { 0, 1 }, number }
+
 
 //
 // DEFAULTS
 //
 
-#define WIDGET(n, m, vx, vy, vw)                                            \
- { n "_x",     (config_t *)&(m).x,     NULL, { vx }, { -1, 320 }, number }, \
- { n "_y",     (config_t *)&(m).y,     NULL, { vy }, {  0, 200 }, number }, \
- { n "_wide",  (config_t *)&(m).wide,  NULL, { vw }, { -2, 2   }, number }
-
-#define WIDGET2(n, m, vx, vy, vw, va)                                      \
- WIDGET(n, m, vx, vy, vw),                                                 \
- { n "_align", (config_t *)&(m).align, NULL, { va }, { -1, 1   }, number }
-
-#define WIDGET3(n, m, vx, vy, vw, va, vv)                                  \
- WIDGET2(n, m, vx, vy, vw, va),                                            \
- { n "_vlign", (config_t *)&(m).vlign, NULL, { vv }, { -1, 1   }, number }
-
-#define TEXTLINE(n, m, vx, vy, vw, va)                                      \
- { n "_x",     (config_t *)&(m).x,     NULL, { vx }, {  0, 320 }, number }, \
- { n "_y",     (config_t *)&(m).y,     NULL, { vy }, {  0, 200 }, number }, \
- { n "_wide",  (config_t *)&(m).wide,  NULL, { vw }, { -2, 2   }, number }, \
- { n "_align", (config_t *)&(m).align, NULL, { va }, { -1, 1   }, number }
-
-#define PATCH(n, i)                                                                             \
- { n "_x",     (config_t *)&nughud.patches[i].x,     NULL, {  0        }, {  0, 320 }, number }, \
- { n "_y",     (config_t *)&nughud.patches[i].y,     NULL, {  0        }, {  0, 200 }, number }, \
- { n "_wide",  (config_t *)&nughud.patches[i].wide,  NULL, {  0        }, { -2, 2   }, number }, \
- { n "_align", (config_t *)&nughud.patches[i].align, NULL, { -1        }, { -1, 1   }, number }, \
- { n "_vlign", (config_t *)&nughud.patches[i].vlign, NULL, {  1        }, { -1, 1   }, number }, \
- { n "_name",  (config_t *)&nughud.patchnames[i],    NULL, { .s = NULL }, {  0      }, string }
-
-#define TOGGLE(n, m, v) { n, (config_t *)&(m), NULL, { v }, { 0, 1 }, number }
-
 default_t nughud_defaults[] = {
-  WIDGET2(   "nughud_ammo",        nughud.ammo,         ST_AMMOX,     ST_AMMOY,     -1,  1     ),
-  WIDGET3(   "nughud_ammoicon",    nughud.ammoicon,    -1,            0,             0, -1,  1 ),
-  TOGGLE(    "nughud_ammoicon_big",nughud.ammoicon_big, 0                                      ),
-  WIDGET2(   "nughud_health",      nughud.health,       ST_HEALTHX,   ST_HEALTHY,   -1,  1     ),
-  WIDGET3(   "nughud_healthicon",  nughud.healthicon,  -1,            0,             0, -1,  1 ),
-  WIDGET(    "nughud_arms1",       nughud.arms[0],     -1,            0,             0         ),
-  WIDGET(    "nughud_arms2",       nughud.arms[1],      111,          172,          -1         ),
-  WIDGET(    "nughud_arms3",       nughud.arms[2],      119,          172,          -1         ),
-  WIDGET(    "nughud_arms4",       nughud.arms[3],      127,          172,          -1         ),
-  WIDGET(    "nughud_arms5",       nughud.arms[4],      135,          172,          -1         ),
-  WIDGET(    "nughud_arms6",       nughud.arms[5],      111,          182,          -1         ),
-  WIDGET(    "nughud_arms7",       nughud.arms[6],      119,          182,          -1         ),
-  WIDGET(    "nughud_arms8",       nughud.arms[7],      127,          182,          -1         ),
-  WIDGET(    "nughud_arms9",       nughud.arms[8],      135,          182,          -1         ),
-  WIDGET2(   "nughud_frags",       nughud.frags,        160,          171,           0,  0     ),
-  WIDGET(    "nughud_face",        nughud.face,        -1,            ST_FACESY,     0         ),
-  TOGGLE(    "nughud_face_bg",     nughud.face_bg,      1                                      ),
-  WIDGET2(   "nughud_armor",       nughud.armor,        ST_ARMORX,    ST_ARMORY,     1,  1     ),
-  WIDGET3(   "nughud_armoricon",   nughud.armoricon,   -1,            0,             0, -1,  1 ),
-  WIDGET(    "nughud_key0",        nughud.keys[0],      ST_KEY0X,     ST_KEY0Y,      1         ),
-  WIDGET(    "nughud_key1",        nughud.keys[1],      ST_KEY1X,     ST_KEY1Y,      1         ),
-  WIDGET(    "nughud_key2",        nughud.keys[2],      ST_KEY2X,     ST_KEY2Y,      1         ),
-  WIDGET2(   "nughud_ammo0",       nughud.ammos[0],     ST_AMMO0X,    ST_AMMO0Y,     1,  1     ),
-  WIDGET2(   "nughud_ammo1",       nughud.ammos[1],     ST_AMMO1X,    ST_AMMO1Y,     1,  1     ),
-  WIDGET2(   "nughud_ammo2",       nughud.ammos[2],     ST_AMMO2X,    ST_AMMO2Y,     1,  1     ),
-  WIDGET2(   "nughud_ammo3",       nughud.ammos[3],     ST_AMMO3X,    ST_AMMO3Y,     1,  1     ),
-  WIDGET2(   "nughud_maxammo0",    nughud.maxammos[0],  ST_MAXAMMO0X, ST_MAXAMMO0Y,  1,  1     ),
-  WIDGET2(   "nughud_maxammo1",    nughud.maxammos[1],  ST_MAXAMMO1X, ST_MAXAMMO1Y,  1,  1     ),
-  WIDGET2(   "nughud_maxammo2",    nughud.maxammos[2],  ST_MAXAMMO2X, ST_MAXAMMO2Y,  1,  1     ),
-  WIDGET2(   "nughud_maxammo3",    nughud.maxammos[3],  ST_MAXAMMO3X, ST_MAXAMMO3Y,  1,  1     ),
-  TEXTLINE(  "nughud_time",        nughud.time,         2,            152,          -1, -1     ),
-  TOGGLE(    "nughud_time_sts",    nughud.time_sts,     1                                      ),
-  TEXTLINE(  "nughud_sts",         nughud.sts,          2,            160,          -1, -1     ),
-  TOGGLE(    "nughud_sts_ml",      nughud.sts_ml,       0                                      ),
-  TEXTLINE(  "nughud_title",       nughud.title,        318,          160,           1,  1     ),
-  TEXTLINE(  "nughud_powers",      nughud.powers,       318,          8,             1,  1     ),
-  TEXTLINE(  "nughud_coord",       nughud.coord,        318,          16,            1,  1     ),
-  TOGGLE(    "nughud_coord_ml",    nughud.coord_ml,     0                                      ),
-  TEXTLINE(  "nughud_fps",         nughud.fps,          318,          24,            1,  1     ),
-  TEXTLINE(  "nughud_rate",        nughud.rate,         2,            192,          -1, -1     ),
-  {          "nughud_message_x",     (config_t *)&nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
-  {          "nughud_message_y",     (config_t *)&nughud.message.y,     NULL, {  0 }, {  0, 200 }, number },
-  {          "nughud_message_wide",  (config_t *)&nughud.message.wide,  NULL, { -1 }, { -2, 2 },   number },
-  {          "nughud_message_align", (config_t *)&nughud.message.align, NULL, { -1 }, { -1, 1 },   number },
-  TEXTLINE(  "nughud_secret",      nughud.secret,       160,          84,            0,  0     ),
-  PATCH(     "nughud_patch1",      0                                                           ),
-  PATCH(     "nughud_patch2",      1                                                           ),
-  PATCH(     "nughud_patch3",      2                                                           ),
-  PATCH(     "nughud_patch4",      3                                                           ),
-  PATCH(     "nughud_patch5",      4                                                           ),
-  PATCH(     "nughud_patch6",      5                                                           ),
-  PATCH(     "nughud_patch7",      6                                                           ),
-  PATCH(     "nughud_patch8",      7                                                           ),
+  WIDGET2( "nughud_ammo",         nughud.ammo,          ST_AMMOX, ST_AMMOY, -1,  1    ),
+  WIDGET3( "nughud_ammoicon",     nughud.ammoicon,     -1,        0,         0, -1, 1 ),
+  TOGGLE(  "nughud_ammoicon_big", nughud.ammoicon_big,  0                             ),
 
-  TOGGLE(    "nughud_percents",       nughud.percents,       1                                 ),
-  TOGGLE(    "nughud_patch_offsets",  nughud.patch_offsets,  1                                 ),
-  {          "nughud_weapheight",     (config_t *)&nughud.weapheight, NULL, {  0 }, { -32, 32 }, number },
-  {          "nughud_viewoffset",     (config_t *)&nughud.viewoffset, NULL, {  0 }, { -16, 16 }, number },
+  WIDGET2( "nughud_health",     nughud.health,      ST_HEALTHX, ST_HEALTHY, -1,  1    ),
+  WIDGET3( "nughud_healthicon", nughud.healthicon, -1,          0,           0, -1, 1 ),
+
+  WIDGET( "nughud_arms1", nughud.arms[0], -1,   0,    0 ),
+  WIDGET( "nughud_arms2", nughud.arms[1],  111, 172, -1 ),
+  WIDGET( "nughud_arms3", nughud.arms[2],  119, 172, -1 ),
+  WIDGET( "nughud_arms4", nughud.arms[3],  127, 172, -1 ),
+  WIDGET( "nughud_arms5", nughud.arms[4],  135, 172, -1 ),
+  WIDGET( "nughud_arms6", nughud.arms[5],  111, 182, -1 ),
+  WIDGET( "nughud_arms7", nughud.arms[6],  119, 182, -1 ),
+  WIDGET( "nughud_arms8", nughud.arms[7],  127, 182, -1 ),
+  WIDGET( "nughud_arms9", nughud.arms[8],  135, 182, -1 ),
+
+  WIDGET2( "nughud_frags", nughud.frags, 160, 171, 0, 0 ),
+
+  WIDGET( "nughud_face",    nughud.face,    -1, ST_FACESY, 0 ),
+  TOGGLE( "nughud_face_bg", nughud.face_bg,  1               ),
+
+  WIDGET2( "nughud_armor",     nughud.armor,      ST_ARMORX, ST_ARMORY, 1,  1    ),
+  WIDGET3( "nughud_armoricon", nughud.armoricon, -1,         0,         0, -1, 1 ),
+
+  WIDGET( "nughud_key0", nughud.keys[0], ST_KEY0X, ST_KEY0Y, 1 ),
+  WIDGET( "nughud_key1", nughud.keys[1], ST_KEY1X, ST_KEY1Y, 1 ),
+  WIDGET( "nughud_key2", nughud.keys[2], ST_KEY2X, ST_KEY2Y, 1 ),
+
+  WIDGET2( "nughud_ammo0", nughud.ammos[0], ST_AMMO0X, ST_AMMO0Y, 1, 1 ),
+  WIDGET2( "nughud_ammo1", nughud.ammos[1], ST_AMMO1X, ST_AMMO1Y, 1, 1 ),
+  WIDGET2( "nughud_ammo2", nughud.ammos[2], ST_AMMO2X, ST_AMMO2Y, 1, 1 ),
+  WIDGET2( "nughud_ammo3", nughud.ammos[3], ST_AMMO3X, ST_AMMO3Y, 1, 1 ),
+
+  WIDGET2( "nughud_maxammo0", nughud.maxammos[0], ST_MAXAMMO0X, ST_MAXAMMO0Y, 1, 1 ),
+  WIDGET2( "nughud_maxammo1", nughud.maxammos[1], ST_MAXAMMO1X, ST_MAXAMMO1Y, 1, 1 ),
+  WIDGET2( "nughud_maxammo2", nughud.maxammos[2], ST_MAXAMMO2X, ST_MAXAMMO2Y, 1, 1 ),
+  WIDGET2( "nughud_maxammo3", nughud.maxammos[3], ST_MAXAMMO3X, ST_MAXAMMO3Y, 1, 1 ),
+
+  TEXTLINE( "nughud_time",     nughud.time,     2, 152, -1, -1 ),
+  TOGGLE(   "nughud_time_sts", nughud.time_sts, 1              ),
+
+  TEXTLINE( "nughud_sts",    nughud.sts,    2, 160, -1, -1 ),
+  TOGGLE(   "nughud_sts_ml", nughud.sts_ml, 0              ),
+
+  TEXTLINE( "nughud_title", nughud.title, 318, 160, 1, 1 ),
+
+  TEXTLINE( "nughud_powers", nughud.powers, 318, 8, 1, 1 ),
+
+  TEXTLINE( "nughud_coord",    nughud.coord,    318, 16, 1, 1 ),
+  TOGGLE(   "nughud_coord_ml", nughud.coord_ml, 0             ),
+
+  TEXTLINE( "nughud_fps", nughud.fps, 318, 24, 1, 1 ),
+
+  TEXTLINE( "nughud_rate", nughud.rate, 2, 192, -1, -1 ),
+
+  { "nughud_message_x",     (config_t *)&nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
+  { "nughud_message_y",     (config_t *)&nughud.message.y,     NULL, {  0 }, {  0, 200 }, number },
+  { "nughud_message_wide",  (config_t *)&nughud.message.wide,  NULL, { -1 }, { -2, 2 },   number },
+  { "nughud_message_align", (config_t *)&nughud.message.align, NULL, { -1 }, { -1, 1 },   number },
+
+  TEXTLINE( "nughud_secret", nughud.secret, 160, 84, 0, 0 ),
+
+  PATCH( "nughud_patch1", 0 ),
+  PATCH( "nughud_patch2", 1 ),
+  PATCH( "nughud_patch3", 2 ),
+  PATCH( "nughud_patch4", 3 ),
+  PATCH( "nughud_patch5", 4 ),
+  PATCH( "nughud_patch6", 5 ),
+  PATCH( "nughud_patch7", 6 ),
+  PATCH( "nughud_patch8", 7 ),
+
+  TOGGLE( "nughud_percents",      nughud.percents,      1 ),
+  TOGGLE( "nughud_patch_offsets", nughud.patch_offsets, 1 ),
+
+  { "nughud_weapheight", (config_t *)&nughud.weapheight, NULL, { 0 }, { -32, 32 }, number },
+  { "nughud_viewoffset", (config_t *)&nughud.viewoffset, NULL, { 0 }, { -16, 16 }, number },
 
   { NULL }         // last entry
 };

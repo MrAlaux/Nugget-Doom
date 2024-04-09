@@ -938,7 +938,8 @@ static void ST_doPaletteStuff(void)
     }
 }
 
-// [Nugget] NUGHUD
+// [Nugget] NUGHUD /----------------------------------------------------------
+
 static void NughudDrawPatch(nughud_vlignable_t *widget, patch_t *patch, boolean no_offsets)
 {
   int x, y;
@@ -959,6 +960,8 @@ static void NughudDrawPatch(nughud_vlignable_t *widget, patch_t *patch, boolean 
   V_DrawPatch(x, y, patch);
 }
 
+// [Nugget] -----------------------------------------------------------------/
+
 void ST_drawWidgets(void)
 {
   int i;
@@ -978,6 +981,8 @@ void ST_drawWidgets(void)
   // [Nugget] Draw some NUGHUD graphics
   if (st_crispyhud)
   {
+    // Patches ---------------------------------------------------------------
+
     for (i = 0;  i < NUMNUGHUDPATCHES;  i++)
     {
       if (nughud_patchlump[i] >= 0)
@@ -989,6 +994,8 @@ void ST_drawWidgets(void)
         );
       }
     }
+
+    // Icons -----------------------------------------------------------------
 
     if (nughud.ammoicon.x > -1 && weaponinfo[w_ready.data].ammo != am_noammo)
     {

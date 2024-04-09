@@ -63,6 +63,7 @@ typedef struct nughud_s {
   nughud_widget_t    keys[3];
   nughud_alignable_t ammos[4];
   nughud_alignable_t maxammos[4];
+
   nughud_alignable_t time;
   boolean            time_sts;
   nughud_alignable_t sts;
@@ -75,13 +76,14 @@ typedef struct nughud_s {
   nughud_alignable_t rate;
   nughud_alignable_t message;
   nughud_alignable_t secret;
+
   nughud_vlignable_t patches[NUMNUGHUDPATCHES];
   char               *patchnames[NUMNUGHUDPATCHES];
   boolean            patch_offsets;
 
-  boolean            percents;
-  fixed_t            weapheight;
-  int                viewoffset;
+  boolean percents;
+  fixed_t weapheight;
+  int     viewoffset;
 } nughud_t;
 
 extern nughud_t nughud;
