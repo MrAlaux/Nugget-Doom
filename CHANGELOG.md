@@ -8,6 +8,9 @@
 
 ## Changes
 
+- **Rewind improvements:**
+  - Only delete key frames when rewinding within less than 0.6 seconds since the last rewind
+  - "Aligned" key-framing time
 - **Support for _Milestone Completion Announcements_ in multiplayer**
 
 ## Bug Fixes

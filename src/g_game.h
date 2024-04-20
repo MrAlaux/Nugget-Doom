@@ -114,7 +114,7 @@ extern int cpars[];     // hardcoded array size
 
 // [Nugget] Rewind -----------------------------------------------------------
 
-extern void G_ResetRewindCountdown(void);
+extern void G_SetRewindCountdown(int value);
 extern void G_EnableRewind(void);
 extern void G_Rewind(void);
 extern void G_ClearExcessKeyFrames(void);

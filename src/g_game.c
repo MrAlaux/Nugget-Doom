@@ -1058,6 +1058,9 @@ static void G_DoLoadLevel(void)
 
   // [Nugget] ----------------------------------------------------------------
 
+  // Rewind
+  G_SetRewindCountdown(0);
+
   // Minimap
   if (minimap_was_on) {
     AM_ChangeMode(AM_MINI);
@@ -2665,6 +2668,12 @@ static void G_DoLoadGame(void)
   st_health = players[displayplayer].health;
   st_armor  = players[displayplayer].armorpoints;
 
+  // [Nugget] Rewind:
+  // Just like with `G_DoRewind`,
+  // this is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
+
   if (setsizeneeded)
     R_ExecuteSetViewSize();
 
@@ -2697,9 +2706,9 @@ static void G_DoLoadGame(void)
 
 // [Nugget] Rewind /----------------------------------------------------------
 
-void G_ResetRewindCountdown(void)
+void G_SetRewindCountdown(int value)
 {
-  rewind_countdown = rewind_interval * TICRATE;
+  rewind_countdown = value;
 }
 
 static void G_SaveKeyFrame(void)
@@ -2814,7 +2823,7 @@ static void G_SaveKeyFrame(void)
     rewind_on = false;
   }
 
-  G_ResetRewindCountdown();
+  G_SetRewindCountdown(rewind_interval * TICRATE);
 
   Z_Free(savebuffer);
   savebuffer = save_p = NULL;
@@ -2822,6 +2831,22 @@ static void G_SaveKeyFrame(void)
 
 static void G_DoRewind(void)
 {
+  static int last_rewind_time = 0;
+
+  if ((0 <= keyframe_index - 1)
+      && (gametic - last_rewind_time <= 21)) // 0.6 seconds
+  {
+    keyframe_index--;
+
+    Z_Free(keyframe_list_tail->frame);
+
+    keyframe_list_tail = keyframe_list_tail->prev;
+    Z_Free(keyframe_list_tail->next);
+    keyframe_list_tail->next = NULL;
+  }
+
+  last_rewind_time = gametic;
+
   int length, i;
 
   I_SetFastdemoTimer(false);
@@ -2944,18 +2969,9 @@ static void G_DoRewind(void)
 
   displaymsg("Restored key frame %i", keyframe_index);
 
-  if (0 <= keyframe_index - 1)
-  {
-    keyframe_index--;
-
-    Z_Free(savebuffer);
-
-    keyframe_list_tail = keyframe_list_tail->prev;
-    Z_Free(keyframe_list_tail->next);
-    keyframe_list_tail->next = NULL;
-  }
-
-  G_ResetRewindCountdown();
+  // This is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  G_SetRewindCountdown((rewind_interval * TICRATE) + 1);
 }
 
 void G_EnableRewind(void)
@@ -3102,10 +3118,8 @@ void G_Ticker(void)
       && gamestate == GS_LEVEL && oldleveltime < leveltime
       && players[consoleplayer].playerstate != PST_DEAD)
   {
-    if (!rewind_countdown)
+    if (--rewind_countdown <= 0)
     { G_SaveKeyFrame(); }
-    else
-    { rewind_countdown--; }
   }
   else if (!CASUALPLAY(rewind_depth) || gamestate != GS_LEVEL)
   {
