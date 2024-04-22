@@ -1,7 +1,7 @@
 //  Copyright (C) 1999 by
 //  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
 //  Copyright(C) 2020-2021 Fabian Greffrath
-//  Copyright(C) 2021-2023 Alaux
+//  Copyright(C) 2021-2024 Alaux
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
