@@ -232,34 +232,34 @@ nughud_stack1_wide  -1
 nughud_stack1_align -1
 nughud_stack1_vlign 1
 
-; Stack 2 (top-left corner)
+; Stack 2 (top-right corner)
 nughud_stack2_x     318
 nughud_stack2_y     8
 nughud_stack2_wide  1
 nughud_stack2_align 1
 nughud_stack2_vlign 1
 
-; Stack 3 (top-left corner)
-nughud_stack_x     2
-nughud_stack_y     168
-nughud_stack_wide  -1
-nughud_stack_align -1
-nughud_stack_vlign -1
+; Stack 3 (bottom-left corner)
+nughud_stack3_x     2
+nughud_stack3_y     168
+nughud_stack3_wide  -1
+nughud_stack3_align -1
+nughud_stack3_vlign -1
 
-; Stack 4 (top-left corner)
-nughud_stack_x     318
-nughud_stack_y     168
-nughud_stack_wide  1
-nughud_stack_align 1
-nughud_stack_vlign -1
+; Stack 4 (bottom-right corner)
+nughud_stack4_x     318
+nughud_stack4_y     168
+nughud_stack4_wide  1
+nughud_stack4_align 1
+nughud_stack4_vlign -1
 
 ; Stack 5
 ; (All remaining Stacks have the same properties)
-nughud_stack_x     0
-nughud_stack_y     0
-nughud_stack_wide  0
-nughud_stack_align -1
-nughud_stack_vlign 1
+nughud_stack5_x     0
+nughud_stack5_y     0
+nughud_stack5_wide  0
+nughud_stack5_align -1
+nughud_stack5_vlign 1
 
 ; Example Patch
 ; (All other Patches have the same properties)
