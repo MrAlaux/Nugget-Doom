@@ -48,11 +48,23 @@ nughud_t nughud; // Behold!!!
  { _cvar_ "_vlign", (config_t *) &(_struct_).vlign, NULL, { _vlign_ }, { -1, 1 }, number }
 
 
-#define TEXTLINE(_cvar_, _struct_, _x_, _y_, _wide_, _align_)                                 \
- { _cvar_ "_x",     (config_t *) &(_struct_).x,     NULL, { _x_     }, {  0, 320 }, number }, \
- { _cvar_ "_y",     (config_t *) &(_struct_).y,     NULL, { _y_     }, {  0, 200 }, number }, \
+#define STK (NUMNUGHUDSTACKS)
+
+#define TEXTLINE(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _stack_, _order_)                   \
+ { _cvar_ "_x",     (config_t *) &(_struct_).x,     NULL, { _x_     }, { -1, 320 }, number }, \
+ { _cvar_ "_y",     (config_t *) &(_struct_).y,     NULL, { _y_     }, { -1, 200 }, number }, \
  { _cvar_ "_wide",  (config_t *) &(_struct_).wide,  NULL, { _wide_  }, { -2, 2   }, number }, \
- { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1   }, number }
+ { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1   }, number }, \
+ { _cvar_ "_stack", (config_t *) &(_struct_).stack, NULL, { _stack_ }, {  1, STK }, number }, \
+ { _cvar_ "_order", (config_t *) &(_struct_).order, NULL, { _order_ }, {  0, 64  }, number }
+
+
+#define STACK(_i_, _x_, _y_, _wide_, _align_, _vlign_)                                                                 \
+ { "nughud_stack" #_i_ "_x",     (config_t *) &nughud.stacks[_i_ - 1].x,     NULL, { _x_     }, {  0, 320 }, number }, \
+ { "nughud_stack" #_i_ "_y",     (config_t *) &nughud.stacks[_i_ - 1].y,     NULL, { _y_     }, {  0, 200 }, number }, \
+ { "nughud_stack" #_i_ "_wide",  (config_t *) &nughud.stacks[_i_ - 1].wide,  NULL, { _wide_  }, { -2, 2   }, number }, \
+ { "nughud_stack" #_i_ "_align", (config_t *) &nughud.stacks[_i_ - 1].align, NULL, { _align_ }, { -1, 1   }, number }, \
+ { "nughud_stack" #_i_ "_vlign", (config_t *) &nughud.stacks[_i_ - 1].vlign, NULL, { _vlign_ }, { -1, 1   }, number }
 
 
 #define PATCH(_cvar_, _i_)                                                                               \
@@ -62,6 +74,7 @@ nughud_t nughud; // Behold!!!
  { _cvar_ "_align", (config_t *) &nughud.patches[_i_].align, NULL, { -1        }, { -1, 1   }, number }, \
  { _cvar_ "_vlign", (config_t *) &nughud.patches[_i_].vlign, NULL, {  1        }, { -1, 1   }, number }, \
  { _cvar_ "_name",  (config_t *) &nughud.patchnames[_i_],    NULL, { .s = NULL }, {  0      }, string }
+
 
 #define SBCHUNK(_cvar_, _i_)                                                                \
  WIDGET(_cvar_, nughud.sbchunks[_i_], -1, 0, 0),                                            \
@@ -118,29 +131,37 @@ default_t nughud_defaults[] = {
   WIDGET2( "nughud_maxammo2", nughud.maxammos[2], ST_MAXAMMO2X, ST_MAXAMMO2Y, 1, 1 ),
   WIDGET2( "nughud_maxammo3", nughud.maxammos[3], ST_MAXAMMO3X, ST_MAXAMMO3Y, 1, 1 ),
 
-  TEXTLINE( "nughud_time",     nughud.time,     2, 152, -1, -1 ),
-  TOGGLE(   "nughud_time_sts", nughud.time_sts, 1              ),
+  TEXTLINE( "nughud_time", nughud.time, -1, -1, -1, -1, 3, 2 ),
 
-  TEXTLINE( "nughud_sts",    nughud.sts,    2, 160, -1, -1 ),
-  TOGGLE(   "nughud_sts_ml", nughud.sts_ml, 0              ),
+  TEXTLINE( "nughud_sts", nughud.sts, -1, -1, -1, -1, 3, 1 ),
+  { "nughud_sts_ml", (config_t *) &nughud.sts_ml, NULL, { -1 }, { -1, 1 }, number },
 
-  TEXTLINE( "nughud_title", nughud.title, 318, 160, 1, 1 ),
+  TEXTLINE( "nughud_title", nughud.title, -1, -1, -1, -1, 3, 0 ),
 
-  TEXTLINE( "nughud_powers", nughud.powers, 318, 8, 1, 1 ),
+  TEXTLINE( "nughud_powers", nughud.powers, -1, -1, -1, -1, 2, 0 ),
 
-  TEXTLINE( "nughud_coord",    nughud.coord,    318, 16, 1, 1 ),
-  TOGGLE(   "nughud_coord_ml", nughud.coord_ml, 0             ),
+  TEXTLINE( "nughud_coord",    nughud.coord,    -1, -1, -1, -1, 2, 1 ),
+  { "nughud_coord_ml", (config_t *) &nughud.coord_ml, NULL, { -1 }, { -1, 1 }, number },
 
-  TEXTLINE( "nughud_fps", nughud.fps, 318, 24, 1, 1 ),
+  TEXTLINE( "nughud_fps", nughud.fps, -1, -1, -1, -1, 2, 2 ),
 
-  TEXTLINE( "nughud_rate", nughud.rate, 2, 192, -1, -1 ),
+  TEXTLINE( "nughud_rate", nughud.rate, 2, 192, -1, -1, 1, 0 ),
 
-  { "nughud_message_x",     (config_t *)&nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
-  { "nughud_message_y",     (config_t *)&nughud.message.y,     NULL, {  0 }, {  0, 200 }, number },
-  { "nughud_message_wide",  (config_t *)&nughud.message.wide,  NULL, { -1 }, { -2, 2 },   number },
-  { "nughud_message_align", (config_t *)&nughud.message.align, NULL, { -1 }, { -1, 1 },   number },
+  { "nughud_message_x",     (config_t *) &nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
+  { "nughud_message_y",     (config_t *) &nughud.message.y,     NULL, {  0 }, {  0, 200 }, number },
+  { "nughud_message_wide",  (config_t *) &nughud.message.wide,  NULL, { -1 }, { -2, 2   }, number },
+  { "nughud_message_align", (config_t *) &nughud.message.align, NULL, { -1 }, { -1, 1   }, number },
 
-  TEXTLINE( "nughud_secret", nughud.secret, 160, 84, 0, 0 ),
+  TEXTLINE( "nughud_secret", nughud.secret, 160, 84, 0, 0, 1, 0 ),
+
+  STACK(1,   2,   8, -1, -1,  1),
+  STACK(2, 318,   8,  1,  1,  1),
+  STACK(3,   2, 168, -1, -1, -1),
+  STACK(4, 318, 168,  1,  1, -1),
+  STACK(5,   0,   0,  0, -1,  1),
+  STACK(6,   0,   0,  0, -1,  1),
+  STACK(7,   0,   0,  0, -1,  1),
+  STACK(8,   0,   0,  0, -1,  1),
 
   PATCH( "nughud_patch1", 0 ),
   PATCH( "nughud_patch2", 1 ),
@@ -163,8 +184,8 @@ default_t nughud_defaults[] = {
   TOGGLE( "nughud_percents",      nughud.percents,      1 ),
   TOGGLE( "nughud_patch_offsets", nughud.patch_offsets, 1 ),
 
-  { "nughud_weapheight", (config_t *)&nughud.weapheight, NULL, { 0 }, { -32, 32 }, number },
-  { "nughud_viewoffset", (config_t *)&nughud.viewoffset, NULL, { 0 }, { -16, 16 }, number },
+  { "nughud_weapheight", (config_t *) &nughud.weapheight, NULL, { 0 }, { -32, 32 }, number },
+  { "nughud_viewoffset", (config_t *) &nughud.viewoffset, NULL, { 0 }, { -16, 16 }, number },
 
   { NULL }         // last entry
 };

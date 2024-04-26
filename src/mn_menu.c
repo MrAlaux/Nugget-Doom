@@ -2295,8 +2295,6 @@ static boolean ShortcutResponder(const event_t *ev)
             }
         }
 
-        if (st_crispyhud) { HU_NughudAlignTime(); } // [Nugget] NUGHUD
-
         return true;
     }
 

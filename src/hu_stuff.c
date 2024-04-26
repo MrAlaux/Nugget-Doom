@@ -621,17 +621,32 @@ static hu_multiline_t *w_stats;
 
 // [Nugget] /-----------------------------------------------------------------
 
-static void NughudAlignWidget(nughud_alignable_t *aligner, hu_widget_t *alignee)
+#define NUMSQWIDGETS 8
+
+typedef struct {
+  nughud_textline_t *ntl;
+  hu_widget_t *wid;
+} widgetpair_t;
+
+typedef struct {
+  int offset;
+  widgetpair_t pairs[NUMSQWIDGETS];
+} stackqueue_t;
+
+static stackqueue_t nughud_stackqueues[NUMNUGHUDSTACKS];
+
+static void NughudAlignWidget(nughud_textline_t *aligner, hu_widget_t *alignee)
 {
-  alignee->y = aligner->y;
+  alignee->y = MAX(0, aligner->y);
 
   // Messages hack
-  if (aligner->x == -1) {
+  if (aligner == &nughud.message && aligner->x == -1)
+  {
     alignee->h_align = message_centered ? align_center : align_left;
     alignee->x = 1994;
     return;
   }
-  
+
   switch (aligner->align) {
     case -1:  alignee->h_align = align_left;    break;
     case  0:  alignee->h_align = align_center;  break;
@@ -639,36 +654,53 @@ static void NughudAlignWidget(nughud_alignable_t *aligner, hu_widget_t *alignee)
     default:                                    break;
   }
 
-  alignee->x = aligner->x + NUGHUDWIDESHIFT(aligner->wide);
+  alignee->x = MAX(0, aligner->x) + NUGHUDWIDESHIFT(aligner->wide);
 }
 
-void HU_NughudAlignTime(void)
+static boolean NughudAddToStack(nughud_textline_t *ntl, hu_widget_t *wid)
 {
-  hu_widget_t *w = boom_widgets[NUGHUDSLOT];
+  if (ntl->x != -1 || ntl->y != -1) { return false; }
 
-  while (w->multiline)
+  for (int i = 0;  i < NUMSQWIDGETS;  i++)
   {
-    if (w->multiline == &w_sttime)
-    {
-      if (nughud.time_sts
-          && !(hud_level_stats & HUD_WIDGET_HUD)
-          && (automapactive != AM_FULL || !(hud_level_stats & HUD_WIDGET_AUTOMAP)))
-      {
-        // Relocate Time text line to position of Stats text line
-        NughudAlignWidget(&nughud.sts, w);
-      }
-      else
-      { NughudAlignWidget(&nughud.time, w); }
+    widgetpair_t *pair = &nughud_stackqueues[ntl->stack - 1].pairs[i];
 
+    if (!pair->ntl) {
+      pair->ntl = ntl;
+      pair->wid = wid;
       break;
     }
-    else { w++; }
   }
+
+  return true;
 }
 
-// [Nugget] -----------------------------------------------------------------/
+static int NughudSortWidgets(const void *_p1, const void *_p2)
+{
+  const widgetpair_t *p1 = (widgetpair_t *) _p1,
+                     *p2 = (widgetpair_t *) _p2;
+
+  if (!p1->ntl || !p2->ntl) { return 0; }
+
+  int ret;
+
+       if (p1->ntl->order < p2->ntl->order) { ret = -1; }
+  else if (p1->ntl->order > p2->ntl->order) { ret =  1; }
+  else                                      { ret =  0; }
+
+  if (nughud.stacks[p1->ntl->stack - 1].vlign == -1) { ret = -ret; }
+
+  return ret;
+}
+
+#define MULTILINE(a) (                                 \
+   (hud_widget_layout && (!st_crispyhud || (a) == -1)) \
+    || (st_crispyhud && (a) == 1)                      \
+)
 
 boolean hud_automap;  // [Nugget] Condition used for level title
+
+// [Nugget] -----------------------------------------------------------------/
 
 void HU_Start(void)
 {
@@ -747,10 +779,7 @@ void HU_Start(void)
 
   // create the hud monster/secret widget
   HUlib_init_multiline(&w_monsec,
-                       // [Nugget] NUGHUD
-                       ((hud_widget_layout && !st_crispyhud)
-                        || (st_crispyhud && nughud.sts_ml))
-                       ? 3 : 1,
+                       MULTILINE(nughud.sts_ml) ? 3 : 1, // [Nugget] NUGHUD
                        &boom_font, colrngs[CR_GRAY],
                        NULL, HU_widget_build_monsec);
   // [FG] in deathmatch: w_keys.builder = HU_widget_build_frag()
@@ -767,10 +796,7 @@ void HU_Start(void)
 
   // create the automaps coordinate widget
   HUlib_init_multiline(&w_coord,
-                       // [Nugget] NUGHUD
-                       ((hud_widget_layout && !st_crispyhud)
-                        || (st_crispyhud && nughud.coord_ml))
-                       ? 3 : 1,
+                       MULTILINE(nughud.coord_ml) ? 3 : 1, // [Nugget] NUGHUD
                        &boom_font, colrngs[hudcolor_xyco],
                        NULL, HU_widget_build_coord);
 
@@ -791,27 +817,40 @@ void HU_Start(void)
   {
     hu_widget_t    *w;
     hu_multiline_t *m;
-    nughud_alignable_t *na;
+    nughud_textline_t *ntl;
+
+    for (i = 0;  i < NUMNUGHUDSTACKS;  i++)
+    {
+      stackqueue_t *sq = &nughud_stackqueues[i];
+
+      sq->offset = 0;
+
+      for (int j = 0;  j < NUMSQWIDGETS;  j++)
+      {
+        sq->pairs[j].ntl = NULL;
+        sq->pairs[j].wid = NULL;
+      }
+    }
 
     w = doom_widgets[NUGHUDSLOT];
     while ((m = w->multiline)) 
     {
-      na = NULL;
-      if      (m == &w_title)   { na = &nughud.title;   } 
-      else if (m == &w_message) { na = &nughud.message; }
-      else if (m == &w_chat)    { na = &nughud.message; }
-      else if (m == &w_secret)  { na = &nughud.secret;  }
+      ntl = NULL;
+      if      (m == &w_title)   { ntl = &nughud.title;   } 
+      else if (m == &w_message) { ntl = &nughud.message; }
+      else if (m == &w_chat)    { ntl = &nughud.message; }
+      else if (m == &w_secret)  { ntl = &nughud.secret;  }
 
-      if (na)
+      if (ntl && (ntl == &nughud.message || !NughudAddToStack(ntl, w)))
       {
         if (m == &w_chat)
         {
-          w->x = (na->x == -1) ? (hud_active == 2) ? -video.deltaw : 0
-                               : -abs(NUGHUDWIDESHIFT(na->wide));
+          w->x = (ntl->x == -1) ? (hud_active == 2) ? -video.deltaw : 0
+                                : -abs(NUGHUDWIDESHIFT(ntl->wide));
 
-          w->y = na->y + ((*m->font)->line_height * (message_list ? hud_msg_lines : 1));
+          w->y = ntl->y + ((*m->font)->line_height * (message_list ? hud_msg_lines : 1));
         }
-        else { NughudAlignWidget(na, w); }
+        else { NughudAlignWidget(ntl, w); }
       }
 
       w++;
@@ -820,22 +859,28 @@ void HU_Start(void)
     w = boom_widgets[NUGHUDSLOT];
     while ((m = w->multiline))
     {
-      na = NULL;
-      if      (m ==  w_stats)  { na = &nughud.sts;    }
-      else if (m == &w_sttime) { na = &nughud.time;   }
-      else if (m == &w_powers) { na = &nughud.powers; }
-      else if (m == &w_coord)  { na = &nughud.coord;  }
-      else if (m == &w_fps)    { na = &nughud.fps;    }
-      else if (m == &w_rate)   { na = &nughud.rate;   }
+      ntl = NULL;
+      if      (m ==  w_stats)  { ntl = &nughud.sts;    }
+      else if (m == &w_sttime) { ntl = &nughud.time;   }
+      else if (m == &w_powers) { ntl = &nughud.powers; }
+      else if (m == &w_coord)  { ntl = &nughud.coord;  }
+      else if (m == &w_fps)    { ntl = &nughud.fps;    }
+      else if (m == &w_rate)   { ntl = &nughud.rate;   }
 
-      if (na) {
-        if (na == &nughud.time)
-        { HU_NughudAlignTime(); }
-        else
-        { NughudAlignWidget(na, w); }
-      }
+      if (ntl && !NughudAddToStack(ntl, w))
+      { NughudAlignWidget(ntl, w); }
 
       w++;
+    }
+
+    for (i = 0;  i < NUMNUGHUDSTACKS;  i++)
+    {
+      qsort(
+        nughud_stackqueues[i].pairs,
+        NUMSQWIDGETS,
+        sizeof(widgetpair_t),
+        NughudSortWidgets
+      );
     }
   }
 
@@ -1422,7 +1467,7 @@ static void HU_widget_build_monsec(void)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  if ((hud_widget_layout && !st_crispyhud) || (st_crispyhud && nughud.sts_ml)) // [Nugget] NUGHUD
+  if (MULTILINE(nughud.sts_ml)) // [Nugget] NUGHUD
   {
     // [Nugget] Stats icons
     // [Nugget] Stats formats from Crispy
@@ -1552,7 +1597,7 @@ static void HU_widget_build_coord (void)
   AM_Coordinates(plr->mo, &x, &y, &z);
 
   //jff 2/16/98 output new coord display
-  if ((hud_widget_layout && !st_crispyhud) || (st_crispyhud && nughud.coord_ml)) // [Nugget] NUGHUD
+  if (MULTILINE(nughud.coord_ml)) // [Nugget] NUGHUD
   {
     M_snprintf(hud_coordstr, sizeof(hud_coordstr), "X\t\x1b%c%d", '0'+CR_GRAY, x >> FRACBITS);
     HUlib_add_string_to_cur_line(&w_coord, hud_coordstr);
@@ -2060,20 +2105,29 @@ void HU_Ticker(void)
 
   // draw the automap widgets if automap is displayed
 
+  #define SHOWPOWERS (                     \
+       plr->powers[pw_infrared] > 0        \
+    || plr->powers[pw_invisibility] > 0    \
+    || plr->powers[pw_invulnerability] > 0 \
+    || plr->powers[pw_ironfeet] > 0        \
+  )
+
   if (automapactive == AM_FULL)
   {
     HU_cond_build_widget(w_stats, hud_level_stats & HUD_WIDGET_AUTOMAP);
     HU_cond_build_widget(&w_sttime, hud_level_time & HUD_WIDGET_AUTOMAP || plr->btuse_tics);
-    HU_cond_build_widget(&w_powers, STRICTMODE(hud_power_timers) & HUD_WIDGET_AUTOMAP); // [Nugget] Powerup timers
+    HU_cond_build_widget(&w_powers, STRICTMODE(hud_power_timers) & HUD_WIDGET_AUTOMAP && SHOWPOWERS); // [Nugget] Powerup timers
     HU_cond_build_widget(&w_coord, STRICTMODE(hud_player_coords) & HUD_WIDGET_AUTOMAP);
   }
   else
   {
     HU_cond_build_widget(w_stats, hud_level_stats & HUD_WIDGET_HUD);
     HU_cond_build_widget(&w_sttime, hud_level_time & HUD_WIDGET_HUD || plr->btuse_tics);
-    HU_cond_build_widget(&w_powers, STRICTMODE(hud_power_timers) & HUD_WIDGET_HUD); // [Nugget] Powerup timers
+    HU_cond_build_widget(&w_powers, STRICTMODE(hud_power_timers) & HUD_WIDGET_HUD && SHOWPOWERS); // [Nugget] Powerup timers
     HU_cond_build_widget(&w_coord, STRICTMODE(hud_player_coords) & HUD_WIDGET_HUD);
   }
+
+  #undef SHOWPOWERS
 
   HU_cond_build_widget(&w_fps, plr->cheats & CF_SHOWFPS);
   HU_cond_build_widget(&w_rate, plr->cheats & CF_RENDERSTATS);
@@ -2094,6 +2148,62 @@ void HU_Ticker(void)
       HU_cond_build_widget(&w_health, true);
       HU_cond_build_widget(&w_ammo, true);
       HU_cond_build_widget(&w_keys, true);
+    }
+  }
+
+  // [Nugget] NUGHUD
+  if (st_crispyhud)
+  {
+    for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
+    {
+      nughud_stackqueues[i].offset = 0;
+
+      int secondtime = 0;
+
+      do
+      {
+        for (int j = 0;  j < NUMSQWIDGETS;  j++)
+        {
+          widgetpair_t *pair = &nughud_stackqueues[i].pairs[j];
+
+          if (!pair->ntl) { continue; }
+
+          hu_multiline_t *ml = pair->wid->multiline;
+
+          if (ml->built || (ml->on && *ml->on))
+          {
+            nughud_vlignable_t *stack = &nughud.stacks[i];
+            const int line_height = (*ml->font)->line_height;
+
+            if (!secondtime)
+            {
+              for (int k = 0;  k < ml->numlines;  k++)
+              {
+                switch (stack->vlign) {
+                  case -1:  nughud_stackqueues[i].offset += line_height;      break;
+                  case  0:  nughud_stackqueues[i].offset += line_height / 2;  break;
+                  case  1:  default:                                          break;
+                }
+              }
+            }
+            else {
+              pair->wid->y = stack->y - nughud_stackqueues[i].offset;
+
+              switch (stack->align) {
+                case -1:  pair->wid->h_align = align_left;    break;
+                case  0:  pair->wid->h_align = align_center;  break;
+                case  1:  pair->wid->h_align = align_right;   break;
+                default:                                      break;
+              }
+
+              pair->wid->x = stack->x + NUGHUDWIDESHIFT(stack->wide);
+
+              for (int k = 0;  k < ml->numlines;  k++)
+              { nughud_stackqueues[i].offset -= line_height; }
+            }
+          }
+        }
+      } while (!secondtime++);
     }
   }
 
