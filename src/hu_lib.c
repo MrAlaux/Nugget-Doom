@@ -228,17 +228,11 @@ static int horz_align_widget(const hu_widget_t *const w, const hu_line_t *const 
   // [Nugget] NUGHUD
   if (st_crispyhud)
   {
-    int x = w->x;
-
-    // Messages hack
-    if (x == 1994)
-    { x = (h_align == align_center) ? SCREENWIDTH/2 : -video.deltaw * (hud_active == 2); }
-
     switch (h_align) {
       default:
-      case align_left:   return x;
-      case align_center: return x - l->width/2;
-      case align_right:  return x - l->width;
+      case align_left:   return w->x;
+      case align_center: return w->x - l->width/2;
+      case align_right:  return w->x - l->width;
     }
   }
 

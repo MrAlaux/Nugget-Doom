@@ -90,10 +90,10 @@ The following text lines are available:
 | `nughud_coord`   | Coordinates display, only shown if enabled by the user |
 | `nughud_fps`     | FPS display, only shown when the `FPS` cheat is activated |
 | `nughud_rate`    | Rendering-statistics display, only shown when the `IDRATE` cheat is activated |
-| `nughud_message` | Message display |
+| `nughud_message` | Message and Chat display |
 | `nughud_secret`  | "Secret Revealed" and milestone-completion message display |
 
-**All text lines are alignable.**
+**All text lines are horizontally-alignable.**
 
 There are some additional properties, `nughud_sts_ml` and `nughud_coord_ml`,
 that respectively determine whether to draw the Stats and Coordinates display as multiple lines or a single one,
@@ -103,8 +103,11 @@ with the following possible values:
 - ` 0` to forcefully draw them as a single line.
 - ` 1` to forcefully draw them as multiple lines.
 
-The _Message_ display supports an X position value of `-1` to forcefully draw it at its original X position,
+There is an additional toggle, `nughud_message_defx`, to forcefully draw the _Message_ display at its original X position,
 where it'll be affected by the _Centered Messages_ setting.
+
+Note that the _Chat_ display is always drawn from the (widescreen-dependent) left-most border of the screen,
+regardless of the _Message_ display's X position and alignment.
 
 ### Stacks
 
@@ -119,7 +122,9 @@ Text lines will inherit the properties of the stack they belong to.
 **8 stacks are available**, numbered 1 through 8. **They're referred to as `nughud_stack#`**, where `#` is the stack number.
 **Stacks make use of all the shared properties, and are alignable both horizontally and vertically.**
 
-The _Message_ display cannot be drawn as part of stacks.
+The _Message_ and _Chat_ displays will always be drawn first in whichever stack they're assigned to,
+and will also be assigned to the next stack, which is assumed to be on the other end of the screen at the same height,
+so as to leave space to prevent overlapping issues due to those displays' potential length.
 
 #### Examples
 

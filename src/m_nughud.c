@@ -148,14 +148,16 @@ default_t nughud_defaults[] = {
   TEXTLINE( "nughud_rate", nughud.rate, 2, 192, -1, -1, 1, 0 ),
 
   { "nughud_message_x",     (config_t *) &nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
-  { "nughud_message_y",     (config_t *) &nughud.message.y,     NULL, {  0 }, {  0, 200 }, number },
+  { "nughud_message_y",     (config_t *) &nughud.message.y,     NULL, { -1 }, { -1, 200 }, number },
   { "nughud_message_wide",  (config_t *) &nughud.message.wide,  NULL, { -1 }, { -2, 2   }, number },
   { "nughud_message_align", (config_t *) &nughud.message.align, NULL, { -1 }, { -1, 1   }, number },
+  { "nughud_message_stack", (config_t *) &nughud.message.stack, NULL, {  1 }, {  1, STK }, number },
+  TOGGLE( "nughud_message_defx", nughud.message_defx, 1 ),
 
   TEXTLINE( "nughud_secret", nughud.secret, 160, 84, 0, 0, 1, 0 ),
 
-  STACK(1,   2,   8, -1, -1,  1),
-  STACK(2, 318,   8,  1,  1,  1),
+  STACK(1,   2,   0, -1, -1,  1),
+  STACK(2, 318,   0,  1,  1,  1),
   STACK(3,   2, 168, -1, -1, -1),
   STACK(4, 318, 168,  1,  1, -1),
   STACK(5,   0,   0,  0, -1,  1),

@@ -213,9 +213,11 @@ nughud_rate_order 0
 
 ; Message display
 nughud_message_x     -1
-nughud_message_y     0
+nughud_message_y     -1
 nughud_message_wide  -1
 nughud_message_align -1
+nughud_message_stack 1
+nughud_message_defx  1
 
 ; Secret Message/Milestone Completion display
 nughud_secret_x     160
@@ -227,14 +229,14 @@ nughud_secret_order 0
 
 ; Stack 1 (top-left corner)
 nughud_stack1_x     2
-nughud_stack1_y     8
+nughud_stack1_y     0
 nughud_stack1_wide  -1
 nughud_stack1_align -1
 nughud_stack1_vlign 1
 
 ; Stack 2 (top-right corner)
 nughud_stack2_x     318
-nughud_stack2_y     8
+nughud_stack2_y     0
 nughud_stack2_wide  1
 nughud_stack2_align 1
 nughud_stack2_vlign 1

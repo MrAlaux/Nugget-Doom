@@ -621,11 +621,12 @@ static hu_multiline_t *w_stats;
 
 // [Nugget] /-----------------------------------------------------------------
 
-#define NUMSQWIDGETS 8
+#define NUMSQWIDGETS 10
 
 typedef struct {
   nughud_textline_t *ntl;
   hu_widget_t *wid;
+  int order;
 } widgetpair_t;
 
 typedef struct {
@@ -637,15 +638,13 @@ static stackqueue_t nughud_stackqueues[NUMNUGHUDSTACKS];
 
 static void NughudAlignWidget(nughud_textline_t *aligner, hu_widget_t *alignee)
 {
+  // Chat hack
+  if (alignee->multiline == &w_chat) { return; }
+
   alignee->y = MAX(0, aligner->y);
 
   // Messages hack
-  if (aligner == &nughud.message && aligner->x == -1)
-  {
-    alignee->h_align = message_centered ? align_center : align_left;
-    alignee->x = 1994;
-    return;
-  }
+  if (alignee->multiline == &w_message && nughud.message_defx) { return; }
 
   switch (aligner->align) {
     case -1:  alignee->h_align = align_left;    break;
@@ -657,17 +656,19 @@ static void NughudAlignWidget(nughud_textline_t *aligner, hu_widget_t *alignee)
   alignee->x = MAX(0, aligner->x) + NUGHUDWIDESHIFT(aligner->wide);
 }
 
-static boolean NughudAddToStack(nughud_textline_t *ntl, hu_widget_t *wid)
+static boolean NughudAddToStack(nughud_textline_t *ntl, hu_widget_t *wid, int stack)
 {
   if (ntl->x != -1 || ntl->y != -1) { return false; }
 
   for (int i = 0;  i < NUMSQWIDGETS;  i++)
   {
-    widgetpair_t *pair = &nughud_stackqueues[ntl->stack - 1].pairs[i];
+    widgetpair_t *pair = &nughud_stackqueues[stack - 1].pairs[i];
 
     if (!pair->ntl) {
       pair->ntl = ntl;
       pair->wid = wid;
+      pair->order = (wid->multiline == &w_message) ? -2 :
+                    (wid->multiline == &w_chat)    ? -1 : ntl->order;
       break;
     }
   }
@@ -680,13 +681,13 @@ static int NughudSortWidgets(const void *_p1, const void *_p2)
   const widgetpair_t *p1 = (widgetpair_t *) _p1,
                      *p2 = (widgetpair_t *) _p2;
 
-  if (!p1->ntl || !p2->ntl) { return 0; }
+  if (!p1->ntl) { return 0; }
 
   int ret;
 
-       if (p1->ntl->order < p2->ntl->order) { ret = -1; }
-  else if (p1->ntl->order > p2->ntl->order) { ret =  1; }
-  else                                      { ret =  0; }
+       if (p1->order < p2->order) { ret = -1; }
+  else if (p1->order > p2->order) { ret =  1; }
+  else                            { ret =  0; }
 
   if (nughud.stacks[p1->ntl->stack - 1].vlign == -1) { ret = -ret; }
 
@@ -829,6 +830,7 @@ void HU_Start(void)
       {
         sq->pairs[j].ntl = NULL;
         sq->pairs[j].wid = NULL;
+        sq->pairs[j].order = 0;
       }
     }
 
@@ -841,16 +843,31 @@ void HU_Start(void)
       else if (m == &w_chat)    { ntl = &nughud.message; }
       else if (m == &w_secret)  { ntl = &nughud.secret;  }
 
-      if (ntl && (ntl == &nughud.message || !NughudAddToStack(ntl, w)))
+      if (ntl)
       {
+        // Messages hack
+        if (m == &w_message && nughud.message_defx)
+        {
+          w->h_align = message_centered ? align_center : align_left;
+          w->x = (w->h_align == align_center) ? SCREENWIDTH/2 : -video.deltaw * (hud_active == 2);
+        }
+
+        // Chat hack
         if (m == &w_chat)
         {
-          w->x = (ntl->x == -1) ? (hud_active == 2) ? -video.deltaw : 0
-                                : -abs(NUGHUDWIDESHIFT(ntl->wide));
-
-          w->y = ntl->y + ((*m->font)->line_height * (message_list ? hud_msg_lines : 1));
+          w->x = nughud.message_defx ? -video.deltaw * (hud_active == 2)
+                                     : -abs(NUGHUDWIDESHIFT(ntl->wide));
         }
-        else { NughudAlignWidget(ntl, w); }
+
+        if (!NughudAddToStack(ntl, w, ntl->stack))
+        {
+          NughudAlignWidget(ntl, w);
+        }
+        else if ((m == &w_message || m == &w_chat)
+                 && ntl->stack < NUMNUGHUDSTACKS)
+        {
+          NughudAddToStack(ntl, w, ntl->stack + 1);
+        }
       }
 
       w++;
@@ -867,7 +884,7 @@ void HU_Start(void)
       else if (m == &w_fps)    { ntl = &nughud.fps;    }
       else if (m == &w_rate)   { ntl = &nughud.rate;   }
 
-      if (ntl && !NughudAddToStack(ntl, w))
+      if (ntl && !NughudAddToStack(ntl, w, ntl->stack))
       { NughudAlignWidget(ntl, w); }
 
       w++;
@@ -2105,6 +2122,7 @@ void HU_Ticker(void)
 
   // draw the automap widgets if automap is displayed
 
+  // [Nugget] Powerup timers
   #define SHOWPOWERS (                     \
        plr->powers[pw_infrared] > 0        \
     || plr->powers[pw_invisibility] > 0    \
@@ -2154,6 +2172,34 @@ void HU_Ticker(void)
   // [Nugget] NUGHUD
   if (st_crispyhud)
   {
+    /* Loose-chat hack */ {
+      hu_widget_t *w = doom_widgets[NUGHUDSLOT];
+
+      while (w->multiline)
+      {
+        if (w->multiline == &w_chat)
+        {
+          w->y = nughud.message.y;
+
+          if (*w_message.on)
+          {
+            for (int i = 0;  i < w_message.numlines;  i++)
+            {
+              if (w_message.lines[i]->width)
+              {
+                w->y += (*w_message.font)->line_height;
+              }
+            }
+          }
+
+          break;
+        }
+
+        w++;
+      }
+    }
+
+    // Stacks
     for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
     {
       nughud_stackqueues[i].offset = 0;
@@ -2175,9 +2221,30 @@ void HU_Ticker(void)
             nughud_vlignable_t *stack = &nughud.stacks[i];
             const int line_height = (*ml->font)->line_height;
 
-            if (!secondtime)
+            if (secondtime && i == pair->ntl->stack - 1)
             {
-              for (int k = 0;  k < ml->numlines;  k++)
+                pair->wid->y = stack->y - nughud_stackqueues[i].offset;
+
+                if (!((ml == &w_message && nughud.message_defx) || ml == &w_chat)) // Messages and chat hacks
+                {
+                  switch (stack->align) {
+                    case -1:  pair->wid->h_align = align_left;    break;
+                    case  0:  pair->wid->h_align = align_center;  break;
+                    case  1:  pair->wid->h_align = align_right;   break;
+                    default:                                      break;
+                  }
+
+                  pair->wid->x = stack->x + NUGHUDWIDESHIFT(stack->wide);
+                }
+            }
+
+            for (int k = 0;  k < ml->numlines;  k++)
+            {
+              // Don't account for empty lines beyond the first one;
+              // message lines can be empty, and the chat's line-width is always zero
+              if (k && !ml->lines[k]->width) { continue; }
+
+              if (!secondtime)
               {
                 switch (stack->vlign) {
                   case -1:  nughud_stackqueues[i].offset += line_height;      break;
@@ -2185,21 +2252,7 @@ void HU_Ticker(void)
                   case  1:  default:                                          break;
                 }
               }
-            }
-            else {
-              pair->wid->y = stack->y - nughud_stackqueues[i].offset;
-
-              switch (stack->align) {
-                case -1:  pair->wid->h_align = align_left;    break;
-                case  0:  pair->wid->h_align = align_center;  break;
-                case  1:  pair->wid->h_align = align_right;   break;
-                default:                                      break;
-              }
-
-              pair->wid->x = stack->x + NUGHUDWIDESHIFT(stack->wide);
-
-              for (int k = 0;  k < ml->numlines;  k++)
-              { nughud_stackqueues[i].offset -= line_height; }
+              else { nughud_stackqueues[i].offset -= line_height; }
             }
           }
         }

@@ -91,6 +91,7 @@ typedef struct nughud_s {
   nughud_textline_t  fps;
   nughud_textline_t  rate;
   nughud_textline_t  message;
+  boolean            message_defx;
   nughud_textline_t  secret;
 
   nughud_vlignable_t stacks[NUMNUGHUDSTACKS];
