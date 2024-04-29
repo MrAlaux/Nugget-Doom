@@ -1290,7 +1290,8 @@ void R_RenderPlayerView (player_t* player)
 "/////////////////hffed\211de////////////////////"[i];
           c[i] = t=='/' ? color : t;
         }
-      if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8)
+      if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8
+          && !no_killough_face) // [Nugget]
         V_DrawBlock(scaledviewx +  scaledviewwidth/2 - 24,
                     scaledviewy + scaledviewheight/2 - 24, 47, 47, c);
       R_DrawViewBorder();

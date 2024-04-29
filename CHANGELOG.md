@@ -9,6 +9,7 @@
     - Removed `nughud_time_sts` in favor of stacks [1]
   - Status-Bar chunks
   - User-chosen `hud_widget_layout` support
+- Toggle to **disable the Killough-face easter egg**
 
 **[1].** This may affect existing NUGHUDs.
 

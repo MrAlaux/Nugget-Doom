@@ -234,7 +234,10 @@ int fancy_teleport;
 int screenshot_palette;
 int menu_backdrop_darkening;
 int automap_overlay_darkening;
+int no_killough_face;
 int sp_chat;
+
+int fail_safe;
 
 // Doom Compatibility (CFG-Only) ------
 
@@ -258,8 +261,6 @@ int comp_godface;
 int comp_deadoof;
 int comp_unusedpals;
 int comp_keypal;
-
-int fail_safe; // CFG-Only
 
 // [Nugget] -----------------------------------------------------------------/
 

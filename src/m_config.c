@@ -400,6 +400,13 @@ default_t defaults[] = {
     "1 to enable flashing HOM indicator"
   },
 
+  { // [Nugget]
+    "no_killough_face",
+    (config_t *) &no_killough_face, NULL,
+    {0}, {0,1}, number, ss_none, wad_yes,
+    "1 to disable the Killough-face easter egg"
+  },
+
   { // killough 2/21/98: default to 10
     "screenblocks",
     (config_t *) &screenblocks, NULL,

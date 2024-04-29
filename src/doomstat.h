@@ -607,7 +607,10 @@ enum {
 
 extern int menu_backdrop_darkening;
 extern int automap_overlay_darkening;
+extern int no_killough_face;
 extern int sp_chat;
+
+extern int fail_safe;
 
 // Doom Compatibility (CFG-Only) ------
 
@@ -631,8 +634,6 @@ extern int comp_godface;
 extern int comp_deadoof;
 extern int comp_unusedpals;
 extern int comp_keypal;
-
-extern int fail_safe; // CFG-Only
 
 // [Nugget] -----------------------------------------------------------------/
 
