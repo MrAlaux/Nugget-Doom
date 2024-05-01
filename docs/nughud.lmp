@@ -221,7 +221,7 @@ nughud_message_defx  1
 
 ; Secret Message/Milestone Completion display
 nughud_secret_x     160
-nughud_secret_y     84
+nughud_secret_y     42
 nughud_secret_wide  0
 nughud_secret_align 0
 nughud_secret_stack 1

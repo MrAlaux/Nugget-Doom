@@ -45,7 +45,9 @@ typedef enum
     key_mode
 } menu_input_mode_t;
 
-extern menu_input_mode_t menu_input;
+extern menu_input_mode_t menu_input, old_menu_input;
+void MN_ResetMouseCursor(void);
+
 extern boolean setup_active;
 extern short whichSkull; // which skull to draw (he blinks)
 extern int saved_screenblocks;
@@ -93,6 +95,7 @@ void MN_DrawEnemy(void);
 
 extern int resolution_scale;
 extern int midi_player_menu;
+extern const char *midi_player_string;
 
 /////////////////////////////
 //

@@ -59,11 +59,13 @@ void MN_ForcedLoadGame(const char *msg); // killough 5/15/98: forced loadgames
 void MN_Trans(void);     // killough 11/98: reset translucency
 void MN_ResetMenu(void); // killough 11/98: reset main menu ordering
 void MN_SetupResetMenu(void);
-void MN_SetupResetMenuVideo(void);
 void MN_ResetTimeScale(void);
 void MN_DrawCredits(void); // killough 11/98
 void MN_SetHUFontKerning(void);
 void MN_DisableVoxelsRenderingItem(void);
+void MN_UpdateDynamicResolutionItem(void);
+void MN_DisableResolutionScaleItem(void);
+void MN_UpdateFpsLimitItem(void);
 
 extern int traditional_menu; // display the menu traditional way
 
@@ -79,6 +81,8 @@ boolean MN_MenuIsShaded(void);
 
 void MN_SetQuickSaveSlot(int slot);
 
+void MN_InitMidiPlayer(void);
+
 void MN_InitMenuStrings(void);
 
 boolean MN_StartsWithMapIdentifier(char *str);
@@ -87,6 +91,10 @@ extern boolean inhelpscreens;
 
 int MN_GetPixelWidth(const char *ch);
 void MN_DrawString(int cx, int cy, int color, const char *ch);
+
+void M_StartSound(int sound_id);
+
+void M_StartSoundOptional(const int opt_sound_id, const int sound_id); // [Nugget]
 
 #endif
 

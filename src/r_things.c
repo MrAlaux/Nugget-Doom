@@ -470,10 +470,10 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
     {
       texturecolumn = frac>>FRACBITS;
 
-#ifdef RANGECHECK
-      if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-        I_Error ("R_DrawSpriteRange: bad texturecolumn");
-#endif
+      if (texturecolumn < 0)
+        continue;
+      else if (texturecolumn >= SHORT(patch->width))
+        break;
 
       column = (column_t *)((byte *) patch +
                             LONG(patch->columnofs[texturecolumn]));
@@ -729,7 +729,7 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   // Well, now it will be done.
   sec->validcount = validcount;
 
-  if (demo_version <= 202)
+  if (demo_version <= DV_BOOM)
     lightlevel = sec->lightlevel;
 
   lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;

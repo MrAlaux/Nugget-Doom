@@ -54,6 +54,7 @@
 #include "mn_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
+#include "mn_setup.h"
 #include "mn_snapshot.h"
 #include "m_swap.h" // [FG] LONG
 #include "memio.h"
@@ -174,8 +175,7 @@ boolean         padlook = false;
 // killough 4/13/98: Make clock rate adjustable by scale factor
 int             realtic_clock_rate = 100;
 
-complevel_t     default_complevel;
-boolean         force_complevel;
+complevel_t     force_complevel, default_complevel;
 
 boolean         pistolstart, default_pistolstart;
 
@@ -975,7 +975,7 @@ static void G_DoLoadLevel(void)
 
   playback_levelstarttic = playback_tic;
 
-  if (!demo_compatibility && demo_version < 203)   // killough 9/29/98
+  if (!demo_compatibility && demo_version < DV_MBF)   // killough 9/29/98
     basetic = gametic;
 
   if (wipegamestate == GS_LEVEL
@@ -1003,7 +1003,6 @@ static void G_DoLoadLevel(void)
 
   critical = (gameaction == ga_playdemo || demorecording || demoplayback || D_CheckNetConnect());
 
-  P_UpdateDirectVerticalAiming();
   P_UpdateCheckSight();
 
   // [crispy] pistol start
@@ -1013,6 +1012,9 @@ static void G_DoLoadLevel(void)
   }
 
   P_SetupLevel (gameepisode, gamemap, 0, gameskill);
+
+  MN_UpdateFreeLook();
+
   // [Woof!] Do not reset chosen player view across levels in multiplayer
   // demo playback. However, it must be reset when starting a new game.
   if (usergame)
@@ -1941,22 +1943,19 @@ static void G_DoWorldDone(void)
 
 #define MIN_MAXPLAYERS 32
 
-#define INVALID_DEMO(a, b) \
-   do \
-   { \
-     I_Printf(VB_WARNING, "G_DoPlayDemo: " a, b); \
-     gameaction = ga_nothing; \
-     demoplayback = true; \
-     G_CheckDemoStatus(); \
-     return; \
-   } while(0)
+static void InvalidDemo(void)
+{
+    gameaction = ga_nothing;
+    demoplayback = true;
+    G_CheckDemoStatus();
+}
 
 static void G_DoPlayDemo(void)
 {
   skill_t skill;
   int i, episode, map;
   char basename[9];
-  int demover;
+  demo_version_t demover;
   byte *option_p = NULL;      // killough 11/98
   int lumpnum, lumplength;
 
@@ -1980,19 +1979,25 @@ static void G_DoPlayDemo(void)
   // [FG] ignore too short demo lumps
   if (lumplength < 0xd)
   {
-    INVALID_DEMO("Short demo lump %s.", basename);
+    I_Printf(VB_WARNING, "G_DoPlayDemo: Short demo lump %s.", basename);
+    InvalidDemo();
+    return;
   }
 
   demover = *demo_p++;
 
   // skip UMAPINFO demo header
-  if (demover == 255)
+  if (demover == DV_UM)
   {
     // we check for the PR+UM signature.
     // Eternity Engine also uses 255 demover, with other signatures.
-    if (strncmp((const char *)demo_p, "PR+UM", 5) != 0)
+    if (memcmp(demo_p, "PR+UM", 5))
     {
-      INVALID_DEMO("Extended demo format %d found, but \"PR+UM\" string not found.", demover);
+      I_Printf(VB_WARNING,
+            "Extended demo format %d found, but \"PR+UM\" string not found.",
+            demover);
+      InvalidDemo();
+      return;
     }
 
     demo_p += 6;
@@ -2013,7 +2018,7 @@ static void G_DoPlayDemo(void)
       I_Error("G_DoPlayDemo: Unknown demo format.");
     }
 
-    if (strncmp((const char *)demo_p, "UMAPINFO", 8))
+    if (memcmp(demo_p, "UMAPINFO", 8))
     {
       I_Error("G_DoPlayDemo: Unknown demo format.");
     }
@@ -2036,14 +2041,16 @@ static void G_DoPlayDemo(void)
   // [FG] PrBoom's own demo format starts with demo version 210
   if (demover >= 210 && !mbf21)
   {
-    INVALID_DEMO("Unknown demo format %d.", demover);
+    I_Printf(VB_WARNING, "Unknown demo format %d.", demover);
+    InvalidDemo();
+    return;
   }
 
   longtics = false;
 
-  if (demover < 200)     // Autodetect old demos
+  if (demover < DV_BOOM200)     // Autodetect old demos
     {
-      if (demover == 111)
+      if (demover == DV_LONGTIC)
       {
         longtics = true;
       }
@@ -2077,7 +2084,7 @@ static void G_DoPlayDemo(void)
       // killough 3/6/98: rearrange to fix savegame bugs (moved fastparm,
       // respawnparm, nomonsters flags to G_LoadOptions()/G_SaveOptions())
 
-      if ((skill=demover) >= 100)         // For demos from versions >= 1.4
+      if (demover >= 100)         // For demos from versions >= 1.4
         {
           skill = *demo_p++;
           episode = *demo_p++;
@@ -2090,6 +2097,7 @@ static void G_DoPlayDemo(void)
         }
       else
         {
+          skill = (int)demover;
           episode = *demo_p++;
           map = *demo_p++;
           deathmatch = respawnparm = fastparm =
@@ -2116,7 +2124,7 @@ static void G_DoPlayDemo(void)
       consoleplayer = *demo_p++;
 
       // killough 11/98: save option pointer for below
-      if (demover >= 203)
+      if (demover >= DV_MBF)
 	option_p = demo_p;
 
       // killough 3/1/98: Read game options
@@ -2125,7 +2133,7 @@ static void G_DoPlayDemo(void)
       else
         demo_p = G_ReadOptions(demo_p);
 
-      if (demover == 200)        // killough 6/3/98: partially fix v2.00 demos
+      if (demover == DV_BOOM200) // killough 6/3/98: partially fix v2.00 demos
         demo_p += 256-G_GameOptionSize();
     }
 
@@ -2521,7 +2529,7 @@ static void G_DoLoadGame(void)
   }
   else
   {
-    demo_version = 203;
+    demo_version = DV_MBF;
   }
 
   // killough 2/14/98: load compatibility mode
@@ -3645,106 +3653,134 @@ static int G_GetHelpers(void)
   return j ? (j+1 < myargc && myargv[j+1][0] != '-') ? M_ParmArgToInt(j) : 1 : default_dogs;
 }
 
-// [FG] support named complevels on the command line, e.g. "-complevel boom",
+// [FG] support named complevels on the command line, e.g. "-complevel boom"
 
-int G_GetNamedComplevel (const char *arg)
+demo_version_t G_GetNamedComplevel(const char *arg)
 {
-  int i;
-
-  const struct {
-    int level;
-    const char *const name;
-    int exe;
-  } named_complevel[] = {
-    {109, "vanilla", -1},
-    {109, "doom2",   exe_doom_1_9},
-    {109, "1.9",     exe_doom_1_9},
-    {109, "2",       exe_doom_1_9},
-    {109, "ultimate",exe_ultimate},
-    {109, "3",       exe_ultimate},
-    {109, "final",   exe_final},
-    {109, "tnt",     exe_final},
-    {109, "plutonia",exe_final},
-    {109, "4",       exe_final},
-    {202, "boom",    -1},
-    {202, "9",       -1},
-    {203, "mbf",     -1},
-    {203, "11",      -1},
-    {221, "mbf21",   -1},
-    {221, "21",      -1},
-  };
-
-  for (i = 0; i < sizeof(named_complevel)/sizeof(*named_complevel); i++)
-  {
-    if (!strcasecmp(arg, named_complevel[i].name))
+    const struct
     {
-      if (named_complevel[i].exe >= 0)
-        gameversion = named_complevel[i].exe;
+        demo_version_t demover;
+        const char *const name;
+        int exe;
+    } named_complevel[] = {
+        {DV_VANILLA, "vanilla",  exe_indetermined},
+        {DV_VANILLA, "doom2",    exe_doom_1_9    },
+        {DV_VANILLA, "1.9",      exe_doom_1_9    },
+        {DV_VANILLA, "2",        exe_doom_1_9    },
+        {DV_VANILLA, "ultimate", exe_ultimate    },
+        {DV_VANILLA, "3",        exe_ultimate    },
+        {DV_VANILLA, "final",    exe_final       },
+        {DV_VANILLA, "tnt",      exe_final       },
+        {DV_VANILLA, "plutonia", exe_final       },
+        {DV_VANILLA, "4",        exe_final       },
+        {DV_BOOM,    "boom",     exe_indetermined},
+        {DV_BOOM,    "9",        exe_indetermined},
+        {DV_MBF,     "mbf",      exe_indetermined},
+        {DV_MBF,     "11",       exe_indetermined},
+        {DV_MBF21,   "mbf21",    exe_indetermined},
+        {DV_MBF21,   "21",       exe_indetermined},
+    };
 
-      return named_complevel[i].level;
+    for (int i = 0; i < arrlen(named_complevel); i++)
+    {
+        if (!strcasecmp(arg, named_complevel[i].name))
+        {
+            if (named_complevel[i].exe != exe_indetermined)
+            {
+                gameversion = named_complevel[i].exe;
+            }
+
+            return named_complevel[i].demover;
+        }
     }
-  }
 
-  return -1;
+    return DV_NONE;
 }
 
-static int G_GetDefaultComplevel()
+static struct
 {
-  switch (default_complevel)
-  {
-    case CL_VANILLA:
-      return 109;
-    case CL_BOOM:
-      return 202;
-    case CL_MBF:
-      return 203;
-    default:
-      return 221;
-  }
+    demo_version_t demover;
+    complevel_t complevel;
+} demover_complevel[] = {
+    {DV_VANILLA, CL_VANILLA},
+    {DV_BOOM,    CL_BOOM   },
+    {DV_MBF,     CL_MBF    },
+    {DV_MBF21,   CL_MBF21  }
+};
+
+static complevel_t GetComplevel(demo_version_t demover)
+{
+    for (int i = 0; i < arrlen(demover_complevel); ++i)
+    {
+        if (demover == demover_complevel[i].demover)
+        {
+            return demover_complevel[i].complevel;
+        }
+    }
+
+    return CL_NONE;
+}
+
+static demo_version_t GetDemover(complevel_t complevel)
+{
+    for (int i = 0; i < arrlen(demover_complevel); ++i)
+    {
+        if (complevel == demover_complevel[i].complevel)
+        {
+            return demover_complevel[i].demover;
+        }
+    }
+
+    return DV_NONE;
 }
 
 const char *G_GetCurrentComplevelName(void)
 {
-  switch (demo_version)
-  {
-    case 109:
-      return gameversions[gameversion].description;
-    case 202:
-      return "Boom";
-    case 203:
-      return "MBF";
-    case 221:
-      return "MBF21";
-    default:
-      return "Unknown";
-  }
+    switch (demo_version)
+    {
+        case DV_VANILLA:
+            return gameversions[gameversion].description;
+        case DV_BOOM:
+            return "Boom";
+        case DV_MBF:
+            return "MBF";
+        case DV_MBF21:
+            return "MBF21";
+        default:
+            return "Unknown";
+    }
 }
 
-static int G_GetWadComplevel(void)
+static demo_version_t GetWadDemover(void)
 {
-  int lumpnum;
+    int lumpnum = W_CheckNumForName("COMPLVL");
 
-  lumpnum = W_CheckNumForName("COMPLVL");
+    if (lumpnum < 0)
+    {
+        return DV_NONE;
+    }
 
-  if (lumpnum >= 0)
-  {
-    int length;
-    char *data = NULL;
-
-    length = W_LumpLength(lumpnum);
-    data = W_CacheLumpNum(lumpnum, PU_CACHE);
+    int length = W_LumpLength(lumpnum);
+    char *data = W_CacheLumpNum(lumpnum, PU_CACHE);
 
     if (length == 7 && !strncasecmp("vanilla", data, 7))
-      return 109;
+    {
+        return DV_VANILLA;
+    }
     else if (length == 4 && !strncasecmp("boom", data, 4))
-      return 202;
+    {
+        return DV_BOOM;
+    }
     else if (length == 3 && !strncasecmp("mbf", data, 3))
-      return 203;
+    {
+        return DV_MBF;
+    }
     else if (length == 5 && !strncasecmp("mbf21", data, 5))
-      return 221;
-  }
+    {
+        return DV_MBF21;
+    }
 
-  return -1;
+    return DV_NONE;
 }
 
 static void G_MBFDefaults(void)
@@ -3871,7 +3907,7 @@ void G_ReloadDefaults(boolean keep_demover)
 
   if (!keep_demover)
   {
-    int level = -1;
+    demo_version_t demover = DV_NONE;
 
     //!
     // @arg <version>
@@ -3886,27 +3922,28 @@ void G_ReloadDefaults(boolean keep_demover)
 
     if (p > 0)
     {
-      level = G_GetNamedComplevel(myargv[p + 1]);
-      if (level < 0)
+      demover = G_GetNamedComplevel(myargv[p + 1]);
+      if (demover == DV_NONE)
       {
         I_Error("Invalid parameter '%s' for -complevel, "
                 "valid values are vanilla, boom, mbf, mbf21.", myargv[p + 1]);
       }
     }
 
-    if (level < 0)
+    if (demover == DV_NONE)
     {
-      level = G_GetWadComplevel();
+      demover = GetWadDemover();
     }
 
-    if (level < 0)
+    if (demover == DV_NONE)
     {
-      demo_version = G_GetDefaultComplevel();
+      demo_version = GetDemover(default_complevel);
+      force_complevel = CL_NONE;
     }
     else
     {
-      demo_version = level;
-      force_complevel = true;
+      demo_version = demover;
+      force_complevel = GetComplevel(demo_version);
     }
   }
 
@@ -3943,7 +3980,7 @@ void G_ReloadDefaults(boolean keep_demover)
   // Reset MBF compatibility options in strict mode
   if (strictmode)
   {
-    if (demo_version == 203)
+    if (demo_version == DV_MBF)
       G_MBFDefaults();
     else if (mbf21)
       G_MBF21Defaults();
@@ -3967,13 +4004,16 @@ void G_ReloadDefaults(boolean keep_demover)
   // haleyjd
   rngseed = time(NULL);
 
-  if (beta_emulation && demo_version != 203)
+  if (beta_emulation && demo_version != DV_MBF)
     I_Error("G_ReloadDefaults: Beta emulation requires complevel MBF.");
 
-  if ((M_CheckParm("-dog") || M_CheckParm("-dogs")) && demo_version < 203)
+  if ((M_CheckParm("-dog") || M_CheckParm("-dogs")) && demo_version < DV_MBF)
     I_Error("G_ReloadDefaults: Helper dogs require complevel MBF or MBF21.");
 
-  if (demo_version < 203)
+  if (M_CheckParm("-skill") && startskill == sk_none && !demo_compatibility)
+    I_Error("G_ReloadDefaults: '-skill 0' requires complevel Vanilla.");
+
+  if (demo_version < DV_MBF)
   {
     monster_infighting = 1;
     monster_backing = 0;
@@ -3986,12 +4026,12 @@ void G_ReloadDefaults(boolean keep_demover)
 
     monkeys = 0;
 
-    if (demo_version == 109)
+    if (demo_version == DV_VANILLA)
     {
       compatibility = true;
       memset(comp, 0xff, sizeof comp);
     }
-    else if (demo_version == 202)
+    else if (demo_version == DV_BOOM)
     {
       memset(comp, 0, sizeof comp);
       G_BoomComp();
@@ -4088,7 +4128,7 @@ int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap)
     return 0;
   strncpy(mapuname, mapname, 8);
   mapuname[8] = 0;
-  M_ForceUppercase(mapuname);
+  M_StringToUpper(mapuname);
 
   if (gamemode != commercial)
   {
@@ -4193,7 +4233,7 @@ void G_InitNew(skill_t skill, int episode, int map)
 
   M_LoadOptions();     // killough 11/98: read OPTIONS lump from wad
 
-  if (demo_version == 203)
+  if (demo_version == DV_MBF)
     G_MBFComp();
 
   G_DoLoadLevel();
@@ -4481,7 +4521,7 @@ byte *G_ReadOptions(byte *demo_p)
   rngseed += *demo_p++ & 0xff;
 
   // Options new to v2.03
-  if (demo_version >= 203)
+  if (demo_version >= DV_MBF)
     {
       monster_infighting = *demo_p++;   // killough 7/19/98
 
@@ -4516,10 +4556,6 @@ byte *G_ReadOptions(byte *demo_p)
       }
 
       G_MBFComp();
-
-      // Options new to v2.04, etc.
-      if (demo_version >= 204)
-	;
     }
   else  // defaults for versions < 2.02
     {
@@ -4527,7 +4563,7 @@ byte *G_ReadOptions(byte *demo_p)
       for (i=0; i < COMP_TOTAL; i++)
 	comp[i] = compatibility;
 
-      if (demo_version == 202 || demo_version == 201)
+      if (demo_version == DV_BOOM || demo_version == DV_BOOM201)
         G_BoomComp();
 
       monster_infighting = 1;           // killough 7/19/98
@@ -4557,7 +4593,7 @@ void G_BeginRecording(void)
 
   demo_p = demobuffer;
 
-  if (demo_version == 203 || mbf21)
+  if (demo_version == DV_MBF || mbf21)
   {
   *demo_p++ = demo_version;
 
@@ -4593,7 +4629,7 @@ void G_BeginRecording(void)
   for (; i<MIN_MAXPLAYERS; i++)
     *demo_p++ = 0;
   }
-  else if (demo_version == 202)
+  else if (demo_version == DV_BOOM)
   {
     *demo_p++ = demo_version;
 
@@ -4626,11 +4662,11 @@ void G_BeginRecording(void)
     for (; i<MIN_MAXPLAYERS; i++)
       *demo_p++ = 0;
   }
-  else if (demo_version == 109)
+  else if (demo_version == DV_VANILLA)
   {
     if (longtics)
     {
-      *demo_p++ = 111;
+      *demo_p++ = DV_LONGTIC;
     }
     else
     {
@@ -4694,8 +4730,11 @@ static size_t WriteCmdLineLump(MEMFILE *stream)
   {
     const char *basename = M_BaseName(wadfiles[i]);
 
-    if (!strcasecmp("brghtmps.lmp", basename))
+    if (!strcasecmp("brghtmps.lmp", basename) ||
+        !strcasecmp("woofhud.lmp", basename))
+    {
       continue;
+    }
 
     if (!has_files)
     {

@@ -23,7 +23,6 @@
 // Game Mode - identify IWAD as shareware, retail etc.
 GameMode_t gamemode = indetermined;
 GameMission_t gamemission = doom;
-GameVariant_t gamevariant = vanilla;
 
 // [FG] emulate a specific version of Doom
 GameVersion_t gameversion = exe_doom_1_9;
@@ -62,7 +61,7 @@ overflow_t overflow[EMU_TOTAL] = {
   { true, false, "donut_overflow"}
 };
 
-int demo_version;           // killough 7/19/98: Boom version of demo
+demo_version_t demo_version;        // killough 7/19/98: Boom version of demo
 
 // v1.1-like pitched sounds
 int pitched_sounds;  // killough 10/98

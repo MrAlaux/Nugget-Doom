@@ -188,6 +188,7 @@ typedef struct menu_s
     int lumps_missing; // [FG] indicate missing menu graphics lumps
 } menu_t;
 
+static int highlight_item;
 static short itemOn;           // menu item skull is on (for Big Font menus)
 static short skullAnimCounter; // skull animation counter
 short whichSkull;              // which skull to draw (he blinks)
@@ -261,6 +262,7 @@ static void SetNextMenu(menu_t *menudef)
 {
     currentMenu = menudef;
     itemOn = currentMenu->lastOn;
+    highlight_item = 0;
 }
 
 static menu_t NewDef; // phares 5/04/98
@@ -840,7 +842,9 @@ static void M_DrawSaveLoadBottomLine(void)
     // [crispy] force status bar refresh
     inhelpscreens = true;
 
-    int flags = currentMenu->menuitems[itemOn].flags;
+    int index = (menu_input == mouse_mode ? highlight_item : itemOn);
+
+    int flags = currentMenu->menuitems[index].flags;
     byte *cr = (flags & MF_PAGE) ? cr_bright : NULL;
 
     M_DrawSaveLoadBorder(LoadDef.x, y, cr);
@@ -879,7 +883,9 @@ static void M_DrawLoad(void)
         WriteText(LoadDef.x, LoadDef.y + LINEHEIGHT * i, savegamestrings[i]);
     }
 
-    M_DrawBorderedSnapshot(itemOn);
+    int index = (menu_input == mouse_mode ? highlight_item : itemOn);
+
+    M_DrawBorderedSnapshot(index);
 
     M_DrawSaveLoadBottomLine();
 }
@@ -1132,6 +1138,11 @@ static void SetDefaultSaveName(int slot)
     char *maplump = MAPNAME(gameepisode, gamemap);
     int maplumpnum = W_CheckNumForName(maplump);
 
+    if (gamemapinfo && U_CheckField(gamemapinfo->label))
+    {
+        maplump = gamemapinfo->label;
+    }
+
     if (!organize_savefiles)
     {
         char *wadname = M_StringDuplicate(W_WadNameForLump(maplumpnum));
@@ -1151,20 +1162,20 @@ static void SetDefaultSaveName(int slot)
         M_snprintf(savegamestrings[slot], SAVESTRINGSIZE, "%s", maplump);
     }
 
-    M_ForceUppercase(savegamestrings[slot]);
+    M_StringToUpper(savegamestrings[slot]);
 }
 
 // [FG] override savegame name if it already starts with a map identifier
 boolean MN_StartsWithMapIdentifier(char *str)
 {
-    if (strnlen(str, 8) >= 4 && toupper(str[0]) == 'E' && isdigit(str[1])
-        && toupper(str[2]) == 'M' && isdigit(str[3]))
+    if (strnlen(str, 8) >= 4 && M_ToUpper(str[0]) == 'E' && isdigit(str[1])
+        && M_ToUpper(str[2]) == 'M' && isdigit(str[3]))
     {
         return true;
     }
 
-    if (strnlen(str, 8) >= 5 && toupper(str[0]) == 'M' && toupper(str[1]) == 'A'
-        && toupper(str[2]) == 'P' && isdigit(str[3]) && isdigit(str[4]))
+    if (strnlen(str, 8) >= 5 && M_ToUpper(str[0]) == 'M' && M_ToUpper(str[1]) == 'A'
+        && M_ToUpper(str[2]) == 'P' && isdigit(str[3]) && isdigit(str[4]))
     {
         return true;
     }
@@ -1240,11 +1251,11 @@ static void M_QuitResponse(int ch)
     {
         if (gamemode == commercial)
         {
-            S_StartSound(NULL, quitsounds2[(gametic >> 2) & 7]);
+            M_StartSound(quitsounds2[(gametic >> 2) & 7]);
         }
         else
         {
-            S_StartSound(NULL, quitsounds[(gametic >> 2) & 7]);
+            M_StartSound(quitsounds[(gametic >> 2) & 7]);
         }
         I_WaitVBL(105);
     }
@@ -1313,7 +1324,7 @@ static void M_DrawSound(void)
 {
     MN_DrawTitle(60, 38, "M_SVOL", "Sound Volume");
 
-    int index = itemOn + 1;
+    int index = highlight_item + 1;
     menuitem_t *item = &currentMenu->menuitems[index];
     byte *cr;
 
@@ -1417,7 +1428,7 @@ static void M_QuickSaveResponse(int ch)
             SetDefaultSaveName(quickSaveSlot);
         }
         M_DoSave(quickSaveSlot);
-        S_StartSoundOptional(NULL, sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
     }
 }
 
@@ -1428,7 +1439,7 @@ static void M_QuickSave(void)
 {
     if (!usergame && (!demoplayback || netgame)) // killough 10/98
     {
-        S_StartSoundOptional(NULL, sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
         return;
     }
 
@@ -1464,7 +1475,7 @@ static void M_QuickLoadResponse(int ch)
     if (ch == 'y')
     {
         M_LoadSelect(quickSaveSlot);
-        S_StartSoundOptional(NULL, sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
     }
 }
 
@@ -1936,7 +1947,7 @@ void MN_Back(void)
 
     currentMenu = currentMenu->prevMenu;
     itemOn = currentMenu->lastOn;
-    S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
 }
 
 //
@@ -2145,14 +2156,14 @@ static boolean ShortcutResponder(const event_t *ev)
         currentMenu = &HelpDef; // killough 10/98: new help screen
 
         itemOn = 0;
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
     if (M_InputActivated(input_savegame)) // Save Game
     {
         MN_StartControlPanel();
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_SaveGame(0);
         return true;
     }
@@ -2160,7 +2171,7 @@ static boolean ShortcutResponder(const event_t *ev)
     if (M_InputActivated(input_loadgame)) // Load Game
     {
         MN_StartControlPanel();
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_LoadGame(0);
         return true;
     }
@@ -2170,20 +2181,20 @@ static boolean ShortcutResponder(const event_t *ev)
         MN_StartControlPanel();
         currentMenu = &SoundDef;
         itemOn = sfx_vol;
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
     if (M_InputActivated(input_quicksave)) // Quicksave
     {
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_QuickSave();
         return true;
     }
 
     if (M_InputActivated(input_endgame)) // End game
     {
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_EndGame(0);
         return true;
     }
@@ -2191,20 +2202,20 @@ static boolean ShortcutResponder(const event_t *ev)
     if (M_InputActivated(input_messages)) // Toggle messages
     {
         M_ChangeMessages(0);
-        S_StartSoundOptional(NULL, sfx_mnusli, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnusli, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
     if (M_InputActivated(input_quickload)) // Quickload
     {
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_QuickLoad();
         return true;
     }
 
     if (M_InputActivated(input_quit)) // Quit DOOM
     {
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_QuitDOOM(0);
         return true;
     }
@@ -2228,7 +2239,7 @@ static boolean ShortcutResponder(const event_t *ev)
             return false;
         }
         MN_SizeDisplay(0);
-        S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -2239,7 +2250,7 @@ static boolean ShortcutResponder(const event_t *ev)
             return false;
         }
         MN_SizeDisplay(1);
-        S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -2302,7 +2313,7 @@ static boolean ShortcutResponder(const event_t *ev)
     if (M_InputActivated(input_setup))
     {
         MN_StartControlPanel();
-        S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         SetNextMenu(&SetupDef);
         return true;
     }
@@ -2369,7 +2380,7 @@ static boolean ShortcutResponder(const event_t *ev)
     return false;
 }
 
-menu_input_mode_t menu_input;
+menu_input_mode_t menu_input, old_menu_input;
 
 static int mouse_state_x, mouse_state_y;
 
@@ -2381,7 +2392,7 @@ boolean MN_PointInsideRect(mrect_t *rect, int x, int y)
 
 static void CursorPosition(void)
 {
-    if (!menuactive || messageToPrint)
+    if (!menuactive || messageToPrint || delete_verify)
     {
         return;
     }
@@ -2414,12 +2425,20 @@ static void CursorPosition(void)
                 cursor--;
             }
 
-            if (itemOn != cursor)
+            if (highlight_item != cursor)
             {
-                itemOn = cursor;
-                S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+                highlight_item = cursor;
+                M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
             }
         }
+    }
+}
+
+static void ClearHighlightedItems(void)
+{
+    for (int i = 0; i < currentMenu->numitems; ++i)
+    {
+        currentMenu->menuitems[i].flags &= ~MF_HILITE;
     }
 }
 
@@ -2434,15 +2453,15 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
 
     if (delete_verify)
     {
-        if (toupper(ch) == 'Y')
+        if (M_ToUpper(ch) == 'Y')
         {
-            M_DeleteGame(itemOn);
-            S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+            M_DeleteGame(old_menu_input == mouse_mode ? highlight_item : itemOn);
+            M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
             delete_verify = false;
         }
-        else if (toupper(ch) == 'N')
+        else if (M_ToUpper(ch) == 'N')
         {
-            S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
             delete_verify = false;
         }
         return true;
@@ -2457,7 +2476,7 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
             savepage--;
             quickSaveSlot = -1;
             M_ReadSaveStrings();
-            S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
         }
         return true;
     }
@@ -2468,7 +2487,7 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
             savepage++;
             quickSaveSlot = -1;
             M_ReadSaveStrings();
-            S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
         }
         return true;
     }
@@ -2476,21 +2495,38 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
     return false;
 }
 
+void MN_ResetMouseCursor(void)
+{
+    static boolean state;
+
+    if (menu_input == mouse_mode && !state)
+    {
+        state = true;
+        I_ShowMouseCursor(true);
+    }
+    else if (menu_input != mouse_mode && state)
+    {
+        state = false;
+        ClearHighlightedItems();
+        I_ShowMouseCursor(false);
+    }
+}
+
 static boolean MouseResponder(void)
 {
-    if (!menuactive || messageToPrint)
+    if (!menuactive || messageToPrint || delete_verify)
     {
         return false;
     }
 
-    I_ShowMouseCursor(true);
+    MN_ResetMouseCursor();
 
     if (setup_active)
     {
         return MN_SetupMouseResponder(mouse_state_x, mouse_state_y);
     }
 
-    menuitem_t *current_item = &currentMenu->menuitems[itemOn];
+    menuitem_t *current_item = &currentMenu->menuitems[highlight_item];
 
     if (current_item->flags & MF_PAGE)
     {
@@ -2513,10 +2549,14 @@ static boolean MouseResponder(void)
 
     mrect_t *rect = &current_item->rect;
 
-    if (M_InputActivated(input_menu_enter)
-        && !MN_PointInsideRect(rect, mouse_state_x, mouse_state_y))
+    if (M_InputActivated(input_menu_enter))
     {
-        return true; // eat event
+        if (!MN_PointInsideRect(rect, mouse_state_x, mouse_state_y))
+        {
+            return true; // eat event
+        }
+
+        itemOn = highlight_item;
     }
 
     if (!(current_item->flags & MF_THRM))
@@ -2546,7 +2586,7 @@ static boolean MouseResponder(void)
         if (current_item->routine)
         {
             current_item->routine(value);
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         }
 
         return true;
@@ -2563,6 +2603,8 @@ boolean M_Responder(event_t *ev)
     static menu_action_t repeat = MENU_NULL;
     menu_action_t action = MENU_NULL;
 
+    old_menu_input = menu_input;
+
     ch = 0; // will be changed to a legit char if we're going to use it here
 
     switch (ev->type)
@@ -2578,7 +2620,7 @@ boolean M_Responder(event_t *ev)
             }
             else
             {
-                S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
                 M_QuitDOOM(0);
             }
             return true;
@@ -2643,18 +2685,6 @@ boolean M_Responder(event_t *ev)
 
         default:
             return false;
-    }
-
-    if (menuactive)
-    {
-        if (menu_input == mouse_mode)
-        {
-            I_ShowMouseCursor(true);
-        }
-        else
-        {
-            I_ShowMouseCursor(false);
-        }
     }
 
     if (M_InputActivated(input_menu_up))
@@ -2731,7 +2761,7 @@ boolean M_Responder(event_t *ev)
         }
         else
         {
-            ch = toupper(ch);
+            ch = M_ToUpper(ch);
 
             if (ch >= 32 && ch <= 127 && saveCharIndex < SAVESTRINGSIZE - 1
                 && MN_StringWidth(savegamestrings[saveSlot])
@@ -2769,7 +2799,7 @@ boolean M_Responder(event_t *ev)
         }
 
         menuactive = false;
-        S_StartSoundOptional(NULL, sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -2800,7 +2830,7 @@ boolean M_Responder(event_t *ev)
             || action == MENU_ESCAPE) // phares
         {
             MN_StartControlPanel();
-            S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
             return true;
         }
         return false;
@@ -2816,12 +2846,16 @@ boolean M_Responder(event_t *ev)
         return true;
     }
 
+    if (menuactive)
+    {
+        MN_ResetMouseCursor();
+    }
+
     // From here on, these navigation keys are used on the BIG FONT menus
     // like the Main Menu.
 
     if (action == MENU_DOWN) // phares 3/7/98
     {
-        currentMenu->menuitems[itemOn].flags &= ~MF_HILITE;
         do
         {
             if (itemOn + 1 > currentMenu->numitems - 1)
@@ -2832,14 +2866,13 @@ boolean M_Responder(event_t *ev)
             {
                 itemOn++;
             }
-            S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
         } while (currentMenu->menuitems[itemOn].status == -1);
         return true;
     }
 
     if (action == MENU_UP) // phares 3/7/98
     {
-        currentMenu->menuitems[itemOn].flags &= ~MF_HILITE;
         do
         {
             if (!itemOn)
@@ -2850,7 +2883,7 @@ boolean M_Responder(event_t *ev)
             {
                 itemOn--;
             }
-            S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
         } while (currentMenu->menuitems[itemOn].status == -1);
         return true;
     }
@@ -2860,7 +2893,7 @@ boolean M_Responder(event_t *ev)
         if (currentMenu->menuitems[itemOn].routine
             && currentMenu->menuitems[itemOn].status == 2)
         {
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
             currentMenu->menuitems[itemOn].routine(CHOICE_LEFT);
         }
         return true;
@@ -2871,7 +2904,7 @@ boolean M_Responder(event_t *ev)
         if (currentMenu->menuitems[itemOn].routine
             && currentMenu->menuitems[itemOn].status == 2)
         {
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
             currentMenu->menuitems[itemOn].routine(CHOICE_RIGHT);
         }
         return true;
@@ -2887,17 +2920,17 @@ boolean M_Responder(event_t *ev)
             if (currentMenu->menuitems[itemOn].status == 2)
             {
                 currentMenu->menuitems[itemOn].routine(CHOICE_RIGHT);
-                S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
             }
             else
             {
                 currentMenu->menuitems[itemOn].routine(itemOn);
-                S_StartSoundOptional(NULL, sfx_mnuact, sfx_pistol); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnuact, sfx_pistol); // [Nugget]: [NS] Optional menu sounds.
             }
         }
         else
         {
-            S_StartSoundOptional(NULL, sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
         }
         // jff 3/24/98 remember last skill selected
         //  killough 10/98 moved to skill-specific functions
@@ -2911,7 +2944,9 @@ boolean M_Responder(event_t *ev)
             currentMenu->lastOn = itemOn;
         }
         MN_ClearMenus();
-        S_StartSoundOptional(NULL, sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        menu_input = old_menu_input;
+        MN_ResetMouseCursor();
         return true;
     }
 
@@ -2945,13 +2980,15 @@ boolean M_Responder(event_t *ev)
                 currentMenu = currentMenu->prevMenu;
             }
             itemOn = currentMenu->lastOn;
-            S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         }
         else
         {
             MN_ClearMenus();
-            S_StartSoundOptional(NULL, sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
         }
+        menu_input = old_menu_input;
+        MN_ResetMouseCursor();
         return true;
     }
 
@@ -2963,14 +3000,15 @@ boolean M_Responder(event_t *ev)
         {
             if (LoadMenu[itemOn].status)
             {
-                S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
                 currentMenu->lastOn = itemOn;
+                menu_input = old_menu_input;
                 delete_verify = true;
                 return true;
             }
             else
             {
-                S_StartSoundOptional(NULL, sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
             }
         }
     }
@@ -2984,7 +3022,7 @@ boolean M_Responder(event_t *ev)
             if (currentMenu->menuitems[i].alphaKey == ch)
             {
                 itemOn = i;
-                S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
                 return true;
             }
         }
@@ -2994,7 +3032,7 @@ boolean M_Responder(event_t *ev)
             if (currentMenu->menuitems[i].alphaKey == ch)
             {
                 itemOn = i;
-                S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
                 return true;
             }
         }
@@ -3147,8 +3185,6 @@ void M_Drawer(void)
     // [FG] check current menu for missing menu graphics lumps - only once
     if (currentMenu->lumps_missing == 0)
     {
-        int bigfont_lump = W_CheckNumForName("DBIGFONT");
-
         for (int i = 0; i < max; i++)
         {
             const char *name = currentMenu->menuitems[i].name;
@@ -3159,9 +3195,7 @@ void M_Drawer(void)
                 patch_lump = W_CheckNumForName(name);
             }
 
-            if ((patch_lump < 0
-                 || (W_IsIWADLump(patch_lump) && bigfont_lump >= 0))
-                && currentMenu->menuitems[i].alttext)
+            if (patch_lump < 0 && currentMenu->menuitems[i].alttext)
             {
                 currentMenu->lumps_missing++;
                 break;
@@ -3321,7 +3355,7 @@ static void WriteText(int x, int y, const char *string)
             continue;
         }
 
-        c = toupper(c) - HU_FONTSTART;
+        c = M_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c >= HU_FONTSIZE)
         {
             cx += 4;
@@ -3336,6 +3370,17 @@ static void WriteText(int x, int y, const char *string)
         V_DrawPatch(cx, cy, hu_font[c]);
         cx += w;
     }
+}
+
+void M_StartSound(int sound_id)
+{
+    S_StartSoundPitch(NULL, sound_id, PITCH_NONE);
+}
+
+// [Nugget]
+void M_StartSoundOptional(const int opt_sound_id, const int sound_id)
+{
+    S_StartSoundPitchOptional(NULL, opt_sound_id, sound_id, PITCH_NONE);
 }
 
 //----------------------------------------------------------------------------

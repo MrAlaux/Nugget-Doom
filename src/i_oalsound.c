@@ -29,7 +29,9 @@
 #include "i_printf.h"
 #include "i_sndfile.h"
 #include "i_sound.h"
+#include "m_array.h"
 #include "m_fixed.h"
+#include "m_misc.h"
 #include "sounds.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -43,7 +45,6 @@
 #define OAL_MAP_UNITS_PER_METER (128.0f / 3.0f)
 #define OAL_SOURCE_RADIUS       32.0f
 #define OAL_DEFAULT_PITCH       1.0f
-#define OAL_NUM_ATTRIBS         5
 
 #define DMXHDRSIZE              8
 #define DMXPADSIZE              16
@@ -61,13 +62,12 @@
 #endif
 
 int snd_resampler;
+boolean snd_limiter;
 boolean snd_hrtf;
 int snd_absorption;
 int snd_doppler;
 
 boolean oal_use_doppler;
-
-static const char *oal_resamplers[] = {"Nearest", "Linear", "Cubic"};
 
 typedef struct oal_system_s
 {
@@ -199,9 +199,8 @@ void I_OAL_ShutdownSound(void)
     oal = NULL;
 }
 
-static void SetResampler(ALuint *sources)
+void I_OAL_SetResampler(void)
 {
-    const char *resampler_name = oal_resamplers[snd_resampler];
     LPALGETSTRINGISOFT alGetStringiSOFT = NULL;
     ALint i, num_resamplers, def_resampler;
 
@@ -221,7 +220,6 @@ static void SetResampler(ALuint *sources)
     }
 
     num_resamplers = alGetInteger(AL_NUM_RESAMPLERS_SOFT);
-    def_resampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
 
     if (!num_resamplers)
     {
@@ -229,29 +227,29 @@ static void SetResampler(ALuint *sources)
         return;
     }
 
+    def_resampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
+
     for (i = 0; i < num_resamplers; i++)
     {
-        if (!strcasecmp(resampler_name,
-                        alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, i)))
+        if (!strcasecmp("Linear", alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, i)))
         {
             def_resampler = i;
             break;
         }
     }
-    if (i == num_resamplers)
+
+    if (snd_resampler >= num_resamplers)
     {
-        I_Printf(VB_WARNING, " Failed to find resampler: '%s'.",
-                 resampler_name);
-        return;
+        snd_resampler = def_resampler;
     }
 
     for (i = 0; i < MAX_CHANNELS; i++)
     {
-        alSourcei(sources[i], AL_SOURCE_RESAMPLER_SOFT, def_resampler);
+        alSourcei(oal->sources[i], AL_SOURCE_RESAMPLER_SOFT, snd_resampler);
     }
 
     I_Printf(VB_DEBUG, " Using '%s' resampler.",
-             alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, def_resampler));
+             alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, snd_resampler));
 }
 
 void I_OAL_ResetSource2D(int channel)
@@ -327,9 +325,38 @@ void I_OAL_UpdateListenerParams(const ALfloat *position,
     alListenerfv(AL_ORIENTATION, orientation);
 }
 
+const char **I_OAL_GetResamplerStrings(void)
+{
+    LPALGETSTRINGISOFT alGetStringiSOFT = NULL;
+    ALint i, num_resamplers;
+    const char **strings = NULL;
+
+    if (alIsExtensionPresent("AL_SOFT_source_resampler") != AL_TRUE)
+    {
+        return NULL;
+    }
+
+    alGetStringiSOFT =
+        FUNCTION_CAST(LPALGETSTRINGISOFT, alGetProcAddress("alGetStringiSOFT"));
+
+    if (!alGetStringiSOFT)
+    {
+        return NULL;
+    }
+
+    num_resamplers = alGetInteger(AL_NUM_RESAMPLERS_SOFT);
+
+    for (i = 0; i < num_resamplers; i++)
+    {
+        array_push(strings, alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, i));
+    }
+
+    return strings;
+}
+
 static void UpdateUserSoundSettings(void)
 {
-    SetResampler(oal->sources);
+    I_OAL_SetResampler();
 
     if (snd_module == SND_MODULE_3D)
     {
@@ -406,32 +433,40 @@ static void PrintDeviceInfo(ALCdevice *device)
     I_Printf(VB_INFO, " Using '%s' @ %d Hz.", name, srate);
 }
 
-static void GetAttribs(ALCint *attribs)
+static void GetAttribs(ALCint **attribs)
 {
     const boolean use_3d = (snd_module == SND_MODULE_3D);
-    int i = 0;
-
-    memset(attribs, 0, sizeof(*attribs) * OAL_NUM_ATTRIBS);
 
     if (alcIsExtensionPresent(oal->device, "ALC_SOFT_HRTF") == ALC_TRUE)
     {
-        attribs[i++] = ALC_HRTF_SOFT;
-        attribs[i++] = use_3d ? (snd_hrtf ? ALC_TRUE : ALC_FALSE) : ALC_FALSE;
+        array_push(*attribs, ALC_HRTF_SOFT);
+        array_push(*attribs, (use_3d && snd_hrtf) ? ALC_TRUE : ALC_FALSE);
     }
 
 #ifdef ALC_OUTPUT_MODE_SOFT
     if (alcIsExtensionPresent(oal->device, "ALC_SOFT_output_mode") == ALC_TRUE)
     {
-        attribs[i++] = ALC_OUTPUT_MODE_SOFT;
-        attribs[i++] = use_3d ? (snd_hrtf ? ALC_STEREO_HRTF_SOFT : ALC_ANY_SOFT)
-                              : ALC_STEREO_BASIC_SOFT;
+        array_push(*attribs, ALC_OUTPUT_MODE_SOFT);
+        array_push(*attribs,
+                   use_3d ? (snd_hrtf ? ALC_STEREO_HRTF_SOFT : ALC_ANY_SOFT)
+                          : ALC_STEREO_BASIC_SOFT);
     }
 #endif
+
+    if (alcIsExtensionPresent(oal->device, "ALC_SOFT_output_limiter")
+        == ALC_TRUE)
+    {
+        array_push(*attribs, ALC_OUTPUT_LIMITER_SOFT);
+        array_push(*attribs, snd_limiter ? ALC_TRUE : ALC_FALSE);
+    }
+
+    // Attribute list must be zero terminated.
+    array_push(*attribs, 0);
 }
 
 boolean I_OAL_InitSound(void)
 {
-    ALCint attribs[OAL_NUM_ATTRIBS];
+    ALCint *attribs = NULL;
 
     if (oal)
     {
@@ -448,8 +483,9 @@ boolean I_OAL_InitSound(void)
         return false;
     }
 
-    GetAttribs(attribs);
+    GetAttribs(&attribs);
     oal->context = alcCreateContext(oal->device, attribs);
+    array_free(attribs);
     if (!oal->context || !alcMakeContextCurrent(oal->context))
     {
         I_Printf(VB_ERROR, "I_OAL_InitSound: Error creating context.");
@@ -483,7 +519,8 @@ boolean I_OAL_InitSound(void)
 boolean I_OAL_ReinitSound(void)
 {
     LPALCRESETDEVICESOFT alcResetDeviceSOFT = NULL;
-    ALCint attribs[OAL_NUM_ATTRIBS];
+    ALCint *attribs = NULL;
+    ALCboolean result;
 
     if (!oal)
     {
@@ -506,9 +543,10 @@ boolean I_OAL_ReinitSound(void)
         return false;
     }
 
-    GetAttribs(attribs);
-
-    if (alcResetDeviceSOFT(oal->device, attribs) != ALC_TRUE)
+    GetAttribs(&attribs);
+    result = alcResetDeviceSOFT(oal->device, attribs);
+    array_free(attribs);
+    if (result != ALC_TRUE)
     {
         I_Printf(VB_ERROR, "I_OAL_ReinitSound: Error resetting device.");
         I_OAL_ShutdownSound();

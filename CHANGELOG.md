@@ -1,5 +1,8 @@
 ## New Features
 
+- **Merged changes from [Woof! 14.5.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_14.5.0)**, note:
+  - Removed Nugget's `all` autoload folder in favor of Woof's `all-all`
+  - Changed `nughud_secret_y` default to match default Boom HUD
 - **_Level Stats Format_** settings
   - Removed _Kills % in Stats display_ setting in favor of them
 - **Minimap zooming** (keyboard only)

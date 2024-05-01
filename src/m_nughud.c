@@ -154,7 +154,7 @@ default_t nughud_defaults[] = {
   { "nughud_message_stack", (config_t *) &nughud.message.stack, NULL, {  1 }, {  1, STK }, number },
   TOGGLE( "nughud_message_defx", nughud.message_defx, 1 ),
 
-  TEXTLINE( "nughud_secret", nughud.secret, 160, 84, 0, 0, 1, 0 ),
+  TEXTLINE( "nughud_secret", nughud.secret, 160, (SCREENHEIGHT - ST_HEIGHT) / 4, 0, 0, 1, 0 ),
 
   STACK(1,   2,   0, -1, -1,  1),
   STACK(2, 318,   0,  1,  1,  1),

@@ -342,7 +342,7 @@ static void ST_DrawSolidBackground(int st_x)
   Z_ChangeTag (pal, PU_CACHE);
 }
 
-void ST_refreshBackground(boolean force)
+void ST_refreshBackground(void)
 {
     int st_x;
 
@@ -406,24 +406,7 @@ void ST_refreshBackground(boolean force)
 
     // [crispy] copy entire video.unscaledw, to preserve the pattern to the left
     // and right of the status bar in widescren mode
-    if (!force)
-    {
-        V_CopyRect(ST_X, 0, st_backing_screen,
-                   video.unscaledw, ST_HEIGHT,
-                   ST_X, ST_Y);
-    }
-    else
-    {
-        if (video.deltaw > 0 && !st_firsttime)
-        {
-            V_CopyRect(0, 0, st_backing_screen,
-                       video.deltaw, ST_HEIGHT,
-                       0, ST_Y);
-            V_CopyRect(SCREENWIDTH + video.deltaw, 0, st_backing_screen,
-                       video.deltaw, ST_HEIGHT,
-                       SCREENWIDTH + video.deltaw, ST_Y);
-        }
-    }
+    V_CopyRect(0, 0, st_backing_screen, video.unscaledw, ST_HEIGHT, 0, ST_Y);
 }
 
 // Respond to keyboard input events,
@@ -714,9 +697,10 @@ int ST_BlinkKey(player_t* player, int index)
   return -1;
 }
 
+static int largeammo = LARGENUMBER; // means "n/a"
+
 void ST_updateWidgets(void)
 {
-  static int  largeammo = 1994; // means "n/a"
   int         i;
 
   // must redirect the pointer if the ready weapon has changed.
@@ -765,7 +749,7 @@ void ST_updateWidgets(void)
     else
     {
       if (!(plyr->keyblinktics & (2*KEYBLINKMASK - 1)))
-        S_StartSoundOptional(NULL, sfx_keybnk, sfx_itemup); // [Nugget] Optional key-blink sound
+        S_StartSoundPitchOptional(NULL, sfx_keybnk, sfx_itemup, PITCH_NONE); // [Nugget] Optional key-blink sound
 
       plyr->keyblinktics--;
 
@@ -1315,7 +1299,7 @@ void ST_Drawer(boolean fullscreen, boolean refresh)
     st_firsttime = false;
 
     // draw status bar background to off-screen buff
-    ST_refreshBackground(false);
+    ST_refreshBackground();
   }
   
   ST_drawWidgets();
@@ -1691,11 +1675,13 @@ void ST_createWidgets(void)
 
   // ready weapon ammo
   STlib_initNum(&w_ready,
-                (!st_crispyhud ? ST_AMMOX : nughud.ammo.x + NUGHUDWIDESHIFT(nughud.ammo.wide)),
-                (!st_crispyhud ? ST_AMMOY : nughud.ammo.y),
+                (!st_crispyhud ? ST_AMMOX - distributed_delta : nughud.ammo.x + NUGHUDWIDESHIFT(nughud.ammo.wide)),
+                (!st_crispyhud ? ST_AMMOY                     : nughud.ammo.y),
                 (st_crispyhud ? (nhrnum[0] ? nhrnum :
                                  nhtnum[0] ? nhtnum : tallnum) : tallnum),
-                &plyr->ammo[weaponinfo[plyr->readyweapon].ammo],
+                weaponinfo[plyr->readyweapon].ammo != am_noammo ?
+                &plyr->ammo[weaponinfo[plyr->readyweapon].ammo] :
+                &largeammo,
                 &st_statusbaron,
                 ST_AMMOWIDTH,
                 NUGHUDALIGN(nughud.ammo.align));

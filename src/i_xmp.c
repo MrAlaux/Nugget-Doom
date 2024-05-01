@@ -55,11 +55,16 @@ static void PrintError(int e)
             msg = "Unknown error.";
             break;
     }
-    I_Printf(VB_ERROR, "XMP: %s", msg);
+    I_Printf(VB_DEBUG, "XMP: %s", msg);
 }
 
 static boolean I_XMP_InitStream(int device)
 {
+    if (context)
+    {
+        return true;
+    }
+
     context = xmp_create_context();
 
     if (!context)
@@ -79,13 +84,10 @@ static boolean I_XMP_OpenStream(void *data, ALsizei size, ALenum *format,
         return false;
     }
 
-    int err = 0;
-
-    err = xmp_load_module_from_memory(context, data, (long)size);
+    int err = xmp_load_module_from_memory(context, data, (long)size);
     if (err < 0)
     {
         PrintError(err);
-        xmp_free_context(context);
         return false;
     }
 
@@ -143,7 +145,7 @@ static void I_XMP_ShutdownStream(void)
     context = NULL;
 }
 
-static const char **I_XMP_DeviceList(int *current_device)
+static const char **I_XMP_DeviceList(void)
 {
     return NULL;
 }

@@ -16,8 +16,8 @@
 //      [FG] miscellaneous helper functions from Chocolate Doom.
 //
 
-#ifndef __M_MISC2__
-#define __M_MISC2__
+#ifndef __M_MISC__
+#define __M_MISC__
 
 #include <stdarg.h>
 
@@ -29,8 +29,10 @@ char *M_FileCaseExists(const char *file);
 boolean M_StrToInt(const char *str, int *result);
 char *M_DirName(const char *path);
 const char *M_BaseName(const char *path);
-void M_ForceUppercase(char *text);
-void M_ForceLowercase(char *text);
+char M_ToUpper(const char c);
+void M_StringToUpper(char *text);
+char M_ToLower(const char c);
+void M_StringToLower(char *text);
 char *M_StringDuplicate(const char *orig);
 boolean M_StringCopy(char *dest, const char *src, size_t dest_size);
 boolean M_StringConcat(char *dest, const char *src, size_t dest_size);
@@ -45,7 +47,6 @@ int M_snprintf(char *buf, size_t buf_len, const char *s, ...) PRINTF_ATTR(3, 4);
 
 void M_CopyLumpName(char *dest, const char *src);
 char *AddDefaultExtension(char *path, const char *ext);
-void NormalizeSlashes(char *str);
 boolean M_WriteFile(const char *name, void *source, int length);
 int M_ReadFile(const char *name, byte **buffer);
 

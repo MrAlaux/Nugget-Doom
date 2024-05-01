@@ -24,6 +24,7 @@
 #include "hu_stuff.h"
 #include "i_gamepad.h"
 #include "i_input.h"
+#include "i_oalsound.h"
 #include "i_sound.h"
 #include "i_timer.h"
 #include "i_video.h"
@@ -168,6 +169,7 @@ boolean default_verify = false;           // verify reset defaults decision
 //
 // current_setup_menu is a pointer to the current setup menu table.
 
+static int highlight_item;
 static int set_item_on; // which setup item is selected?   // phares 3/98
 static setup_menu_t *current_menu; // points to current setup menu table
 static int current_page;           // the index of the current screen in a set
@@ -180,7 +182,7 @@ typedef struct
 } setup_tab_t;
 
 static setup_tab_t *current_tabs;
-static int set_tab_on;
+static int highlight_tab;
 
 // [FG] save the setup menu's itemon value in the S_END element's x coordinate
 
@@ -306,6 +308,7 @@ enum
 
     str_gamma,
     str_sound_module,
+    str_resampler,
 
     str_mouse_accel,
 
@@ -338,12 +341,15 @@ static const char **GetStrings(int id);
 
 static boolean ItemDisabled(int flags)
 {
+    complevel_t complevel =
+        force_complevel != CL_NONE ? force_complevel : default_complevel;
+
     if ((flags & S_DISABLE)
         || (flags & S_STRICT && (default_strictmode || force_strictmode))
-        || (flags & S_BOOM && default_complevel < CL_BOOM)
-        || (flags & S_MBF && default_complevel < CL_MBF)
-        || (flags & S_VANILLA && default_complevel != CL_VANILLA) ||
-        (flags & S_CRITICAL && !casual_play)) // [Nugget]
+        || (flags & S_BOOM && complevel < CL_BOOM)
+        || (flags & S_MBF && complevel < CL_MBF)
+        || (flags & S_VANILLA && complevel != CL_VANILLA)
+        || (flags & S_CRITICAL && !casual_play)) // [Nugget]
     {
         return true;
     }
@@ -397,10 +403,7 @@ static void BlinkingArrowLeft(setup_menu_t *s)
 
     if (menu_input == mouse_mode)
     {
-        if (flags & S_HILITE)
-        {
-            strcpy(menu_buffer, "< ");
-        }
+        return;
     }
     else if (flags & (S_CHOICE | S_CRITEM | S_THERMO))
     {
@@ -430,10 +433,7 @@ static void BlinkingArrowRight(setup_menu_t *s)
 
     if (menu_input == mouse_mode)
     {
-        if (flags & S_HILITE)
-        {
-            strcat(menu_buffer, " >");
-        }
+        return;
     }
     else if (flags & (S_CHOICE | S_CRITEM | S_THERMO))
     {
@@ -942,14 +942,10 @@ void MN_DrawDelVerify(void)
 
 static void DrawInstructions()
 {
-    int flags = current_menu[set_item_on].m_flags;
+    int index = (menu_input == mouse_mode ? highlight_item : set_item_on);
+    int flags = current_menu[index].m_flags;
 
     if (ItemDisabled(flags) || print_warning_about_changes > 0)
-    {
-        return;
-    }
-
-    if (menu_input == mouse_mode && !(flags & S_HILITE))
     {
         return;
     }
@@ -1061,7 +1057,8 @@ static void SetupMenu(void)
     setup_select = false;
     default_verify = false;
     setup_gather = false;
-    set_tab_on = 0;
+    highlight_tab = 0;
+    highlight_item = 0;
     set_item_on = GetItemOn();
     while (current_menu[set_item_on++].m_flags & S_SKIP)
         ;
@@ -1527,7 +1524,7 @@ static const char *screensize_strings[] = {
 
 static const char *hudtype_strings[] = {"Nugget", "Boom No Bars", "Boom"}; // [Nugget] Rename "Crispy" to "Nugget"
 
-static const char **M_GetHUDModeStrings(void)
+static const char **GetHUDModeStrings(void)
 {
     static const char *crispy_strings[] = {"Off", "Original", "Widescreen"};
     static const char *boom_strings[] = {"Minimal", "Compact", "Distributed"};
@@ -1952,7 +1949,7 @@ static void BarkSound(void)
 {
     if (default_dogs)
     {
-        S_StartSound(NULL, sfx_dgact);
+        M_StartSound(sfx_dgact);
     }
 }
 
@@ -2052,10 +2049,13 @@ static const char *vertical_aiming_strings[] = {
   "Auto", "Direct", "Direct+Auto", NULL
 };
 
+static void UpdateInterceptsEmuItem(void);
+
 setup_menu_t comp_settings1[] = {
 
     {"Default Compatibility Level", S_CHOICE | S_LEVWARN, M_X, M_SPC,
-     {"default_complevel"}, m_null, input_null, str_default_complevel},
+     {"default_complevel"}, m_null, input_null, str_default_complevel,
+     UpdateInterceptsEmuItem},
 
     {"Strict Mode", S_ONOFF | S_LEVWARN, M_X, M_SPC, {"strictmode"}},
 
@@ -2074,7 +2074,7 @@ setup_menu_t comp_settings1[] = {
 
     MI_GAP,
 
-    {"Improved Hit Detection", S_ONOFF | S_STRICT | S_BOOM, M_X, M_SPC,
+    {"Improved Hit Detection", S_ONOFF | S_STRICT, M_X, M_SPC,
      {"blockmapfix"}},
 
     {"Fast Line-of-Sight Calculation", S_ONOFF | S_STRICT, M_X, M_SPC,
@@ -2084,12 +2084,19 @@ setup_menu_t comp_settings1[] = {
      {"hangsolid"}},
 
     {"Emulate INTERCEPTS overflow", S_ONOFF | S_VANILLA, M_X, M_SPC,
-     {"emu_intercepts"}},
+     {"emu_intercepts"}, m_null, input_null, str_empty, UpdateInterceptsEmuItem},
 
     MI_RESET,
 
     MI_END
 };
+
+static void UpdateInterceptsEmuItem(void)
+{
+    DisableItem((force_complevel == CL_VANILLA || default_complevel == CL_VANILLA)
+                    && overflow[emu_intercepts].enabled,
+                comp_settings1, "blockmapfix");
+}
 
 static setup_menu_t *comp_settings[] = {comp_settings1, NULL};
 
@@ -2154,16 +2161,21 @@ int resolution_scale;
 static const char **GetResolutionScaleStrings(void)
 {
     const char **strings = NULL;
-
     resolution_scaling_t rs;
     I_GetResolutionScaling(&rs);
 
     array_push(strings, "100%");
 
+    if (current_video_height == SCREENHEIGHT)
+    {
+        resolution_scale = 0;
+    }
+
     int val = SCREENHEIGHT * 2;
     char buf[8];
+    int i;
 
-    for (int i = 1; val < rs.max; ++i)
+    for (i = 1; val < rs.max; ++i)
     {
         if (val == current_video_height)
         {
@@ -2177,12 +2189,12 @@ static const char **GetResolutionScaleStrings(void)
         val += rs.step;
     }
 
+    resolution_scale = BETWEEN(0, i, resolution_scale);
+
     array_push(strings, "native");
 
     return strings;
 }
-
-static void UpdateDynamicResolutionItem(void);
 
 static void ResetVideoHeight(void)
 {
@@ -2227,7 +2239,7 @@ static void ResetVideoHeight(void)
         VX_ResetMaxDist();
     }
 
-    UpdateDynamicResolutionItem();
+    MN_UpdateDynamicResolutionItem();
 
     resetneeded = true;
 }
@@ -2244,8 +2256,6 @@ static void UpdateFOV(void)
 {
     setsizeneeded = true; // run R_ExecuteSetViewSize;
 }
-
-static void ToggleUncapped(void);
 
 static void ToggleFullScreen(void)
 {
@@ -2310,7 +2320,7 @@ static setup_menu_t gen_settings1[] = {
     MI_GAP,
 
     {"Uncapped Framerate", S_ONOFF, M_X, M_SPC, {"uncapped"}, m_null, input_null,
-     str_empty, ToggleUncapped},
+     str_empty, MN_UpdateFpsLimitItem},
 
     {"Framerate Limit", S_NUM, M_X, M_SPC, {"fpslimit"}, m_null, input_null,
      str_empty, CoerceFPSLimit},
@@ -2330,6 +2340,11 @@ static setup_menu_t gen_settings1[] = {
 
     MI_END
 };
+
+void MN_DisableResolutionScaleItem(void)
+{
+    DisableItem(true, gen_settings1, "resolution_scale");
+}
 
 static void UpdateSfxVolume(void)
 {
@@ -2366,18 +2381,17 @@ static void SetSoundModule(void)
 }
 
 int midi_player_menu;
-
-static const char **GetMidiDevicesStrings(void)
-{
-    return I_DeviceList(&midi_player_menu);
-}
+const char *midi_player_string = "";
 
 static void SetMidiPlayer(void)
 {
     S_StopMusic();
-    I_SetMidiPlayer(midi_player_menu);
+    I_SetMidiPlayer(&midi_player_menu);
     S_SetMusicVolume(snd_MusicVolume);
     S_RestartMusic();
+
+    const char **strings = GetStrings(str_midi_player);
+    midi_player_string = strings[midi_player_menu];
 }
 
 static setup_menu_t gen_settings2[] = {
@@ -2401,6 +2415,10 @@ static setup_menu_t gen_settings2[] = {
     // [FG] play sounds in full length
     {"Disable Sound Cutoffs", S_ONOFF, M_X, M_SPC, {"full_sounds"}},
 
+    {"Resampler", S_CHOICE | S_NEXT_LINE, M_X, M_SPC, {"snd_resampler"}, m_null,
+     input_null, str_resampler, I_OAL_SetResampler},
+
+    MI_GAP,
     MI_GAP,
 
     // [FG] music backend
@@ -2410,11 +2428,18 @@ static setup_menu_t gen_settings2[] = {
     MI_END
 };
 
+static const char **GetResamplerStrings(void)
+{
+    const char **strings = I_OAL_GetResamplerStrings();
+    DisableItem(!strings, gen_settings2, "snd_resampler");
+    return strings;
+}
+
 void MN_UpdateFreeLook(void)
 {
     P_UpdateDirectVerticalAiming();
 
-    if (!mouselook || !padlook)
+    if (!mouselook && !padlook)
     {
         for (int i = 0; i < MAXPLAYERS; ++i)
         {
@@ -2430,7 +2455,7 @@ void MN_UpdateFreeLook(void)
 
 #define MOUSE_ACCEL_STRINGS_SIZE (40 + 1)
 
-static const char **M_GetMouseAccelStrings(void)
+static const char **GetMouseAccelStrings(void)
 {
     static const char *strings[MOUSE_ACCEL_STRINGS_SIZE];
     char buf[8];
@@ -2786,7 +2811,7 @@ static setup_menu_t *gen_settings[] = {
     NULL
 };
 
-static void UpdateDynamicResolutionItem(void)
+void MN_UpdateDynamicResolutionItem(void)
 {
     DisableItem(current_video_height <= DRS_MIN_HEIGHT, gen_settings1,
                 "dynamic_resolution");
@@ -2797,7 +2822,7 @@ static void UpdateAdvancedSoundItems(void)
     DisableItem(snd_module != SND_MODULE_3D, gen_settings2, "snd_hrtf");
 }
 
-static void ToggleUncapped(void)
+void MN_UpdateFpsLimitItem(void)
 {
     DisableItem(!default_uncapped, gen_settings1, "fpslimit");
     setrefreshneeded = true;
@@ -2875,7 +2900,7 @@ static void SelectDone(setup_menu_t *ptr)
 {
     ptr->m_flags &= ~S_SELECT;
     ptr->m_flags |= S_HILITE;
-    S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
     setup_select = false;
     if (print_warning_about_changes) // killough 8/15/98
     {
@@ -3131,7 +3156,7 @@ void MN_DrawStringCR(int cx, int cy, byte *cr1, byte *cr2, const char *ch)
             }
         }
 
-        c = toupper(c) - HU_FONTSTART;
+        c = M_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c > HU_FONTSIZE)
         {
             cx += SPACEWIDTH; // space
@@ -3218,7 +3243,7 @@ int MN_GetPixelWidth(const char *ch)
             continue;
         }
 
-        c = toupper(c) - HU_FONTSTART;
+        c = M_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c > HU_FONTSIZE)
         {
             len += SPACEWIDTH; // space
@@ -3353,10 +3378,10 @@ boolean MN_SetupCursorPostion(int x, int y)
             {
                 tab->flags |= S_HILITE;
 
-                if (set_tab_on != i)
+                if (highlight_tab != i)
                 {
-                    set_tab_on = i;
-                    S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+                    highlight_tab = i;
+                    M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
                 }
             }
         }
@@ -3378,11 +3403,11 @@ boolean MN_SetupCursorPostion(int x, int y)
         {
             item->m_flags |= S_HILITE;
 
-            if (set_item_on != i)
+            if (highlight_item != i)
             {
                 print_warning_about_changes = false;
-                set_item_on = i;
-                    S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+                highlight_item = i;
+                M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
             }
         }
     }
@@ -3440,7 +3465,7 @@ static void Choice(menu_action_t action)
 
         if (def->location->i != value)
         {
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         }
         def->location->i = value;
 
@@ -3471,7 +3496,7 @@ static void Choice(menu_action_t action)
 
         if (def->location->i != value)
         {
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         }
         def->location->i = value;
 
@@ -3522,6 +3547,8 @@ static boolean ChangeEntry(menu_action_t action, int ch)
 
         SelectDone(current_item); // phares 4/17/98
         setup_gather = false;     // finished gathering keys, if any
+        menu_input = old_menu_input;
+        MN_ResetMouseCursor();
         return true;
     }
 
@@ -3553,6 +3580,9 @@ static boolean ChangeEntry(menu_action_t action, int ch)
         // friendly input method (e.g. don't clear value early,
         // allow backspace, and return to original value if bad
         // value is entered).
+
+        menu_input = old_menu_input;
+        MN_ResetMouseCursor();
 
         if (action == MENU_ENTER)
         {
@@ -3625,6 +3655,9 @@ static boolean BindInput(void)
     { // incoming key or button gets bound
         return false;
     }
+
+    menu_input = old_menu_input;
+    MN_ResetMouseCursor();
 
     setup_menu_t *current_item = current_menu + set_item_on;
 
@@ -3712,7 +3745,7 @@ static boolean NextPage(int inc)
     current_item->m_flags &= ~S_HILITE;
 
     SetItemOn(set_item_on);
-    set_tab_on = current_page;
+    highlight_tab = current_page;
     current_menu = setup_screens[setup_screen][current_page];
     set_item_on = GetItemOn();
 
@@ -3721,7 +3754,7 @@ static boolean NextPage(int inc)
         ;
     current_menu[--set_item_on].m_flags |= S_HILITE;
 
-    S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
     return true;
 }
 
@@ -3737,7 +3770,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
 
     if (menu_input != mouse_mode && current_tabs)
     {
-        current_tabs[set_tab_on].flags &= ~S_HILITE;
+        current_tabs[highlight_tab].flags &= ~S_HILITE;
     }
 
     setup_menu_t *current_item = current_menu + set_item_on;
@@ -3748,13 +3781,13 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
 
     if (default_verify)
     {
-        if (toupper(ch) == 'Y')
+        if (M_ToUpper(ch) == 'Y')
         {
             ResetDefaults();
             default_verify = false;
             SelectDone(current_item);
         }
-        else if (toupper(ch) == 'N')
+        else if (M_ToUpper(ch) == 'N')
         {
             default_verify = false;
             SelectDone(current_item);
@@ -3813,7 +3846,29 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
         }
 
         SelectDone(current_item); // phares 4/17/98
+        menu_input = old_menu_input;
+        MN_ResetMouseCursor();
         return true;
+    }
+
+    // [FG] clear key bindings with the DEL key
+    if (action == MENU_CLEAR)
+    {
+        int index = (old_menu_input == mouse_mode ? highlight_item : set_item_on);
+        current_item = current_menu + index;
+
+        if (current_item->m_flags & S_INPUT)
+        {
+            M_InputReset(current_item->input_id);
+        }
+        menu_input = old_menu_input;
+        MN_ResetMouseCursor();
+        return true;
+    }
+
+    if (highlight_item != set_item_on)
+    {
+        current_menu[highlight_item].m_flags &= ~S_HILITE;
     }
 
     // Not changing any items on the Setup screens. See if we're
@@ -3861,18 +3916,6 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
         return true;
     }
 
-    // [FG] clear key bindings with the DEL key
-    if (action == MENU_CLEAR)
-    {
-        int flags = current_item->m_flags;
-
-        if (flags & S_INPUT)
-        {
-            M_InputReset(current_item->input_id);
-        }
-        return true;
-    }
-
     if (action == MENU_ENTER)
     {
         int flags = current_item->m_flags;
@@ -3883,7 +3926,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
 
         if (ItemDisabled(flags))
         {
-            S_StartSoundOptional(NULL, sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
             return true;
         }
         else if (flags & S_NUM)
@@ -3899,7 +3942,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
 
         current_item->m_flags |= S_SELECT;
         setup_select = true;
-        S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -3924,7 +3967,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
         default_verify = false;              // phares 4/19/98
         print_warning_about_changes = false; // [FG] reset
         HU_Start(); // catch any message changes // phares 4/19/98
-        S_StartSoundOptional(NULL, sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -3955,21 +3998,21 @@ static boolean SetupTab(void)
         return false;
     }
 
-    setup_tab_t *tab = current_tabs + set_tab_on;
+    setup_tab_t *tab = current_tabs + highlight_tab;
 
     if (!(M_InputActivated(input_menu_enter) && tab->flags & S_HILITE))
     {
         return false;
     }
 
-    current_page = set_tab_on;
+    current_page = highlight_tab;
     current_menu = setup_screens[setup_screen][current_page];
     set_item_on = 0;
     while (current_menu[set_item_on++].m_flags & S_SKIP)
         ;
     set_item_on--;
 
-    S_StartSoundOptional(NULL, sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
     return true;
 }
 
@@ -4009,6 +4052,11 @@ boolean MN_SetupMouseResponder(int x, int y)
             }
         }
         active_thermo = NULL;
+    }
+
+    if (M_InputActivated(input_menu_enter))
+    {
+        set_item_on = highlight_item;
     }
 
     setup_menu_t *current_item = current_menu + set_item_on;
@@ -4071,7 +4119,7 @@ boolean MN_SetupMouseResponder(int x, int y)
             {
                 active_thermo->action();
             }
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         }
         return true;
     }
@@ -4084,7 +4132,7 @@ boolean MN_SetupMouseResponder(int x, int y)
     if (flags & S_ONOFF) // yes or no setting?
     {
         OnOff();
-        S_StartSoundOptional(NULL, sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -4105,7 +4153,7 @@ boolean MN_SetupMouseResponder(int x, int y)
 
         if (def->location->i != value)
         {
-            S_StartSoundOptional(NULL, sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         }
         def->location->i = value;
 
@@ -4148,7 +4196,7 @@ int MN_StringWidth(const char *string)
             }
             continue;
         }
-        c = toupper(c) - HU_FONTSTART;
+        c = M_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c > HU_FONTSIZE)
         {
             w += SPACEWIDTH;
@@ -4174,7 +4222,15 @@ void MN_SetHUFontKerning(void)
 
 int MN_StringHeight(const char *string)
 {
-    return SHORT(hu_font[0]->height);
+    int height = SHORT(hu_font[0]->height);
+    for (int i = 0; string[i]; ++i)
+    {
+        if (string[i] == '\n')
+        {
+            height += SHORT(hu_font[0]->height);
+        }
+    }
+    return height;
 }
 
 // [FG] alternative text for missing menu graphics lumps
@@ -4182,9 +4238,8 @@ int MN_StringHeight(const char *string)
 void MN_DrawTitle(int x, int y, const char *patch, const char *alttext)
 {
     int patch_lump = W_CheckNumForName(patch);
-    int bigfont_lump = W_CheckNumForName("DBIGFONT");
 
-    if (patch_lump >= 0 && !(W_IsIWADLump(patch_lump) && bigfont_lump >= 0))
+    if (patch_lump >= 0)
     {
         V_DrawPatch(x, y, W_CacheLumpNum(patch_lump, PU_CACHE));
     }
@@ -4223,6 +4278,7 @@ static const char **selectstrings[] = {
     NULL, // str_midi_player
     gamma_strings,
     sound_module_strings,
+    NULL, // str_resampler
     NULL, // str_mouse_accel
     default_skill_strings,
     default_complevel_strings,
@@ -4261,15 +4317,39 @@ static const char **GetStrings(int id)
 
 static void UpdateHUDModeStrings(void)
 {
-    selectstrings[str_hudmode] = M_GetHUDModeStrings();
+    selectstrings[str_hudmode] = GetHUDModeStrings();
+}
+
+void MN_InitMidiPlayer(void)
+{
+    const char **devices = I_DeviceList();
+
+    for (int i = 0; i < array_size(devices); ++i)
+    {
+        if (!strcasecmp(devices[i], midi_player_string))
+        {
+            midi_player_menu = i;
+            break;
+        }
+    }
+
+    if (midi_player_menu >= array_size(devices))
+    {
+        midi_player_menu = 0;
+    }
+
+    I_SetMidiPlayer(&midi_player_menu);
+    midi_player_string = devices[midi_player_menu];
+
+    selectstrings[str_midi_player] = devices;
 }
 
 void MN_InitMenuStrings(void)
 {
     UpdateHUDModeStrings();
     selectstrings[str_resolution_scale] = GetResolutionScaleStrings();
-    selectstrings[str_midi_player] = GetMidiDevicesStrings();
-    selectstrings[str_mouse_accel] = M_GetMouseAccelStrings();
+    selectstrings[str_mouse_accel] = GetMouseAccelStrings();
+    selectstrings[str_resampler] = GetResamplerStrings();
 }
 
 void MN_SetupResetMenu(void)
@@ -4277,15 +4357,16 @@ void MN_SetupResetMenu(void)
     extern boolean deh_set_blood_color;
 
     DisableItem(force_strictmode, comp_settings1, "strictmode");
-    DisableItem(force_complevel, comp_settings1, "default_complevel");
+    DisableItem(force_complevel != CL_NONE, comp_settings1, "default_complevel");
     DisableItem(M_ParmExists("-pistolstart"), comp_settings1, "pistolstart");
     DisableItem(M_ParmExists("-uncapped") || M_ParmExists("-nouncapped"),
                 gen_settings1, "uncapped");
     DisableItem(deh_set_blood_color, enem_settings1, "colored_blood");
     DisableItem(!brightmaps_found || force_brightmaps, gen_settings5,
                 "brightmaps");
-
-    UpdateDynamicResolutionItem();
+    DisableItem(default_current_video_height <= DRS_MIN_HEIGHT, gen_settings1,
+                "dynamic_resolution");
+    UpdateInterceptsEmuItem();
     CoerceFPSLimit();
     UpdateCrosshairItems();
     UpdateCenteredWeaponItem();
@@ -4298,9 +4379,4 @@ void MN_SetupResetMenu(void)
 
     UpdatePaletteItems();
     UpdateMultiLineMsgItem();
-}
-
-void MN_SetupResetMenuVideo(void)
-{
-    ToggleUncapped();
 }

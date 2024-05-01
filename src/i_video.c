@@ -59,7 +59,9 @@
 
 #include "icon.c"
 
-int current_video_height;
+int current_video_height, default_current_video_height;
+static int GetCurrentVideoHeight(void);
+
 boolean dynamic_resolution;
 
 boolean use_vsync; // killough 2/8/98: controls whether vsync is called
@@ -69,6 +71,7 @@ boolean uncapped, default_uncapped; // [FG] uncapped rendering frame rate
 int fpslimit; // when uncapped, limit framerate to this value
 boolean fullscreen;
 boolean exclusive_fullscreen;
+boolean change_display_resolution;
 aspect_ratio_mode_t widescreen, default_widescreen; // widescreen mode
 int custom_fov;
 boolean vga_porch_flash; // emulate VGA "porch" behaviour
@@ -80,7 +83,8 @@ boolean toggle_fullscreen;
 boolean toggle_exclusive_fullscreen;
 
 int video_display = 0; // display index
-int window_width, window_height;
+static int window_width, window_height;
+int default_window_width, default_window_height;
 int window_position_x, window_position_y;
 
 // [AM] Fractional part of the current tic, in the half-open
@@ -106,10 +110,10 @@ static int window_x, window_y;
 static int actualheight;
 static int unscaled_actualheight;
 
-static int native_width;
-static int native_height;
-static int native_height_adjusted;
-static int native_refresh_rate;
+int max_video_width, max_video_height;
+static int max_width, max_height;
+static int max_height_adjusted;
+static int display_refresh_rate;
 
 static boolean use_limiter;
 static int targetrefresh;
@@ -168,7 +172,7 @@ static boolean MouseShouldBeGrabbed(void)
 
     // only grab mouse when playing levels (but not demos)
     return (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
-           && !demoplayback;
+           && !demoplayback && !advancedemo;
 }
 
 // [FG] mouse grabbing from Chocolate Doom 3.0
@@ -199,26 +203,20 @@ static void UpdateGrab(void)
 
     if (!grab && currently_grabbed)
     {
+        int w, h;
+
         SetShowCursor(true);
+
+        SDL_GetWindowSize(screen, &w, &h);
+        SDL_WarpMouseInWindow(screen, 3 * w / 4, 4 * h / 5);
     }
 
     currently_grabbed = grab;
 }
 
-void I_ShowMouseCursor(boolean on)
+void I_ShowMouseCursor(boolean toggle)
 {
-    static boolean state = true;
-
-    if (state == on)
-    {
-        return;
-    }
-    else
-    {
-        state = on;
-    }
-
-    SDL_ShowCursor(on);
+    SDL_ShowCursor(toggle);
 }
 
 void I_ResetRelativeMouseState(void)
@@ -400,7 +398,7 @@ static void UpdateLimiter(void)
 {
     if (uncapped)
     {
-        if (fpslimit >= native_refresh_rate && native_refresh_rate > 0
+        if (fpslimit >= display_refresh_rate && display_refresh_rate > 0
             && use_vsync)
         {
             // SDL will limit framerate using vsync.
@@ -1142,8 +1140,8 @@ static double CurrentAspectRatio(void)
             h = unscaled_actualheight;
             break;
         case RATIO_AUTO:
-            w = native_width;
-            h = native_height;
+            w = max_width;
+            h = max_height;
             break;
         case RATIO_16_10:
             w = 16;
@@ -1366,7 +1364,7 @@ static void I_ResetTargetRefresh(void)
     if (uncapped)
     {
         // SDL may report native refresh rate as zero.
-        targetrefresh = (fpslimit >= TICRATE) ? fpslimit : native_refresh_rate;
+        targetrefresh = (fpslimit >= TICRATE) ? fpslimit : display_refresh_rate;
     }
     else
     {
@@ -1392,22 +1390,45 @@ static void I_InitVideoParms(void)
         I_Error("Error getting display mode: %s", SDL_GetError());
     }
 
-    native_width = mode.w;
-    native_height = mode.h;
+    if (max_video_width && max_video_height)
+    {
+        if (use_aspect && max_video_height < ACTUALHEIGHT)
+        {
+            I_Error("The vertical resolution is too low, turn off the aspect "
+                    "ratio correction.");
+        }
+        double aspect_ratio =
+            (double)max_video_width / (double)max_video_height;
+        if (aspect_ratio < ASPECT_RATIO_MIN)
+        {
+            I_Error("Aspect ratio not supported, set other resolution");
+        }
+        max_width = max_video_width;
+        max_height = max_video_height;
+    }
+    else
+    {
+        max_width = mode.w;
+        max_height = mode.h;
+    }
 
     if (use_aspect)
     {
-        native_height_adjusted = (int)(native_height / 1.2);
+        max_height_adjusted = (int)(max_height / 1.2);
         unscaled_actualheight = ACTUALHEIGHT;
     }
     else
     {
-        native_height_adjusted = native_height;
+        max_height_adjusted = max_height;
         unscaled_actualheight = SCREENHEIGHT;
     }
 
     // SDL may report native refresh rate as zero.
-    native_refresh_rate = mode.refresh_rate;
+    display_refresh_rate = mode.refresh_rate;
+
+    current_video_height = default_current_video_height;
+    window_width = default_window_width;
+    window_height = default_window_height;
 
     widescreen = default_widescreen;
     uncapped = default_uncapped;
@@ -1489,6 +1510,9 @@ static void I_InitVideoParms(void)
     if (p && strcasecmp("-skipsec", myargv[p - 1]))
     {
         scalefactor = tmp_scalefactor;
+        GetCurrentVideoHeight();
+        MN_UpdateDynamicResolutionItem();
+        MN_DisableResolutionScaleItem();
     }
 
     //!
@@ -1513,7 +1537,7 @@ static void I_InitVideoParms(void)
         fullscreen = true;
     }
 
-    MN_SetupResetMenuVideo();
+    MN_UpdateFpsLimitItem();
 }
 
 static void I_InitGraphicsMode(void)
@@ -1532,14 +1556,23 @@ static void I_InitGraphicsMode(void)
     {
         if (exclusive_fullscreen)
         {
-            SDL_DisplayMode mode;
-            if (SDL_GetCurrentDisplayMode(video_display, &mode) != 0)
+            if (change_display_resolution && max_video_width
+                && max_video_height)
             {
-                I_Error("Could not get display mode for video display #%d: %s",
-                        video_display, SDL_GetError());
+                w = max_video_width;
+                h = max_video_height;
             }
-            w = mode.w;
-            h = mode.h;
+            else
+            {
+                SDL_DisplayMode mode;
+                if (SDL_GetCurrentDisplayMode(video_display, &mode) != 0)
+                {
+                    I_Error("Could not get display mode for video display #%d: %s",
+                            video_display, SDL_GetError());
+                }
+                w = mode.w;
+                h = mode.h;
+            }
             // [FG] exclusive fullscreen
             flags |= SDL_WINDOW_FULLSCREEN;
         }
@@ -1620,14 +1653,19 @@ static void I_InitGraphicsMode(void)
 
 void I_GetResolutionScaling(resolution_scaling_t *rs)
 {
-    rs->max = native_height_adjusted;
+    rs->max = max_height_adjusted;
     rs->step = 50;
 }
 
-static int CurrentResolutionHeight(void)
+static int GetCurrentVideoHeight(void)
 {
+    if (scalefactor > 0)
+    {
+        current_video_height = scalefactor * SCREENHEIGHT;
+    }
+
     current_video_height =
-        BETWEEN(SCREENHEIGHT, native_height_adjusted, current_video_height);
+        BETWEEN(SCREENHEIGHT, max_height_adjusted, current_video_height);
 
     return current_video_height;
 }
@@ -1683,7 +1721,7 @@ static void CreateSurfaces(int w, int h)
 
     I_InitDiskFlash();
 
-    // [Nugget] Don't double width and height
+    // [Nugget] Keep minimum window size at 200p/240p unconditionally
     SDL_SetWindowMinimumSize(screen, video.unscaledw,
                              use_aspect ? ACTUALHEIGHT : SCREENHEIGHT);
 
@@ -1714,7 +1752,7 @@ static void I_ReinitGraphicsMode(void)
     window_position_y = 0;
 
     I_InitGraphicsMode();
-    ResetResolution(CurrentResolutionHeight(), true);
+    ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
 }
@@ -1725,13 +1763,9 @@ void I_ResetScreen(void)
 
     widescreen = default_widescreen;
 
-    ResetResolution(CurrentResolutionHeight(), true);
+    ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
-
-    // [Nugget] Don't double width and height
-    SDL_SetWindowMinimumSize(screen, video.unscaledw,
-                             use_aspect ? ACTUALHEIGHT : SCREENHEIGHT);
 }
 
 void I_ShutdownGraphics(void)
@@ -1739,6 +1773,13 @@ void I_ShutdownGraphics(void)
     if (!(fullscreen && exclusive_fullscreen))
     {
         SDL_GetWindowPosition(screen, &window_position_x, &window_position_y);
+    }
+
+    if (scalefactor == 0)
+    {
+        default_window_width = window_width;
+        default_window_height = window_height;
+        default_current_video_height = current_video_height;
     }
 
     UpdateGrab();
@@ -1755,9 +1796,14 @@ void I_InitGraphics(void)
 
     I_InitVideoParms();
     I_InitGraphicsMode(); // killough 10/98
-    ResetResolution(CurrentResolutionHeight(), true);
+    ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
+
+    // clear out events waiting at the start and center the mouse
+    SDL_PumpEvents();
+    SDL_FlushEvent(SDL_MOUSEMOTION);
+    I_ResetRelativeMouseState();
 }
 
 //----------------------------------------------------------------------------

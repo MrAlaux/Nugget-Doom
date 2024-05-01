@@ -718,7 +718,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
   if (STRICTMODE(bonuscount_cap >= 0 && player->bonuscount > bonuscount_cap))
   { player->bonuscount = bonuscount_cap; }
 
-  S_StartSoundOptional(player->mo, sound, sfx_itemup); // [Nugget]: [NS] Fallback to itemup.
+  S_StartSoundPitchOptional(player->mo, sound, sfx_itemup, // [Nugget]: [NS] Fallback to itemup.
+                            sound == sfx_itemup ? PITCH_NONE : PITCH_FULL);
 }
 
 // [Nugget] Check for Extra Gibbing
@@ -784,7 +785,7 @@ static void P_NuggetGib(mobj_t *mo)
 
     // Physics differ between versions (complevels),
     // so this is done to get rather decent behavior in Vanilla
-    if (demo_version < 200) { splat->flags |= MF_NOCLIP; }
+    if (demo_version < DV_BOOM200) { splat->flags |= MF_NOCLIP; }
 
     splat->tics += (Woof_Random() & 3) - (Woof_Random() & 3);
     if (splat->tics < 1) { splat->tics = 1; }
@@ -864,7 +865,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod)
 
             if (playerscount)
             {
-              if (demo_version >= 203)
+              if (demo_version >= DV_MBF)
                 i = P_Random(pr_friends) % playerscount;
               else
                 i = Woof_Random() % playerscount;
@@ -1128,7 +1129,7 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
     }
 
   // killough 9/7/98: keep track of targets so that friends can help friends
-  if (demo_version >= 203)
+  if (demo_version >= DV_MBF)
     {
       // If target is a player, set player's target to source,
       // so that a friend can tell who's hurting a player
@@ -1160,8 +1161,8 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
 
   if (source && source != target && !(source->flags2 & MF2_DMGIGNORED) &&
       (!target->threshold || target->flags2 & MF2_NOTHRESHOLD) &&
-      ((source->flags ^ target->flags) & MF_FRIEND ||
-       monster_infighting || demo_version < 203) &&
+      ((source->flags ^ target->flags) & MF_FRIEND || 
+       monster_infighting || demo_version < DV_MBF) &&
       !P_InfightingImmune(target, source))
     {
       // if not intent on another player, chase after this one
@@ -1171,10 +1172,10 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
       // killough 9/9/98: cleaned up, made more consistent:
 
       if (!target->lastenemy || target->lastenemy->health <= 0 ||
-          (demo_version < 203 ? !target->lastenemy->player :
-           !((target->flags ^ target->lastenemy->flags) & MF_FRIEND) &&
-           target->target != source)) // remember last enemy - killough
-        P_SetTarget(&target->lastenemy, target->target);
+	  (demo_version < DV_MBF ? !target->lastenemy->player :
+	   !((target->flags ^ target->lastenemy->flags) & MF_FRIEND) &&
+	   target->target != source)) // remember last enemy - killough
+	P_SetTarget(&target->lastenemy, target->target);
 
       P_SetTarget(&target->target, source);       // killough 11/98
       target->threshold = BASETHRESHOLD;

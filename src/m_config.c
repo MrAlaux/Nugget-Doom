@@ -75,7 +75,7 @@ extern int showMessages;
 extern int show_toggle_messages;
 extern int show_pickup_messages;
 
-extern int window_width, window_height;
+extern int default_window_width, default_window_height;
 extern int window_position_x, window_position_y;
 extern boolean flipcorpses;    // [crispy] randomly flip corpse, blood and death
                                // animation sprites
@@ -85,18 +85,15 @@ extern int mouse_acceleration;
 extern int mouse_acceleration_threshold;
 extern int show_endoom;
 #if defined(HAVE_FLUIDSYNTH)
-extern char *soundfont_path;
 extern char *soundfont_dir;
 extern boolean mus_chorus;
 extern boolean mus_reverb;
 extern int mus_gain;
 #endif
-#if defined(_WIN32)
-extern char *winmm_device;
-extern int winmm_complevel;
-extern int winmm_reset_type;
-extern int winmm_reset_delay;
-#endif
+extern int midi_complevel;
+extern int midi_reset_type;
+extern int midi_reset_delay;
+extern boolean midi_ctf;
 extern int opl_gain;
 extern boolean demobar;
 extern boolean smoothlight;
@@ -150,7 +147,7 @@ default_t defaults[] = {
 
   {
     "current_video_height",
-    (config_t *) &current_video_height, NULL,
+    (config_t *) &default_current_video_height, NULL,
     {600}, {SCREENHEIGHT, UL}, number, ss_none, wad_no,
     "vertical resolution (600p by default)"
   },
@@ -257,6 +254,27 @@ default_t defaults[] = {
     "current video display index"
   },
 
+  {
+    "max_video_width",
+    (config_t *) &max_video_width, NULL,
+    {0}, {SCREENWIDTH, UL}, number, ss_none, wad_no,
+    "maximum horizontal resolution (native by default)"
+  },
+
+  {
+    "max_video_height",
+    (config_t *) &max_video_height, NULL,
+    {0}, {SCREENHEIGHT, UL}, number, ss_none, wad_no,
+    "maximum vertical resolution (native by default)"
+  },
+
+  {
+    "change_display_resolution",
+    (config_t *) &change_display_resolution, NULL,
+    {0}, {0, 1}, number, ss_none, wad_no,
+    "1 to change display resolution with exclusive fullscreen (make sense only with CRT)"
+  },
+
   // window position
   {
     "window_position_x",
@@ -275,7 +293,7 @@ default_t defaults[] = {
   // window width
   {
     "window_width",
-    (config_t *) &window_width, NULL,
+    (config_t *) &default_window_width, NULL,
     {1065}, {0, UL}, number, ss_none, wad_no,
     "window width"
   },
@@ -283,7 +301,7 @@ default_t defaults[] = {
   // window height
   {
     "window_height",
-    (config_t *) &window_height, NULL,
+    (config_t *) &default_window_height, NULL,
     {600}, {0, UL}, number, ss_none, wad_no,
     "window height"
   },
@@ -471,8 +489,15 @@ default_t defaults[] = {
   {
     "snd_resampler",
     (config_t *) &snd_resampler, NULL,
-    {1}, {0, 2}, number, ss_gen, wad_no,
-    "OpenAL resampler (0 = Nearest, 1 = Linear, 2 = Cubic)"
+    {1}, {0, UL}, number, ss_gen, wad_no,
+    "Sound resampler (0 = Nearest, 1 = Linear, ...)"
+  },
+
+  {
+    "snd_limiter",
+    (config_t *) &snd_limiter, NULL,
+    {0}, {0, 1}, number, ss_none, wad_no,
+    "1 to enable sound output limiter"
   },
 
   {
@@ -504,26 +529,26 @@ default_t defaults[] = {
   },
 
   {
-    "midi_player",
-    (config_t *) &midi_player, NULL,
-    {0}, {0, 2}, number, ss_none, wad_no,
-    "MIDI Player backend (Native if available, FluidSynth if available, OPL Emulation)"
-  },
-
-  {
     "midi_player_menu",
     (config_t *) &midi_player_menu, NULL,
     {0}, {0, UL}, number, ss_none, wad_no,
     "MIDI Player menu index"
   },
 
+  {
+    "midi_player_string",
+    (config_t *) &midi_player_string, NULL,
+    {.s = ""}, {0}, string, ss_none, wad_no,
+    "MIDI Player string"
+  },
+
 #if defined(HAVE_FLUIDSYNTH)
   {
     "soundfont_dir",
     (config_t *) &soundfont_dir, NULL,
-#if defined(_WIN32)
+#  if defined(_WIN32)
     {.s = "soundfonts"},
-#else
+#  else
     /* RedHat/Fedora/Arch */
     {.s = "/usr/share/soundfonts:"
     /* Debian/Ubuntu/OpenSUSE */
@@ -531,16 +556,9 @@ default_t defaults[] = {
     "/usr/share/sounds/sf3:"
     /* AppImage */
     "../share/" PROJECT_SHORTNAME "/soundfonts"},
-#endif
+#  endif
     {0}, string, ss_none, wad_no,
     "FluidSynth soundfont directories"
-  },
-
-  {
-    "soundfont_path",
-    (config_t *) &soundfont_path, NULL,
-    {.s = ""}, {0}, string, ss_none, wad_no,
-    "FluidSynth current soundfont path"
   },
 
   {
@@ -572,35 +590,33 @@ default_t defaults[] = {
     "fine tune OPL emulation output level (default 200%)"
   },
 
-#if defined(_WIN32)
   {
-    "winmm_device",
-    (config_t *) &winmm_device, NULL,
-    {.s = ""}, {0}, string, ss_none, wad_no,
-    "Native MIDI device"
-  },
-
-  {
-    "winmm_complevel",
-    (config_t *) &winmm_complevel, NULL,
+    "midi_complevel",
+    (config_t *) &midi_complevel, NULL,
     {1}, {0, 2}, number, ss_none, wad_no,
     "Native MIDI compatibility level (0 = Vanilla, 1 = Standard, 2 = Full)"
   },
 
   {
-    "winmm_reset_type",
-    (config_t *) &winmm_reset_type, NULL,
+    "midi_reset_type",
+    (config_t *) &midi_reset_type, NULL,
     {1}, {0, 3}, number, ss_none, wad_no,
-    "SysEx reset for native MIDI (0 = None, 1 = GM, 2 = GS, 3 = XG)"
+    "Reset type for native MIDI (0 = No SysEx, 1 = GM, 2 = GS, 3 = XG)"
   },
 
   {
-    "winmm_reset_delay",
-    (config_t *) &winmm_reset_delay, NULL,
-    {0}, {0, 2000}, number, ss_none, wad_no,
-    "Delay after reset for native MIDI (milliseconds)"
+    "midi_reset_delay",
+    (config_t *) &midi_reset_delay, NULL,
+    {-1}, {-1, 2000}, number, ss_none, wad_no,
+    "Delay after reset for native MIDI (-1 = Auto, 0 = None, 1-2000 = Milliseconds)"
   },
-#endif
+
+  {
+    "midi_ctf",
+    (config_t *) &midi_ctf, NULL,
+    {1}, {0, 1}, number, ss_none, wad_no,
+    "1 to fix invalid instruments by emulating SC-55 capital tone fallback"
+  },
 
   //
   // QOL features
@@ -3782,7 +3798,7 @@ static unsigned default_hash(const char *name)
     unsigned hash = 0;
     while (*name)
     {
-        hash = hash * 2 + toupper(*name++);
+        hash = hash * 2 + M_ToUpper(*name++);
     }
     return hash % NUMDEFAULTS;
 }
@@ -3845,7 +3861,6 @@ void M_SaveDefaults(void)
 
     tmpfile = M_StringJoin(D_DoomPrefDir(), DIR_SEPARATOR_S, "tmp",
                            D_DoomExeName(), ".cfg", NULL);
-    NormalizeSlashes(tmpfile);
 
     errno = 0;
     if (!(f = M_fopen(tmpfile, "w"))) // killough 9/21/98
@@ -4084,7 +4099,7 @@ boolean M_ParseOption(const char *p, boolean wad)
         dp->setup_menu = dp_preset->setup_menu;
     }
 
-    if (demo_version < 203 && dp->setup_menu
+    if (demo_version < DV_MBF && dp->setup_menu
         && !(dp->setup_menu->m_flags & S_COSMETIC))
     {
         return 1;
@@ -4321,8 +4336,6 @@ void M_LoadDefaults(void)
             defaultfile = strdup(basedefault);
         }
     }
-
-    NormalizeSlashes(defaultfile);
 
     // read the file in, overriding any set defaults
     //

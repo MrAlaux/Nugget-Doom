@@ -211,6 +211,8 @@ void V_InitColorTranslation(void)
         double green = *palsrc++ / 256.0;
         double blue  = *palsrc++ / 256.0;
 
+        // formula is taken from dcolors.c preseving "Carmack's typo"
+        // https://doomwiki.org/wiki/Carmack%27s_typo
         int gray = (red * 0.299 + green * 0.587 + blue * 0.144) * 255;
         invul_gray[i] = I_GetPaletteIndex(playpal, gray, gray, gray);
     }
@@ -1347,13 +1349,13 @@ void V_ScreenShot(void)
     // players[consoleplayer].message = "screen shot"
 
     // killough 10/98: print error message and change sound effect if error
-    S_StartSound(NULL,
+    S_StartSoundPitch(NULL,
                  !success
                  ? displaymsg("%s", errno ? strerror(errno)
                                           : "Could not take screenshot"),
                  sfx_oof
                  : gamemode == commercial ? sfx_radio
-                                          : sfx_tink);
+                                          : sfx_tink, PITCH_NONE);
 }
 
 //----------------------------------------------------------------------------

@@ -22,6 +22,12 @@
 
 #include "doomtype.h"
 
+typedef enum {
+  PITCH_FULL,
+  PITCH_HALF,
+  PITCH_NONE
+} pitchrange_t;
+
 struct mobj_s;
 
 //
@@ -42,7 +48,8 @@ void S_Start(void);
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
 //
-void S_StartSound(const struct mobj_s *origin, int sound_id);
+#define S_StartSound(o,i) S_StartSoundPitch((o),(i),PITCH_FULL)
+void S_StartSoundPitch(const struct mobj_s *origin, int sound_id, const pitchrange_t pitch_range);
 
 // Stop sound for thing at <origin>
 void S_StopSound(const struct mobj_s *origin);
@@ -68,8 +75,6 @@ void S_ResumeSound(void);
 
 void S_RestartMusic(void);
 
-void S_UpdateMusic(void);
-
 //
 // Updates music & sounds
 //
@@ -88,7 +93,10 @@ extern int idmusnum;
 // [Nugget] ------------------------------------------------------------------
 
 // [NS] Try to play an optional sound.
-void S_StartSoundOptional(const struct mobj_s *const origin, const int sfx_id, const int old_sfx_id);
+#define S_StartSoundOptional(o, p, i) S_StartSoundPitchOptional((o), (p), (i), PITCH_FULL)
+void S_StartSoundPitchOptional(const struct mobj_s *const origin,
+                               const int opt_sound_id, const int sound_id,
+                               const pitchrange_t pitch_range);
 
 void S_PlayerPainSound(const struct mobj_s *const origin);
 

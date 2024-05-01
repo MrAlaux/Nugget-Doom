@@ -34,6 +34,7 @@
 #include "mn_menu.h"
 #include "r_defs.h"
 #include "s_sound.h"
+#include "st_lib.h"
 #include "sounds.h"
 #include "u_mapinfo.h"
 #include "v_video.h"
@@ -609,10 +610,10 @@ WI_drawOnLnode  // draw stuff at a location by episode/map#
 // ====================================================================
 // WI_initAnimatedBack
 // Purpose: Initialize pointers and styles for background animation
-// Args:    none
+// Args:    firstcall -- [Woof!] check if animations needs to be reset
 // Returns: void
 //
-static void WI_initAnimatedBack(void)
+static void WI_initAnimatedBack(boolean firstcall)
 {
   int   i;
   anim_t* a;
@@ -633,6 +634,10 @@ static void WI_initAnimatedBack(void)
       a = &anims[wbs->epsd][i];
 
       // init variables
+      // [Woof!] Do not reset animation timers upon switching to "Entering" state
+      // via WI_initShowNextLoc. Fixes notable blinking of Tower of Babel drawing
+      // and the rest of animations from being restarted.
+      if (firstcall)
       a->ctr = -1;
 
       // specify the next time to draw it
@@ -790,7 +795,7 @@ WI_drawNum
     }
 
   // if non-number, do not draw it
-  if (n == 1994)
+  if (n == LARGENUMBER)
     return 0;
 
   // draw the new number
@@ -1036,7 +1041,7 @@ static void WI_initShowNextLoc(void)
   acceleratestage = 0;
   cnt = SHOWNEXTLOCDELAY * TICRATE;
 
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(false);
 }
 
 
@@ -1191,7 +1196,7 @@ static void WI_initDeathmatchStats(void)
           dm_totals[i] = 0;
         }
     }
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(true);
 }
 
 
@@ -1432,7 +1437,7 @@ static void WI_initNetgameStats(void)
 
   dofrags = !!dofrags; // set to true or false - did we have frags?
 
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(true);
 }
 
 
@@ -1687,7 +1692,7 @@ static void WI_initStats(void)
   cnt_time = cnt_par = cnt_total_time = -1;
   cnt_pause = TICRATE;
 
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(true);
 }
 
 // ====================================================================
@@ -1757,8 +1762,8 @@ static void WI_updateStats(void)
           // killough 2/22/98: Make secrets = 100% if maxsecret = 0:
           // [FG] Intermission screen secrets desync
           // http://prboom.sourceforge.net/mbf-bugs.html
-          if ((!wbs->maxsecret && demo_version < 203) ||
-              cnt_secret[0] >= (wbs->maxsecret ?
+          if ((!wbs->maxsecret && demo_version < DV_MBF) ||
+              cnt_secret[0] >= (wbs->maxsecret ? 
                                 (plrs[me].ssecret * 100) / wbs->maxsecret : 100))
             {
               cnt_secret[0] = (wbs->maxsecret ?
@@ -1791,10 +1796,10 @@ static void WI_updateStats(void)
 
                 // This check affects demo compatibility with PrBoom+
                 if ((cnt_time >= plrs[me].stime / TICRATE) &&
-                    (demo_version < 203 || cnt_total_time >= wbs->totaltimes / TICRATE)
+                    (demo_version < DV_MBF || cnt_total_time >= wbs->totaltimes / TICRATE)
                    )
                   {
-                    if (demo_version < 203)
+                    if (demo_version < DV_MBF)
                       cnt_total_time = wbs->totaltimes / TICRATE;
                     S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
                     sp_state++;

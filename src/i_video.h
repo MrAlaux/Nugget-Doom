@@ -72,9 +72,11 @@ extern char *sdl_renderdriver; // [Nugget]
 
 extern boolean use_vsync; // killough 2/8/98: controls whether vsync is called
 extern boolean disk_icon; // killough 10/98
-extern int current_video_height;
 
-#  define DRS_MIN_HEIGHT 400
+extern int max_video_width, max_video_height;
+extern int current_video_height, default_current_video_height;
+
+#define DRS_MIN_HEIGHT 400
 extern boolean dynamic_resolution;
 
 extern boolean use_aspect;
@@ -85,6 +87,7 @@ extern boolean stretch_to_fit; // [Nugget]
 
 extern boolean fullscreen;
 extern boolean exclusive_fullscreen;
+extern boolean change_display_resolution;
 extern int fpslimit; // when uncapped, limit framerate to this value
 extern int fps;
 extern boolean vga_porch_flash; // emulate VGA "porch" behaviour
@@ -114,7 +117,7 @@ void *I_GetSDLRenderer(void);
 
 void I_InitWindowIcon(void);
 
-void I_ShowMouseCursor(boolean on);
+void I_ShowMouseCursor(boolean toggle);
 void I_ResetRelativeMouseState(void);
 
 #endif

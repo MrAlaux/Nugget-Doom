@@ -43,13 +43,6 @@ typedef enum {
   none
 } GameMission_t;
 
-typedef enum
-{
-    vanilla,    // Vanilla Doom
-    freedoom,   // FreeDoom: Phase 1 + 2 and FreeDM
-    miniwad     // miniwad
-} GameVariant_t;
-
 // Identify language to use, software localization.
 typedef enum {
   english,
@@ -62,6 +55,7 @@ typedef enum {
 
 typedef enum
 {
+    exe_indetermined = -1,
     exe_doom_1_9,    // Doom 1.9: for shareware, registered and commercial
     exe_ultimate,    // Ultimate Doom (retail)
     exe_final,       // Final Doom

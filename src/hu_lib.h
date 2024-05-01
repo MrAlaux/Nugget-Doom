@@ -81,7 +81,7 @@ typedef struct
   // [FG] length in chars
   int len;
 
-  // [FG] length in chars
+  // [FG] width in pixels
   int width;
 
 } hu_line_t;
@@ -105,6 +105,7 @@ typedef struct hu_multiline_s
   boolean built;
 
   boolean exclusive;
+  boolean bottomup;
 
 } hu_multiline_t;
 

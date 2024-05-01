@@ -76,6 +76,7 @@ void I_ShutdownSound(void);
 
 extern int forceFlipPan;
 extern int snd_resampler;
+extern boolean snd_limiter;
 extern int snd_module;
 extern boolean snd_hrtf;
 extern int snd_absorption;
@@ -168,27 +169,19 @@ typedef struct
     void (*I_ResumeSong)(void *handle);
     void *(*I_RegisterSong)(void *data, int size);
     void (*I_PlaySong)(void *handle, boolean looping);
-    void (*I_UpdateMusic)(void);
     void (*I_StopSong)(void *handle);
     void (*I_UnRegisterSong)(void *handle);
-    const char **(*I_DeviceList)(int *current_device);
+    const char **(*I_DeviceList)(void);
 } music_module_t;
 
 // Music modules
 extern music_module_t music_oal_module;
-extern music_module_t music_win_module;
-extern music_module_t music_mac_module;
-
-extern int midi_player;
-
-extern struct stream_module_s *midi_stream_module;
+extern music_module_t music_mid_module;
 
 boolean I_InitMusic(void);
 void I_ShutdownMusic(void);
 
-#define DEFAULT_MIDI_DEVICE -1  // use saved music module device
-
-void I_SetMidiPlayer(int device);
+void I_SetMidiPlayer(int *menu_index);
 
 // Volume.
 void I_SetMusicVolume(int volume);
@@ -206,15 +199,13 @@ void *I_RegisterSong(void *data, int size);
 // Horrible thing to do, considering.
 void I_PlaySong(void *handle, boolean looping);
 
-void I_UpdateMusic(void);
-
 // Stops a song over 3 seconds.
 void I_StopSong(void *handle);
 
 // See above (register), then think backwards
 void I_UnRegisterSong(void *handle);
 
-const char **I_DeviceList(int *current_device);
+const char **I_DeviceList(void);
 
 // Determine whether memory block is a .mid file
 boolean IsMid(byte *mem, int len);
