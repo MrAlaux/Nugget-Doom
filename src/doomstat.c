@@ -247,6 +247,7 @@ int comp_lscollision;
 int comp_lsamnesia;
 int comp_fuzzyblood;
 int comp_nonbleeders;
+int comp_faceshadow;
 int comp_iosdeath;
 int comp_choppers;
 

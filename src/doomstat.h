@@ -632,6 +632,7 @@ extern int comp_lscollision;
 extern int comp_lsamnesia;
 extern int comp_fuzzyblood;
 extern int comp_nonbleeders;
+extern int comp_faceshadow;
 extern int comp_iosdeath;
 extern int comp_choppers;
 

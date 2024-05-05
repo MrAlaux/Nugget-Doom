@@ -127,6 +127,7 @@ All of these are CFG-Only, so their CVAR names are included.
 - Lost Soul forgets target upon impact (`comp_lsamnesia`)
 - Fuzzy things bleed fuzzy blood (`comp_fuzzyblood`) [i.b. Crispy Doom]
 - Non-bleeders don't bleed when crushed (`comp_nonbleeders`) [i.b. Crispy Doom]
+- Attackers face fuzzy targets straight (`comp_faceshadow`)
 - Fix lopsided Icon of Sin explosions (`comp_iosdeath`)
 - Permanent IDCHOPPERS invulnerability (`comp_choppers`)
 - Blazing doors reopen with wrong sound (`comp_blazing2`) [p.f. Crispy Doom]

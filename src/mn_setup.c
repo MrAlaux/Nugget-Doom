@@ -2308,7 +2308,8 @@ static setup_menu_t gen_settings1[] = {
     {"Widescreen", S_CHOICE | S_RES, M_X, M_SPC, {"widescreen"}, m_null, input_null,
      str_widescreen, ResetVideo},
 
-    {"FOV", S_THERMO, M_X_THRM8, M_THRM_SPC, {"fov"}, m_null, input_null,
+    // [Nugget] Lengthened
+    {"FOV", S_THERMO | S_THRM_SIZE11, M_X_THRM11, M_THRM_SPC, {"fov"}, m_null, input_null,
      str_empty, UpdateFOV},
 
     {"Fullscreen", S_ONOFF, M_X, M_SPC, {"fullscreen"}, m_null, input_null,

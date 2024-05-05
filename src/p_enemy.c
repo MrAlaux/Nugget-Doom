@@ -1315,7 +1315,9 @@ void A_FaceTarget(mobj_t *actor)
   actor->flags &= ~MF_AMBUSH;
   actor->angle = R_PointToAngle2(actor->x, actor->y,
                                  actor->target->x, actor->target->y);
-  if (actor->target->flags & MF_SHADOW)
+
+  // [Nugget] Face fuzzy enemies straight
+  if (!CASUALPLAY(comp_faceshadow) && actor->target->flags & MF_SHADOW)
     { // killough 5/5/98: remove dependence on order of evaluation:
       int t = P_Random(pr_facetarget);
       actor->angle += (t-P_Random(pr_facetarget))<<21;

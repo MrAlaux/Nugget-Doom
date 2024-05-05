@@ -765,7 +765,7 @@ static void P_NuggetGib(mobj_t *mo)
 
   for (int i = 0; i < quantity; i++)
   {
-    mobj_t *splat = P_SpawnMobj(mo->x, mo->y, mo->z + (mo->height / 1.5),
+    mobj_t *splat = P_SpawnMobj(mo->x, mo->y, mo->z + (mo->height * 3/2),
                                 (comp_nonbleeders && mo->flags & MF_NOBLOOD)
                                 ? MT_PUFF : MT_BLOOD);
 

@@ -1623,6 +1623,13 @@ default_t defaults[] = {
   },
 
   {
+    "comp_faceshadow",
+    (config_t *) &comp_faceshadow, NULL,
+    {0}, {0,1}, number, ss_none, wad_yes,
+    "Attackers face fuzzy targets straight"
+  },
+
+  {
     "comp_nonbleeders",
     (config_t *) &comp_nonbleeders, NULL,
     {0}, {0,1}, number, ss_none, wad_yes,
