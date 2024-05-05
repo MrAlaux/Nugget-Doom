@@ -19,13 +19,15 @@
 - **Merged changes from [Woof! 14.5.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_14.5.0)**, note:
   - Removed Nugget's `all` autoload folder in favor of Woof's `all-all`
   - Changed `nughud_secret_y` default to match default Boom HUD
+- **NUGHUD:**
+  - **Changed defaults** to make use of stacks and further match the default WOOFHUD [1]
+  - **Improved Y-position of standalone Chat**
+  - **Made Status Bar elements be drawn before HUD elements**, as was before 3.0.0 [1]
 - **Rewind improvements:**
   - Only delete key frames when rewinding within less than 0.6 seconds since the last rewind
   - "Aligned" key-framing time
 - **Adjusted spawning height of _Bloodier Gibbing_ blood splats**
 - **Support for _Milestone Completion Announcements_ in multiplayer**
-- **Changed NUGHUD defaults** to make use of stacks and further match the default WOOFHUD [1]
-- **Improved Y-position of standalone Chat in NUGHUD**
 - **Lengthened FOV slider**
 
 **[1].** This may affect existing NUGHUDs.

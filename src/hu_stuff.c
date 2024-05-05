@@ -1830,6 +1830,12 @@ void HU_Drawer(void)
   if (hud_pending)
     return;
 
+  // [Nugget] Draw Status Bar *before* HUD
+  if (draw_crispy_hud)
+  {
+    ST_Drawer (false, true);
+  }
+
   HUlib_reset_align_offsets();
 
   while (w->multiline)
@@ -1839,11 +1845,6 @@ void HU_Drawer(void)
       HUlib_draw_widget(w);
     }
     w++;
-  }
-
-  if (draw_crispy_hud)
-  {
-    ST_Drawer (false, true);
   }
 }
 
