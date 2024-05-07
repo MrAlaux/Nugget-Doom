@@ -35,4 +35,5 @@
 ## Bug Fixes
 
 - **_Show Stats/Time_ toggle affecting Automap instead of HUD when on Minimap**
+- **NUGHUD view offset behaving incorrectly** (should now match pre-3.0.0 behavior)
 - **_Cycle Chasecam_ and _Toggle Crosshair_ inputs eating inputs**

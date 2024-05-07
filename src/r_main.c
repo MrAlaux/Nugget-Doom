@@ -631,6 +631,11 @@ static void R_SetupFreelook(void)
     dy = 0;
   }
 
+  if (STRICTMODE(st_crispyhud) && !(WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION)))
+  {
+    dy += (nughud.viewoffset * viewheight / SCREENHEIGHT) << FRACBITS;
+  }
+
   centery = viewheight / 2 + (dy >> FRACBITS);
   centeryfrac = centery << FRACBITS;
 
@@ -799,7 +804,7 @@ void R_ExecuteSetViewSize (void)
     { fx += fovfx[i].current; }
 
     r_fov = (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
-           ? MAX(140, custom_fov) : custom_fov + fx;
+            ? MAX(140, custom_fov) : custom_fov + fx;
   }
 
   centerxfrac = (viewwidth << FRACBITS) / 2;
@@ -1025,16 +1030,7 @@ void R_SetupFrame (player_t *player)
 
     basepitch = pitch = 0;
   }
-  else {
-    target_interangle = viewangle;
-
-    // NUGHUD
-    if (STRICTMODE(st_crispyhud)) {
-      angle_t viewoffset = nughud.viewoffset * ANG1/2;
-      basepitch += viewoffset;
-          pitch += viewoffset;
-    }
-  }
+  else { target_interangle = viewangle; }
 
   // Explosion shake effect
   chasecamheight = chasecam_height * FRACUNIT;
