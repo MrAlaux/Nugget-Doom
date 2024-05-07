@@ -12,8 +12,6 @@
 - Toggle to **disable the Killough-face easter egg**
 - Toggle to **make attackers face fuzzy targets straight**
 
-**[1].** This may affect existing NUGHUDs.
-
 ## Changes
 
 - **Merged changes from [Woof! 14.5.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_14.5.0)**, note:
@@ -30,10 +28,10 @@
 - **Support for _Milestone Completion Announcements_ in multiplayer**
 - **Lengthened FOV slider**
 
-**[1].** This may affect existing NUGHUDs.
-
 ## Bug Fixes
 
 - **_Show Stats/Time_ toggle affecting Automap instead of HUD when on Minimap**
-- **NUGHUD view offset behaving incorrectly** (should now match pre-3.0.0 behavior)
+- **NUGHUD view offset behaving incorrectly** (should now match pre-3.0.0 behavior) [1]
 - **_Cycle Chasecam_ and _Toggle Crosshair_ inputs eating inputs**
+
+**[1].** This may affect existing NUGHUDs.
