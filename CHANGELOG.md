@@ -33,5 +33,6 @@
 - **_Show Stats/Time_ toggle affecting Automap instead of HUD when on Minimap**
 - **NUGHUD view offset behaving incorrectly** (should now match pre-3.0.0 behavior) [1]
 - **_Cycle Chasecam_ and _Toggle Crosshair_ inputs eating inputs**
+- **Crosshair jumping vertically when changing screen size to Status Bar from NUGHUD with view offset**
 
 **[1].** This may affect existing NUGHUDs.

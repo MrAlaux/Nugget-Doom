@@ -1682,9 +1682,6 @@ static void HU_UpdateCrosshair(void)
   crosshair.x = SCREENWIDTH/2;
   crosshair.y = (screenblocks <= 10) ? (SCREENHEIGHT-ST_HEIGHT)/2 : SCREENHEIGHT/2;
 
-  // [Nugget] NUGHUD
-  crosshair.y += STRICTMODE(st_crispyhud) ? nughud.viewoffset : 0;
-
   crosshair.side = 0; // [Nugget] Horizontal-autoaim indicators
 
   if (hud_crosshair_health)
@@ -1766,9 +1763,12 @@ void HU_DrawCrosshair(void)
     return;
   }
 
+  // [Nugget] NUGHUD
+  const int y = crosshair.y + (nughud.viewoffset * STRICTMODE(st_crispyhud));
+
   if (crosshair.patch)
     V_DrawPatchTranslated(crosshair.x - crosshair.w,
-                          crosshair.y - crosshair.h,
+                                    y - crosshair.h,
                           crosshair.patch, crosshair.cr);
 
   // [Nugget] Horizontal-autoaim indicators ----------------------------------
@@ -1776,13 +1776,13 @@ void HU_DrawCrosshair(void)
   if (crosshair.side == -1)
   {
     V_DrawPatchTranslated(crosshair.x - crosshair.w - crosshair.lw,
-                          crosshair.y - crosshair.lh,
+                                    y - crosshair.lh,
                           crosshair.patchl, crosshair.cr);
   }
   else if (crosshair.side == 1)
   {
     V_DrawPatchTranslated(crosshair.x + crosshair.w,
-                          crosshair.y - crosshair.rh,
+                                    y - crosshair.rh,
                           crosshair.patchr, crosshair.cr);
   }
 }
