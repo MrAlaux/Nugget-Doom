@@ -25,6 +25,7 @@
 #include "doomstat.h"
 #include "i_system.h"
 #include "i_video.h"
+#include "m_random.h"
 #include "r_bsp.h"
 #include "r_defs.h"
 #include "r_draw.h"
@@ -419,9 +420,6 @@ void R_DrawSkyColumn(void)
 // Spectre/Invisibility.
 //
 
-// [Nugget - ceski] Selective fuzz darkening, credit: Linguica (https://www.doomworld.com/forum/post/1335769)
-//int fuzzdark_mode;
-
 #define FUZZTABLE 50 
 
 // killough 11/98: convert fuzzoffset to be screenwidth-independent
@@ -610,12 +608,88 @@ static void R_DrawFuzzColumn_block(void)
     }
 }
 
+// [Nugget - ceski] Selective fuzz darkening
+// Reference: https://www.doomworld.com/forum/post/1335769
+int fuzzdark_mode;
+static int nx, ny;
+#define FUZZDARK (256 * (Woof_Random() < 32 ? (Woof_Random() & 1 ? 4 : 8) : 6))
+#define FUZZSELECT (fuzzoffset[fuzzpos] ? 0 : FUZZDARK)
+
+static void DrawFuzz(byte **dest, int dark, int a, int b)
+{
+  const int offset = ny * linesize * (fuzzoffset[fuzzpos] ? a : b);
+  const byte fuzz = fullcolormap[dark + (*dest)[offset]];
+
+  for (int i = 0; i < ny; i++)
+  {
+    memset(*dest, fuzz, nx);
+    *dest += linesize;
+  }
+
+  fuzzpos = (fuzzpos + 1) % FUZZTABLE;
+}
+
+static void R_DrawSelectiveFuzzColumn(void)
+{
+  int count;
+  byte *dest;
+  boolean cutoff;
+
+  if (dc_x % nx)
+    return;
+
+  dc_yl += ny - 1;
+  dc_yl -= dc_yl % ny;
+  dc_yh -= dc_yh % ny;
+
+  if (dc_yh > viewheight - ny)
+    dc_yh = viewheight - ny;
+
+  if ((count = (dc_yh - dc_yl) / ny) < 0)
+    return;
+
+#ifdef RANGECHECK
+  if (dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    I_Error("R_DrawSelectiveFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+#endif
+
+  dest = ylookup[dc_yl] + columnofs[dc_x];
+  cutoff = (dc_yh == viewheight - ny);
+
+  if (!cutoff)
+    count++;
+
+  if (count-- > 0)
+    DrawFuzz(&dest, FUZZDARK, (dc_yl ? -1 : 0), 1);
+
+  while (count-- > 0)
+    DrawFuzz(&dest, FUZZSELECT, -1, 1);
+
+  if (cutoff)
+    DrawFuzz(&dest, FUZZSELECT, -1, 0);
+}
+
 // [FG] spectre drawing mode: 0 original, 1 blocky (hires)
 
 int fuzzcolumn_mode;
 void (*R_DrawFuzzColumn) (void) = R_DrawFuzzColumn_orig;
 void R_SetFuzzColumnMode (void)
 {
+  if (fuzzdark_mode)
+  {
+    if (fuzzcolumn_mode && current_video_height > SCREENHEIGHT)
+    {
+      nx = video.xscale >> FRACBITS;
+      ny = video.yscale >> FRACBITS;
+    }
+    else
+    {
+      nx = ny = 1;
+    }
+    R_DrawFuzzColumn = R_DrawSelectiveFuzzColumn;
+    return;
+  }
+
   if (fuzzcolumn_mode && current_video_height > SCREENHEIGHT)
     R_DrawFuzzColumn = R_DrawFuzzColumn_block;
   else
