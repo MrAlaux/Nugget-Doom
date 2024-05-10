@@ -986,6 +986,13 @@ void ST_drawWidgets(void)
   // [Nugget] Draw some NUGHUD graphics
   if (st_crispyhud)
   {
+    // Status-Bar chunks -----------------------------------------------------
+
+    for (i = 0;  i < NUMSBCHUNKS;  i++)
+    {
+      if (nughud.sbchunks[i].x > -1) { NughudDrawSBChunk(&nughud.sbchunks[i]); }
+    }
+
     // Patches ---------------------------------------------------------------
 
     for (i = 0;  i < NUMNUGHUDPATCHES;  i++)
@@ -998,13 +1005,6 @@ void ST_drawWidgets(void)
           !nughud.patch_offsets
         );
       }
-    }
-
-    // Status-Bar chunks -----------------------------------------------------
-
-    for (i = 0;  i < NUMSBCHUNKS;  i++)
-    {
-      if (nughud.sbchunks[i].x > -1) { NughudDrawSBChunk(&nughud.sbchunks[i]); }
     }
 
     // Icons -----------------------------------------------------------------

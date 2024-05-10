@@ -229,7 +229,7 @@ Infinity, drawn in place of the Ammo count when using weapons with no ammo type 
 ### Patches
 
 **Patches are static graphics that can be drawn anywhere on the screen**, behind the rest of widgets.  
-Up to 8 patches can be drawn. They are drawn back-to-front; `patch1` is drawn behind `patch2`, which is drawn behind `patch3`, and so on.
+Up to 8 patches can be drawn; `patch1` is drawn behind `patch2`, which is drawn behind `patch3`, and so on.
 
 Aside from the shared properties, **patches make use of an additional property, `_name`, that determines the name of the graphic lump to be used**,
 which can be either a sprite (i.e. a lump between `S_START` and `S_END` markers, like `MEDIA0`) or a graphic (like `STBAR`).  
@@ -263,7 +263,7 @@ nughud_patch2_name "STARMS"
 ### Status-Bar Chunks
 
 **Status-Bar chunks** are square regions of the Status Bar, taken from the currently-loaded `STBAR`.
-Up to 8 chunks can be drawn. They are drawn in the left-to-right order in which they appear in the traditional Status Bar.
+Up to 8 chunks can be drawn; they are drawn behind patches, following the same order (`chunk1` before `chunk2`, etc.).
 
 Apart from the shared properties, **chunks make use of the following additional properties**:
 
