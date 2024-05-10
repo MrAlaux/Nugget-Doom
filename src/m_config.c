@@ -1358,14 +1358,12 @@ default_t defaults[] = {
     "0 original, 1 blocky"
   },
 
-  /*
   { // [Nugget - ceski] Selective fuzz darkening
     "fuzzdark_mode",
     (config_t *) &fuzzdark_mode, NULL,
     {0}, {0,1}, number, ss_enem, wad_no,
-    "0 original, 1 selective darkening"
+    "Use selective fuzz darkening"
   },
-  */
 
   //
   // Compatibility

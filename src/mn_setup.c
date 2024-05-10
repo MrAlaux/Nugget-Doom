@@ -1987,7 +1987,10 @@ static setup_menu_t enem_settings1[] = {
       {"Extra Gibbing",            S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"extra_gibbing"}},
       {"Bloodier Gibbing",         S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"bloodier_gibbing"}},
       {"ZDoom-like Item Drops",    S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"zdoom_item_drops"}},
-//      {"Selective Fuzz Darkening", S_ONOFF|S_STRICT,            M_X, M_SPC, {"fuzzdark_mode"}}, // [Nugget - ceski] Selective fuzz darkening
+
+      // [Nugget - ceski] Selective fuzz darkening
+      {"Selective Fuzz Darkening", S_ONOFF|S_STRICT, M_X, M_SPC,
+       {"fuzzdark_mode"}, m_null, input_null, str_empty, R_SetFuzzColumnMode},
 
     // [Nugget] ---------------------------------------------------------------/
 
