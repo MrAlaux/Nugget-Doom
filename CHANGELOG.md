@@ -1,5 +1,6 @@
 ## New Features
 
+- Restored **_Selective Fuzz Darkening_** setting [by @ceski-1]
 - **_Level Stats Format_** settings
   - Removed _Kills % in Stats display_ setting in favor of them
 - **Minimap zooming** (keyboard only)

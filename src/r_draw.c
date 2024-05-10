@@ -610,7 +610,10 @@ static void R_DrawFuzzColumn_block(void)
 
 // [Nugget - ceski] Selective fuzz darkening
 // Reference: https://www.doomworld.com/forum/post/1335769
+// /--------------------------------------------------------------------------
+
 int fuzzdark_mode;
+
 static int nx, ny;
 #define FUZZDARK (256 * (Woof_Random() < 32 ? (Woof_Random() & 1 ? 4 : 8) : 6))
 #define FUZZSELECT (fuzzoffset[fuzzpos] ? 0 : FUZZDARK)
@@ -669,12 +672,15 @@ static void R_DrawSelectiveFuzzColumn(void)
     DrawFuzz(&dest, FUZZSELECT, -1, 0);
 }
 
+// [Nugget] -----------------------------------------------------------------/
+
 // [FG] spectre drawing mode: 0 original, 1 blocky (hires)
 
 int fuzzcolumn_mode;
 void (*R_DrawFuzzColumn) (void) = R_DrawFuzzColumn_orig;
 void R_SetFuzzColumnMode (void)
 {
+  // [Nugget - ceski] Selective fuzz darkening
   if (fuzzdark_mode)
   {
     if (fuzzcolumn_mode && current_video_height > SCREENHEIGHT)
@@ -686,6 +692,7 @@ void R_SetFuzzColumnMode (void)
     {
       nx = ny = 1;
     }
+
     R_DrawFuzzColumn = R_DrawSelectiveFuzzColumn;
     return;
   }
