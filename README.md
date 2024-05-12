@@ -162,6 +162,7 @@ All of these are CFG-Only, so their CVAR names are included.
 - **_'TNTEM'_** as an alternative to _'KILLEM'_
 - **_'FPS'_** as a replacement for _'SHOWFPS'_
 - **Mid-air control while in noclipping mode** [p.f. Crispy Doom]
+- **Key-binding for Computer Area Map cheat**
 - Reenabled **_'NOMOMENTUM'_** cheat [p.f. Crispy Doom]
 
 For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.

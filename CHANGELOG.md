@@ -10,8 +10,10 @@
     - Removed `nughud_time_sts` in favor of stacks [1]
   - Status-Bar chunks
   - User-chosen `hud_widget_layout` support
+- **Key-binding for Computer Area Map cheat**
 - Toggle to **disable the Killough-face easter egg**
 - Toggle to **make attackers face fuzzy targets straight**
+- Toggle to **allow Level Stats icons**
 
 ## Changes
 

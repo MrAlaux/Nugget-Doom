@@ -1205,7 +1205,8 @@ static setup_menu_t keys_settings6[] = {
     {"Berserk",              S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_idbeholds},
     {"Partial Invisibility", S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_idbeholdi},
     {"Radiation Suit",       S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_idbeholdr},
-    {"Reveal Map",           S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_iddt     },
+    {"Computer Area Map",    S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_idbeholda}, // [Nugget]
+    {"Reveal Map (IDDT)",    S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_iddt     }, // [Nugget] Tweaked description
     {"Light Amplification",  S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_idbeholdl},
     {"No Target",            S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_notarget },
     {"Freeze",               S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_freeze   },
@@ -1736,6 +1737,7 @@ static setup_menu_t stat_settings5[] =
     {"Show Powerup Timers",        S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_power_timers"}, m_null, input_null, str_show_widgets},
     {"HUD Level Stats Format",     S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format"}, m_null, input_null, str_stats_format},
     {"Automap Level Stats Format", S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format_map"}, m_null, input_null, str_stats_format},
+    {"Allow Level Stats Icons",    S_ONOFF,             M_X, M_SPC, {"hud_stats_icons"}},
     {"Alternative Arms Display",   S_ONOFF,             M_X, M_SPC, {"alt_arms"}, m_null, input_null, str_empty, ST_createWidgets},
 
   MI_GAP,

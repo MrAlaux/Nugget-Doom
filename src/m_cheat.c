@@ -1812,6 +1812,7 @@ static const struct {
   { input_freeze,    not_net|not_demo, {cheat_freeze},   0 },
   { input_avj,       not_net|not_demo, {cheat_avj},      0 },
   // [Nugget] ----------------------------------------------------------------
+  { input_idbeholda,  not_net|not_demo, {cheat_pw},         pw_allmap },
   { input_infammo,    not_net|not_demo, {cheat_infammo},    0 },
   { input_fastweaps,  not_net|not_demo, {cheat_fastweaps},  0 },
   { input_resurrect,  not_net|not_demo, {cheat_resurrect},  0 },

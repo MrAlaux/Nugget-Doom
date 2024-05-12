@@ -152,6 +152,7 @@ enum
     input_map_teleport, // Teleport to Automap pointer
     input_map_mini, // Minimap
 
+    input_idbeholda,
     input_infammo,
     input_fastweaps,
     input_resurrect,

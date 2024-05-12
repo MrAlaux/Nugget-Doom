@@ -2379,11 +2379,19 @@ default_t defaults[] = {
     input_idbeholdl, { {0, 0} }
   },
 
+  { // [Nugget]
+    "input_idbeholda",
+    NULL, NULL,
+    {0}, {UL,UL}, input, ss_keys, wad_no,
+    "key to give computer area map",
+    input_idbeholda, { {0, 0} }
+  },
+
   {
     "input_iddt",
     NULL, NULL,
     {0}, {UL,UL}, input, ss_keys, wad_no,
-    "key to reveal map",
+    "key to reveal map (IDDT)", // [Nugget] Tweaked description
     input_iddt, { {0, 0} }
   },
 
@@ -3570,6 +3578,13 @@ default_t defaults[] = {
   },
 
   // [Nugget] ---------------------------------------------------------------/
+
+  { // [Nugget]
+    "hud_stats_icons",
+    (config_t *) &hud_stats_icons, NULL,
+    {1}, {0,1}, number, ss_stat, wad_yes,
+    "Allow usage of icons for the Level Stats widget's labels"
+  },
 
   // [FG] level time widget
   {
