@@ -3103,6 +3103,13 @@ default_t defaults[] = {
     "color used for lines around revealed secret sectors"
   },
 
+  { // [Nugget] None
+    "mapcolor_trig",
+    (config_t *) &mapcolor_trig, NULL,
+    {0}, {0,255}, number, ss_none, wad_yes,
+    "Color used for trigger lines (lines with actions)"
+  },
+
   { // none
     "mapcolor_exit",
     (config_t *) &mapcolor_exit, NULL,

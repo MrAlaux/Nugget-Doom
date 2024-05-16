@@ -85,6 +85,7 @@ int mapcolor_ydor;    // yellow door color
 int mapcolor_tele;    // teleporter line color
 int mapcolor_secr;    // secret sector boundary color
 int mapcolor_revsecr; // revealed secret sector boundary color
+int mapcolor_trig;    // [Nugget] Trigger-line color
 int mapcolor_exit;    // jff 4/23/98 add exit line color
 int mapcolor_unsn;    // computer map unseen line color
 int mapcolor_flat;    // line with no floor/ceiling changes
@@ -1895,8 +1896,22 @@ static void AM_drawWalls(void)
         continue;
       }
 
+      // [Nugget] Trigger lines
+      #define IsTrigger(l) (        \
+        (l).special                 \
+        && !(   (l).special == 48   \
+             || (l).special == 85   \
+             || (l).special == 255) \
+      )
+
       if (!lines[i].backsector)
       {
+        // [Nugget] Trigger lines
+        if (ddt_cheating && mapcolor_trig && IsTrigger(lines[i]))
+        {
+          array_push(lines_1S, ((am_line_t){l, mapcolor_trig}));
+        }
+        else
         // jff 1/10/98 add new color for 1S secret sector boundary
         if (mapcolor_secr && //jff 4/3/98 0 is disable
             (
@@ -1935,6 +1950,11 @@ static void AM_drawWalls(void)
         )
         { // teleporters
           AM_drawMline(&l, mapcolor_tele);
+        }
+        // [Nugget] Trigger lines
+        else if (ddt_cheating && mapcolor_trig && IsTrigger(lines[i]))
+        {
+          AM_drawMline(&l, mapcolor_trig);
         }
         else if (lines[i].flags & ML_SECRET)    // secret door
         {
@@ -2016,10 +2036,10 @@ static void AM_drawWalls(void)
     // [Nugget] Tag Finder from PrBoomX: Highlight sectors and lines
     if (magic_sector || magic_tag > 0)
     {
-      if (   (lines[i].frontsector && ((magic_sector && lines[i].frontsector->tag == magic_sector->tag)
-                                        || ((magic_tag > 0) && lines[i].frontsector->tag == magic_tag)))
-          || (lines[i].backsector  && ((magic_sector && lines[i].backsector->tag  == magic_sector->tag)
-                                        || ((magic_tag > 0) && lines[i].backsector->tag  == magic_tag))))
+      if (   (lines[i].frontsector && (   (magic_sector  && lines[i].frontsector->tag == magic_sector->tag)
+                                       || (magic_tag > 0 && lines[i].frontsector->tag == magic_tag)))
+          || (lines[i].backsector  && (   (magic_sector  && lines[i].backsector->tag  == magic_sector->tag)
+                                       || (magic_tag > 0 && lines[i].backsector->tag  == magic_tag))))
       {
         AM_drawMline(&l, magic_sector_color_pos);
 

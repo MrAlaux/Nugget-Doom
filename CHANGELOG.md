@@ -10,6 +10,7 @@
     - Removed `nughud_time_sts` in favor of stacks [1]
   - Status-Bar chunks
   - User-chosen `hud_widget_layout` support
+- **Automap color for trigger lines**
 - **Key-binding for Computer Area Map cheat**
 - Toggle to **disable the Killough-face easter egg**
 - Toggle to **make attackers face fuzzy targets straight**
@@ -33,6 +34,7 @@
 
 ## Bug Fixes
 
+- **Sky being distorted by zoom effect**
 - **_Show Stats/Time_ toggle affecting Automap instead of HUD when on Minimap**
 - **NUGHUD view offset behaving incorrectly** (should now match pre-3.0.0 behavior) [1]
 - **_Cycle Chasecam_ and _Toggle Crosshair_ inputs eating inputs**

@@ -109,6 +109,7 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - Key to **_Blink [Automap] Marks_** (default: <kbd>B</kbd>)
 - **_Tag Finder_**: Position the Automap pointer over a sector and press the _Tag Finder_ key to highlight its activator line(s), and vice versa [p.f. PrBoomX]
 - Key to **_Teleport to Automap pointer_**
+- **Color for trigger lines**, used with IDDT (CFG-Only: `mapcolor_trig`)
 
 ### Enemies
 
