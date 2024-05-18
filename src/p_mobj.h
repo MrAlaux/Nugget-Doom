@@ -20,9 +20,11 @@
 #ifndef __P_MOBJ__
 #define __P_MOBJ__
 
+#include <limits.h>
+
 // Basics.
-#include "tables.h"
 #include "m_fixed.h"
+#include "tables.h"
 
 // We need the thinker_t stuff.
 #include "d_think.h"
@@ -233,11 +235,11 @@ enum {
   MIF_SCROLLING = 8,    // Object is affected by scroller / pusher / puller
   // cosmetic
   MIF_FLIP = 16,
+  MIF_SPAWNED_BY_ICON = 32,
 
   // [Nugget] ----------------------------------------------------------------
 
   MIF_CROUCHING    = 0x00010000,  // Mobj (player) is crouching
-  MIF_EXTRASPAWNED = 0x00020000,  // [So Doom] Nightmare-spawned, Icon of Sin-spawned and Archvile-resurrected monsters
 
   MIF_CHEESE       = 0x10000000,
 };
@@ -386,6 +388,8 @@ typedef struct mobj_s
 
     // [FG] colored blood and gibs
     int bloodcolor;
+
+    // [Nugget] Removed `actualheight`
 } mobj_t;
 
 // External declarations (fomerly in p_local.h) -- killough 5/2/98
@@ -397,8 +401,8 @@ typedef struct mobj_s
 #define GRAVITY         FRACUNIT
 #define MAXMOVE         (30*FRACUNIT)
 
-#define ONFLOORZ        D_MININT
-#define ONCEILINGZ      D_MAXINT
+#define ONFLOORZ        INT_MIN
+#define ONCEILINGZ      INT_MAX
 
 // Time interval for item respawning.
 #define ITEMQUESIZE     128
@@ -424,14 +428,6 @@ extern int iquetail;
 // [FG] colored blood and gibs
 extern boolean colored_blood;
 
-// The value `160` is used for the denominator because in Vanilla Doom
-// the horizontal FOV is 90° and spans 320 px, so the height of the
-// resulting triangle is 160.
-// Heretic/Hexen used value `173` presumably because Raven assumed an
-// equilateral triangle (i.e. 60°) for the vertical FOV which spans
-// 200 px, so the height of that triangle would be 100*sqrt(3) = 173.
-#define PLAYER_SLOPE_DENOM 160 // [Nugget] Separate into its own macro
-#define PLAYER_SLOPE(a)	((((a)->lookdir / MLOOKUNIT) << FRACBITS) / PLAYER_SLOPE_DENOM)
 enum {
   VERTAIM_AUTO,
   VERTAIM_DIRECT,
@@ -439,7 +435,8 @@ enum {
 }; extern int vertical_aiming, default_vertical_aiming; // [Nugget] Replace `direct_vertical_aiming`
 void P_UpdateDirectVerticalAiming(void);
 
-#define PLAYER_IMPACTPITCH(player,pitch) ((player)->impactpitch = BETWEEN(-24, 24, (player)->impactpitch + (pitch))) // [Nugget]
+extern boolean checksight12;
+void P_UpdateCheckSight(void);
 
 mobj_t *P_SubstNullMobj(mobj_t *mobj);
 void    P_RespawnSpecials(void);

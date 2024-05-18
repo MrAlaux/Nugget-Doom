@@ -16,9 +16,10 @@
 //    Exit text-mode ENDOOM screen.
 //
 
-
 #ifndef __I_ENDOOM__
 #define __I_ENDOOM__
+
+#include "doomtype.h"
 
 // Display the Endoom screen on shutdown.  Pass a pointer to the
 // ENDOOM lump.
@@ -26,4 +27,3 @@
 void I_Endoom(byte *data);
 
 #endif
-

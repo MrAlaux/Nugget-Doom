@@ -18,27 +18,41 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <limits.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "d_think.h"
+#include "doomdata.h"
 #include "doomstat.h"
-#include "i_printf.h"
-#include "m_bbox.h"
-#include "m_argv.h"
 #include "g_game.h"
-#include "w_wad.h"
-#include "r_main.h"
-#include "r_things.h"
-#include "p_maputl.h"
+#include "i_printf.h"
+#include "i_system.h"
+#include "info.h"
+#include "m_argv.h"
+#include "m_bbox.h"
+#include "m_swap.h"
+#include "nano_bsp.h"
+#include "p_enemy.h"
+#include "p_extnodes.h"
 #include "p_map.h"
+#include "p_maputl.h"
+#include "p_mobj.h"
 #include "p_setup.h"
 #include "p_spec.h"
 #include "p_tick.h"
-#include "p_enemy.h"
-#include "s_sound.h"
+#include "r_data.h"
+#include "r_defs.h"
+#include "r_main.h"
+#include "r_state.h"
+#include "r_things.h"
 #include "s_musinfo.h" // [crispy] S_ParseMusInfo()
-#include "m_misc2.h" // [FG] M_StringJoin()
-#include "m_swap.h"
-
-// [FG] support maps with NODES in uncompressed XNOD/XGLN or compressed ZNOD/ZGLN formats, or DeePBSP format
-#include "p_extnodes.h"
+#include "s_sound.h"
+#include "st_stuff.h"
+#include "tables.h"
+#include "w_wad.h"
+#include "z_zone.h"
 
 //
 // MAP related Lookup tables.
@@ -275,6 +289,16 @@ void P_LoadSectors (int lump)
   byte *data;
   int  i;
 
+  // [FG] SEGS, SSECTORS, NODES lumps missing?
+  for (i = ML_SECTORS; !W_LumpExistsWithName(lump, "SECTORS") && i > ML_VERTEXES; i--)
+  {
+    lump--;
+  }
+  if (i == ML_VERTEXES)
+  {
+    I_Error("No SECTORS found for %s!", lumpinfo[lump - i].name);
+  }
+
   numsectors = W_LumpLength (lump) / sizeof(mapsector_t);
   sectors = Z_Malloc (numsectors*sizeof(sector_t),PU_LEVEL,0);
   memset (sectors, 0, numsectors*sizeof(sector_t));
@@ -434,11 +458,15 @@ void P_LoadThings (int lump)
       P_SpawnMapThing (mt);
     }
 
-  // [Nugget] Reset milestones
+  // [Nugget] Reset milestones / ---------------------------------------------
+
   if (totalkills) { complete_milestones &= ~MILESTONE_KILLS; }
   else            { complete_milestones |=  MILESTONE_KILLS; }
+
   if (totalitems) { complete_milestones &= ~MILESTONE_ITEMS; }
   else            { complete_milestones |=  MILESTONE_ITEMS; }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   Z_Free (data);
 }
@@ -1168,7 +1196,7 @@ boolean P_LoadBlockMap (int lump)
   // Forces a (re-)building of the BLOCKMAP lumps for loaded maps.
   //
 
-  if (M_CheckParm("-blockmap") || (count = W_LumpLength(lump)/2) >= 0x10000 || count < 4) // [FG] always rebuild too short blockmaps
+  if (M_CheckParm("-blockmap") || (count = W_LumpLengthWithName(lump, "BLOCKMAP")/2) >= 0x10000 || count < 4) // [FG] always rebuild too short blockmaps
   {
     P_CreateBlockMap();
   }
@@ -1230,7 +1258,7 @@ static void AddLineToSector(sector_t *s, line_t *l)
   *s->lines++ = l;
 }
 
-void P_DegenMobjThinker(void)
+void P_DegenMobjThinker(void *p)
 {
   // no-op
 }
@@ -1289,7 +1317,7 @@ int P_GroupLines (void)
       sector->soundorg.y = (sector->blockbox[BOXTOP] +
 			    sector->blockbox[BOXBOTTOM])/2;
 
-      sector->soundorg.thinker.function.v = (actionf_v)P_DegenMobjThinker;
+      sector->soundorg.thinker.function.p1 = (actionf_p1)P_DegenMobjThinker;
 
       // adjust bounding box to map blocks
       block = (sector->blockbox[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
@@ -1387,7 +1415,7 @@ void P_RemoveSlimeTrails(void)                // killough 10/98
 		    v->r_y = (fixed_t)((dy2 * y0 + dx2 * y1 + dxy * (x0 - x1)) / s);
 
 		    // [FG] override actual vertex coordinates except in compatibility mode
-		    if (demo_version >= 203)
+		    if (demo_version >= DV_MBF)
 		    {
 		      v->x = v->r_x;
 		      v->y = v->r_y;
@@ -1480,7 +1508,7 @@ static boolean P_LoadReject(int lumpnum, int totallines)
     // Otherwise, we need to allocate a buffer of the correct size
     // and pad it with appropriate data.
 
-    lumplen = W_LumpLength(lumpnum);
+    lumplen = W_LumpLengthWithName(lumpnum, "REJECT");
 
     if (lumplen >= minlength)
     {
@@ -1558,11 +1586,13 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   boolean gen_blockmap, pad_reject;
 
   totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
-  // [crispy] count spawned monsters
-  extraspawns = extrakills = 0; // [Nugget] Smart Totals from So Doom
+  max_kill_requirement = 0;
   wminfo.partime = 180;
   for (i=0; i<MAXPLAYERS; i++)
+  {
     players[i].killcount = players[i].secretcount = players[i].itemcount = 0;
+    players[i].maxkilldiscount = 0;
+  }
 
   // Initial height of PointOfView will be set by player think.
   players[consoleplayer].viewz = 1;
@@ -1612,8 +1642,13 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   P_LoadSideDefs2 (lumpnum+ML_SIDEDEFS);             //       |
   P_LoadLineDefs2 (lumpnum+ML_LINEDEFS);             // killough 4/4/98
   gen_blockmap = P_LoadBlockMap  (lumpnum+ML_BLOCKMAP);             // killough 3/1/98
+  // [FG] build nodes with NanoBSP
+  if (mapformat >= MFMT_UNSUPPORTED)
+  {
+    BSP_BuildNodes();
+  }
   // [FG] support maps with NODES in uncompressed XNOD/XGLN or compressed ZNOD/ZGLN formats, or DeePBSP format
-  if (mapformat == MFMT_XGLN || mapformat == MFMT_ZGLN)
+  else if (mapformat == MFMT_XGLN || mapformat == MFMT_ZGLN)
   {
     P_LoadNodes_XNOD (lumpnum+ML_SSECTORS, mapformat == MFMT_ZGLN, true);
   }
@@ -1637,10 +1672,13 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   // [FG] pad the REJECT table when the lump is too small
   pad_reject = P_LoadReject (lumpnum+ML_REJECT, P_GroupLines());
 
-  P_RemoveSlimeTrails();    // killough 10/98: remove slime trails from wad
+  if (mapformat != MFMT_UNSUPPORTED)
+    P_RemoveSlimeTrails();    // killough 10/98: remove slime trails from wad
 
   // [crispy] fix long wall wobble
   P_SegLengths(false);
+  // [crispy] blinking key or skull in the status bar
+  memset(st_keyorskull, 0, sizeof(st_keyorskull));
 
   // Note: you don't need to clear player queue slots --
   // a much simpler fix is in g_game.c -- killough 10/98
@@ -1681,19 +1719,19 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
     R_PrecacheLevel();
 
   // [FG] log level setup
-  {
-    I_Printf(VB_INFO, "P_SetupLevel: %.8s (%s), %s%s%s, %s complevel",
-      lumpname, W_WadNameForLump(lumpnum),
-      mapformat == MFMT_XNOD ? "XNOD nodes" :
-      mapformat == MFMT_ZNOD ? "ZNOD nodes" :
-      mapformat == MFMT_XGLN ? "XGLN nodes" :
-      mapformat == MFMT_ZGLN ? "ZGLN nodes" :
-      mapformat == MFMT_DEEP ? "DeepBSP nodes" :
-      "Doom nodes",
-      gen_blockmap ? " + Blockmap" : "",
-      pad_reject ? " + Reject" : "",
-      G_GetCurrentComplevelName());
-  }
+  I_Printf(VB_INFO, "P_SetupLevel: %.8s (%s), Skill %d, %s%s%s, %s",
+    lumpname, W_WadNameForLump(lumpnum),
+    gameskill + 1,
+    mapformat >= MFMT_UNSUPPORTED ? "NanoBSP" :
+    mapformat == MFMT_XNOD ? "XNOD" :
+    mapformat == MFMT_ZNOD ? "ZNOD" :
+    mapformat == MFMT_XGLN ? "XGLN" :
+    mapformat == MFMT_ZGLN ? "ZGLN" :
+    mapformat == MFMT_DEEP ? "DeepBSP" :
+    "Doom",
+    gen_blockmap ? "+Blockmap" : "",
+    pad_reject ? "+Reject" : "",
+    G_GetCurrentComplevelName());
 }
 
 //

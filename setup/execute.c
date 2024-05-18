@@ -20,29 +20,19 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <sys/types.h>
-
 #ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <process.h>
-#include <shellapi.h>
-
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>
+  #include <shellapi.h>
 #else
-
-#include <sys/wait.h>
-#include <unistd.h>
-
+  #include <sys/wait.h>
+  #include <unistd.h>
 #endif
 
-#include "textscreen.h"
-
-#include "config.h"
 #include "execute.h"
 #include "m_argv.h"
-#include "m_misc2.h"
 #include "m_io.h"
+#include "m_misc.h"
 
 struct execute_context_s
 {
@@ -146,7 +136,8 @@ void AddCmdLineParameter(execute_context_t *context, const char *s, ...)
 boolean OpenFolder(const char *path)
 {
     // "If the function succeeds, it returns a value greater than 32."
-    return (intptr_t)ShellExecute(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32;
+    void *ret = ShellExecute(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
+    return (intptr_t)ret > 32;
 }
 
 // Wait for the specified process to exit.  Returns the exit code.

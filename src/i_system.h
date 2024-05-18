@@ -20,11 +20,7 @@
 #ifndef __I_SYSTEM__
 #define __I_SYSTEM__
 
-#include "d_ticcmd.h"
-#include "i_timer.h"
-
-// Called by DoomMain.
-void I_InitJoystick(void);
+#include "doomtype.h"
 
 //
 // Called by D_DoomLoop,
@@ -45,6 +41,8 @@ void I_StartFrame (void);
 
 void I_StartTic (void);
 
+void I_StartDisplay(void);
+
 // Asynchronous interrupt functions should maintain private queues
 // that are read by the synchronous functions
 // to be converted into events.
@@ -54,11 +52,11 @@ void I_StartTic (void);
 // This ticcmd will then be modified by the gameloop
 // for normal input.
 
-ticcmd_t* I_BaseTiccmd (void);
+struct ticcmd_s *I_BaseTiccmd(void);
 
 // killough 3/20/98: add const
 // killough 4/25/98: add gcc attributes
-void I_ErrorOrSuccess(int err_code, const char *error, ...) PRINTF_ATTR(2, 3);
+NORETURN void I_ErrorOrSuccess(int err_code, const char *error, ...) PRINTF_ATTR(2, 3);
 #define I_Error(...) I_ErrorOrSuccess(-1, __VA_ARGS__)
 #define I_Success(...) I_ErrorOrSuccess(0, __VA_ARGS__)
 
@@ -79,16 +77,14 @@ typedef void (*atexit_func_t)(void);
 void I_AtExitPrio(atexit_func_t func, boolean run_if_error,
                   const char* name, exit_priority_t priority);
 #define I_AtExit(a,b) I_AtExitPrio(a,b,#a,exit_priority_normal)
-void I_SafeExit(int rc) NORETURN;
+NORETURN void I_SafeExit(int rc);
 void I_ErrorMsg(void);
 
 void *I_Realloc(void *ptr, size_t size);
 
 boolean I_GetMemoryValue(unsigned int offset, void *value, int size);
 
-#ifdef _WIN32
-boolean I_WinConsole(void);
-#endif
+const char *I_GetPlatform(void);
 
 #endif
 

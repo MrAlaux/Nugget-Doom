@@ -19,24 +19,44 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <stdlib.h>
+
+#include "d_items.h"
+#include "d_player.h"
+#include "d_think.h"
+#include "doomdata.h"
+#include "doomdef.h"
 #include "doomstat.h"
+#include "doomtype.h"
+#include "g_game.h"
+#include "hu_obituary.h"
 #include "i_printf.h"
+#include "i_system.h"
+#include "info.h"
+#include "m_bbox.h"
+#include "m_fixed.h"
 #include "m_random.h"
-#include "r_main.h"
-#include "p_maputl.h"
+#include "p_action.h"
+#include "p_enemy.h"
+#include "p_inter.h"
 #include "p_map.h"
+#include "p_maputl.h"
+#include "p_mobj.h"
+#include "p_pspr.h"
 #include "p_setup.h"
 #include "p_spec.h"
+#include "p_tick.h"
+#include "r_defs.h"
+#include "r_main.h"
+#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "p_inter.h"
-#include "g_game.h"
-#include "p_enemy.h"
-#include "p_tick.h"
-#include "m_bbox.h"
-#include "w_wad.h" // [Nugget] W_CheckNumForName
+#include "tables.h"
+#include "u_mapinfo.h"
+#include "z_zone.h"
 
-#include "p_action.h"
+// [Nugget]
+#include "w_wad.h" // W_CheckNumForName
 
 static mobj_t *current_actor;
 
@@ -471,19 +491,19 @@ static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
       // Boom v2.02 and LxDoom return good && (P_Random(pr_trywalk)&3)
       // MBF plays even more games
 
-      if (demo_version < 202)
+      if (demo_version < DV_BOOM)
         return good;
-      if (demo_version < 203)
+      if (demo_version < DV_MBF)
         return good && (compatibility || (P_Random(pr_trywalk)&3)); //jff 8/13/98
       else
-      return good && (demo_version < 203 || comp[comp_doorstuck] ||
+      return good && (demo_version < DV_MBF || comp[comp_doorstuck] ||
 		      (P_Random(pr_opendoor) >= 230) ^ (good & 1));
     }
   else
     actor->flags &= ~MF_INFLOAT;
 
   // killough 11/98: fall more slowly, under gravity, if felldown==true
-  if (!(actor->flags & MF_FLOAT) && (!felldown || demo_version < 203))
+  if (!(actor->flags & MF_FLOAT) && (!felldown || demo_version < DV_MBF))
   {
     actor->z = actor->floorz;
 
@@ -715,7 +735,7 @@ static void P_NewChaseDir(mobj_t *actor)
 
   actor->strafecount = 0;
 
-  if (demo_version >= 203)
+  if (demo_version >= DV_MBF)
   {
     if (actor->floorz - actor->dropoffz > FRACUNIT*24 &&
 	actor->z <= actor->floorz && !(actor->flags & (MF_DROPOFF|MF_FLOAT)) &&
@@ -881,7 +901,7 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
 
   c = 0;
 
-  stopc = demo_version < 203 && !demo_compatibility && monsters_remember ?
+  stopc = demo_version < DV_MBF && !demo_compatibility && monsters_remember ?
     MAXPLAYERS : 2;       // killough 9/9/98
 
   for (;; actor->lastlook = (actor->lastlook+1)&(MAXPLAYERS-1))
@@ -897,7 +917,7 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
         // There are no more desyncs on Donce's demos on horror.wad
 
         // Use last known enemy if no players sighted -- killough 2/15/98:
-        if (demo_version < 203 && !demo_compatibility && monsters_remember)
+        if (demo_version < DV_MBF && !demo_compatibility && monsters_remember)
         {
           if (actor->lastenemy && actor->lastenemy->health > 0)
           {
@@ -925,7 +945,7 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
 
       // killough 9/9/98: give monsters a threshold towards getting players
       // (we don't want it to be too easy for a player with dogs :)
-      if (demo_version >= 203 && !comp[comp_pursuit])
+      if (demo_version >= DV_MBF && !comp[comp_pursuit])
 	actor->threshold = 60;
 
       return true;
@@ -955,7 +975,7 @@ static boolean P_LookForMonsters(mobj_t *actor, boolean allaround)
       return true;
     }
 
-  if (demo_version < 203)  // Old demos do not support monster-seeking bots
+  if (demo_version < DV_MBF)  // Old demos do not support monster-seeking bots
     return false;
 
   // Search the threaded list corresponding to this object's potential targets
@@ -1230,7 +1250,7 @@ void A_Chase(mobj_t *actor)
 
   if (!actor->threshold)
   {
-    if (demo_version < 203)
+    if (demo_version < DV_MBF)
       {   // killough 9/9/98: for backward demo compatibility
 	if (netgame && !P_CheckSight(actor, actor->target) &&
 	    P_LookForPlayers(actor, true))
@@ -1295,7 +1315,9 @@ void A_FaceTarget(mobj_t *actor)
   actor->flags &= ~MF_AMBUSH;
   actor->angle = R_PointToAngle2(actor->x, actor->y,
                                  actor->target->x, actor->target->y);
-  if (actor->target->flags & MF_SHADOW)
+
+  // [Nugget] Face fuzzy enemies straight
+  if (!CASUALPLAY(comp_faceshadow) && actor->target->flags & MF_SHADOW)
     { // killough 5/5/98: remove dependence on order of evaluation:
       int t = P_Random(pr_facetarget);
       actor->angle += (t-P_Random(pr_facetarget))<<21;
@@ -1699,6 +1721,36 @@ boolean PIT_VileCheck(mobj_t *thing)
 
 boolean ghost_monsters;
 
+static void WatchResurrection(mobj_t* target, mobj_t* raiser)
+{
+  int i;
+
+  if (raiser && (raiser->intflags & MIF_SPAWNED_BY_ICON))
+  {
+    target->intflags |= MIF_SPAWNED_BY_ICON;
+  }
+
+  if (((target->flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)) ||
+      (target->intflags & MIF_SPAWNED_BY_ICON))
+  {
+    return;
+  }
+
+  for (i = 0; i < MAXPLAYERS; ++i)
+  {
+    if (!playeringame[i] || players[i].killcount == 0)
+    {
+      continue;
+    }
+
+    if (players[i].killcount > 0)
+    {
+      players[i].maxkilldiscount++;
+      return;
+    }
+  }
+}
+
 static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfxenum_t healsound)
 {
   int xl, xh;
@@ -1756,6 +1808,8 @@ static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfx
 		  corpsehit->flags = 
 		    (info->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND);
 
+		  WatchResurrection(corpsehit, actor);
+
 		  // [crispy] resurrected pools of gore ("ghost monsters") are translucent
 		  if (STRICTMODE(ghost_monsters) && corpsehit->height == 0
 		      && corpsehit->radius == 0)
@@ -1768,7 +1822,7 @@ static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfx
                   corpsehit->health = info->spawnhealth;
 		  P_SetTarget(&corpsehit->target, NULL);  // killough 11/98
 
-		  if (demo_version >= 203)
+		  if (demo_version >= DV_MBF)
 		    {         // kilough 9/9/98
 		      P_SetTarget(&corpsehit->lastenemy, NULL);
 		      corpsehit->flags &= ~MF_JUSTHIT;
@@ -1776,14 +1830,6 @@ static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfx
 
 		  // killough 8/29/98: add to appropriate thread
 		  P_UpdateThinker(&corpsehit->thinker);
-
-                  // [Nugget]: [So Doom]
-                  corpsehit->intflags |= MIF_EXTRASPAWNED;
-
-                  // [crispy] count resurrected monsters
-                  // [Nugget] Only if counted towards killcount
-                  if ((corpsehit->flags & MF_COUNTKILL) && !(corpsehit->flags & MF_FRIEND))
-                    extraspawns++; // [Nugget] Smart Totals from So Doom
 
                   return true;
                 }
@@ -1870,7 +1916,7 @@ void A_VileTarget(mobj_t *actor)
 
   // killough 12/98: fix Vile fog coordinates
   fog = P_SpawnMobj(actor->target->x,
-                    demo_version < 203 ? actor->target->x : actor->target->y,
+                    demo_version < DV_MBF ? actor->target->x : actor->target->y,
                     actor->target->z,MT_FIRE);
 
   P_SetTarget(&actor->tracer, fog);   // killough 11/98
@@ -2041,7 +2087,7 @@ void A_BetaSkullAttack(mobj_t *actor)
 {
   int damage;
 
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
 
   if (!actor->target || actor->target->type == MT_SKULL)
@@ -2058,7 +2104,7 @@ void A_BetaSkullAttack(mobj_t *actor)
 
 void A_Stop(mobj_t *actor)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   actor->momx = actor->momy = actor->momz = 0;
 }
@@ -2133,11 +2179,6 @@ void A_PainShootSkull(mobj_t *actor, angle_t angle)
 
   // killough 7/20/98: PEs shoot lost souls with the same friendliness
   newmobj->flags = (newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND);
-
-  // [Nugget] Count towards extraspawns if for some reason
-  // the spawned mobj counts towards killcount
-  if ((newmobj->flags & MF_COUNTKILL) && !(newmobj->flags & MF_FRIEND))
-    extraspawns++;
 
   // killough 8/29/98: add to appropriate thread
   P_UpdateThinker(&newmobj->thinker);
@@ -2235,7 +2276,7 @@ void A_Fall(mobj_t *actor)
 // killough 11/98: kill an object
 void A_Die(mobj_t *actor)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   P_DamageMobj(actor, NULL, NULL, actor->health);
 }
@@ -2255,7 +2296,7 @@ void A_Explode(mobj_t *thingy)
 
 void A_Detonate(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   P_RadiusAttack(mo, mo->target, mo->info->damage, mo->info->damage);
 }
@@ -2273,7 +2314,7 @@ void A_Mushroom(mobj_t *actor)
   fixed_t misc1 = actor->state->misc1 ? actor->state->misc1 : FRACUNIT*4;
   fixed_t misc2 = actor->state->misc2 ? actor->state->misc2 : FRACUNIT/2;
 
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   A_Explode(actor);               // make normal explosion
 
@@ -2655,6 +2696,18 @@ void A_SpawnSound(mobj_t *mo)
   A_SpawnFly(mo);
 }
 
+static void WatchIconSpawn(mobj_t* spawned)
+{
+  spawned->intflags |= MIF_SPAWNED_BY_ICON;
+
+  // We can't know inside P_SpawnMobj what the source is
+  // This is less invasive than introducing a spawn source concept
+  if (!((spawned->flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)))
+  {
+    --max_kill_requirement;
+  }
+}
+
 void A_SpawnFly(mobj_t *mo)
 {
   mobj_t *newmobj;  // killough 8/9/98
@@ -2706,13 +2759,7 @@ void A_SpawnFly(mobj_t *mo)
   // killough 7/18/98: brain friendliness is transferred
   newmobj->flags = (newmobj->flags & ~MF_FRIEND) | (mo->flags & MF_FRIEND);
 
-  // [Nugget]: [So Doom]
-  newmobj->intflags |= MIF_EXTRASPAWNED;
-
-  // [crispy] count spawned monsters
-  // [Nugget] Only if counted towards killcount
-  if ((newmobj->flags & MF_COUNTKILL) && !(newmobj->flags & MF_FRIEND))
-    extraspawns++; // [Nugget] Smart Totals from So Doom
+  WatchIconSpawn(newmobj);
 
   // killough 8/29/98: add to appropriate thread
   P_UpdateThinker(&newmobj->thinker);
@@ -2771,7 +2818,7 @@ void A_KeenDie(mobj_t* mo)
 
 void A_Spawn(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   if (mo->state->misc1)
     {
@@ -2788,21 +2835,21 @@ void A_Spawn(mobj_t *mo)
 
 void A_Turn(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   mo->angle += (angle_t)(((uint64_t) mo->state->misc1 << 32) / 360);
 }
 
 void A_Face(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   mo->angle = (angle_t)(((uint64_t) mo->state->misc1 << 32) / 360);
 }
 
 void A_Scratch(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   mo->target && (A_FaceTarget(mo), P_CheckMeleeRange(mo)) ?
     mo->state->misc2 ? S_StartSound(mo, mo->state->misc2) : (void) 0,
@@ -2811,7 +2858,7 @@ void A_Scratch(mobj_t *mo)
 
 void A_PlaySound(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   S_StartSound(mo->state->misc2 ? NULL : mo, mo->state->misc1);
 }
@@ -2830,7 +2877,7 @@ void A_RandomJump(mobj_t *mo)
 
 void A_LineEffect(mobj_t *mo)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
   if (!(mo->intflags & MIF_LINEDONE))                // Unless already used up
     {

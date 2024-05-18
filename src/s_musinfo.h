@@ -2,7 +2,8 @@
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 1993-2008 Raven Software
 // Copyright(C) 2005-2014 Simon Howard
-// Copyright(C) 2005-2006 Florian Schulze, Colin Phipps, Neil Stevens, Andrey Budko
+// Copyright(C) 2005-2006 Florian Schulze, Colin Phipps, Neil Stevens, Andrey
+// Budko
 // Copyright(C) 2017 Fabian Greffrath
 //
 // This program is free software; you can redistribute it and/or
@@ -22,23 +23,23 @@
 #ifndef __S_MUSINFO__
 #define __S_MUSINFO__
 
-#include "p_mobj.h"
+#include "doomtype.h"
 
 #define MAX_MUS_ENTRIES 65 // [crispy] 0 to 64 inclusive
 
 typedef struct musinfo_s
 {
-	mobj_t *mapthing;
-	mobj_t *lastmapthing;
-	int tics;
-	int current_item;
-	int items[MAX_MUS_ENTRIES];
-	boolean from_savegame;
+    struct mobj_s *mapthing;
+    struct mobj_s *lastmapthing;
+    int tics;
+    int current_item;
+    int items[MAX_MUS_ENTRIES];
+    boolean from_savegame;
 } musinfo_t;
 
 extern musinfo_t musinfo;
 
-extern void S_ParseMusInfo (const char *mapid);
-extern void T_MusInfo (void);
+extern void S_ParseMusInfo(const char *mapid);
+extern void T_MusInfo(void);
 
 #endif

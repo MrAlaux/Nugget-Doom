@@ -17,10 +17,12 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "SDL.h"
+
+#include <stdlib.h>
+#include <locale.h>
+
 #include "config.h"
-
-#include "SDL.h" // haleyjd
-
 #include "i_printf.h"
 #include "i_system.h"
 #include "m_argv.h"
@@ -49,6 +51,9 @@ int main(int argc, char **argv)
 {
    myargc = argc;
    myargv = argv;
+
+   // Print date and time in the Load/Save Game menus in the current locale
+   setlocale(LC_TIME, "");
 
    I_Printf(VB_ALWAYS, "%s (built on %s)\n", PROJECT_STRING, version_date);
 

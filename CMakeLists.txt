@@ -12,8 +12,8 @@ set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
 cmake_minimum_required(VERSION 3.9)
 
 project("Nugget Doom"
-    VERSION 2.3.1
-    DESCRIPTION "Nugget Doom 2.3.1"
+    VERSION 3.1.0
+    DESCRIPTION "Nugget Doom 3.1.0"
     HOMEPAGE_URL "https://github.com/MrAlaux/Nugget-Doom"
     LANGUAGES C)
 
@@ -69,6 +69,13 @@ find_package(SDL2 2.0.18 REQUIRED)
 find_package(SDL2_net REQUIRED)
 find_package(OpenAL REQUIRED)
 find_package(SndFile 1.0.29 REQUIRED)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(ALSA REQUIRED)
+endif()
+
+if(ALSA_FOUND)
+    set(HAVE_ALSA TRUE)
+endif()
 
 if(OPENAL_VERSION_STRING VERSION_GREATER_EQUAL "1.22.0")
     set(HAVE_AL_BUFFER_CALLBACK TRUE)

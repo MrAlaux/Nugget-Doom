@@ -18,6 +18,7 @@
 #ifndef NET_IO_H
 #define NET_IO_H
 
+#include "doomtype.h"
 #include "net_defs.h"
 
 extern net_addr_t net_broadcast_addr;
@@ -57,5 +58,4 @@ void NET_ReleaseAddress(net_addr_t *addr);
 // caller when it is no longer needed.
 net_addr_t *NET_ResolveAddress(net_context_t *context, const char *address);
 
-#endif  /* #ifndef NET_IO_H */
-
+#endif /* #ifndef NET_IO_H */

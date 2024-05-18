@@ -16,40 +16,28 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-
 #include "SDL.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "config.h"
+#include "d_ticcmd.h"
 #include "i_printf.h"
 #include "i_system.h"
-#include "m_misc2.h"
 #include "m_argv.h"
+#include "m_misc.h"
 
 ticcmd_t *I_BaseTiccmd(void)
 {
   static ticcmd_t emptycmd; // killough
   return &emptycmd;
-}
-
-static void I_ShutdownJoystick(void)
-{
-    SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
-}
-
-void I_InitJoystick(void)
-{
-    if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0)
-    {
-        I_Printf(VB_WARNING, "I_InitJoystick: Failed to initialize game controller: %s",
-                SDL_GetError());
-        return;
-    }
-
-    SDL_GameControllerEventState(SDL_ENABLE);
-
-    I_Printf(VB_INFO, "I_InitJoystick: Initialize game controller.");
-
-    I_AtExit(I_ShutdownJoystick, true);
 }
 
 //
@@ -132,25 +120,30 @@ void I_AtExitPrio(atexit_func_t func, boolean run_on_error,
 
 void I_SafeExit(int rc)
 {
-  atexit_listentry_t *entry;
+    atexit_listentry_t *entry;
 
-  // Run through all exit functions
+    // Run through all exit functions
 
-  for (; exit_priority < exit_priority_max; ++exit_priority)
-  {
-    while ((entry = exit_funcs[exit_priority]))
+    for (; exit_priority < exit_priority_max; ++exit_priority)
     {
-      exit_funcs[exit_priority] = exit_funcs[exit_priority]->next;
+        while ((entry = exit_funcs[exit_priority]))
+        {
+            exit_funcs[exit_priority] = exit_funcs[exit_priority]->next;
 
-      if (rc == 0 || entry->run_on_error)
-      {
-        I_Printf(VB_DEBUG, "Exit Sequence[%d]: %s (%d)", exit_priority, entry->name, rc);
-        entry->func();
-      }
+            if (rc == 0 || entry->run_on_error)
+            {
+                I_Printf(VB_DEBUG, "Exit Sequence[%d]: %s (%d)",
+                         exit_priority, entry->name, rc);
+                entry->func();
+            }
+        }
     }
-  }
 
-  exit(rc);
+#if defined(WIN_LAUNCHER)
+    ExitProcess(rc);
+#else
+    exit(rc);
+#endif
 }
 
 //
@@ -281,6 +274,11 @@ boolean I_GetMemoryValue(unsigned int offset, void *value, int size)
     }
 
     return false;
+}
+
+const char *I_GetPlatform(void)
+{
+    return SDL_GetPlatform();
 }
 
 //----------------------------------------------------------------------------

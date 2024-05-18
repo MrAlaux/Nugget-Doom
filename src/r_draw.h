@@ -20,7 +20,8 @@
 #ifndef __R_DRAW__
 #define __R_DRAW__
 
-#include "r_defs.h"
+#include "doomtype.h"
+#include "m_fixed.h"
 
 extern lighttable_t *dc_colormap[2];
 extern int      dc_x;
@@ -30,7 +31,6 @@ extern fixed_t  dc_iscale;
 extern fixed_t  dc_texturemid;
 extern int      dc_texheight;    // killough
 extern byte     dc_skycolor;
-extern int      linesize;        // killough 11/98
 
 // first pixel in a column
 extern byte     *dc_source;         
@@ -61,8 +61,6 @@ void R_DrawSkyColumn(void);
 
 void R_DrawTranslatedColumn(void);
 
-void R_VideoErase(unsigned ofs, int count);
-
 extern lighttable_t *ds_colormap[2];
 
 extern int     ds_y;
@@ -82,20 +80,20 @@ extern const byte *ds_brightmap;
 // Span blitting for rows, floor/ceiling. No Spectre effect needed.
 void R_DrawSpan(void);
 
-void R_InitBuffer(int width, int height);
+void R_InitBuffer(void);
 
 // Initialize color translation tables, for player rendering etc.
 void R_InitTranslationTables(void);
 
 // Rendering function.
+void R_VideoErase(int x, int y, int w, int h);
 void R_FillBackScreen(void);
-void R_DrawBackground(char *patch, byte *back_dest);
-void R_DrawBorder(int x, int y, int w, int h, int s);
+void R_DrawBorder(int x, int y, int w, int h);
 
 // If the view size is not full screen, draws a border around it.
 void R_DrawViewBorder(void);
 
-extern byte *ylookup[];       // killough 11/98
+void R_InitBufferRes(void);
 
 #endif
 

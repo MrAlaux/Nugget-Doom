@@ -25,16 +25,13 @@
 #ifndef __D_STATE__
 #define __D_STATE__
 
-// We need globally shared data structures,
-//  for defining the global state variables.
-#include "doomdata.h"
-#include "d_loop.h"
-
 // We need the playr data structure as well.
 #include "d_player.h"
+#include "doomdata.h"
+#include "doomdef.h"
+#include "doomtype.h"
 
-// and mapinfo information
-#include "u_mapinfo.h"
+struct mapentry_s;
 
 // ------------------------
 // Command line parameters.
@@ -52,7 +49,7 @@ extern  int screenblocks;     // killough 11/98
 //
 
 extern GameMode_t gamemode;
-extern GameMission_t  gamemission;
+extern GameMission_t gamemission;
 
 // [FG] emulate a specific version of Doom
 extern GameVersion_t gameversion;
@@ -95,14 +92,26 @@ typedef struct {
 
 extern overflow_t overflow[EMU_TOTAL];
 
-extern int demo_version;           // killough 7/19/98: Version of demo
+typedef enum {
+  DV_NONE    = -1,
+  DV_VANILLA = 109,
+  DV_LONGTIC = 111,
+  DV_BOOM200 = 200,
+  DV_BOOM201 = 201,
+  DV_BOOM    = 202,
+  DV_MBF     = 203,
+  DV_MBF21   = 221,
+  DV_UM      = 255,
+} demo_version_t;
+
+extern demo_version_t demo_version;           // killough 7/19/98: Version of demo
 
 // Only true when playing back an old demo -- used only in "corner cases"
 // which break playback but are otherwise unnoticable or are just desirable:
 
-#define demo_compatibility (demo_version < 200) /* killough 11/98: macroized */
+#define demo_compatibility (demo_version < DV_BOOM200) /* killough 11/98: macroized */
 
-#define mbf21 (demo_version == 221)
+#define mbf21 (demo_version == DV_MBF21)
 
 // killough 7/19/98: whether monsters should fight against each other
 extern int monster_infighting, default_monster_infighting;
@@ -164,6 +173,15 @@ enum {
 
 extern int comp[COMP_TOTAL], default_comp[COMP_TOTAL];
 
+typedef enum
+{
+  INVUL_VANILLA,
+  INVUL_MBF,
+  INVUL_GRAY,
+} invul_mode_t;
+
+extern invul_mode_t invul_mode;
+
 // -------------------------------------------
 // Language.
 extern  Language_t   language;
@@ -186,7 +204,7 @@ extern  boolean   autostart;
 extern  skill_t         gameskill;
 extern  int   gameepisode;
 extern  int   gamemap;
-extern  mapentry_t*     gamemapinfo;
+extern  struct mapentry_s *gamemapinfo;
 
 // If non-zero, exit the level after this number of minutes
 extern  int             timelimit;
@@ -196,6 +214,7 @@ extern  boolean         respawnmonsters;
 
 // Netgame? Only true if >1 player.
 extern  boolean netgame;
+extern  boolean solonet;
 
 extern boolean D_CheckNetConnect(void);
 
@@ -232,9 +251,9 @@ extern  int automapactive; // In AutoMap mode? // [Nugget] Minimap: now an int
 
 typedef enum
 {
-  overlay_off,
-  overlay_on,
-  overlay_dark,
+  AM_OVERLAY_OFF,
+  AM_OVERLAY_ON,
+  AM_OVERLAY_DARK,
 } overlay_t;
 
 extern  overlay_t automapoverlay;
@@ -267,10 +286,9 @@ extern  int displayplayer;
 // Statistics on a given map, for intermission.
 //
 extern  int totalkills;
-extern  int extraspawns; // [Nugget]: [crispy] count resurrected and (re)spawned monsters
-extern  int extrakills; // [Nugget]: [So Doom] count kills of resurrected and (re)spawned monsters
 extern  int totalitems;
 extern  int totalsecret;
+extern  int max_kill_requirement;
 
 // [Nugget]
 typedef enum { MILESTONE_KILLS = 0x1, MILESTONE_ITEMS = 0x2, MILESTONE_SECRETS = 0x4, } milestone_t;
@@ -293,6 +311,9 @@ extern  boolean demorecording;
 // recording Vanilla demos in netgames.
 extern  boolean lowres_turn;
 
+// Config key for low resolution turning.
+extern  boolean shorttics;
+
 // cph's doom 1.91 longtics hack
 extern  boolean longtics;
 
@@ -314,14 +335,11 @@ extern  int       playback_skiptics;
 extern  boolean   frozen_mode;
 
 extern  boolean   strictmode, default_strictmode;
+extern  boolean   force_strictmode;
 
 #define STRICTMODE(x) (strictmode ? 0 : (x))
 
-#define NOTSTRICTMODE(x) (strictmode ? 1 : (x))
-
 #define STRICTMODE_COMP(x) (strictmode ? comp[x] : default_comp[x])
-
-#define STRICTMODE_VANILLA(x) (strictmode && demo_compatibility ? 0 : (x))
 
 extern  boolean   critical;
 
@@ -364,6 +382,7 @@ extern wbstartstruct_t wminfo;
 
 // File handling stuff.
 extern  char   *basedefault;
+extern  boolean organize_savefiles;
 
 // if true, load all graphics at level load
 extern  boolean precache;
@@ -391,7 +410,7 @@ extern  int        rndindex;
 
 extern  int        maketic;
 
-extern  ticcmd_t   *netcmds;
+extern  struct ticcmd_s *netcmds;
 extern  int        ticdup;
 
 //-----------------------------------------------------------------------------
@@ -446,6 +465,9 @@ extern boolean hide_weapon;
 // [FG] centered weapon sprite
 extern int center_weapon;
 
+extern int view_bobbing_pct;
+extern int weapon_bobbing_pct;
+
 // [Nugget] /-----------------------------------------------------------------
 
 extern boolean fauxdemo;
@@ -456,20 +478,16 @@ extern boolean casual_play;
 
 // General ----------------------------
 
-extern int gammacycle; // CFG-Only
-extern int wipe_type;
 extern int over_under;
 extern int jump_crouch;
-extern int fov;
 extern int viewheight_value;
-extern int view_bobbing_percentage;
 
 enum {
-  IMPACTPITCH_OFF,
-  IMPACTPITCH_FALL,
-  IMPACTPITCH_DAMAGE,
-  IMPACTPITCH_BOTH,
-}; extern int impact_pitch;
+  FLINCH_OFF,
+  FLINCH_LANDING,
+  FLINCH_DAMAGE,
+  FLINCH_BOTH,
+}; extern int flinching;
 
 extern int explosion_shake;
 extern int breathing;
@@ -489,6 +507,7 @@ extern int menu_background_all;
 extern int no_menu_tint;
 extern int no_berserk_tint;
 extern int no_radsuit_tint;
+extern int nightvision_visor;
 extern int damagecount_cap;
 extern int bonuscount_cap;
 extern int fake_contrast;
@@ -513,7 +532,6 @@ extern int a11y_invul_colormap;
 extern int no_hor_autoaim;
 extern int switch_on_pickup;
 extern int always_bob; // CFG-Only
-extern int weapon_bobbing_percentage;
 
 enum {
   BOBSTYLE_VANILLA,
@@ -534,11 +552,21 @@ extern int sx_fix; // CFG-Only
 
 // Status Bar/HUD ---------------------
 
+extern int announce_milestones;
+extern int show_save_messages; // CFG-Only
 extern int show_ssg; // CFG-Only
+
+enum {
+  STATSFORMAT_RATIO = 1,
+  STATSFORMAT_BOOLEAN,
+  STATSFORMAT_PERCENTAGE,
+  STATSFORMAT_REMAINING,
+};
+extern int hud_stats_format;
+extern int hud_stats_format_map;
+extern int hud_stats_icons;
+
 extern int alt_arms;
-extern int blink_keys; // CFG-Only
-extern int smarttotals;
-extern int hud_kills_percentage;
 
 typedef enum {
   TIMER_USE,
@@ -547,7 +575,8 @@ typedef enum {
   
   NUMTIMERS
 } eventtimer_t;
-extern int event_timers[];
+extern int hud_time_teleport;
+extern int hud_time_keypickup;
 
 extern int hudcolor_time_scale;
 extern int hudcolor_total_time;
@@ -574,11 +603,6 @@ extern int extra_gibbing[];
 extern int bloodier_gibbing;
 extern int zdoom_item_drops;
 
-// Messages ---------------------------
-
-extern int show_save_messages; // CFG-Only
-extern int announce_milestones;
-
 // Key Bindings -----------------------
 
 extern int zoom_fov;
@@ -593,11 +617,14 @@ enum {
   SHOTPAL_BOTH,
 }; extern int screenshot_palette;
 
-extern int menu_background_darkening;
+extern int menu_backdrop_darkening;
 extern int automap_overlay_darkening;
+extern int no_killough_face;
 extern int sp_chat;
 
-// Doom Compatibility -----------------
+extern int fail_safe;
+
+// Doom Compatibility (CFG-Only) ------
 
 extern int comp_bruistarget;
 extern int comp_nomeleesnap;
@@ -606,6 +633,7 @@ extern int comp_lscollision;
 extern int comp_lsamnesia;
 extern int comp_fuzzyblood;
 extern int comp_nonbleeders;
+extern int comp_faceshadow;
 extern int comp_iosdeath;
 extern int comp_choppers;
 

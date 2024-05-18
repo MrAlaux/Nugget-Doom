@@ -21,8 +21,9 @@
 #define __R_STATE__
 
 // Need data structure definitions.
-#include "d_player.h"
-#include "r_data.h"
+#include "r_defs.h"
+
+struct player_s;
 
 //
 // Refresh internal data structures,
@@ -44,8 +45,10 @@ extern lighttable_t *fullcolormap;        // killough 3/20/98
 
 extern int viewwidth;
 extern int scaledviewwidth;
+extern int scaledviewx;
 extern int viewheight;
 extern int scaledviewheight;              // killough 11/98
+extern int scaledviewy;
 
 extern int firstflat;
 
@@ -86,6 +89,16 @@ extern line_t           *lines;
 extern int              numsides;
 extern side_t           *sides;
 
+typedef struct localview_s
+{
+    angle_t oldticangle;
+    angle_t ticangle;
+    short ticangleturn;
+    double rawangle;
+    double rawpitch;
+    angle_t angle;
+    int pitch;
+} localview_t;
 
 //
 // POV data.
@@ -94,10 +107,12 @@ extern fixed_t          viewx;
 extern fixed_t          viewy;
 extern fixed_t          viewz;
 extern angle_t          viewangle;
-extern player_t         *viewplayer;
+extern localview_t      localview; // View orientation offsets for current frame.
+extern struct player_s  *viewplayer;
 extern angle_t          clipangle;
+extern angle_t          vx_clipangle;
 extern int              viewangletox[FINEANGLES/2];
-extern angle_t          xtoviewangle[MAX_SCREENWIDTH+1];  // killough 2/8/98
+extern angle_t          *xtoviewangle;  // killough 2/8/98
 extern fixed_t          rw_distance;
 extern angle_t          rw_normalangle;
 
@@ -106,7 +121,7 @@ extern fixed_t          chasexofs, chaseyofs;
 extern angle_t          chaseaofs;
 
 // [FG] linear horizontal sky scrolling
-extern angle_t          linearskyangle[MAX_SCREENWIDTH+1];
+extern angle_t          *linearskyangle;
 
 // angle to line origin
 extern int              rw_angle1;

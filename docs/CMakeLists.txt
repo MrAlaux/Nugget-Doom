@@ -2,7 +2,6 @@ set(NUGGETDOOM_DOCS
     boom.txt
     boomdeh.txt
     boomref.txt
-    mapcolors_vanilla.cfg
     mbf.txt
     mbfedit.txt
     mbffaq.txt

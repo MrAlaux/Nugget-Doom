@@ -21,20 +21,7 @@
 #ifndef __R_DATA__
 #define __R_DATA__
 
-#include "r_defs.h"
-#include "r_state.h"
-
-// [Nugget]
-#define ORIGFOV 90
-#define MINFOV  20
-#define MAXFOV  160
-
-#define LOOKDIRMAX	100
-#define   PITCHMAX	(LOOKDIRMAX+24) // [Nugget] Accommodate pitch effects (e.g. recoil)
-// [crispy] lookdir range: -100..100
-// [Nugget] Increased to accommodate variable FOV
-#define LOOKDIRS	((2*PITCHMAX+1) * ORIGFOV / (MINFOV-2))
-#define MLOOKUNIT	8
+#include "doomtype.h"
 
 // Retrieve column data for span blitting.
 byte *R_GetColumn(int tex, int col);
@@ -60,9 +47,13 @@ int R_ColormapNumForName(const char *name);      // killough 4/4/98
 
 void R_InitColormaps(void);   // killough 8/9/98
 
+void R_InvulMode(void);
+
 boolean R_IsPatchLump (const int lump);
 
 extern byte *main_tranmap, *tranmap;
+
+extern int tran_filter_pct;
 
 #endif
 

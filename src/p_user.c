@@ -19,17 +19,51 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomstat.h"
+#include <stdlib.h>
+
 #include "d_event.h"
-#include "r_main.h"
+#include "d_player.h"
+#include "d_ticcmd.h"
+#include "doomdef.h"
+#include "doomstat.h"
+#include "doomtype.h"
+#include "g_game.h"
+#include "hu_stuff.h"
+#include "info.h"
+#include "m_input.h"
 #include "p_map.h"
+#include "p_mobj.h"
+#include "p_pspr.h"
 #include "p_spec.h"
 #include "p_user.h"
-#include "g_game.h"
+#include "r_defs.h"
+#include "r_main.h"
+#include "r_state.h"
+
 // [Nugget]
-#include "m_input.h"
 #include "s_sound.h"
 #include "sounds.h"
+
+static fixed_t PlayerSlope(player_t *player)
+{
+  const fixed_t pitch = player->pitch;
+
+  if (pitch)
+  {
+    const fixed_t slope = -finetangent[(ANG90 - pitch) >> ANGLETOFINESHIFT];
+    return (fixed_t)((int64_t)slope * SCREENHEIGHT / ACTUALHEIGHT);
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+// [Nugget] Flinching
+void P_SetFlinch(player_t *const player, int pitch)
+{
+  player->flinch = BETWEEN(-12*ANG1, 12*ANG1, player->flinch + pitch*ANG1/2);
+}
 
 // Index of the special effects (INVUL inverse) map.
 
@@ -72,7 +106,7 @@ void P_Thrust(player_t* player,angle_t angle,fixed_t move)
 
 void P_Bob(player_t *player, angle_t angle, fixed_t move)
 {
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
     return;
 
   player->momx += FixedMul(move,finecosine[angle >>= ANGLETOFINESHIFT]);
@@ -106,14 +140,14 @@ void P_CalcHeight (player_t* player)
 
   // [FG] MBF player bobbing rewrite causes demo sync problems
   // http://prboom.sourceforge.net/mbf-bugs.html
-  player->bob = (demo_version >= 203 && player_bobbing) ?
+  player->bob = (demo_version >= DV_MBF && player_bobbing) ?
       (FixedMul(player->momx,player->momx)
       + FixedMul(player->momy,player->momy))>>2 :
       (demo_compatibility || player_bobbing) ?
       (FixedMul (player->mo->momx, player->mo->momx)
       + FixedMul (player->mo->momy,player->mo->momy))>>2 : 0;
 
-  if ((demo_version == 202 || demo_version == 203) &&
+  if ((demo_version == DV_BOOM || demo_version == DV_MBF) &&
       player->mo->friction > ORIG_FRICTION) // ice?
   {
     if (player->bob > (MAXBOB>>2))
@@ -145,13 +179,9 @@ void P_CalcHeight (player_t* player)
 
   angle = (FINEANGLES/20*leveltime)&FINEMASK;
 
-  bob = player->bob;
-
-  // [Nugget] View bobbing percentage setting
-  if (view_bobbing_percentage != 100)
-  { bob = FixedDiv(FixedMul(bob, view_bobbing_percentage), 100); }
-
-  bob = FixedMul(bob / 2, finesine[angle]);
+  // [Nugget] Extended view bobbing percentage setting
+  bob = player->bob * view_bobbing_pct / 100;
+  bob = FixedMul(bob/2,finesine[angle]);
 
   // move viewheight
 
@@ -370,6 +400,12 @@ void P_MovePlayer (player_t* player)
     { player->crouchoffset = offsettarget; }
   }
 
+  if (player == &players[consoleplayer])
+  {
+    localview.ticangle += localview.ticangleturn << 16;
+    localview.ticangleturn = 0;
+  }
+
   // killough 10/98:
   //
   // We must apply thrust to the player and bobbing separately, to avoid
@@ -377,7 +413,7 @@ void P_MovePlayer (player_t* player)
   // ice, because the player still "works just as hard" to move, while the
   // thrust applied to the movement varies with 'movefactor'.
 
-  if ((!demo_compatibility && demo_version < 203) ||
+  if ((!demo_compatibility && demo_version < DV_MBF) ||
       cmd->forwardmove | cmd->sidemove) // killough 10/98
     {
       if (onground || mo->flags & MF_BOUNCES) // killough 8/9/98
@@ -416,10 +452,8 @@ void P_MovePlayer (player_t* player)
       // [Nugget] Allow minimal mid-air movement if Jumping is enabled
       else if (casual_play && !onground && jump_crouch)
       {
-        if (cmd->forwardmove)
-        { P_Thrust(player,mo->angle,cmd->forwardmove); }
-        if (cmd->sidemove)
-        { P_Thrust(player,mo->angle-ANG90,cmd->sidemove); }
+        if (cmd->forwardmove) { P_Thrust(player, mo->angle,       cmd->forwardmove); }
+        if (cmd->sidemove)    { P_Thrust(player, mo->angle-ANG90, cmd->sidemove);    }
       }
       
       // Add (cmd-> forwardmove || cmd-> sidemove) check to prevent the players
@@ -431,10 +465,9 @@ void P_MovePlayer (player_t* player)
 
   if (!menuactive && !demoplayback)
   {
-    player->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT,
-                               LOOKDIRMAX * MLOOKUNIT,
-                               player->lookdir + cmd->lookdir);
-    player->slope = PLAYER_SLOPE(player);
+    player->pitch += cmd->pitch;
+    player->pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, player->pitch);
+    player->slope = PlayerSlope(player);
   }
 }
 
@@ -517,9 +550,9 @@ void P_DeathThink (player_t* player)
   // [Nugget] Allow some freelook while dead
   if ((player->viewheight == 6*FRACUNIT) && !menuactive && !demoplayback)
   {
-    player->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT / 2,
-                               LOOKDIRMAX * MLOOKUNIT / 2,
-                               player->lookdir + player->cmd.lookdir);
+    player->pitch += player->cmd.pitch;
+    player->pitch = BETWEEN(-MAX_PITCH_ANGLE/2, MAX_PITCH_ANGLE/2, player->pitch);
+    player->slope = PlayerSlope(player);
   }
 
   if (player->cmd.buttons & BT_USE)
@@ -537,6 +570,8 @@ void P_DeathThink (player_t* player)
           char *file = G_SaveGameName(savegameslot);
           G_LoadGame(file, savegameslot, false);
           free(file);
+          // [Woof!] prevent on-death-action reloads from activating specials
+          M_InputGameDeactivate(input_use);
         }
         else
           player->playerstate = PST_REBORN;
@@ -551,15 +586,15 @@ void P_DeathThink (player_t* player)
 // [Nugget] Event Timers
 void P_SetPlayerEvent(player_t* player, eventtimer_t type)
 {
-  if (!STRICTMODE(event_timers[type] == 2
-                  || (event_timers[type] && (demorecording||demoplayback))))
+  if (!hud_time[type] || (strictmode && type != TIMER_USE))
   {
     return;
   }
 
   player->eventtype = type;
-  player->eventtime = leveltime;
-  player->eventtics = 5*TICRATE/2; // [crispy] 2.5 seconds
+  // to match the timer, we use the leveltime value at the end of the frame
+  player->btuse = leveltime + 1;
+  player->btuse_tics = 5*TICRATE/2; // [crispy] 2.5 seconds
 }
 
 //
@@ -582,9 +617,14 @@ void P_PlayerThink (player_t* player)
   player->mo->oldz = player->mo->z;
   player->mo->oldangle = player->mo->angle;
   player->oldviewz = player->viewz;
-  player->oldlookdir = player->lookdir;
+  player->oldpitch = player->pitch;
   player->oldrecoilpitch = player->recoilpitch;
-  player->oldimpactpitch = player->impactpitch; // [Nugget] Impact pitch
+  player->oldflinch = player->flinch; // [Nugget] Flinching
+
+  if (player == &players[consoleplayer])
+  {
+    localview.oldticangle = localview.ticangle;
+  }
 
   // killough 2/8/98, 3/21/98:
   // (this code is necessary despite questions raised elsewhere in a comment)
@@ -606,21 +646,29 @@ void P_PlayerThink (player_t* player)
     }
 
   // [crispy] center view
+  #define CENTERING_VIEW_ANGLE (4 * ANG1)
+
   if (player->centering)
   {
-    if (player->lookdir > 0)
+    if (player->pitch > 0)
     {
-      player->lookdir -= 8 * MLOOKUNIT;
+      player->pitch -= CENTERING_VIEW_ANGLE;
     }
-    else if (player->lookdir < 0)
+    else if (player->pitch < 0)
     {
-      player->lookdir += 8 * MLOOKUNIT;
+      player->pitch += CENTERING_VIEW_ANGLE;
     }
-    if (abs(player->lookdir) < 8 * MLOOKUNIT)
+    if (abs(player->pitch) < CENTERING_VIEW_ANGLE)
     {
-      player->lookdir = 0;
-      player->centering = false;
+      player->pitch = 0;
+
+      if (player->oldpitch == 0)
+      {
+        player->centering = false;
+      }
     }
+
+    player->slope = PlayerSlope(player);
   }
 
   // [crispy] weapon recoil pitch
@@ -628,18 +676,25 @@ void P_PlayerThink (player_t* player)
   {
     if (player->recoilpitch > 0)
     {
-      player->recoilpitch -= 1;
+      player->recoilpitch -= ANG1;
     }
     else if (player->recoilpitch < 0)
     {
-      player->recoilpitch += 1;
+      player->recoilpitch += ANG1;
     }
   }
 
-  // [Nugget] Impact pitch
-  if (player->impactpitch) {
-         if (player->impactpitch > 0) { player->impactpitch--; }
-    else if (player->impactpitch < 0) { player->impactpitch++; }
+  // [Nugget] Flinching
+  if (player->flinch)
+  {
+    if (player->flinch > 0)
+    {
+      player->flinch = MAX(0, player->flinch - ANG1);
+    }
+    else if (player->flinch < 0)
+    {
+      player->flinch = MIN(0, player->flinch + ANG1);
+    }
   }
 
   if (player->playerstate == PST_DEAD)
@@ -647,7 +702,6 @@ void P_PlayerThink (player_t* player)
       // [Nugget] Disable zoom upon death
       if (R_GetZoom() == ZOOM_ON) { R_SetZoom(ZOOM_OFF); }
 
-      player->slope = PLAYER_SLOPE(player); // For 3D audio pitch angle.
       P_DeathThink (player);
       return;
     }
@@ -752,12 +806,13 @@ void P_PlayerThink (player_t* player)
   if (cmd->buttons & BT_USE)
     {
       if (!player->usedown)
-        {
-          P_UseLines (player);
-          player->usedown = true;
-          
-          P_SetPlayerEvent(player, TIMER_USE); // [Nugget] "Use" button timer
-        }
+	{
+	  P_UseLines (player);
+	  player->usedown = true;
+
+    // [Nugget] Support more event timers
+    P_SetPlayerEvent(player, TIMER_USE);
+	}
     }
   else
     player->usedown = false;
@@ -815,12 +870,6 @@ void P_PlayerThink (player_t* player)
     }
   }
 
-  if (player->cheats & CF_RENDERSTATS)
-  {
-    extern void R_ShowRenderingStats();
-    R_ShowRenderingStats();
-  }
-
   if (player->cheats & CF_MAPCOORDS)
   {
     extern void cheat_mypos_print();
@@ -862,7 +911,9 @@ void P_PlayerThink (player_t* player)
 
     player->powers[pw_invulnerability] > 4*32 ||    /* Regular Doom */
     player->powers[pw_invulnerability] & 8 ? INVERSECOLORMAP :
-    player->powers[pw_infrared] > 4*32 || player->powers[pw_infrared] & 8;
+    player->powers[pw_infrared] > 4*32 || player->powers[pw_infrared] & 8
+    // [Nugget] Night-vision visor
+    ? (STRICTMODE(nightvision_visor) ? 33 : 1) : 0;
 }
 
 //----------------------------------------------------------------------------

@@ -19,16 +19,27 @@
 //
 // 4/25/98, 5/2/98 killough: reformatted, beautified
 
+#include <limits.h>
+#include <string.h>
+
+#include "doomdata.h"
 #include "doomstat.h"
-#include "i_video.h"
-#include "p_tick.h"
-#include "r_main.h"
-#include "r_bsp.h"
-#include "r_plane.h"
-#include "r_things.h"
-#include "r_draw.h"
-#include "w_wad.h"
+#include "doomtype.h"
+#include "i_system.h"
+#include "m_fixed.h"
 #include "r_bmaps.h" // [crispy] brightmaps
+#include "r_bsp.h"
+#include "r_data.h"
+#include "r_defs.h"
+#include "r_draw.h"
+#include "r_main.h"
+#include "r_plane.h"
+#include "r_state.h"
+#include "r_things.h"
+#include "tables.h"
+#include "v_video.h"
+#include "w_wad.h"
+#include "z_zone.h"
 
 // OPTIMIZE: closed two sided lines as single sided
 
@@ -158,19 +169,17 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
   // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
-    if (maskedtexturecol[dc_x] != D_MAXINT) // [FG] 32-bit integer math
+    if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
       {
         if (!fixedcolormap)      // calculate lighting
-          {
-            unsigned index = (int) (spryscale/fovdiff)  // [Nugget]
-                             / ((1 << LIGHTSCALESHIFT) * hires); // killough 11/98
+          {                             // killough 11/98:
+            const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+                              ? 0 : R_GetLightIndex(spryscale);
 
-            if (index >=  MAXLIGHTSCALE )
-              index = MAXLIGHTSCALE-1;
-
-            if (STRICTMODE(!diminished_lighting)) { index = 0; } // [Nugget]
-
-            dc_colormap[0] = dc_colormap[1] = walllights[index];
+            // [crispy] brightmaps for two sided mid-textures
+            dc_brightmap = texturebrightmap[texnum];
+            dc_colormap[0] = walllights[index];
+            dc_colormap[1] = STRICTMODE(brightmaps) ? fullcolormap : dc_colormap[0];
           }
 
         // killough 3/2/98:
@@ -187,7 +196,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
           int64_t t = ((int64_t) centeryfrac << FRACBITS) -
             (int64_t) dc_texturemid * spryscale;
           if (t + (int64_t) textureheight[texnum] * spryscale < 0 ||
-              t > (int64_t) MAX_SCREENHEIGHT << FRACBITS*2)
+              t > (int64_t) video.height << FRACBITS*2)
             continue;        // skip if the texture is out of screen's range
           sprtopscreen = (int64_t)(t >> FRACBITS); // [FG] 64-bit integer math
         }
@@ -206,7 +215,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
         col = (column_t *)((byte *)
                            R_GetColumnMod(texnum,maskedtexturecol[dc_x]) - 3);
         R_DrawMaskedColumn (col);
-        maskedtexturecol[dc_x] = D_MAXINT; // [FG] 32-bit integer math
+        maskedtexturecol[dc_x] = INT_MAX; // [FG] 32-bit integer math
       }
 
   // [FG] reset column drawing function
@@ -374,22 +383,16 @@ static void R_RenderSegLoop (void)
       // texturecolumn and lighting are independent of wall tiers
       if (segtextured)
         {
-          unsigned index;
+          const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+                            ? 0 : R_GetLightIndex(rw_scale);
 
           // calculate texture offset
           angle_t angle =(rw_centerangle+xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
+          angle &= 0xFFF; // Prevent finetangent overflow.
           texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
           texturecolumn >>= FRACBITS;
 
           // calculate lighting
-          index = (int) (rw_scale/fovdiff)   // [Nugget]
-                  / ((1 << LIGHTSCALESHIFT) * hires); // killough 11/98
-
-          if (index >=  MAXLIGHTSCALE )
-            index = MAXLIGHTSCALE-1;
-
-          if (STRICTMODE(!diminished_lighting)) { index = 0; } // [Nugget]
-
           dc_colormap[0] = walllights[index];
           dc_colormap[1] = (!fixedcolormap && STRICTMODE(brightmaps)) ?
                            fullcolormap : dc_colormap[0];
@@ -624,8 +627,8 @@ void R_StoreWallRange(const int start, const int stop)
       ds_p->silhouette = SIL_BOTH;
       ds_p->sprtopclip = screenheightarray;
       ds_p->sprbottomclip = negonearray;
-      ds_p->bsilheight = D_MAXINT;
-      ds_p->tsilheight = D_MININT;
+      ds_p->bsilheight = INT_MAX;
+      ds_p->tsilheight = INT_MIN;
     }
   else      // two sided line
     {
@@ -641,7 +644,7 @@ void R_StoreWallRange(const int start, const int stop)
         if (backsector->interpfloorheight > viewz)
           {
             ds_p->silhouette = SIL_BOTTOM;
-            ds_p->bsilheight = D_MAXINT;
+            ds_p->bsilheight = INT_MAX;
           }
 
       if (frontsector->interpceilingheight < backsector->interpceilingheight)
@@ -653,7 +656,7 @@ void R_StoreWallRange(const int start, const int stop)
         if (backsector->interpceilingheight < viewz)
           {
             ds_p->silhouette |= SIL_TOP;
-            ds_p->tsilheight = D_MININT;
+            ds_p->tsilheight = INT_MIN;
           }
 
       // killough 1/17/98: this test is required if the fix
@@ -669,13 +672,13 @@ void R_StoreWallRange(const int start, const int stop)
         if (doorclosed || backsector->interpceilingheight<=frontsector->interpfloorheight)
           {
             ds_p->sprbottomclip = negonearray;
-            ds_p->bsilheight = D_MAXINT;
+            ds_p->bsilheight = INT_MAX;
             ds_p->silhouette |= SIL_BOTTOM;
           }
         if (doorclosed || backsector->interpfloorheight>=frontsector->interpceilingheight)
           {                   // killough 1/17/98, 2/8/98
             ds_p->sprtopclip = screenheightarray;
-            ds_p->tsilheight = D_MININT;
+            ds_p->tsilheight = INT_MIN;
             ds_p->silhouette |= SIL_TOP;
           }
       }
@@ -702,6 +705,9 @@ void R_StoreWallRange(const int start, const int stop)
 
         // killough 4/17/98: draw floors if different light levels
         || backsector->floorlightsec != frontsector->floorlightsec
+
+        // hexen flowing water
+        || backsector->special != frontsector->special
         ;
 
       markceiling = worldhigh != worldtop
@@ -904,12 +910,12 @@ void R_StoreWallRange(const int start, const int stop)
   if (maskedtexture && !(ds_p->silhouette & SIL_TOP))
     {
       ds_p->silhouette |= SIL_TOP;
-      ds_p->tsilheight = D_MININT;
+      ds_p->tsilheight = INT_MIN;
     }
   if (maskedtexture && !(ds_p->silhouette & SIL_BOTTOM))
     {
       ds_p->silhouette |= SIL_BOTTOM;
-      ds_p->bsilheight = D_MAXINT;
+      ds_p->bsilheight = INT_MAX;
     }
   ds_p++;
 }

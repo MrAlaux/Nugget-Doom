@@ -51,21 +51,24 @@ void saveg_write32(int value);
 int64_t saveg_read64(void);
 void saveg_write64(int64_t value);
 
-// [Nugget] Moved here
+// [Nugget] Brought over from `p_saveg.c` /-----------------------------------
+
 // Enum values are 32-bit integers.
 
 #define saveg_read_enum saveg_read32
 #define saveg_write_enum saveg_write32
 
+// [Nugget] -----------------------------------------------------------------/
+
 typedef enum saveg_compat_e
 {
   saveg_mbf,
   saveg_woof510,
-  // [Nugget]
   saveg_woof600,
+  // [Nugget]
   saveg_nugget200,
-  
-  saveg_current,
+  saveg_nugget210,
+  saveg_current, // saveg_nugget300
 } saveg_compat_t;
 
 extern saveg_compat_t saveg_compat;

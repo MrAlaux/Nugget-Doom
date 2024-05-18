@@ -17,14 +17,25 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <string.h>
+
+#include "d_player.h"
+#include "doomdata.h"
 #include "doomstat.h"
-#include "m_bbox.h"
+#include "doomtype.h"
 #include "i_system.h"
 #include "i_video.h" // [FG] uncapped
+#include "m_bbox.h"
+#include "m_fixed.h"
+#include "p_mobj.h"
+#include "r_defs.h"
 #include "r_main.h"
-#include "r_segs.h"
 #include "r_plane.h"
+#include "r_segs.h"
+#include "r_state.h"
 #include "r_things.h"
+#include "tables.h"
+#include "v_video.h"
 
 seg_t     *curline;
 side_t    *sidedef;
@@ -85,7 +96,7 @@ typedef struct {
 // Replaces the old R_Clip*WallSegment functions. It draws bits of walls in those
 // columns which aren't solid, and updates the solidcol[] array appropriately
 
-byte solidcol[MAX_SCREENWIDTH];
+byte *solidcol = NULL;
 
 static void R_ClipWallSegment(int first, int last, boolean solid)
 {
@@ -124,7 +135,7 @@ static void R_ClipWallSegment(int first, int last, boolean solid)
 
 void R_ClearClipSegs (void)
 {
-  memset(solidcol, 0, MAX_SCREENWIDTH);
+  memset(solidcol, 0, video.width);
 }
 
 // killough 1/18/98 -- This function is used to fix the automap bug which
@@ -277,7 +288,7 @@ static void R_MaybeInterpolateSector(sector_t* sector)
             // Only if we moved the sector last tic.
             sector->oldfloorgametic == gametic - 1)
         {
-            sector->interpfloorheight = sector->oldfloorheight + FixedMul(sector->floorheight - sector->oldfloorheight, fractionaltic);
+            sector->interpfloorheight = LerpFixed(sector->oldfloorheight, sector->floorheight);
         }
         else
         {
@@ -288,7 +299,7 @@ static void R_MaybeInterpolateSector(sector_t* sector)
             // Only if we moved the sector last tic.
             sector->oldceilgametic == gametic - 1)
         {
-            sector->interpceilingheight = sector->oldceilingheight + FixedMul(sector->ceilingheight - sector->oldceilingheight, fractionaltic);
+            sector->interpceilingheight = LerpFixed(sector->oldceilingheight, sector->ceilingheight);
         }
         else
         {
@@ -297,14 +308,10 @@ static void R_MaybeInterpolateSector(sector_t* sector)
 
         if (sector->oldscrollgametic == gametic - 1)
         {
-            sector->floor_xoffs = sector->old_floor_xoffs +
-                FixedMul(sector->base_floor_xoffs - sector->old_floor_xoffs, fractionaltic);
-            sector->floor_yoffs = sector->old_floor_yoffs +
-                FixedMul(sector->base_floor_yoffs - sector->old_floor_yoffs, fractionaltic);
-            sector->ceiling_xoffs = sector->old_ceiling_xoffs +
-                FixedMul(sector->base_ceiling_xoffs - sector->old_ceiling_xoffs, fractionaltic);
-            sector->ceiling_yoffs = sector->old_ceiling_yoffs +
-                FixedMul(sector->base_ceiling_yoffs - sector->old_ceiling_yoffs, fractionaltic);
+            sector->floor_xoffs = LerpFixed(sector->old_floor_xoffs, sector->base_floor_xoffs);
+            sector->floor_yoffs = LerpFixed(sector->old_floor_yoffs, sector->base_floor_yoffs);
+            sector->ceiling_xoffs = LerpFixed(sector->old_ceiling_xoffs, sector->base_ceiling_xoffs);
+            sector->ceiling_yoffs = LerpFixed(sector->old_ceiling_yoffs, sector->base_ceiling_yoffs);
         }
     }
     else
@@ -318,10 +325,8 @@ static void R_MaybeInterpolateTextureOffsets(side_t *side)
 {
     if (uncapped && side->oldgametic == gametic - 1)
     {
-        side->textureoffset = side->oldtextureoffset +
-            FixedMul(side->basetextureoffset - side->oldtextureoffset, fractionaltic);
-        side->rowoffset = side->oldrowoffset +
-            FixedMul(side->baserowoffset - side->oldrowoffset, fractionaltic);
+        side->textureoffset = LerpFixed(side->oldtextureoffset, side->basetextureoffset);
+        side->rowoffset = LerpFixed(side->oldrowoffset, side->baserowoffset);
     }
 }
 

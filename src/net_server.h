@@ -17,6 +17,8 @@
 #ifndef NET_SERVER_H
 #define NET_SERVER_H
 
+#include "net_defs.h"
+
 // initialize server and wait for connections
 
 void NET_SV_Init(void);
@@ -39,4 +41,3 @@ void NET_SV_AddModule(net_module_t *module);
 void NET_SV_RegisterWithMaster(void);
 
 #endif /* #ifndef NET_SERVER_H */
-

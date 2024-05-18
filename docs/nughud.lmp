@@ -1,4 +1,4 @@
-; Default NUGHUD
+; Default Nugget HUD
 
 ; Ammo count
 nughud_ammo_x     44
@@ -82,10 +82,10 @@ nughud_arms9_y    182
 nughud_arms9_wide -1
 
 ; Frags count
-nughud_frags_x     174
+nughud_frags_x     160
 nughud_frags_y     171
 nughud_frags_wide  0
-nughud_frags_align 1
+nughud_frags_align 0
 
 ; Face
 nughud_face_x    -1
@@ -178,64 +178,133 @@ nughud_maxammo3_wide  1
 nughud_maxammo3_align 1
 
 ; Time display
-nughud_time_x     2
-nughud_time_y     151
-nughud_time_wide  -2
+nughud_time_x     -1
+nughud_time_y     -1
+nughud_time_wide  -1
 nughud_time_align -1
-nughud_time_sts   1
+nughud_time_stack 3
+nughud_time_order 2
 
 ; Stats display
-nughud_sts_x     2
-nughud_sts_y     159
-nughud_sts_wide  -2
+nughud_sts_x     -1
+nughud_sts_y     -1
+nughud_sts_wide  -1
 nughud_sts_align -1
-nughud_sts_ml    0
+nughud_sts_stack 3
+nughud_sts_order 1
+nughud_sts_ml    -1
 
 ; Level Name display
-nughud_title_x     2
-nughud_title_y     143
-nughud_title_wide  -2
+nughud_title_x     -1
+nughud_title_y     -1
+nughud_title_wide  -1
 nughud_title_align -1
+nughud_title_stack 3
+nughud_title_order 0
 
 ; Powerup Timers display
-nughud_powers_x     318
-nughud_powers_y     8
-nughud_powers_wide  2
-nughud_powers_align 1
+nughud_powers_x     -1
+nughud_powers_y     -1
+nughud_powers_wide  -1
+nughud_powers_align -1
+nughud_powers_stack 2
+nughud_powers_order 0
 
 ; Coordinates display
-nughud_coord_x     318
-nughud_coord_y     16
-nughud_coord_wide  2
-nughud_coord_align 1
-nughud_coord_ml    0
+nughud_coord_x     -1
+nughud_coord_y     -1
+nughud_coord_wide  -1
+nughud_coord_align -1
+nughud_coord_stack 2
+nughud_coord_order 1
+nughud_coord_ml    -1
 
 ; FPS display
-nughud_fps_x     318
-nughud_fps_y     24
-nughud_fps_wide  2
-nughud_fps_align 1
+nughud_fps_x     -1
+nughud_fps_y     -1
+nughud_fps_wide  -1
+nughud_fps_align -1
+nughud_fps_stack 2
+nughud_fps_order 2
+
+; Rendering-statistics display
+nughud_rate_x     2
+nughud_rate_y     192
+nughud_rate_wide  -1
+nughud_rate_align -1
+nughud_rate_stack 1
+nughud_rate_order 0
 
 ; Message display
 nughud_message_x     -1
-nughud_message_y     0
-nughud_message_wide  -2
+nughud_message_y     -1
+nughud_message_wide  -1
 nughud_message_align -1
+nughud_message_stack 1
+nughud_message_defx  1
 
 ; Secret Message/Milestone Completion display
 nughud_secret_x     160
-nughud_secret_y     84
+nughud_secret_y     42
 nughud_secret_wide  0
 nughud_secret_align 0
+nughud_secret_stack 1
+nughud_secret_order 0
+
+; Stack 1 (top-left corner)
+nughud_stack1_x     2
+nughud_stack1_y     0
+nughud_stack1_wide  -1
+nughud_stack1_align -1
+nughud_stack1_vlign 1
+
+; Stack 2 (top-right corner)
+nughud_stack2_x     318
+nughud_stack2_y     0
+nughud_stack2_wide  1
+nughud_stack2_align 1
+nughud_stack2_vlign 1
+
+; Stack 3 (bottom-left corner)
+nughud_stack3_x     2
+nughud_stack3_y     168
+nughud_stack3_wide  -1
+nughud_stack3_align -1
+nughud_stack3_vlign -1
+
+; Stack 4 (bottom-right corner)
+nughud_stack4_x     318
+nughud_stack4_y     168
+nughud_stack4_wide  1
+nughud_stack4_align 1
+nughud_stack4_vlign -1
+
+; Stack 5
+; (All remaining Stacks have the same properties)
+nughud_stack5_x     0
+nughud_stack5_y     0
+nughud_stack5_wide  0
+nughud_stack5_align -1
+nughud_stack5_vlign 1
 
 ; Example Patch
-; (All other Patches up to and including patch8 have the same properties)
+; (All other Patches have the same properties)
 nughud_patch1_x     0
 nughud_patch1_y     0
 nughud_patch1_wide  0
 nughud_patch1_align -1
 nughud_patch1_vlign 1
 nughud_patch1_name  ""
+
+; Example Status-Bar Chunk
+; (All other Chunks have the same properties)
+nughud_sbchunk1_x     -1
+nughud_sbchunk1_y     0
+nughud_sbchunk1_wide  0
+nughud_sbchunk1_sx    0
+nughud_sbchunk1_sy    0
+nughud_sbchunk1_sw    1
+nughud_sbchunk1_sh    32
 
 ; Draw percentage signs
 nughud_percents 1

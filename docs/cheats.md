@@ -121,20 +121,33 @@ Force gibbing on dying enemies, independently of damage dealt.
 `IDFLY`  
 Toggle Fly Mode (uses jumping/crouching keys).
 
-`SUMMON`  
-Spawn a hostile or friendly actor based on its mobjtype index.
+`SUMMON[X][Y]`  
+Spawn an actor based on its mobj type index, where:
+
+- `X` is either "E" to spawn a hostile actor, "F" to spawn a friendly actor, or "R" to repeat the last spawn.
+- `Y` is a three-digit number specifying the type.
+
+For example, to spawn a hostile Shotgun Guy (whose index is 2), the full cheat would be `SUMMONE002`.
+
+Actors are always spawned facing the same direction as the player.
+If the Automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
+Otherwise, they will be spawned in front of the player.
+
+`IDDF[C][T]`  
+Find a key on the Automap.
+This cheat functions similarly to the `KEY` cheat, with `C` and `T` specifying the key color and type respectively.
 
 `RESURRECT` / `IDRES`  
 Resurrect the player without toggling IDDQD.
 
 `LINETARGET`  
-Toggle Linetarget Query Mode, which gives some info on the player's linetarget.
+Toggle Linetarget Query Mode, which gives some info on the player's linetarget (i.e. the shootable thing being aimed at).
 
 `MDK`  
-Perform a hitscan attack with 1 million damage.
+Perform a hitscan attack of 1-million damage.
 
 `SAITAMA`  
-Toggle MDK Fist (replaces A_Punch's melee attack with the MDK attack, featuring an alternate multishot attack when holding down Strafe On).
+Toggle MDK Fist (replaces A_Punch's melee attack with the MDK attack, featuring an alternate multi-shot attack when holding down Strafe On).
 
 `BOOMCAN`  
 Toggle explosive hitscan attacks for the player's ranged hitscan weapons
@@ -149,7 +162,7 @@ Exit the level as if using a secret exit.
 Change the player speed in-game.
 
 `NOMOMENTUM`  
-Toggle No Momentum mode; reenabled debugging cheat.
+Toggle no-momentum mode (reenabled debugging cheat).
 
 ## Beta cheats
 

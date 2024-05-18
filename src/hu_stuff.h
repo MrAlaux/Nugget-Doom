@@ -19,17 +19,16 @@
 #ifndef __HU_STUFF_H__
 #define __HU_STUFF_H__
 
-#include "d_event.h"
-#include "r_defs.h"
-#include "hu_lib.h"
+#include "doomdef.h"
+#include "doomtype.h"
+
+// [Nugget]
+#include "doomstat.h"
+
+struct event_s;
+struct mobj_s;
 
 #define HU_BROADCAST    5
-
-//#define HU_MSGREFRESH   KEY_ENTER                                // phares
-#define HU_MSGX         (0 - WIDESCREENDELTA)
-#define HU_MSGY         0
-#define HU_MSGWIDTH     64      /* in characters */
-#define HU_MSGHEIGHT    1       /* in lines */
 
 #define HU_MSGTIMEOUT   (4*TICRATE)
 
@@ -39,15 +38,11 @@
 void HU_Init(void);
 void HU_Start(void);
 void HU_disable_all_widgets (void);
-
-// [Nugget] /-----------------------------------------------------------------
-
-void HU_NughudAlignTime(void); // NUGHUD
 void HU_widget_rebuild_sttime(void);
 
-// [Nugget] -----------------------------------------------------------------/
+void HU_NughudAlignTime(void); // [Nugget] NUGHUD
 
-boolean HU_Responder(event_t* ev);
+boolean HU_Responder(struct event_s *ev);
 
 void HU_Ticker(void);
 void HU_Drawer(void);
@@ -82,21 +77,40 @@ extern int hud_active;      // hud mode 0=off, 1=small, 2=full
 typedef enum { secretmessage_off, secretmessage_on, secretmessage_count, } secretmessage_t;
 extern secretmessage_t hud_secret_message; // "A secret is revealed!" message
 
-extern int map_player_coords, map_level_stats, map_level_time; // [FG] level stats and level time widgets
-extern int hud_level_stats, hud_level_time;
-extern int map_power_timers, hud_power_timers; // [Nugget] Powerup timers
+extern int hud_player_coords, hud_level_stats, hud_level_time;
+extern int hud_power_timers; // [Nugget] Powerup timers
+extern int hud_time[NUMTIMERS]; // [Nugget] Support more event timers
 extern int hud_widget_font;
 extern int hud_widescreen_widgets;
-extern int hud_draw_bargraphs;
-extern int hud_threelined_widgets;
+extern int hud_widget_layout;
 extern boolean message_centered; // center messages
 extern boolean message_colorized; // colorize player messages
 
 extern int playback_tic, playback_totaltics;
 
-extern boolean hud_crosshair_on; // [Nugget] Keep the variable below just for the type
+enum
+{
+  HUD_TYPE_CRISPY,
+  HUD_TYPE_BOOM_NO_BARS,
+  HUD_TYPE_BOOM,
+
+  NUM_HUD_TYPES
+};
+
+extern int hud_type;
+extern boolean draw_crispy_hud;
+
+extern boolean hud_crosshair_on; // [Nugget] Keep the CVAR below just for the type
 extern int hud_crosshair;
 extern boolean hud_crosshair_health;
+
+enum
+{
+  HUD_WIDGET_OFF,
+  HUD_WIDGET_AUTOMAP,
+  HUD_WIDGET_HUD,
+  HUD_WIDGET_ALWAYS,
+};
 
 typedef enum
 {
@@ -117,7 +131,7 @@ extern crosslockon_t hud_crosshair_lockon;
 
 extern boolean hud_crosshair_indicators; // [Nugget] Horizontal autoaim indicators
 extern boolean hud_crosshair_fuzzy; // [Nugget] Account for fuzzy targets
-extern mobj_t *crosshair_target;
+extern struct mobj_s *crosshair_target;
 void HU_UpdateCrosshairLock(int x, int y);
 void HU_DrawCrosshair(void);
 
@@ -125,8 +139,8 @@ extern int hud_crosshair_color;
 extern int hud_crosshair_target_color;
 
 #define HU_CROSSHAIRS 10
-extern const char *crosshair_nam[HU_CROSSHAIRS];
-extern const char *crosshair_str[HU_CROSSHAIRS+1];
+extern const char *crosshair_lumps[HU_CROSSHAIRS];
+extern const char *crosshair_strings[HU_CROSSHAIRS];
 
 #endif
 

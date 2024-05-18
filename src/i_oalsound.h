@@ -19,10 +19,11 @@
 #ifndef __I_OALSOUND__
 #define __I_OALSOUND__
 
-#include "alext.h"
+#include "al.h"
 
 #include "doomtype.h"
-#include "i_sound.h"
+
+struct sfxinfo_s;
 
 extern boolean oal_use_doppler;
 
@@ -34,6 +35,8 @@ void I_OAL_ShutdownSound(void);
 
 void I_OAL_ShutdownModule(void);
 
+void I_OAL_SetResampler(void);
+
 void I_OAL_ResetSource2D(int channel);
 
 void I_OAL_ResetSource3D(int channel, boolean point_source);
@@ -41,10 +44,11 @@ void I_OAL_ResetSource3D(int channel, boolean point_source);
 void I_OAL_UpdateSourceParams(int channel, const ALfloat *position,
                               const ALfloat *velocity);
 
-void I_OAL_UpdateListenerParams(const ALfloat *position, const ALfloat *velocity,
+void I_OAL_UpdateListenerParams(const ALfloat *position,
+                                const ALfloat *velocity,
                                 const ALfloat *orientation);
 
-void I_OAL_UpdateUserSoundSettings(void);
+const char **I_OAL_GetResamplerStrings(void);
 
 boolean I_OAL_InitSound(void);
 
@@ -52,9 +56,9 @@ boolean I_OAL_ReinitSound(void);
 
 boolean I_OAL_AllowReinitSound(void);
 
-boolean I_OAL_CacheSound(sfxinfo_t *sfx);
+boolean I_OAL_CacheSound(struct sfxinfo_s *sfx);
 
-boolean I_OAL_StartSound(int channel, sfxinfo_t *sfx, int pitch);
+boolean I_OAL_StartSound(int channel, struct sfxinfo_s *sfx, int pitch);
 
 void I_OAL_StopSound(int channel);
 

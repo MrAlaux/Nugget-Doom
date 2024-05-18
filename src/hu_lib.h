@@ -20,7 +20,9 @@
 #ifndef __HULIB__
 #define __HULIB__
 
-#include "v_video.h" //jff 2/16/52 include color range defs
+#include "doomtype.h"
+
+struct patch_s;
 
 // [FG] font stuff
 
@@ -32,7 +34,7 @@
 
 typedef struct
 {
-  patch_t *patches[HU_FONTSIZE+6];
+  struct patch_s *patches[HU_FONTSIZE+6+3]; // [Nugget] Stats icons
 
   int line_height;
 
@@ -42,13 +44,13 @@ typedef struct
   const int tab_mask;
 } hu_font_t;
 
-extern patch_t **hu_font;
+extern struct patch_s **hu_font;
 
 // [FG] widget stuff
 
 #define CR_ORIG (-1) // [FG] reset to original color
 
-#define HU_MAXLINELENGTH 80
+#define HU_MAXLINELENGTH 120
 
 //jff 2/26/98 maximum number of messages allowed in refresh list
 #define HU_MAXMESSAGES 8
@@ -79,7 +81,7 @@ typedef struct
   // [FG] length in chars
   int len;
 
-  // [FG] length in chars
+  // [FG] width in pixels
   int width;
 
 } hu_line_t;
@@ -93,7 +95,7 @@ typedef struct hu_multiline_s
   int curline; // current line number
 
   hu_font_t **font; // font
-  char *cr; //jff 2/16/52 output color range
+  byte *cr; //jff 2/16/52 output color range
   boolean drawcursor;
 
   // pointer to boolean stating whether to update window
@@ -101,6 +103,9 @@ typedef struct hu_multiline_s
 
   void (*builder)(void);
   boolean built;
+
+  boolean exclusive;
+  boolean bottomup;
 
 } hu_multiline_t;
 
@@ -114,6 +119,9 @@ typedef struct hu_widget_s
 
   // [FG] align_direct
   int x, y;
+
+  // [FG] back up for centered messages
+  align_t h_align_orig;
 
 } hu_widget_t;
 
@@ -129,10 +137,12 @@ void HUlib_add_strings_to_cur_line (hu_multiline_t *const m, const char *prefix,
 
 void HUlib_draw_widget (const hu_widget_t *const w);
 
-void HUlib_init_multiline (hu_multiline_t *const m, int nl, hu_font_t **f, char *cr, boolean *on, void (*builder)(void));
+void HUlib_init_multiline (hu_multiline_t *const m, int nl, hu_font_t **f, byte *cr, boolean *on, void (*builder)(void));
 
 boolean HUlib_add_key_to_line (hu_line_t *const l, unsigned char ch);
 boolean HUlib_add_key_to_cur_line (hu_multiline_t *const m, unsigned char ch);
+
+void HUlib_erase_widget (const hu_widget_t *const w);
 
 #endif
 

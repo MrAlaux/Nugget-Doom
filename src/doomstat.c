@@ -18,11 +18,11 @@
 //-----------------------------------------------------------------------------
 
 #include "doomstat.h"
-#include "m_misc2.h"
+#include "m_misc.h"
 
 // Game Mode - identify IWAD as shareware, retail etc.
 GameMode_t gamemode = indetermined;
-GameMission_t   gamemission = doom;
+GameMission_t gamemission = doom;
 
 // [FG] emulate a specific version of Doom
 GameVersion_t gameversion = exe_doom_1_9;
@@ -50,6 +50,8 @@ int compatibility, default_compatibility;          // killough 1/31/98
 
 int comp[COMP_TOTAL], default_comp[COMP_TOTAL];    // killough 10/98
 
+invul_mode_t invul_mode;
+
 // [FG] overflow emulation
 overflow_t overflow[EMU_TOTAL] = {
   { true, false, "spechits_overflow"},
@@ -59,7 +61,7 @@ overflow_t overflow[EMU_TOTAL] = {
   { true, false, "donut_overflow"}
 };
 
-int demo_version;           // killough 7/19/98: Boom version of demo
+demo_version_t demo_version;        // killough 7/19/98: Boom version of demo
 
 // v1.1-like pitched sounds
 int pitched_sounds;  // killough 10/98
@@ -119,6 +121,9 @@ boolean hide_weapon;
 // [FG] centered weapon sprite
 int center_weapon;
 
+int view_bobbing_pct;
+int weapon_bobbing_pct;
+
 char *MAPNAME(int e, int m)
 {
   static char name[9];
@@ -139,14 +144,10 @@ boolean casual_play; // Like `critical`, with different checks and functionality
 
 // General ----------------------------
 
-int gammacycle; // CFG-Only
-int wipe_type;
 int over_under;
 int jump_crouch;
-int fov;
 int viewheight_value;
-int view_bobbing_percentage;
-int impact_pitch;
+int flinching;
 int explosion_shake;
 int breathing;
 int teleporter_zoom;
@@ -161,6 +162,7 @@ int menu_background_all;
 int no_menu_tint;
 int no_berserk_tint;
 int no_radsuit_tint;
+int nightvision_visor;
 int damagecount_cap;
 int bonuscount_cap;
 int fake_contrast;
@@ -185,7 +187,6 @@ int a11y_invul_colormap;
 int no_hor_autoaim;
 int switch_on_pickup;
 int always_bob; // CFG-Only
-int weapon_bobbing_percentage;
 int bobbing_style;
 int weapon_inertia;
 int weapon_inertia_scale_pct; // CFG-Only
@@ -196,12 +197,15 @@ int sx_fix; // CFG-Only
 
 // Status Bar/HUD ---------------------
 
+int announce_milestones;
+int show_save_messages; // CFG-Only
 int show_ssg; // CFG-Only
+int hud_stats_format;
+int hud_stats_format_map;
+int hud_stats_icons;
 int alt_arms;
-int blink_keys; // CFG-Only
-int smarttotals;
-int hud_kills_percentage;
-int event_timers[NUMTIMERS];
+int hud_time_teleport;
+int hud_time_keypickup;
 
 int hudcolor_time_scale;
 int hudcolor_total_time;
@@ -220,11 +224,6 @@ int extra_gibbing[NUMEXGIBS]; // CFG-Only
 int bloodier_gibbing;
 int zdoom_item_drops;
 
-// Messages ---------------------------
-
-int show_save_messages; // CFG-Only
-int announce_milestones;
-
 // Key Bindings -----------------------
 
 int zoom_fov;
@@ -233,11 +232,14 @@ int fancy_teleport;
 // Miscellaneous (CFG-Only) -----------
 
 int screenshot_palette;
-int menu_background_darkening;
+int menu_backdrop_darkening;
 int automap_overlay_darkening;
+int no_killough_face;
 int sp_chat;
 
-// Doom Compatibility -----------------
+int fail_safe;
+
+// Doom Compatibility (CFG-Only) ------
 
 int comp_bruistarget;
 int comp_nomeleesnap;
@@ -246,6 +248,7 @@ int comp_lscollision;
 int comp_lsamnesia;
 int comp_fuzzyblood;
 int comp_nonbleeders;
+int comp_faceshadow;
 int comp_iosdeath;
 int comp_choppers;
 

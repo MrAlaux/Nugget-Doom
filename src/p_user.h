@@ -22,15 +22,21 @@
 #ifndef __P_USER__
 #define __P_USER__
 
-#include "d_player.h"
+#include "m_fixed.h"
+#include "tables.h"
 
-void P_PlayerThink(player_t *player);
-void P_CalcHeight(player_t *player);
-void P_DeathThink(player_t *player);
-void P_MovePlayer(player_t *player);
-void P_Thrust(player_t *player, angle_t angle, fixed_t move);
+struct player_s;
 
-void P_SetPlayerEvent(player_t* player, eventtimer_t type); // [Nugget]
+void P_PlayerThink(struct player_s *player);
+void P_CalcHeight(struct player_s *player);
+void P_DeathThink(struct player_s *player);
+void P_MovePlayer(struct player_s *player);
+void P_Thrust(struct player_s *player, angle_t angle, fixed_t move);
+
+// [Nugget] ------------------------------------------------------------------
+
+void P_SetFlinch(player_t *const player, int pitch); // Flinching
+void P_SetPlayerEvent(player_t *player, eventtimer_t type); // Event timers
 
 #endif // __P_USER__
 

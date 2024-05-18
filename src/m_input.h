@@ -18,202 +18,199 @@
 #define __M_INPUT__
 
 #include "doomtype.h"
-#include "d_event.h"
+
+struct event_s;
 
 #define NUM_INPUTS 4
 
 enum
 {
-  input_null,
-  input_forward,
-  input_backward,
-  input_turnleft,
-  input_turnright,
-  input_strafeleft,
-  input_straferight,
-  input_speed,
-  input_strafe,
-  input_jump, // [Nugget]
-  input_crouch, // [Nugget]
-  input_autorun,
-  input_novert,
-  input_reverse,
-  input_use,
-  input_fire,
-  input_prevweapon,
-  input_nextweapon,
-  input_lastweapon, // [Nugget]
+    input_null,
+    input_forward,
+    input_backward,
+    input_turnleft,
+    input_turnright,
+    input_strafeleft,
+    input_straferight,
+    input_speed,
+    input_strafe,
+    input_autorun,
+    input_novert,
+    input_reverse,
+    input_use,
+    input_fire,
+    input_prevweapon,
+    input_nextweapon,
 
-  input_mouselook,
-  input_padlook,
-  input_crosshair, // [Nugget]
-  input_zoom, // [Nugget]
-  input_chasecam, // [Nugget]
+    input_freelook,
 
-  input_weapon1,
-  input_weapon2,
-  input_weapon3,
-  input_weapon4,
-  input_weapon5,
-  input_weapon6,
-  input_weapon7,
-  input_weapon8,
-  input_weapon9,
-  input_weapontoggle,
+    input_weapon1,
+    input_weapon2,
+    input_weapon3,
+    input_weapon4,
+    input_weapon5,
+    input_weapon6,
+    input_weapon7,
+    input_weapon8,
+    input_weapon9,
+    input_weapontoggle,
 
-  input_menu_up,
-  input_menu_down,
-  input_menu_left,
-  input_menu_right,
-  input_menu_backspace,
-  input_menu_enter,
-  input_menu_escape,
-  input_menu_clear,
-  input_menu_reloadlevel,
-  input_menu_nextlevel,
+    input_menu_up,
+    input_menu_down,
+    input_menu_left,
+    input_menu_right,
+    input_menu_backspace,
+    input_menu_enter,
+    input_menu_escape,
+    input_menu_clear,
+    input_menu_reloadlevel,
+    input_menu_nextlevel,
 
-  input_help,
-  input_escape,
-  input_savegame,
-  input_loadgame,
-  input_rewind, // [Nugget]
-  input_soundvolume,
-  input_quicksave,
-  input_endgame,
-  input_messages,
-  input_quickload,
-  input_quit,
-  input_hud,
-  input_gamma,
-  input_zoomin,
-  input_zoomout,
-  input_screenshot,
-  input_clean_screenshot,
-  input_setup,
-  input_pause,
-  input_spy,
-  input_demo_quit,
-  input_demo_fforward,
-  input_demo_join,
-  input_speed_up,
-  input_speed_down,
-  input_speed_default,
+    input_hud_timestats,
 
-  input_map,
-  input_map_up,
-  input_map_down,
-  input_map_left,
-  input_map_right,
-  input_map_follow,
-  input_map_zoomin,
-  input_map_zoomout,
-  input_map_mark,
-  input_map_clear,
-  input_map_blink, // [Nugget] Blink marks
-  input_map_tagfinder, // [Nugget] Tag Finder from PrBoomX
-  input_map_teleport, // [Nugget] Teleport to Automap pointer
-  input_map_mini, // [Nugget] Minimap
-  input_map_gobig,
-  input_map_grid,
-  input_map_overlay,
-  input_map_rotate,
+    input_help,
+    input_escape,
+    input_savegame,
+    input_loadgame,
+    input_soundvolume,
+    input_quicksave,
+    input_endgame,
+    input_messages,
+    input_quickload,
+    input_quit,
+    input_hud,
+    input_gamma,
+    input_zoomin,
+    input_zoomout,
+    input_screenshot,
+    input_clean_screenshot,
+    input_setup,
+    input_pause,
+    input_spy,
+    input_demo_quit,
+    input_demo_fforward,
+    input_demo_join,
+    input_speed_up,
+    input_speed_down,
+    input_speed_default,
 
-  input_chat,
-  input_chat_dest0,
-  input_chat_dest1,
-  input_chat_dest2,
-  input_chat_dest3,
-  input_chat_backspace,
-  input_chat_enter,
+    input_map,
+    input_map_up,
+    input_map_down,
+    input_map_left,
+    input_map_right,
+    input_map_follow,
+    input_map_zoomin,
+    input_map_zoomout,
+    input_map_mark,
+    input_map_clear,
+    input_map_gobig,
+    input_map_grid,
+    input_map_overlay,
+    input_map_rotate,
 
-  input_iddqd,
-  input_idkfa,
-  input_idfa,
-  input_idclip,
-  input_idbeholdh,
-  input_idbeholdm,
-  input_idbeholdv,
-  input_idbeholds,
-  input_idbeholdi,
-  input_idbeholdr,
-  input_idbeholdl,
-  input_idrate,
-  input_iddt,
-  input_notarget,
-  input_freeze,
-  input_avj,
-  // [Nugget] /------------------------
-  input_infammo,
-  input_fastweaps,
-  input_resurrect,
-  input_fly,
-  input_summonr,
-  input_linetarget,
-  input_mdk,
-  input_saitama,
-  input_boomcan,
-  // [Nugget] ------------------------/
+    input_chat,
+    input_chat_dest0,
+    input_chat_dest1,
+    input_chat_dest2,
+    input_chat_dest3,
+    input_chat_backspace,
+    input_chat_enter,
 
-  NUM_INPUT_ID
+    input_iddqd,
+    input_idkfa,
+    input_idfa,
+    input_idclip,
+    input_idbeholdh,
+    input_idbeholdm,
+    input_idbeholdv,
+    input_idbeholds,
+    input_idbeholdi,
+    input_idbeholdr,
+    input_idbeholdl,
+    input_idrate,
+    input_iddt,
+    input_notarget,
+    input_freeze,
+    input_avj,
+
+    // [Nugget] /-------------------------------------------------------------
+
+    input_jump,
+    input_crouch,
+
+    input_lastweapon,
+
+    input_crosshair,
+    input_zoom,
+    input_chasecam,
+
+    input_rewind,
+
+    input_map_blink, // Blink marks
+    input_map_tagfinder, // Tag Finder from PrBoomX
+    input_map_teleport, // Teleport to Automap pointer
+    input_map_mini, // Minimap
+
+    input_idbeholda,
+    input_infammo,
+    input_fastweaps,
+    input_resurrect,
+    input_fly,
+    input_summonr,
+    input_linetarget,
+    input_mdk,
+    input_saitama,
+    input_boomcan,
+
+    // [Nugget] -------------------------------------------------------------/
+
+    NUM_INPUT_ID
 };
 
 typedef enum
 {
-  input_type_null,
-  input_type_key,
-  input_type_mouseb,
-  input_type_joyb,
+    INPUT_NULL,
+    INPUT_KEY,
+    INPUT_MOUSEB,
+    INPUT_JOYB,
 } input_type_t;
 
 typedef struct
 {
-  input_type_t type;
-  int value;
-} input_value_t;
-
-typedef struct
-{
-  input_value_t inputs[NUM_INPUTS];
-  int num_inputs;
+    input_type_t type;
+    int value;
 } input_t;
 
-input_t* M_Input(int ident);
+const input_t *M_Input(int id);
 
-boolean M_InputMatchKey(int ident, int value);
-void    M_InputRemoveKey(int ident, int value);
-boolean M_InputAddKey(int ident, int value);
+boolean M_InputAddKey(int id, int value);
+boolean M_InputAddMouseB(int id, int value);
+boolean M_InputAddJoyB(int id, int value);
 
-boolean M_InputMatchMouseB(int ident, int value);
-void    M_InputRemoveMouseB(int ident, int value);
-boolean M_InputAddMouseB(int ident, int value);
+void M_InputTrackEvent(struct event_s *ev);
+boolean M_InputActivated(int id);
+boolean M_InputDeactivated(int id);
+boolean M_InputAddActivated(int id);
+void M_InputRemoveActivated(int id);
 
-boolean M_InputMatchJoyB(int ident, int value);
-void    M_InputRemoveJoyB(int ident, int value);
-boolean M_InputAddJoyB(int ident, int value);
+boolean M_InputGameActive(int id);
+void M_InputGameDeactivate(int id);
 
-void    M_InputTrackEvent(event_t *ev);
-boolean M_InputActivated(int ident);
-boolean M_InputDeactivated(int ident);
+void M_InputReset(int id);
+void M_InputSetDefault(int id, input_t *inputs);
 
-boolean M_InputGameActive(int ident);
-boolean M_InputGameKeyActive(int ident);
-boolean M_InputGameMouseBActive(int ident);
-boolean M_InputGameJoyBActive(int ident);
-void    M_InputGameDeactivate(int ident);
+const char *M_GetNameForKey(int key);
+int M_GetKeyForName(const char *name);
 
-void    M_InputReset(int ident);
-void    M_InputSet(int ident, input_value_t *inputs);
-void    M_InputAdd(int ident, input_value_t value);
+const char *M_GetNameForJoyB(int joyb);
+int M_GetJoyBForName(const char *name);
 
-const char* M_GetNameForKey(int key);
-int M_GetKeyForName(const char* name);
-
-const char* M_GetNameForJoyB(int joyb);
-int M_GetJoyBForName(const char* name);
-
-const char* M_GetNameForMouseB(int joyb);
-int M_GetMouseBForName(const char* name);
+const char *M_GetNameForMouseB(int joyb);
+int M_GetMouseBForName(const char *name);
 
 boolean M_IsMouseWheel(int mouseb);
+
+void M_InputPredefined(void);
 
 #endif

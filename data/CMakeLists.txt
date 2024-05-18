@@ -1,4 +1,4 @@
-string(TIMESTAMP PROJECT_DATE "%Y-%m-%d")
+string(TIMESTAMP PROJECT_DATE "%Y-%m-%d" UTC)
 
 configure_file(io.github.MrAlaux.Nugget-Doom.metainfo.in
                io.github.MrAlaux.Nugget-Doom.metainfo.xml

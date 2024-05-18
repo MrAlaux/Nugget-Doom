@@ -18,19 +18,32 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <string.h>
+
+#include "d_event.h"
+#include "d_player.h"
+#include "doomdef.h"
 #include "doomstat.h"
-#include "i_printf.h"
-#include "m_random.h"
-#include "w_wad.h"
+#include "doomtype.h"
 #include "g_game.h"
-#include "r_main.h"
-#include "v_video.h"
-#include "wi_stuff.h"
-#include "s_sound.h"
-#include "sounds.h"
-#include "hu_stuff.h"
-#include "m_misc2.h"
+#include "hu_lib.h"
+#include "i_printf.h"
+#include "m_misc.h"
+#include "m_random.h"
 #include "m_swap.h"
+#include "mn_menu.h"
+#include "r_defs.h"
+#include "s_sound.h"
+#include "st_lib.h"
+#include "sounds.h"
+#include "u_mapinfo.h"
+#include "v_video.h"
+#include "w_wad.h"
+#include "wi_stuff.h"
+#include "z_zone.h"
+
+// [Nugget]
+#include "r_main.h"
 
 // Ty 03/17/98: flag that new par times have been loaded in d_deh
 extern boolean deh_pars;
@@ -263,12 +276,6 @@ static anim_t *anims[NUMEPISODES] =
 // GENERAL DATA
 //
 
-//
-// Locally used stuff.
-//
-#define FB 0
-
-
 // States for single-player
 #define SP_KILLS    0
 #define SP_ITEMS    2
@@ -324,10 +331,10 @@ static int    NUMCMAPS;
 //
 
 // You Are Here graphic
-static patch_t*   yah[2];
+static patch_t*   yah[3] = {NULL, NULL, NULL};
 
 // splat
-static patch_t*   splat;
+static patch_t*   splat[2] = {NULL, NULL};
 
 // %, : graphics
 static patch_t*   percent;
@@ -404,26 +411,28 @@ boolean WI_UsingAltInterpic(void)
 // Args:    none
 // Returns: void
 //
-static void WI_slamBackground(void)
+void WI_slamBackground(void)
 {
+  char  name[32];
+
   // [Nugget] Alt. intermission background
-  if (alt_interpic_on)
-  {
-    const size_t size = (SCREENWIDTH * hires) * (SCREENHEIGHT * hires);
-
+  if (alt_interpic_on) {
     R_RenderPlayerView(&players[displayplayer]);
-
-    // Darken background a bit
-    for (int y = 0;  y < size;  y++)
-    { screens[0][y] = colormaps[0][17 * 256 + screens[0][y]]; }
-
-    memcpy(screens[1], screens[0], size);
-  }
-  else {
-    WI_DrawBackground();
+    V_ShadeScreen(17);
+    return;
   }
 
-  V_CopyRect(0, 0, 1, SCREENWIDTH, SCREENHEIGHT, 0, 0, 0);  // killough 11/98
+  if (state != StatCount && enterpic)
+    strcpy(name, enterpic);
+  else if (exitpic)
+    strcpy(name, exitpic);
+  // with UMAPINFO it is possible that wbs->epsd > 3
+  else if (gamemode == commercial || wbs->epsd >= 3)
+    strcpy(name, "INTERPIC");
+  else
+    M_snprintf(name, sizeof(name), "WIMAP%d", wbs->epsd);
+
+  V_DrawPatchFullScreen(W_CacheLumpName(name, PU_CACHE));
 }
 
 // ====================================================================
@@ -441,10 +450,7 @@ boolean WI_Responder(event_t* ev)
 
 static void WI_DrawString(int y, const char* str)
 {
-  extern void M_DrawString(int x, int y, int color, const char* str);
-  extern int  M_StringWidth(char* str);
-
-  M_DrawString(160 - (M_StringWidth((char*)str) / 2), y, CR_GRAY, str);
+  MN_DrawString(160 - (MN_GetPixelWidth(str) / 2), y, CR_GRAY, str);
 }
 
 
@@ -476,8 +482,8 @@ static void WI_drawLF(void)
   {
     patch_t* lpic = W_CacheLumpName(wbs->lastmapinfo->levelpic, PU_CACHE);
 
-    V_DrawPatch((ORIGWIDTH - SHORT(lpic->width))/2,
-               y, FB, lpic);
+    V_DrawPatch((SCREENWIDTH - SHORT(lpic->width))/2,
+               y, lpic);
 
     y += (5 * SHORT(lpic->height)) / 4;
   }
@@ -485,16 +491,16 @@ static void WI_drawLF(void)
   // [FG] prevent crashes for levels without name graphics
   if (wbs->last >= 0 && wbs->last < num_lnames && lnames[wbs->last] != NULL )
   {
-  // draw <LevelName>
-  V_DrawPatch((ORIGWIDTH - SHORT(lnames[wbs->last]->width))/2,
-              y, FB, lnames[wbs->last]);
+  // draw <LevelName> 
+  V_DrawPatch((SCREENWIDTH - SHORT(lnames[wbs->last]->width))/2,
+              y, lnames[wbs->last]);
 
   // draw "Finished!"
   y += (5*SHORT(lnames[wbs->last]->height))/4;
   }
-
-  V_DrawPatch((ORIGWIDTH - SHORT(finished->width))/2,
-              y, FB, finished);
+ 
+  V_DrawPatch((SCREENWIDTH - SHORT(finished->width))/2,
+              y, finished);
 }
 
 
@@ -509,8 +515,8 @@ static void WI_drawEL(void)
   int y = WI_TITLEY;
 
   // draw "Entering"
-  V_DrawPatch((ORIGWIDTH - SHORT(entering->width))/2,
-              y, FB, entering);
+  V_DrawPatch((SCREENWIDTH - SHORT(entering->width))/2,
+              y, entering);
 
   // The level defines a new name but no texture for the name
   if (wbs->nextmapinfo && wbs->nextmapinfo->levelname && wbs->nextmapinfo->levelpic[0] == 0)
@@ -532,19 +538,19 @@ static void WI_drawEL(void)
 
     y += (5 * SHORT(lpic->height)) / 4;
 
-    V_DrawPatch((ORIGWIDTH - SHORT(lpic->width))/2,
-               y, FB, lpic);
+    V_DrawPatch((SCREENWIDTH - SHORT(lpic->width))/2,
+               y, lpic);
   }
-  else
   // [FG] prevent crashes for levels without name graphics
-  if (wbs->next >= 0 && wbs->next < num_lnames && lnames[wbs->next] != NULL)
+  else if (wbs->next >= 0 && wbs->next < num_lnames && lnames[wbs->next] != NULL)
   {
   // draw level
   // haleyjd: corrected to use height of entering, not map name
-  y += (5 * SHORT(entering->height)) / 4;
+  if (SHORT(lnames[wbs->next]->height) < SCREENHEIGHT)
+    y += (5 * SHORT(entering->height)) / 4;
 
-  V_DrawPatch((ORIGWIDTH - SHORT(lnames[wbs->next]->width))/2,
-              y, FB, lnames[wbs->next]);
+  V_DrawPatch((SCREENWIDTH - SHORT(lnames[wbs->next]->width))/2,
+              y, lnames[wbs->next]);
   }
 }
 
@@ -586,18 +592,17 @@ WI_drawOnLnode  // draw stuff at a location by episode/map#
 	fits = true;
       else
 	i++;
-    }
-  while (!fits && i!=2);
+    } 
+  while (!fits && c[i]);
 
-  if (fits && i<2)
+  if (fits)
     {
-      V_DrawPatch(lnodes[wbs->epsd][n].x, lnodes[wbs->epsd][n].y,
-                  FB, c[i]);
+      V_DrawPatch(lnodes[wbs->epsd][n].x, lnodes[wbs->epsd][n].y, c[i]);
     }
   else
     {
       // DEBUG
-      I_Printf(VB_WARNING, "Could not place patch on level %d", n+1);
+      I_Printf(VB_DEBUG, "Could not place patch on level %d", n+1);
     }
 }
 
@@ -605,10 +610,10 @@ WI_drawOnLnode  // draw stuff at a location by episode/map#
 // ====================================================================
 // WI_initAnimatedBack
 // Purpose: Initialize pointers and styles for background animation
-// Args:    none
+// Args:    firstcall -- [Woof!] check if animations needs to be reset
 // Returns: void
 //
-static void WI_initAnimatedBack(void)
+static void WI_initAnimatedBack(boolean firstcall)
 {
   int   i;
   anim_t* a;
@@ -629,6 +634,10 @@ static void WI_initAnimatedBack(void)
       a = &anims[wbs->epsd][i];
 
       // init variables
+      // [Woof!] Do not reset animation timers upon switching to "Entering" state
+      // via WI_initShowNextLoc. Fixes notable blinking of Tower of Babel drawing
+      // and the rest of animations from being restarted.
+      if (firstcall)
       a->ctr = -1;
 
       // specify the next time to draw it
@@ -735,7 +744,7 @@ static void WI_drawAnimatedBack(void)
       a = &anims[wbs->epsd][i];
 
       if (a->ctr >= 0)
-        V_DrawPatch(a->loc.x, a->loc.y, FB, a->p[a->ctr]);
+        V_DrawPatch(a->loc.x, a->loc.y, a->p[a->ctr]);
     }
 }
 
@@ -786,20 +795,20 @@ WI_drawNum
     }
 
   // if non-number, do not draw it
-  if (n == 1994)
+  if (n == LARGENUMBER)
     return 0;
 
   // draw the new number
   while (digits--)
     {
       x -= fontwidth;
-      V_DrawPatch(x, y, FB, num[ n % 10 ]);
+      V_DrawPatch(x, y, num[ n % 10 ]);
       n /= 10;
     }
 
   // draw a minus sign if necessary
   if (neg && wiminus)
-    V_DrawPatch(x-=8, y, FB, wiminus);
+    V_DrawPatch(x-=8, y, wiminus);
 
   return x;
 }
@@ -822,7 +831,7 @@ WI_drawPercent
   if (p < 0)
     return;
 
-  V_DrawPatch(x, y, FB, percent);
+  V_DrawPatch(x, y, percent);
   WI_drawNum(x, y, p, -1);
 }
 
@@ -862,9 +871,9 @@ WI_drawTime
 
           // draw
           if (div==60 || t / div)
-            V_DrawPatch(x, y, FB, colon);
-
-        }
+            V_DrawPatch(x, y, colon);
+      
+        } 
       while (t / div && div < 3600);
 
       // [FG] print at most in hhhh:mm:ss format
@@ -876,7 +885,7 @@ WI_drawTime
   else
     {
       // "sucks"
-      V_DrawPatch(x - SHORT(sucks->width), y, FB, sucks);
+      V_DrawPatch(x - SHORT(sucks->width), y, sucks); 
     }
 }
 
@@ -908,7 +917,7 @@ static void WI_unloadData(void)
       Z_ChangeTag(yah[0], PU_CACHE);
       Z_ChangeTag(yah[1], PU_CACHE);
 
-      Z_ChangeTag(splat, PU_CACHE);
+      Z_ChangeTag(splat[0], PU_CACHE);
 
       for (i=0 ; i<NUMMAPS ; i++)
        if (lnames[i])
@@ -1032,7 +1041,7 @@ static void WI_initShowNextLoc(void)
   acceleratestage = 0;
   cnt = SHOWNEXTLOCDELAY * TICRATE;
 
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(false);
 }
 
 
@@ -1094,11 +1103,11 @@ static void WI_drawShowNextLoc(void)
 
       // draw a splat on taken cities.
       for (i=0 ; i<=last ; i++)
-        WI_drawOnLnode(i, &splat);
+        WI_drawOnLnode(i, splat);
 
       // splat the secret level?
       if (wbs->didsecret)
-        WI_drawOnLnode(8, &splat);
+        WI_drawOnLnode(8, splat);
 
       // draw flashing ptr
       if (snl_pointeron)
@@ -1187,7 +1196,7 @@ static void WI_initDeathmatchStats(void)
           dm_totals[i] = 0;
         }
     }
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(true);
 }
 
 
@@ -1324,11 +1333,10 @@ static void WI_drawDeathmatchStats(void)
   // draw stat titles (top line)
   V_DrawPatch(DM_TOTALSX-SHORT(total->width)/2,
               DM_MATRIXY-WI_SPACINGY+10,
-              FB,
               total);
 
-  V_DrawPatch(DM_KILLERSX, DM_KILLERSY, FB, killers);
-  V_DrawPatch(DM_VICTIMSX, DM_VICTIMSY, FB, victims);
+  V_DrawPatch(DM_KILLERSX, DM_KILLERSY, killers);
+  V_DrawPatch(DM_VICTIMSX, DM_VICTIMSY, victims);
 
   // draw P?
   x = DM_MATRIXX + DM_SPACINGX;
@@ -1340,33 +1348,29 @@ static void WI_drawDeathmatchStats(void)
         {
           V_DrawPatch(x-SHORT(p[i]->width)/2,
                       DM_MATRIXY - WI_SPACINGY,
-                      FB,
                       p[i]);
 
           V_DrawPatch(DM_MATRIXX-SHORT(p[i]->width)/2,
                       y,
-                      FB,
                       p[i]);
 
           if (i == me)
             {
               V_DrawPatch(x-SHORT(p[i]->width)/2,
                           DM_MATRIXY - WI_SPACINGY,
-                          FB,
                           bstar);
 
               V_DrawPatch(DM_MATRIXX-SHORT(p[i]->width)/2,
                           y,
-                          FB,
                           star);
             }
         }
       else
         {
           // V_DrawPatch(x-SHORT(bp[i]->width)/2,
-          //   DM_MATRIXY - WI_SPACINGY, FB, bp[i]);
+          //   DM_MATRIXY - WI_SPACINGY, bp[i]);
           // V_DrawPatch(DM_MATRIXX-SHORT(bp[i]->width)/2,
-          //   y, FB, bp[i]);
+          //   y, bp[i]);
         }
       x += DM_SPACINGX;
       y += WI_SPACINGY;
@@ -1433,7 +1437,7 @@ static void WI_initNetgameStats(void)
 
   dofrags = !!dofrags; // set to true or false - did we have frags?
 
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(true);
 }
 
 
@@ -1631,17 +1635,17 @@ static void WI_drawNetgameStats(void)
 
   // draw stat titles (top line)
   V_DrawPatch(NG_STATSX+NG_SPACINGX-SHORT(kills->width),
-              NG_STATSY, FB, kills);
+              NG_STATSY, kills);
 
   V_DrawPatch(NG_STATSX+2*NG_SPACINGX-SHORT(items->width),
-              NG_STATSY, FB, items);
+              NG_STATSY, items);
 
   V_DrawPatch(NG_STATSX+3*NG_SPACINGX-SHORT(secret->width),
-              NG_STATSY, FB, secret);
-
+              NG_STATSY, secret);
+  
   if (dofrags)
     V_DrawPatch(NG_STATSX+4*NG_SPACINGX-SHORT(frags->width),
-                NG_STATSY, FB, frags);
+                NG_STATSY, frags);
 
   // draw stats
   y = NG_STATSY + SHORT(kills->height);
@@ -1652,10 +1656,10 @@ static void WI_drawNetgameStats(void)
         continue;
 
       x = NG_STATSX;
-      V_DrawPatch(x-SHORT(p[i]->width), y, FB, p[i]);
+      V_DrawPatch(x-SHORT(p[i]->width), y, p[i]);
 
       if (i == me)
-        V_DrawPatch(x-SHORT(p[i]->width), y, FB, star);
+        V_DrawPatch(x-SHORT(p[i]->width), y, star);
 
       x += NG_SPACINGX;
       WI_drawPercent(x-pwidth, y+10, cnt_kills[i]); x += NG_SPACINGX;
@@ -1688,7 +1692,7 @@ static void WI_initStats(void)
   cnt_time = cnt_par = cnt_total_time = -1;
   cnt_pause = TICRATE;
 
-  WI_initAnimatedBack();
+  WI_initAnimatedBack(true);
 }
 
 // ====================================================================
@@ -1758,8 +1762,8 @@ static void WI_updateStats(void)
           // killough 2/22/98: Make secrets = 100% if maxsecret = 0:
           // [FG] Intermission screen secrets desync
           // http://prboom.sourceforge.net/mbf-bugs.html
-          if ((!wbs->maxsecret && demo_version < 203) ||
-              cnt_secret[0] >= (wbs->maxsecret ?
+          if ((!wbs->maxsecret && demo_version < DV_MBF) ||
+              cnt_secret[0] >= (wbs->maxsecret ? 
                                 (plrs[me].ssecret * 100) / wbs->maxsecret : 100))
             {
               cnt_secret[0] = (wbs->maxsecret ?
@@ -1792,10 +1796,10 @@ static void WI_updateStats(void)
 
                 // This check affects demo compatibility with PrBoom+
                 if ((cnt_time >= plrs[me].stime / TICRATE) &&
-                    (demo_version < 203 || cnt_total_time >= wbs->totaltimes / TICRATE)
+                    (demo_version < DV_MBF || cnt_total_time >= wbs->totaltimes / TICRATE)
                    )
                   {
-                    if (demo_version < 203)
+                    if (demo_version < DV_MBF)
                       cnt_total_time = wbs->totaltimes / TICRATE;
                     S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
                     sp_state++;
@@ -1847,17 +1851,17 @@ static void WI_drawStats(void)
 
   WI_drawLF();
 
-  V_DrawPatch(SP_STATSX, SP_STATSY, FB, kills);
-  WI_drawPercent(ORIGWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
+  V_DrawPatch(SP_STATSX, SP_STATSY, kills);
+  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
 
-  V_DrawPatch(SP_STATSX, SP_STATSY+lh, FB, items);
-  WI_drawPercent(ORIGWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
+  V_DrawPatch(SP_STATSX, SP_STATSY+lh, items);
+  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
 
-  V_DrawPatch(SP_STATSX, SP_STATSY+2*lh, FB, sp_secret);
-  WI_drawPercent(ORIGWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
+  V_DrawPatch(SP_STATSX, SP_STATSY+2*lh, sp_secret);
+  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
 
-  V_DrawPatch(SP_TIMEX, SP_TIMEY, FB, witime);
-  WI_drawTime(ORIGWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time, true);
+  V_DrawPatch(SP_TIMEX, SP_TIMEY, witime);
+  WI_drawTime(SCREENWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time, true);
 
   // Ty 04/11/98: redid logic: should skip only if with pwad but
   // without deh patch
@@ -1867,17 +1871,17 @@ static void WI_drawStats(void)
   if (W_IsIWADLump(maplump) || deh_pars || um_pars)
     if (wbs->epsd < 3 || um_pars)
       {
-	V_DrawPatch(ORIGWIDTH/2 + SP_TIMEX, SP_TIMEY, FB, par);
-	WI_drawTime(ORIGWIDTH - SP_TIMEX, SP_TIMEY, cnt_par, true);
+	V_DrawPatch(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
+	WI_drawTime(SCREENWIDTH - SP_TIMEX, SP_TIMEY, cnt_par, true);
       }
 
   // [FG] draw total time alongside level time and par time
   {
-    const boolean wide = (wbs->totaltimes / TICRATE > 61*59) || (SP_TIMEX + SHORT(total->width) >= ORIGWIDTH/4);
+    const boolean wide = (wbs->totaltimes / TICRATE > 61*59) || (SP_TIMEX + SHORT(total->width) >= SCREENWIDTH/4);
 
-    V_DrawPatch(SP_TIMEX, SP_TIMEY + 16, FB, total);
+    V_DrawPatch(SP_TIMEX, SP_TIMEY + 16, total);
     // [FG] choose x-position depending on width of time string
-    WI_drawTime((wide ? ORIGWIDTH : ORIGWIDTH/2) - SP_TIMEX, SP_TIMEY + 16, cnt_total_time, false);
+    WI_drawTime((wide ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX, SP_TIMEY + 16, cnt_total_time, false);
   }
 }
 
@@ -1970,8 +1974,8 @@ void WI_Ticker(void)
       patch_t *patch = (0 <= level && level < num_lnames) ? lnames[level] : NULL;
 
       if (patch) {
-        big =    ((ORIGWIDTH  / 2) < SHORT(patch->width))
-              && ((ORIGHEIGHT / 2) < SHORT(patch->height));
+        big =    ((SCREENWIDTH  / 2) < SHORT(patch->width))
+              && ((SCREENHEIGHT / 2) < SHORT(patch->height));
       }
       else { big = false; }
     }
@@ -1993,31 +1997,9 @@ void WI_Ticker(void)
       if (!alt_interpic_on)
       { R_SetViewSize(screenblocks); }
 
-      fovchange = true;
       R_ExecuteSetViewSize();
     }
   }
-}
-
-// killough 11/98:
-// Moved to separate function so that i_video.c could call it
-
-void WI_DrawBackground(void)
-{
-  char  name[32];
-
-  if (state != StatCount && enterpic)
-    strcpy(name, enterpic);
-  else if (exitpic)
-    strcpy(name, exitpic);
-  // with UMAPINFO it is possible that wbs->epsd > 3
-  else if (gamemode == commercial || wbs->epsd >= 3)
-    strcpy(name, "INTERPIC");
-  else
-    sprintf(name, "WIMAP%d", wbs->epsd);
-
-  // background
-  V_DrawPatchFullScreen(1, W_CacheLumpName(name, PU_CACHE));
 }
 
 // ====================================================================
@@ -2070,7 +2052,7 @@ void WI_loadData(void)
                                      PU_STATIC, 0);
       for (i=0 ; i<NUMMAPS ; i++)
         {
-          sprintf(name, "WILV%d%d", wbs->epsd, i);
+          M_snprintf(name, sizeof(name), "WILV%d%d", wbs->epsd, i);
           if (W_CheckNumForName(name) != -1)
           {
           lnames[i] = W_CacheLumpName(name, PU_STATIC);
@@ -2088,8 +2070,8 @@ void WI_loadData(void)
       yah[1] = W_CacheLumpName("WIURH1", PU_STATIC);
 
       // splat
-      splat = W_CacheLumpName("WISPLAT", PU_STATIC);
-
+      splat[0] = W_CacheLumpName("WISPLAT", PU_STATIC); 
+  
       if (wbs->epsd < 3)
         {
           for (j=0;j<NUMANIMS[wbs->epsd];j++)
@@ -2122,7 +2104,7 @@ void WI_loadData(void)
   for (i=0;i<10;i++)
     {
       // numbers 0-9
-      sprintf(name, "WINUM%d", i);
+      M_snprintf(name, sizeof(name), "WINUM%d", i);
       num[i] = W_CacheLumpName(name, PU_STATIC);
     }
 
@@ -2190,11 +2172,11 @@ void WI_loadData(void)
   for (i=0 ; i<MAXPLAYERS ; i++)
     {
       // "1,2,3,4"
-      sprintf(name, "STPB%d", i);
+      M_snprintf(name, sizeof(name), "STPB%d", i);
       p[i] = W_CacheLumpName(name, PU_STATIC);
 
       // "1,2,3,4"
-      sprintf(name, "WIBP%d", i+1);
+      M_snprintf(name, sizeof(name), "WIBP%d", i + 1);
       bp[i] = W_CacheLumpName(name, PU_STATIC);
     }
 }

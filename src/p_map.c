@@ -18,25 +18,36 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <stdlib.h>
+
+#include "d_player.h"
+#include "doomdata.h"
+#include "doomdef.h"
 #include "doomstat.h"
+#include "hu_obituary.h"
 #include "i_printf.h"
-#include "r_main.h"
-#include "p_mobj.h"
-#include "p_maputl.h"
+#include "i_system.h"
+#include "info.h"
+#include "m_argv.h"
+#include "m_bbox.h"
+#include "m_misc.h"
+#include "m_random.h"
+#include "p_inter.h"
 #include "p_map.h"
+#include "p_maputl.h"
+#include "p_mobj.h"
 #include "p_setup.h"
 #include "p_spec.h"
+#include "r_defs.h"
+#include "r_main.h"
+#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "p_inter.h"
-#include "m_random.h"
-#include "m_bbox.h"
 #include "v_video.h"
-#include "m_argv.h"
-#include "m_misc2.h"
+#include "z_zone.h"
+
 // [Nugget]
 #include "p_tick.h"
-#include "r_main.h"
 
 static mobj_t    *tmthing;
 static int       tmflags;
@@ -140,8 +151,8 @@ int P_GetFriction(const mobj_t *mo, int *frictionfactor)
   // floorheight that have different frictions, use the lowest
   // friction value (muddy has precedence over icy).
 
-  if (!(mo->flags & (MF_NOCLIP|MF_NOGRAVITY))
-      && (demo_version >= 203 || (mo->player && !compatibility)) &&
+  if (!(mo->flags & (MF_NOCLIP|MF_NOGRAVITY)) 
+      && (demo_version >= DV_MBF || (mo->player && !compatibility)) &&
       variable_friction)
     for (m = mo->touching_sectorlist; m; m = m->m_tnext)
       if ((sec = m->m_sector)->special & FRICTION_MASK &&
@@ -149,7 +160,7 @@ int P_GetFriction(const mobj_t *mo, int *frictionfactor)
 	  (mo->z <= sec->floorheight ||
 	   (sec->heightsec != -1 &&
 	    mo->z <= sectors[sec->heightsec].floorheight &&
-	    demo_version >= 203)))
+	    demo_version >= DV_MBF)))
 	friction = sec->friction, movefactor = sec->movefactor;
 
   if (frictionfactor)
@@ -170,7 +181,7 @@ int P_GetMoveFactor(const mobj_t *mo, int *frictionp)
 
   // Restore original Boom friction code for
   // demo compatibility
-  if (demo_version < 203)
+  if (demo_version < DV_MBF)
   {
     int momentum;
 
@@ -247,8 +258,8 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, boolean boss)
   subsector_t *newsubsec;
 
   // killough 8/9/98: make telefragging more consistent, preserve compatibility
-  telefrag = thing->player ||
-    (comp[comp_telefrag] || demo_version < 203 ? gamemap==30 : boss);
+  telefrag = thing->player || 
+    (comp[comp_telefrag] || demo_version < DV_MBF ? gamemap==30 : boss);
 
   // kill anything occupying the position
 
@@ -494,6 +505,12 @@ static boolean P_ProjectileImmune(mobj_t *target, mobj_t *source)
     );
 }
 
+// [FG] mobj or actual sprite height
+static const inline fixed_t thingheight (const mobj_t *const thing, const mobj_t *const cond)
+{
+  return thing->height; // [Nugget] Removed `actualheight`
+}
+
 // [Nugget] Over/Under /------------------------------------------------------
 
 // Potential over/under mobjs
@@ -656,11 +673,9 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   if (tmthing->flags & MF_MISSILE || (tmthing->flags & MF_BOUNCES &&
 				      !(tmthing->flags & MF_SOLID)))
     {
-      // [Nugget] Removed `actualheight`
-
       // see if it went over / under
 
-      if (tmthing->z > thing->z + thing->height)
+      if (tmthing->z > thing->z + thingheight(thing, tmthing->target))
 	return true;    // overhead
 
       if (tmthing->z+tmthing->height < thing->z)
@@ -855,7 +870,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
   // Whether object can get out of a sticky situation:
   tmunstuck = thing->player &&          // only players
     thing->player->mo == thing &&       // not voodoo dolls
-    demo_version >= 203;                // not under old demos
+    demo_version >= DV_MBF;             // not under old demos
 
   // The base floor / ceiling is from the subsector
   // that contains the point.
@@ -979,7 +994,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean dropoff)
 			   (tmfloorz-tmdropoffz > 128*FRACUNIT ||
 			    !thing->target || thing->target->z >tmdropoffz)))
 	    {
-	      if (!monkeys || demo_version < 203 ?
+	      if (!monkeys || demo_version < DV_MBF ?
 		  tmfloorz - tmdropoffz > 24*FRACUNIT :
 		  thing->floorz  - tmfloorz > 24*FRACUNIT ||
 		  thing->dropoffz - tmdropoffz > 24*FRACUNIT)
@@ -1277,7 +1292,7 @@ static void P_HitSlideLine(line_t *ld)
 
   // killough 10/98: only bounce if hit hard (prevents wobbling)
 
-  if (demo_version >= 203)
+  if (demo_version >= DV_MBF)
   {
   icyfloor =
      P_AproxDistance(tmxmove, tmymove) > 4*FRACUNIT &&
@@ -1488,7 +1503,7 @@ void P_SlideMove(mobj_t *mo)
 	    if (!P_TryMove(mo, mo->x + mo->momx, mo->y, true))
 	      // [FG] Compatibility bug in P_SlideMove
 	      // http://prboom.sourceforge.net/mbf-bugs.html
-	      if (demo_version == 201)
+	      if (demo_version == DV_BOOM201)
 		mo->momx = mo->momy = 0;
 
 	  break;
@@ -1627,7 +1642,7 @@ static boolean PTR_AimTraverse (intercept_t *in)
   // check angles to see if the thing can be aimed at
 
   dist = FixedMul(attackrange, in->frac);
-  thingtopslope = FixedDiv(th->z+th->height - shootz , dist);
+  thingtopslope = FixedDiv(th->z+thingheight(th, shootthing) - shootz , dist);
 
   if (thingtopslope < bottomslope)
     return true;    // shot over the thing
@@ -1776,8 +1791,7 @@ static boolean PTR_ShootTraverse(intercept_t *in)
   // check angles to see if the thing can be aimed at
 
   dist = FixedMul (attackrange, in->frac);
-  // [Nugget] Removed `actualheight`
-  thingtopslope = FixedDiv (th->z+th->height - shootz , dist);
+  thingtopslope = FixedDiv (th->z+thingheight(th, shootthing) - shootz , dist);
 
   if (thingtopslope < aimslope)
     return true;  // shot over the thing
@@ -1835,21 +1849,22 @@ fixed_t P_AimLineAttack(mobj_t *t1,angle_t angle,fixed_t distance,int mask)
 
   // can't shoot outside view angles
 
-  if (t1->player && vertical_aiming == VERTAIM_DIRECT) // [Nugget] Vertical aiming
+  if (t1->player && (vertical_aiming == VERTAIM_DIRECT) && (mask & CROSSHAIR_AIM)) // [Nugget] Vertical aiming
   {
-    bottomslope = (topslope = t1->player->slope + 1) - 2;
+    topslope = t1->player->slope + 1;
+    bottomslope = t1->player->slope - 1;
   }
   else
   {
-  topslope = 100*FRACUNIT/160;
-  bottomslope = -100*FRACUNIT/160;
+    topslope = 100*FRACUNIT/160;
+    bottomslope = -100*FRACUNIT/160;
   }
 
   attackrange = distance;
   linetarget = NULL;
 
   // killough 8/2/98: prevent friends from aiming at friends
-  aim_flags_mask = mask;
+  aim_flags_mask = mask & MF_FRIEND;
 
   P_PathTraverse(t1->x,t1->y,x2,y2,PT_ADDLINES|PT_ADDTHINGS,PTR_AimTraverse);
 
@@ -1958,6 +1973,103 @@ void P_UseLines(player_t *player)
   if (P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_UseTraverse))
     if (!P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_NoWayTraverse))
       S_StartSound (usething, sfx_noway);
+}
+
+/*
+==============
+=
+= PTR_SightTraverse
+=
+==============
+*/
+
+static fixed_t sightzstart;            // eye z of looker
+
+boolean PTR_SightTraverse(intercept_t *in)
+{
+  line_t *li;
+  fixed_t slope;
+
+  li = in->d.line;
+
+  //
+  // crosses a two sided line
+  //
+  P_LineOpening(li);
+
+  if (openbottom >= opentop)  // quick test for totally closed doors
+    return false;  // stop
+
+  if (li->frontsector->floorheight != li->backsector->floorheight)
+  {
+    slope = FixedDiv(openbottom - sightzstart , in->frac);
+    if (slope > bottomslope)
+      bottomslope = slope;
+  }
+
+  if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
+  {
+    slope = FixedDiv(opentop - sightzstart, in->frac);
+    if (slope < topslope)
+      topslope = slope;
+  }
+
+  if (topslope <= bottomslope)
+    return false;  // stop
+
+  return true;  // keep going
+}
+
+// This is the P_CheckSight() implementation in Doom 1.2,
+// taken from the Heretic source code.
+//
+// Copyright(C) 1993-1996 Id Software, Inc.
+// Copyright(C) 1993-2008 Raven Software
+//
+// p_map.c:PTR_SightTraverse()
+// p_map.c:P_CheckSight_12()
+// p_maputl.c:P_SightBlockLinesIterator()
+// p_maputl.c:P_SightTraverseIntercepts()
+// p_maputl.c:P_SightPathTraverse()
+
+/*
+=====================
+=
+= P_CheckSight
+=
+= Returns true if a straight line between t1 and t2 is unobstructed
+= look from eyes of t1 to any part of t2
+=
+=====================
+*/
+
+boolean P_CheckSight_12(mobj_t *t1, mobj_t *t2)
+{
+  int s1, s2;
+  int pnum, bytenum, bitnum;
+
+  //
+  // check for trivial rejection
+  //
+  s1 = (t1->subsector->sector - sectors);
+  s2 = (t2->subsector->sector - sectors);
+  pnum = s1*numsectors + s2;
+  bytenum = pnum>>3;
+  bitnum = 1 << (pnum&7);
+
+  if (rejectmatrix[bytenum]&bitnum)
+  {
+    return false;    // can't possibly be connected
+  }
+
+  //
+  // check precisely
+  //
+  sightzstart = t1->z + t1->height - (t1->height>>2);
+  topslope = (t2->z+t2->height) - sightzstart;
+  bottomslope = (t2->z) - sightzstart;
+
+  return P_SightPathTraverse (t1->x, t1->y, t2->x, t2->y);
 }
 
 // [Nugget] Chasecam stuff /--------------------------------------------------
@@ -2279,7 +2391,7 @@ boolean P_CheckSector(sector_t *sector,boolean crunch)
   msecnode_t *n;
 
   // killough 10/98: sometimes use Doom's method
-  if (comp[comp_floors] && (demo_version >= 203 || demo_compatibility))
+  if (comp[comp_floors] && (demo_version >= DV_MBF || demo_compatibility))
     return P_ChangeSector(sector,crunch);
 
   nofit = false;

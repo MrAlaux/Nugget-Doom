@@ -25,10 +25,11 @@
 //
 
 enum {
-  wipe_None,        // [Nugget] No wipe, just a dummy
+  wipe_None,
   wipe_Melt,        // weird screen melt
-  wipe_ColorXForm,  // simple gradual pixel change for 8-bit only
-  wipe_Fade,        // [Nugget] Fade to and from black
+  wipe_ColorXForm,
+  wipe_Fizzle,
+  wipe_Fade,        // [Nugget] Black fade
   wipe_NUMWIPES
 };
 

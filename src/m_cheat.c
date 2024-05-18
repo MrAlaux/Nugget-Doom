@@ -17,27 +17,41 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "am_map.h"
+#include "d_deh.h" // Ty 03/27/98 - externalized strings
+#include "d_event.h"
+#include "d_player.h"
+#include "d_think.h"
+#include "doomdata.h"
+#include "doomdef.h"
 #include "doomstat.h"
-#include "p_tick.h"
 #include "g_game.h"
-#include "r_data.h"
+#include "info.h"
+#include "m_cheat.h"
+#include "m_fixed.h"
+#include "m_input.h"
+#include "m_misc.h"
 #include "p_inter.h"
 #include "p_map.h"
-#include "m_cheat.h"
-#include "m_argv.h"
+#include "p_mobj.h"
+#include "p_pspr.h"
+#include "p_spec.h" // SPECHITS
+#include "p_tick.h"
+#include "r_defs.h"
+#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "dstrings.h"
-#include "d_deh.h"  // Ty 03/27/98 - externalized strings
+#include "tables.h"
 #include "u_mapinfo.h"
 #include "w_wad.h"
-#include "m_misc2.h"
-#include "p_spec.h" // SPECHITS
-#include "d_main.h"
-#include "m_input.h"
-#include "am_map.h"
 
 #define plyr (players+consoleplayer)     /* the console player */
+
+//#define NUGMAGIC // [Nugget]
 
 //-----------------------------------------------------------------------------
 //
@@ -123,6 +137,10 @@ static void cheat_summonr();
 static int spawneetype = -1;
 static boolean spawneefriend;
 
+static void cheat_reveal_key();
+static void cheat_reveal_keyx();
+static void cheat_reveal_keyxx(int key);
+
 static void cheat_linetarget(); // Give info on the current linetarget
 static void cheat_mdk();        // Inspired by ZDoom's console command
 static void cheat_saitama();    // MDK Fist
@@ -134,6 +152,10 @@ static void cheat_cheese();     // cheese :)
 
 boolean idgaf;
 static void cheat_idgaf();
+
+#ifdef NUGMAGIC
+static void cheat_magic();
+#endif
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -370,18 +392,35 @@ struct cheat_s cheat[] = {
   {"nextmap",    NULL, not_net | not_demo, {cheat_normalexit}     },
   {"nextsecret", NULL, not_net | not_demo, {cheat_secretexit}     },
   {"turbo",      NULL, not_net | not_demo, {cheat_turbo},      -3 },
+
   {"summon",     NULL, not_net | not_demo, {cheat_summon}         }, // Summon "Menu"
   {"summone",    NULL, not_net | not_demo, {cheat_summone0}       }, // Summon Enemy "Menu"
   {"summone",    NULL, not_net | not_demo, {cheat_summone},    -3 }, // Summon a hostile mobj
   {"summonf",    NULL, not_net | not_demo, {cheat_summonf0}       }, // Summon Friend "Menu"
   {"summonf",    NULL, not_net | not_demo, {cheat_summonf},    -3 }, // Summon a friendly mobj
   {"summonr",    NULL, not_net | not_demo, {cheat_summonr}        }, // Repeat last summon
+
+  {"iddf",       NULL, not_net | not_demo, {cheat_reveal_key}      },
+  {"iddfb",      NULL, not_net | not_demo, {cheat_reveal_keyx}     },
+  {"iddfy",      NULL, not_net | not_demo, {cheat_reveal_keyx}     },
+  {"iddfr",      NULL, not_net | not_demo, {cheat_reveal_keyx}     },
+  {"iddfbc",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 0 },
+  {"iddfyc",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 2 },
+  {"iddfrc",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 1 },
+  {"iddfbs",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 5 },
+  {"iddfys",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 3 },
+  {"iddfrs",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 4 },
+
   {"linetarget", NULL, not_net | not_demo, {cheat_linetarget}     }, // Give info on the current linetarget
   {"mdk",        NULL, not_net | not_demo, {cheat_mdk}            },
   {"saitama",    NULL, not_net | not_demo, {cheat_saitama}        }, // MDK Fist
   {"boomcan",    NULL, not_net | not_demo, {cheat_boomcan}        }, // Explosive hitscan
   {"cheese",     NULL, not_net | not_demo, {cheat_cheese}         }, // cheese :)
   {"idgaf",      NULL, not_net | not_demo, {cheat_idgaf}          },
+
+  #ifdef NUGMAGIC
+  {"ggg", NULL, 0, {cheat_magic}},
+  #endif
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -390,7 +429,17 @@ struct cheat_s cheat[] = {
 
 //-----------------------------------------------------------------------------
 
+extern int init_thinkers_count; // [Nugget]
+
 // [Nugget] /-----------------------------------------------------------------
+
+#ifdef NUGMAGIC
+static void cheat_magic()
+{
+  // For debugging
+  displaymsg("DM %s", (deathmatch = !deathmatch) ? "ON" : "OFF");
+}
+#endif
 
 static void cheat_nomomentum()
 {
@@ -401,6 +450,8 @@ static void cheat_nomomentum()
 // Emulates demo and/or net play state, for debugging
 static void cheat_fauxdemo()
 {
+  extern void D_NuggetUpdateCasual(void);
+
   fauxdemo = !fauxdemo;
   D_NuggetUpdateCasual();
 
@@ -505,8 +556,6 @@ static void cheat_secretexit()
 static void cheat_turbo(char *buf)
 {
   int scale = 200;
-  extern int forwardmove[2];
-  extern int sidemove[2];
 
   if (!isdigit(buf[0]) || !isdigit(buf[1]) || !isdigit(buf[2]))
   {
@@ -521,10 +570,10 @@ static void cheat_turbo(char *buf)
   scale = BETWEEN(10, 255, scale);
 
   displaymsg("Turbo Scale: %i%%", scale);
-  forwardmove[0] = 25 * scale / 100;
-  forwardmove[1] = 50 * scale / 100;
-     sidemove[0] = 20 * scale / 100;
-     sidemove[1] = 40 * scale / 100;
+  forwardmove[0] = 0x19 * scale / 100;
+  forwardmove[1] = 0x32 * scale / 100;
+     sidemove[0] = 0x18 * scale / 100;
+     sidemove[1] = 0x28 * scale / 100;
 }
 
 static void cheat_summon()
@@ -569,36 +618,43 @@ static void SummonMobj(boolean friendly)
 {
   fixed_t x, y, z;
   mobj_t *spawnee;
-  
+
+  extern void AM_Coordinates(const mobj_t *, fixed_t *, fixed_t *, fixed_t *);
+
   if (spawneetype == -1) {
     displaymsg("You must summon a mobj first!");
     return;
   }
-  
+
   spawneefriend = friendly;
 
   P_MapStart();
-  
-  x = plyr->mo->x + FixedMul((64*FRACUNIT) + mobjinfo[spawneetype].radius,
-                             finecosine[plyr->mo->angle >> ANGLETOFINESHIFT]);
-                 
-  y = plyr->mo->y + FixedMul((64*FRACUNIT) + mobjinfo[spawneetype].radius,
-                             finesine[plyr->mo->angle >> ANGLETOFINESHIFT]);
-                 
-  z = plyr->mo->z + 32*FRACUNIT;
+
+  if (automapactive == AM_FULL && !followplayer)
+  {
+    const int oldcoords = map_point_coordinates;
+
+    map_point_coordinates = true;
+    AM_Coordinates(plyr->mo, &x, &y, &z);
+
+    map_point_coordinates = oldcoords;
+  }
+  else {
+    x = plyr->mo->x + FixedMul((64*FRACUNIT) + mobjinfo[spawneetype].radius,
+                               finecosine[plyr->mo->angle >> ANGLETOFINESHIFT]);
+
+    y = plyr->mo->y + FixedMul((64*FRACUNIT) + mobjinfo[spawneetype].radius,
+                               finesine[plyr->mo->angle >> ANGLETOFINESHIFT]);
+
+    z = plyr->mo->z + 32*FRACUNIT;
+  }
 
   spawnee = P_SpawnMobj(x, y, z, spawneetype);
-  
+
   spawnee->angle = plyr->mo->angle;
-  
-  if (spawneefriend)
-  { spawnee->flags |= MF_FRIEND; }
-  else {
-    spawnee->intflags |= MIF_EXTRASPAWNED;
-    if ((spawnee->flags & MF_COUNTKILL) && !(spawnee->flags & MF_FRIEND))
-    { extraspawns++; }
-  }
-  
+
+  if (spawneefriend) { spawnee->flags |= MF_FRIEND; }
+
   P_MapEnd();
 
   displaymsg("Mobj summoned! (%s - Type = %i)",
@@ -632,6 +688,66 @@ static void cheat_summonf(char *buf)
 static void cheat_summonr()
 {
   SummonMobj(spawneefriend);
+}
+
+static void cheat_reveal_key()
+{
+  if (automapactive != AM_FULL) { return; }
+
+  displaymsg("Key Finder: Red, Yellow or Blue?");
+}
+
+static void cheat_reveal_keyx()
+{
+  if (automapactive != AM_FULL) { return; }
+
+  displaymsg("Key Finder: Card or Skull?");
+}
+
+static void cheat_reveal_keyxx(int key)
+{
+  if (automapactive != AM_FULL) { return; }
+
+  static int last_count;
+  static mobj_t *last_mobj;
+
+  // If the thinkers have been wiped, addresses are invalid
+  if (last_count != init_thinkers_count)
+  {
+    last_count = init_thinkers_count;
+    last_mobj = NULL;
+  }
+
+  thinker_t *th, *start_th;
+
+  if (last_mobj)
+  { th = &(last_mobj->thinker); }
+  else
+  { th = &thinkercap; }
+
+  start_th = th;
+
+  boolean found = false;
+
+  do {
+    th = th->next;
+
+    if (th->function.p1 == (actionf_p1) P_MobjThinker)
+    {
+      mobj_t *mobj = (mobj_t *) th;
+
+      if (mobj->type == MT_MISC4 + key)
+      {
+        found = true;
+        followplayer = false;
+        AM_SetMapCenter(mobj->x, mobj->y);
+        P_SetTarget(&last_mobj, mobj);
+        break;
+      }
+    }
+  } while (th != start_th);
+
+  if (!found) { displaymsg("Key Finder: key not found"); }
 }
 
 // Give info on the current `linetarget`
@@ -802,6 +918,11 @@ static void cheat_god()
     P_SpawnMobj(plyr->mo->x+20*finecosine[an], plyr->mo->y+20*finesine[an], plyr->mo->z, MT_TFOG);
     S_StartSound(plyr->mo, sfx_slop);
     P_MapEnd();
+
+    // Fix reviving as "zombie" if god mode was already enabled
+    if (plyr->mo)
+      plyr->mo->health = god_health;  // Ty 03/09/98 - deh
+    plyr->health = god_health;
   }
 
   plyr->cheats ^= CF_GODMODE;
@@ -989,7 +1110,6 @@ static void cheat_clev0()
 {
   int epsd, map;
   char *cur, *next;
-  extern int G_GotoNextLevel(int *e, int *m);
 
   cur = M_StringDuplicate(MAPNAME(gameepisode, gamemap));
 
@@ -1068,7 +1188,6 @@ static void cheat_clev(char *buf)
 // killough 2/7/98: simplified using dprintf and made output more user-friendly
 static void cheat_mypos()
 {
-  plyr->cheats &= ~CF_RENDERSTATS;
   plyr->cheats ^= CF_MAPCOORDS;
   if ((plyr->cheats & CF_MAPCOORDS) == 0)
     plyr->message = "";
@@ -1150,7 +1269,6 @@ static void cheat_tran()
 {
   displaymsg(            // Ty 03/27/98 - *not* externalized
     (translucency = !translucency) ? "Translucency enabled" : "Translucency disabled");
-  D_SetPredefinedTranslucency();
 }
 
 static void cheat_massacre()    // jff 2/01/98 kill all monsters
@@ -1400,7 +1518,7 @@ static void cheat_reveal_secret()
 static void cheat_cycle_mobj(mobj_t **last_mobj, int *last_count,
                              int flags, int alive)
 {
-  extern int init_thinkers_count;
+  // [Nugget] Moved `extern init_thinkers_count` to global scope
   thinker_t *th, *start_th;
 
   // If the thinkers have been wiped, addresses are invalid
@@ -1578,10 +1696,7 @@ static void cheat_nuke()
 
 static void cheat_rate()
 {
-  plyr->cheats &= ~CF_MAPCOORDS;
   plyr->cheats ^= CF_RENDERSTATS;
-  if ((plyr->cheats & CF_RENDERSTATS) == 0)
-    plyr->message = "";
 }
 
 //-----------------------------------------------------------------------------
@@ -1613,13 +1728,13 @@ boolean M_FindCheats(int key)
 
   if (argsleft)
     {
-      *arg++ = tolower(key);             // store key in arg buffer
+      *arg++ = M_ToLower(key);             // store key in arg buffer
       if (!--argsleft)                   // if last key in arg list,
         cheat[cht].func.s(argbuf);       // process the arg buffer
       return 1;                          // affirmative response
     }
 
-  key = tolower(key) - 'a';
+  key = M_ToLower(key) - 'a';
   if (key < 0 || key >= 32)              // ignore most non-alpha cheat letters
     {
       sr = 0;        // clear shift register
@@ -1635,7 +1750,7 @@ boolean M_FindCheats(int key)
           const char *p; // [FG] char!
           for (p=cheat[i].cheat; *p; p++)
             {
-              unsigned key = tolower(*p)-'a';  // convert to 0-31
+              unsigned key = M_ToLower(*p)-'a';  // convert to 0-31
               if (key >= 32)            // ignore most non-alpha cheat letters
                 continue;
               c = (c<<5) + key;         // shift key into code
@@ -1697,6 +1812,7 @@ static const struct {
   { input_freeze,    not_net|not_demo, {cheat_freeze},   0 },
   { input_avj,       not_net|not_demo, {cheat_avj},      0 },
   // [Nugget] ----------------------------------------------------------------
+  { input_idbeholda,  not_net|not_demo, {cheat_pw},         pw_allmap },
   { input_infammo,    not_net|not_demo, {cheat_infammo},    0 },
   { input_fastweaps,  not_net|not_demo, {cheat_fastweaps},  0 },
   { input_resurrect,  not_net|not_demo, {cheat_resurrect},  0 },
@@ -1711,9 +1827,6 @@ static const struct {
 boolean M_CheatResponder(event_t *ev)
 {
   int i;
-
-  if (strictmode)
-    return false;
 
   if (ev->type == ev_keydown && M_FindCheats(ev->data1))
     return true;

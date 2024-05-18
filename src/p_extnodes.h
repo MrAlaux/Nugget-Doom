@@ -14,13 +14,17 @@
 //  GNU General Public License for more details.
 //
 // DESCRIPTION:
-//      support maps with NODES in uncompressed XNOD/XGLN or compressed ZNOD/ZGLN formats, or DeePBSP format
+//      support maps with NODES in uncompressed XNOD/XGLN or compressed
+//      ZNOD/ZGLN formats, or DeePBSP format
 //
 //-----------------------------------------------------------------------------
 
-
 #ifndef __P_EXTNODES__
 #define __P_EXTNODES__
+
+#include "doomtype.h"
+
+struct vertex_s;
 
 typedef enum
 {
@@ -39,7 +43,7 @@ typedef enum
 } mapformat_t;
 
 extern mapformat_t P_CheckMapFormat(int lumpnum);
-extern fixed_t P_GetOffset(vertex_t *v1, vertex_t *v2);
+extern int P_GetOffset(struct vertex_s *v1, struct vertex_s *v2);
 
 extern void P_LoadSegs_DEEP(int lump);
 extern void P_LoadSubsectors_DEEP(int lump);

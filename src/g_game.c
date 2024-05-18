@@ -16,49 +16,74 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <time.h>
-#include <stdarg.h>
 #include <errno.h>
+#include <math.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include "m_io.h" // haleyjd
-
-#include "doomstat.h"
-#include "i_printf.h"
-#include "doomkeys.h"
-#include "f_finale.h"
-#include "m_argv.h"
-#include "m_misc.h"
-#include "m_menu.h"
-#include "m_random.h"
-#include "p_setup.h"
-#include "p_saveg.h"
-#include "p_tick.h"
-#include "d_main.h"
-#include "wi_stuff.h"
-#include "hu_stuff.h"
-#include "st_stuff.h"
 #include "am_map.h"
-#include "w_wad.h"
-#include "r_main.h"
-#include "r_draw.h"
-#include "p_map.h"
-#include "s_sound.h"
-#include "s_musinfo.h"
-#include "dstrings.h"
-#include "sounds.h"
-#include "r_data.h"
-#include "r_sky.h"
-#include "d_deh.h"              // Ty 3/27/98 deh declarations
-#include "p_inter.h"
+#include "config.h"
+#include "d_deh.h" // Ty 3/27/98 deh declarations
+#include "d_event.h"
+#include "d_main.h"
+#include "d_player.h"
+#include "d_ticcmd.h"
+#include "doomdata.h"
+#include "doomkeys.h"
+#include "doomstat.h"
+#include "f_finale.h"
 #include "g_game.h"
-#include "i_video.h" // [FG] MAX_JSB, MAX_MB
-#include "statdump.h" // [FG] StatCopy()
-#include "m_misc2.h"
-#include "u_mapinfo.h"
+#include "hu_obituary.h"
+#include "hu_stuff.h"
+#include "i_gamepad.h"
+#include "i_input.h"
+#include "i_printf.h"
+#include "i_system.h"
+#include "i_timer.h"
+#include "i_video.h"
+#include "info.h"
+#include "m_argv.h"
+#include "m_array.h"
+#include "m_config.h"
 #include "m_input.h"
-#include "memio.h"
-#include "m_snapshot.h"
+#include "m_io.h"
+#include "mn_menu.h"
+#include "m_misc.h"
+#include "m_random.h"
+#include "mn_setup.h"
+#include "mn_snapshot.h"
 #include "m_swap.h" // [FG] LONG
+#include "memio.h"
+#include "net_defs.h"
+#include "p_inter.h"
+#include "p_map.h"
+#include "p_mobj.h"
+#include "p_pspr.h"
+#include "p_saveg.h"
+#include "p_setup.h"
+#include "p_tick.h"
+#include "r_data.h"
+#include "r_defs.h"
+#include "r_draw.h"
+#include "r_main.h"
+#include "r_sky.h"
+#include "r_state.h"
+#include "s_musinfo.h"
+#include "s_sound.h"
+#include "sounds.h"
+#include "st_stuff.h"
+#include "statdump.h" // [FG] StatCopy()
+#include "tables.h"
+#include "u_mapinfo.h"
+#include "v_video.h"
+#include "version.h"
+#include "w_wad.h"
+#include "wi_stuff.h"
+#include "z_zone.h"
 
 #define SAVEGAMESIZE  0x20000
 #define SAVESTRINGSIZE  24
@@ -120,6 +145,7 @@ int             starttime;     // for comparative timing purposes
 boolean         viewactive;
 int             deathmatch;    // only if started as net death
 boolean         netgame;       // only true if packets are broadcast
+boolean         solonet;
 boolean         playeringame[MAXPLAYERS];
 player_t        players[MAXPLAYERS];
 int             consoleplayer; // player taking events and displaying
@@ -128,12 +154,12 @@ int             gametic;
 int             levelstarttic; // gametic at level start
 int             basetic;       // killough 9/29/98: for demo sync
 int             totalkills, totalitems, totalsecret;    // for intermission
-int             extraspawns;   // [Nugget]: [crispy] count spawned monsters
-int             extrakills;    // [Nugget]: [So Doom] count deaths of resurrected and (re)spawned monsters
+int             max_kill_requirement; // DSDA UV Max category requirements
 milestone_t     complete_milestones; // [Nugget]
 int             totalleveltimes; // [FG] total time for all completed levels
 boolean         demorecording;
 boolean         longtics;             // cph's doom 1.91 longtics hack
+boolean         shorttics;            // Config key for low resolution turning.
 boolean         lowres_turn;          // low resolution turning for longtics
 boolean         demoplayback;
 boolean         singledemo;           // quit after playing a demo from cmdline
@@ -142,17 +168,19 @@ wbstartstruct_t wminfo;               // parms for world map / intermission
 boolean         haswolflevels = false;// jff 4/18/98 wolf levels present
 byte            *savebuffer;
 int             autorun = false;      // always running?          // phares
+boolean         autostrafe50;
 int             novert = false;
 boolean         mouselook = false;
 boolean         padlook = false;
 // killough 4/13/98: Make clock rate adjustable by scale factor
 int             realtic_clock_rate = 100;
 
-int             default_complevel;
+complevel_t     force_complevel, default_complevel;
 
 boolean         pistolstart, default_pistolstart;
 
 boolean         strictmode, default_strictmode;
+boolean         force_strictmode;
 boolean         critical;
 
 boolean         minimap_was_on = false; // [Nugget] Minimap: keep it when advancing through levels
@@ -176,42 +204,40 @@ int     mouse_y_invert;
 #define QUICKREVERSE 32768 // 180 degree reverse                    // phares
 #define NUMKEYS   256
 
-fixed_t forwardmove[2] = {0x19, 0x32};
-fixed_t sidemove[2]    = {0x18, 0x28};
+static fixed_t default_forwardmove[2] = {0x19, 0x32};
+static fixed_t default_sidemove[2] = {0x18, 0x28};
+fixed_t *forwardmove = default_forwardmove;
+fixed_t *sidemove = default_sidemove;
 fixed_t angleturn[3]   = {640, 1280, 320};  // + slow turn
-
-static fixed_t lookspeed[] = {160, 320};
 
 boolean gamekeydown[NUMKEYS];
 int     turnheld;       // for accelerative turning
 
-boolean mousearray[MAX_MB+1]; // [FG] support more mouse buttons
+boolean mousearray[NUM_MOUSE_BUTTONS + 1]; // [FG] support more mouse buttons
 boolean *mousebuttons = &mousearray[1];    // allow [-1]
 
 // mouse values are used once
-int   mousex;
-int   mousey;
-int   mousex2;
-int   mousey2;
+static int mousex;
+static int mousey;
 boolean dclick;
 
-boolean joyarray[MAX_JSB+1]; // [FG] support more joystick buttons
+typedef struct carry_s
+{
+    double angle;
+    double pitch;
+    double side;
+    double vert;
+    short lowres;
+} carry_t;
+
+static carry_t prevcarry;
+static carry_t carry;
+static ticcmd_t basecmd;
+
+boolean joyarray[NUM_CONTROLLER_BUTTONS + 1]; // [FG] support more joystick buttons
 boolean *joybuttons = &joyarray[1];    // allow [-1]
 
-int axis_forward;
-int axis_strafe;
-int axis_turn;
-int axis_look;
-int axis_turn_sens;
-int axis_move_sens;
-int axis_look_sens;
 static const int direction[] = { 1, -1 };
-boolean invert_turn;
-boolean invert_forward;
-boolean invert_strafe;
-boolean invert_look;
-boolean analog_controls;
-int controller_axes[NUM_AXES];
 
 int   savegameslot = -1;
 char  savedescription[32];
@@ -305,7 +331,7 @@ static int G_NextWeapon(int direction)
 
     if (i == arrlen(weapon_order_table))
     {
-        return wp_nochange;
+        I_Error("G_NextWeapon: Invalid weapon type %d", (int)weapon);
     }
 
     // Switch weapon. Don't loop forever.
@@ -372,10 +398,211 @@ static void G_DemoSkipTics(void)
 
     if (playback_skiptics < curtic)
     {
+      playback_skiptics = 0;
       G_EnableWarp(false);
       S_RestartMusic();
-      playback_skiptics = 0;
     }
+  }
+}
+
+static int RoundSide_Strict(double side)
+{
+  return lround(side * 0.5) * 2; // Even values only.
+}
+
+static int RoundSide_Full(double side)
+{
+  return lround(side);
+}
+
+static int (*RoundSide)(double side) = RoundSide_Full;
+
+void G_UpdateSideMove(void)
+{
+  if (strictmode || (netgame && !solonet))
+  {
+    RoundSide = RoundSide_Strict;
+    sidemove = default_sidemove;
+  }
+  else
+  {
+    RoundSide = RoundSide_Full;
+    sidemove = autostrafe50 ? default_forwardmove : default_sidemove;
+  }
+}
+
+static int CalcControllerForward(int speed)
+{
+  const int forward = lroundf(forwardmove[speed] * axes[AXIS_FORWARD] *
+                              direction[joy_invert_forward]);
+  return BETWEEN(-forwardmove[speed], forwardmove[speed], forward);
+}
+
+static int CalcControllerSideTurn(int speed)
+{
+  const int side = RoundSide(forwardmove[speed] * axes[AXIS_TURN] *
+                             direction[joy_invert_turn]);
+  return BETWEEN(-forwardmove[speed], forwardmove[speed], side);
+}
+
+static int CalcControllerSideStrafe(int speed)
+{
+  const int side = RoundSide(forwardmove[speed] * axes[AXIS_STRAFE] *
+                             direction[joy_invert_strafe]);
+  return BETWEEN(-sidemove[speed], sidemove[speed], side);
+}
+
+static double CalcControllerAngle(void)
+{
+  return (angleturn[1] * axes[AXIS_TURN] * direction[joy_invert_turn]);
+}
+
+static double CalcControllerPitch(void)
+{
+  const double pitch = angleturn[1] * axes[AXIS_LOOK];
+  return (pitch * FRACUNIT * direction[joy_invert_look]);
+}
+
+static int CarryError(double value, const double *prevcarry, double *carry)
+{
+  const double desired = value + *prevcarry;
+  const int actual = lround(desired);
+  *carry = desired - actual;
+  return actual;
+}
+
+static short CarryAngle_Full(double angle)
+{
+  return CarryError(angle, &prevcarry.angle, &carry.angle);
+}
+
+static short CarryAngle_LowRes(double angle)
+{
+  const short desired = CarryAngle_Full(angle) + prevcarry.lowres;
+  // Round to nearest 256 for single byte turning. From Chocolate Doom.
+  const short actual = (desired + 128) & 0xFF00;
+  carry.lowres = desired - actual;
+  return actual;
+}
+
+static short (*CarryAngle)(double angle) = CarryAngle_Full;
+
+void G_UpdateCarryAngle(void)
+{
+  CarryAngle = lowres_turn ? CarryAngle_LowRes : CarryAngle_Full;
+}
+
+static int CarryPitch(double pitch)
+{
+  return CarryError(pitch, &prevcarry.pitch, &carry.pitch);
+}
+
+static int CarryMouseVert(double vert)
+{
+  return CarryError(vert, &prevcarry.vert, &carry.vert);
+}
+
+static int CarryMouseSide(double side)
+{
+  const double desired = side + prevcarry.side;
+  const int actual = RoundSide(desired);
+  carry.side = desired - actual;
+  return actual;
+}
+
+static double CalcMouseAngle(int mousex)
+{
+  if (!mouseSensitivity_horiz)
+    return 0.0;
+
+  return (I_AccelerateMouse(mousex) * (mouseSensitivity_horiz + 5) * 8 / 10);
+}
+
+static double CalcMousePitch(int mousey)
+{
+  double pitch;
+
+  if (!mouseSensitivity_vert_look)
+    return 0.0;
+
+  pitch = I_AccelerateMouse(mousey) * (mouseSensitivity_vert_look + 5) * 8 / 10;
+
+  return pitch * FRACUNIT * direction[mouse_y_invert];
+}
+
+static double CalcMouseSide(int mousex)
+{
+  if (!mouseSensitivity_horiz_strafe)
+    return 0.0;
+
+  return (I_AccelerateMouse(mousex) *
+          (mouseSensitivity_horiz_strafe + 5) * 2 / 10);
+}
+
+static double CalcMouseVert(int mousey)
+{
+  if (!mouseSensitivity_vert)
+    return 0.0;
+
+  return (I_AccelerateMouse(mousey) * (mouseSensitivity_vert + 5) / 10);
+}
+
+void G_PrepTiccmd(void)
+{
+  const boolean strafe = M_InputGameActive(input_strafe);
+  ticcmd_t *cmd = &basecmd;
+
+  // [Nugget] Decrease the intensity of some movements if zoomed in /---------
+
+  float zoomdiv = 1.0f;
+
+  if (!strictmode) {
+    const int zoom = R_GetFOVFX(FOVFX_ZOOM);
+    if (zoom)
+    { zoomdiv = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
+
+  // Gamepad
+
+  if (I_UseController() && I_CalcControllerAxes())
+  {
+    D_UpdateDeltaTics();
+
+    if (axes[AXIS_TURN] && !strafe)
+    {
+      localview.rawangle -= CalcControllerAngle() * deltatics / zoomdiv;
+      cmd->angleturn = CarryAngle(localview.rawangle);
+      localview.angle = cmd->angleturn << 16;
+      axes[AXIS_TURN] = 0.0f;
+    }
+
+    if (axes[AXIS_LOOK] && padlook)
+    {
+      localview.rawpitch -= CalcControllerPitch() * deltatics / zoomdiv;
+      cmd->pitch = CarryPitch(localview.rawpitch);
+      localview.pitch = cmd->pitch;
+      axes[AXIS_LOOK] = 0.0f;
+    }
+  }
+
+  // Mouse
+
+  if (mousex && !strafe)
+  {
+    localview.rawangle -= CalcMouseAngle(mousex) / zoomdiv;
+    cmd->angleturn = CarryAngle(localview.rawangle);
+    localview.angle = cmd->angleturn << 16;
+    mousex = 0;
+  }
+
+  if (mousey && mouselook)
+  {
+    localview.rawpitch += CalcMousePitch(mousey) / zoomdiv;
+    cmd->pitch = CarryPitch(localview.rawpitch);
+    localview.pitch = cmd->pitch;
+    mousey = 0;
   }
 }
 
@@ -388,85 +615,70 @@ static void G_DemoSkipTics(void)
 
 void G_BuildTiccmd(ticcmd_t* cmd)
 {
-  boolean strafe;
-  int speed;
-  int tspeed;
-  int forward;
-  int side;
+  const boolean strafe = M_InputGameActive(input_strafe);
+  const boolean turnleft = M_InputGameActive(input_turnleft);
+  const boolean turnright = M_InputGameActive(input_turnright);
+  // [FG] speed key inverts autorun
+  const int speed = autorun ^ M_InputGameActive(input_speed); // phares
+  int angle = 0;
+  int forward = 0;
+  int side = 0;
   int newweapon;                                          // phares
-  ticcmd_t *base;
 
   extern boolean boom_weapon_state_injection;
   static boolean done_autoswitch = false;
 
   G_DemoSkipTics();
 
-  base = I_BaseTiccmd();   // empty, or external driver
-  memcpy(cmd, base, sizeof *cmd);
+  if (!uncapped || !raw_input)
+  {
+    G_PrepTiccmd();
+  }
+
+  memcpy(cmd, &basecmd, sizeof(*cmd));
+  memset(&basecmd, 0, sizeof(basecmd));
 
   cmd->consistancy = consistancy[consoleplayer][maketic%BACKUPTICS];
 
-  strafe = M_InputGameActive(input_strafe);
-  // [FG] speed key inverts autorun
-  speed = autorun ^ M_InputGameActive(input_speed); // phares
-
-  forward = side = 0;
-
-    // use two stage accelerative turning
-    // on the keyboard and joystick
-  if (M_InputGameActive(input_turnleft) ||
-      M_InputGameActive(input_turnright))
-    turnheld += ticdup;
-  else
-    turnheld = 0;
-
-  if (turnheld < SLOWTURNTICS)
-    tspeed = 2;             // slow turn
-  else
-    tspeed = speed;
+  // Composite input
 
   // turn 180 degrees in one keystroke?                           // phares
-                                                                  //    |
-  if (STRICTMODE(M_InputGameActive(input_reverse)))               //    V
-    {
-      cmd->angleturn += (short)QUICKREVERSE;                      //    ^
-      M_InputGameDeactivate(input_reverse);                       //    |
-    }                                                             // phares
+  if (STRICTMODE(M_InputGameActive(input_reverse)))
+  {
+    angle += QUICKREVERSE;
+    M_InputGameDeactivate(input_reverse);
+  }
 
   // let movement keys cancel each other out
+  if (turnleft || turnright)
+  {
+    turnheld += ticdup;
 
-  if (strafe)
+    if (strafe)
     {
-      if (M_InputGameActive(input_turnright))
-        side += sidemove[speed];
-      if (M_InputGameActive(input_turnleft))
-        side -= sidemove[speed];
-
-      if (analog_controls && controller_axes[axis_turn])
+      if (!cmd->angleturn)
       {
-        fixed_t x = axis_move_sens * controller_axes[axis_turn] / 10;
-        x = direction[invert_turn] * x;
-        side += FixedMul(sidemove[speed], x);
+        if (turnright)
+          side += sidemove[speed];
+        if (turnleft)
+          side -= sidemove[speed];
       }
     }
+    else
+    {
+      // use two stage accelerative turning on the keyboard and joystick
+      const int tspeed = ((turnheld < SLOWTURNTICS) ? 2 : speed);
+
+      if (turnright)
+        angle -= angleturn[tspeed];
+      if (turnleft)
+        angle += angleturn[tspeed];
+    }
+  }
   else
-    {
-      if (M_InputGameActive(input_turnright))
-        cmd->angleturn -= angleturn[tspeed];
-      if (M_InputGameActive(input_turnleft))
-        cmd->angleturn += angleturn[tspeed];
-
-      if (analog_controls && controller_axes[axis_turn])
-      {
-        fixed_t x = controller_axes[axis_turn];
-
-        // response curve to compensate for lack of near-centered accuracy
-        x = FixedMul(FixedMul(x, x), x);
-
-        x = direction[invert_turn] * axis_turn_sens * x / 10;
-        cmd->angleturn -= FixedMul(angleturn[1], x);
-      }
-    }
+  {
+    turnheld = 0;
+  }
 
   if (M_InputGameActive(input_forward))
     forward += forwardmove[speed];
@@ -477,23 +689,71 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   if (M_InputGameActive(input_strafeleft))
     side -= sidemove[speed];
 
-  if (analog_controls)
+  // Gamepad
+
+  if (I_UseController())
   {
-    if (controller_axes[axis_forward])
+    if (axes[AXIS_TURN] && strafe && !cmd->angleturn)
     {
-      fixed_t y = axis_move_sens * controller_axes[axis_forward] / 10;
-      y = direction[invert_forward] * y;
-      forward -= FixedMul(forwardmove[speed], y);
+      side += CalcControllerSideTurn(speed);
     }
-    if (controller_axes[axis_strafe])
+
+    if (axes[AXIS_STRAFE])
     {
-      fixed_t x = axis_move_sens * controller_axes[axis_strafe] / 10;
-      x = direction[invert_strafe] * x;
-      side += FixedMul(sidemove[speed], x);
+      side += CalcControllerSideStrafe(speed);
+    }
+
+    if (axes[AXIS_FORWARD])
+    {
+      forward -= CalcControllerForward(speed);
     }
   }
 
-    // buttons
+  // Mouse
+
+  if (mousex && strafe && !cmd->angleturn)
+  {
+    const double mouseside = CalcMouseSide(mousex);
+    side += CarryMouseSide(mouseside);
+  }
+
+  if (mousey && !mouselook && !novert)
+  {
+    const double mousevert = CalcMouseVert(mousey);
+    forward += CarryMouseVert(mousevert);
+  }
+
+  // Update/reset
+
+  if (angle)
+  {
+    const short old_angleturn = cmd->angleturn;
+    cmd->angleturn = CarryAngle(localview.rawangle + angle);
+    localview.ticangleturn = cmd->angleturn - old_angleturn;
+  }
+
+  if (forward > MAXPLMOVE)
+    forward = MAXPLMOVE;
+  else if (forward < -MAXPLMOVE)
+    forward = -MAXPLMOVE;
+  if (side > MAXPLMOVE)
+    side = MAXPLMOVE;
+  else if (side < -MAXPLMOVE)
+    side = -MAXPLMOVE;
+
+  cmd->forwardmove = forward;
+  cmd->sidemove = side;
+
+  I_ResetControllerAxes();
+  mousex = mousey = 0;
+  localview.angle = 0;
+  localview.pitch = 0;
+  localview.rawangle = 0.0;
+  localview.rawpitch = 0.0;
+  prevcarry = carry;
+
+  // Buttons
+
   cmd->chatchar = HU_dequeueChatChar();
 
   if (M_InputGameActive(input_fire))
@@ -618,60 +878,6 @@ void G_BuildTiccmd(ticcmd_t* cmd)
     cmd->buttons |= BT_USE;
   }
 
-  // [crispy] mouse look
-  if (mouselook)
-  {
-    cmd->lookdir = mouse_y_invert ? -mousey2 : mousey2;
-  }
-  else if (!novert)
-  {
-    forward += mousey;
-  }
-
-  if (padlook && controller_axes[axis_look])
-  {
-    fixed_t y = controller_axes[axis_look];
-
-    // response curve to compensate for lack of near-centered accuracy
-    y = FixedMul(FixedMul(y, y), y);
-
-    y = direction[invert_look] * axis_look_sens * y / 10;
-    cmd->lookdir -= FixedMul(lookspeed[0], y);
-  }
-
-  if (strafe)
-    side += mousex2*2;
-  else
-    cmd->angleturn -= mousex*0x8;
-
-  mousex = mousex2 = mousey = mousey2 = 0;
-  
-  // [Nugget] Decrease the intensity of some movements if zoomed in
-  if (!strictmode)
-  {
-    const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-    if (zoom) {
-      const float divisor = fov / MAX(1, fov + zoom);
-      if (divisor > 1) {
-        cmd->angleturn /= divisor;
-        cmd->lookdir /= divisor;
-      }
-    }
-  }
-
-  if (forward > MAXPLMOVE)
-    forward = MAXPLMOVE;
-  else if (forward < -MAXPLMOVE)
-    forward = -MAXPLMOVE;
-  if (side > MAXPLMOVE)
-    side = MAXPLMOVE;
-  else if (side < -MAXPLMOVE)
-    side = -MAXPLMOVE;
-
-  cmd->forwardmove += forward;
-  cmd->sidemove += side;
-
   // special buttons
   if (sendpause)
     {
@@ -697,26 +903,16 @@ void G_BuildTiccmd(ticcmd_t* cmd)
     sendjoin = false;
     cmd->buttons |= BT_JOIN;
   }
+}
 
-  // low-res turning
-
-  if (lowres_turn)
-  {
-    static signed short carry = 0;
-    signed short desired_angleturn;
-
-    desired_angleturn = cmd->angleturn + carry;
-
-    // round angleturn to the nearest 256 unit boundary
-    // for recording demos with single byte values for turn
-
-    cmd->angleturn = (desired_angleturn + 128) & 0xff00;
-
-    // Carry forward the error from the reduced resolution to the
-    // next tic, so that successive small movements can accumulate.
-
-    carry = desired_angleturn - cmd->angleturn;
-  }
+void G_ClearInput(void)
+{
+  I_ResetControllerLevel();
+  mousex = mousey = 0;
+  memset(&localview, 0, sizeof(localview));
+  memset(&carry, 0, sizeof(carry));
+  memset(&prevcarry, 0, sizeof(prevcarry));
+  memset(&basecmd, 0, sizeof(basecmd));
 }
 
 //
@@ -779,7 +975,7 @@ static void G_DoLoadLevel(void)
 
   playback_levelstarttic = playback_tic;
 
-  if (!demo_compatibility && demo_version < 203)   // killough 9/29/98
+  if (!demo_compatibility && demo_version < DV_MBF)   // killough 9/29/98
     basetic = gametic;
 
   if (wipegamestate == GS_LEVEL
@@ -807,7 +1003,7 @@ static void G_DoLoadLevel(void)
 
   critical = (gameaction == ga_playdemo || demorecording || demoplayback || D_CheckNetConnect());
 
-  P_UpdateDirectVerticalAiming();
+  P_UpdateCheckSight();
 
   // [crispy] pistol start
   if (CRITICAL(pistolstart))
@@ -816,7 +1012,15 @@ static void G_DoLoadLevel(void)
   }
 
   P_SetupLevel (gameepisode, gamemap, 0, gameskill);
-  displayplayer = consoleplayer;    // view the guy you are playing
+
+  MN_UpdateFreeLook();
+
+  // [Woof!] Do not reset chosen player view across levels in multiplayer
+  // demo playback. However, it must be reset when starting a new game.
+  if (usergame)
+  {
+    displayplayer = consoleplayer;    // view the guy you are playing
+  }
   // [Alaux] Update smooth count values
   st_health = players[displayplayer].health;
   st_armor  = players[displayplayer].armorpoints;
@@ -829,12 +1033,11 @@ static void G_DoLoadLevel(void)
   // [Nugget] Rewind: unless we just rewound
   if (old_gameaction != ga_rewind) {
     memset (gamekeydown, 0, sizeof(gamekeydown));
-    mousex = mousex2 = mousey = mousey2 = 0;
+    G_ClearInput();
     sendpause = sendsave = paused = false;
     // [FG] array size!
     memset (mousearray, 0, sizeof(mousearray));
     memset (joyarray, 0, sizeof(joyarray));
-    memset (controller_axes, 0, sizeof(controller_axes));
   }
 
   //jff 4/26/98 wake up the status bar in case were coming out of a DM demo
@@ -857,6 +1060,9 @@ static void G_DoLoadLevel(void)
 
   // [Nugget] ----------------------------------------------------------------
 
+  // Rewind
+  G_SetRewindCountdown(0);
+
   // Minimap
   if (minimap_was_on) {
     AM_ChangeMode(AM_MINI);
@@ -865,7 +1071,6 @@ static void G_DoLoadLevel(void)
 
   // Alt. intermission background
   if (WI_UsingAltInterpic()) {
-    fovchange = true;
     R_SetViewSize(screenblocks);
     R_ExecuteSetViewSize();
   }
@@ -898,6 +1103,109 @@ static void G_ReloadLevel(void)
     G_BeginRecording();
 }
 
+// [FG] reload current level / go to next level
+// adapted from prboom-plus/src/e6y.c:369-449
+int G_GotoNextLevel(int *pEpi, int *pMap)
+{
+  byte doom_next[4][9] = {
+    {12, 13, 19, 15, 16, 17, 18, 21, 14},
+    {22, 23, 24, 25, 29, 27, 28, 31, 26},
+    {32, 33, 34, 35, 36, 39, 38, 41, 37},
+    {42, 49, 44, 45, 46, 47, 48, 11, 43}
+  };
+  byte doom2_next[32] = {
+     2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
+    12, 13, 14, 15, 31, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 26, 27, 28, 29, 30,  1,
+    32, 16
+  };
+
+  int epsd;
+  int map = -1;
+
+  if (gamemapinfo)
+  {
+    const char *next = NULL;
+
+    if (gamemapinfo->nextsecret[0])
+      next = gamemapinfo->nextsecret;
+    else if (gamemapinfo->nextmap[0])
+      next = gamemapinfo->nextmap;
+    else if (U_CheckField(gamemapinfo->endpic))
+    {
+      epsd = 1;
+      map = 1;
+    }
+
+    if (next)
+      G_ValidateMapName(next, &epsd, &map);
+  }
+
+  if (map == -1)
+  {
+    // secret level
+    doom2_next[14] = (haswolflevels ? 31 : 16);
+
+    // shareware doom has only episode 1
+    doom_next[0][7] = (gamemode == shareware ? 11 : 21);
+
+    doom_next[2][7] = (gamemode == registered ? 11 : 41);
+
+    //doom2_next and doom_next are 0 based, unlike gameepisode and gamemap
+    epsd = gameepisode - 1;
+    map = gamemap - 1;
+
+    if (gamemode == commercial)
+    {
+      epsd = 1;
+      if (map >= 0 && map <= 31)
+        map = doom2_next[map];
+      else
+        map = gamemap + 1;
+    }
+    else
+    {
+      if (epsd >= 0 && epsd <= 3 && map >= 0 && map <= 8)
+      {
+        int next = doom_next[epsd][map];
+        epsd = next / 10;
+        map = next % 10;
+      }
+      else
+      {
+        epsd = gameepisode;
+        map = gamemap + 1;
+      }
+    }
+  }
+
+  // [FG] report next level without changing
+  if (pEpi || pMap)
+  {
+    if (pEpi)
+      *pEpi = epsd;
+    if (pMap)
+      *pMap = map;
+  }
+  else if ((gamestate == GS_LEVEL) &&
+            !deathmatch && !netgame &&
+            !demorecording && !demoplayback &&
+            !menuactive)
+  {
+    char *name = MAPNAME(epsd, map);
+
+    if (W_CheckNumForName(name) == -1)
+      displaymsg("Next level not found: %s", name);
+    else
+    {
+      G_DeferedInitNew(gameskill, epsd, map);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 static boolean G_StrictModeSkipEvent(event_t *ev)
 {
   static boolean enable_mouse = false;
@@ -921,16 +1229,55 @@ static boolean G_StrictModeSkipEvent(event_t *ev)
 
     case ev_joyb_down:
     case ev_joyb_up:
-    case ev_joystick:
-        if (first_event && (ev->data1 || ev->data2 || ev->data3 || ev->data4))
+        if (first_event)
         {
           first_event = false;
           enable_controller = true;
         }
         return !enable_controller;
 
+    case ev_joystick:
+        if (first_event)
+        {
+          I_UpdateAxesData(ev);
+          I_CalcControllerAxes();
+          if (axes[AXIS_STRAFE] || axes[AXIS_FORWARD] || axes[AXIS_TURN] ||
+              axes[AXIS_LOOK])
+          {
+            first_event = false;
+            enable_controller = true;
+          }
+          I_ResetControllerLevel();
+        }
+        return !enable_controller;
+
     default:
         break;
+  }
+
+  return false;
+}
+
+boolean G_MovementResponder(event_t *ev)
+{
+  if (G_StrictModeSkipEvent(ev))
+  {
+    return true;
+  }
+
+  switch (ev->type)
+  {
+    case ev_mouse:
+      mousex += ev->data2;
+      mousey += ev->data3;
+      return true;
+
+    case ev_joystick:
+      I_UpdateAxesData(ev);
+      return true;
+
+    default:
+      break;
   }
 
   return false;
@@ -1020,7 +1367,7 @@ boolean G_Responder(event_t* ev)
 	 (ev->type == ev_joyb_down)) ?
 	(!menuactive ? S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn) // [Nugget]: [NS] Optional menu sounds.
 	             : true),
-	M_StartControlPanel(), true : false;
+	MN_StartControlPanel(), true : false;
     }
 
   if (gamestate == GS_FINALE && F_Responder(ev))
@@ -1040,11 +1387,8 @@ boolean G_Responder(event_t* ev)
   }
 
   if (dclick_use && ev->type == ev_mouseb_down &&
-       (
-         M_InputMatchMouseB(input_strafe, ev->data1) ||
-         M_InputMatchMouseB(input_forward, ev->data1)
-       ) &&
-       ev->data2 >= 2 && (ev->data2 % 2) == 0)
+      (M_InputActivated(input_strafe) || M_InputActivated(input_forward)) &&
+      ev->data2 >= 2 && (ev->data2 % 2) == 0)
   {
     dclick = true;
   }
@@ -1055,8 +1399,10 @@ boolean G_Responder(event_t* ev)
     return true;
   }
 
-  if (G_StrictModeSkipEvent(ev))
+  if (G_MovementResponder(ev))
+  {
     return true; // eat events
+  }
 
   switch (ev->type)
     {
@@ -1071,42 +1417,24 @@ boolean G_Responder(event_t* ev)
       return false;   // always let key up events filter down
 
     case ev_mouseb_down:
-      if (ev->data1 < MAX_MB)
+      if (ev->data1 < NUM_MOUSE_BUTTONS)
         mousebuttons[ev->data1] = true;
       return true;
 
     case ev_mouseb_up:
-      if (ev->data1 < MAX_MB)
+      if (ev->data1 < NUM_MOUSE_BUTTONS)
         mousebuttons[ev->data1] = false;
       return true;
 
-    case ev_mouse:
-      if (mouseSensitivity_horiz) // [FG] turn
-        mousex = ev->data2*(mouseSensitivity_horiz+5)/10;
-      if (mouseSensitivity_horiz_strafe) // [FG] strafe
-        mousex2 = ev->data2*(mouseSensitivity_horiz_strafe+5)/10;
-      if (mouseSensitivity_vert) // [FG] move
-        mousey = ev->data3*(mouseSensitivity_vert+5)/10;
-      if (mouseSensitivity_vert_look) // [FG] look
-        mousey2 = ev->data3*(mouseSensitivity_vert_look+5)/10;
-      return true;    // eat events
-
     case ev_joyb_down:
-      if (ev->data1 < MAX_JSB)
+      if (ev->data1 < NUM_CONTROLLER_BUTTONS)
         joybuttons[ev->data1] = true;
       return true;
 
     case ev_joyb_up:
-      if (ev->data1 < MAX_JSB)
+      if (ev->data1 < NUM_CONTROLLER_BUTTONS)
         joybuttons[ev->data1] = false;
       return true;
-
-    case ev_joystick:
-      controller_axes[AXIS_LEFTX]  = ev->data1 * 2;
-      controller_axes[AXIS_LEFTY]  = ev->data2 * 2;
-      controller_axes[AXIS_RIGHTX] = ev->data3 * 2;
-      controller_axes[AXIS_RIGHTY] = ev->data4 * 2;
-      return true;    // eat events
 
     default:
       break;
@@ -1275,35 +1603,46 @@ static void G_PlayerFinishLevel(int player)
   p->damagecount = 0;     // no palette changes
   p->bonuscount = 0;
   // [crispy] reset additional player properties
-  p->oldlookdir = p->lookdir = 0;
+  p->btuse_tics = 0;
+  memset(p->keyblinkkeys, 0, sizeof p->keyblinkkeys);
+  p->keyblinktics = 0;
+  p->oldpitch = p->pitch = 0;
   p->centering = false;
   p->slope = 0;
   p->recoilpitch = p->oldrecoilpitch = 0;
 
   // [Nugget] Reset more additional player properties ------------------------
 
+  p->jumptics = 0; // Jumping
+
+  // Crouching
   p->mo->height = p->mo->info->height;
   p->mo->intflags &= ~MIF_CROUCHING;
-  p->jumptics = p->crouchoffset = 0;
-  p->oldimpactpitch = p->impactpitch = 0;
-  memset(p->keyblinkkeys, 0, sizeof (p->keyblinkkeys)); // [crispy] blinking key or skull in the status bar
+  p->crouchoffset = 0;
+
+  p->oldflinch = p->flinch = 0; // Flinching
 }
 
 // [crispy] format time for level statistics
 #define TIMESTRSIZE 16
-static void G_FormatLevelStatTime(char *str, int tics)
+static void G_FormatLevelStatTime(char *str, int tics, boolean total)
 {
     int exitHours, exitMinutes;
     float exitTime, exitSeconds;
 
-    exitTime = (float) tics / 35;
+    exitTime = (float) tics / TICRATE;
     exitHours = exitTime / 3600;
     exitTime -= exitHours * 3600;
     exitMinutes = exitTime / 60;
     exitTime -= exitMinutes * 60;
     exitSeconds = exitTime;
 
-    if (exitHours)
+    if (total)
+    {
+        M_snprintf(str, TIMESTRSIZE, "%d:%02d",
+                tics / TICRATE / 60, (tics % (60 * TICRATE)) / TICRATE);
+    }
+    else if (exitHours)
     {
         M_snprintf(str, TIMESTRSIZE, "%d:%02d:%05.2f",
                     exitHours, exitMinutes, exitSeconds);
@@ -1324,7 +1663,6 @@ static void G_WriteLevelStat(void)
     char levelString[8];
     char levelTimeString[TIMESTRSIZE];
     char totalTimeString[TIMESTRSIZE];
-    char *decimal;
 
     if (fstream == NULL)
     {
@@ -1339,21 +1677,14 @@ static void G_WriteLevelStat(void)
 
     strcpy(levelString, MAPNAME(gameepisode, gamemap));
 
-    G_FormatLevelStatTime(levelTimeString, leveltime);
-    G_FormatLevelStatTime(totalTimeString, totalleveltimes + leveltime);
-
-    // Total time ignores centiseconds
-    decimal = strchr(totalTimeString, '.');
-    if (decimal != NULL)
-    {
-        *decimal = '\0';
-    }
+    G_FormatLevelStatTime(levelTimeString, leveltime, false);
+    G_FormatLevelStatTime(totalTimeString, totalleveltimes + leveltime, true);
 
     for (i = 0; i < MAXPLAYERS; i++)
     {
         if (playeringame[i])
         {
-            playerKills += players[i].killcount;
+            playerKills += players[i].killcount - players[i].maxkilldiscount;
             playerItems += players[i].itemcount;
             playerSecrets += players[i].secretcount;
         }
@@ -1402,6 +1733,9 @@ static void G_DoCompleted(void)
 
     AM_ChangeMode(AM_OFF);
   }
+
+  // Rebuild the Time widget to get rid of the Use-button timer
+  HU_widget_rebuild_sttime();
 
   wminfo.nextep = wminfo.epsd = gameepisode -1;
   wminfo.last = gamemap -1;
@@ -1609,22 +1943,19 @@ static void G_DoWorldDone(void)
 
 #define MIN_MAXPLAYERS 32
 
-#define INVALID_DEMO(a, b) \
-   do \
-   { \
-     I_Printf(VB_WARNING, "G_DoPlayDemo: " a, b); \
-     gameaction = ga_nothing; \
-     demoplayback = true; \
-     G_CheckDemoStatus(); \
-     return; \
-   } while(0)
+static void InvalidDemo(void)
+{
+    gameaction = ga_nothing;
+    demoplayback = true;
+    G_CheckDemoStatus();
+}
 
 static void G_DoPlayDemo(void)
 {
   skill_t skill;
   int i, episode, map;
   char basename[9];
-  int demover;
+  demo_version_t demover;
   byte *option_p = NULL;      // killough 11/98
   int lumpnum, lumplength;
 
@@ -1648,19 +1979,25 @@ static void G_DoPlayDemo(void)
   // [FG] ignore too short demo lumps
   if (lumplength < 0xd)
   {
-    INVALID_DEMO("Short demo lump %s.", basename);
+    I_Printf(VB_WARNING, "G_DoPlayDemo: Short demo lump %s.", basename);
+    InvalidDemo();
+    return;
   }
 
   demover = *demo_p++;
 
   // skip UMAPINFO demo header
-  if (demover == 255)
+  if (demover == DV_UM)
   {
     // we check for the PR+UM signature.
     // Eternity Engine also uses 255 demover, with other signatures.
-    if (strncmp((const char *)demo_p, "PR+UM", 5) != 0)
+    if (memcmp(demo_p, "PR+UM", 5))
     {
-      INVALID_DEMO("Extended demo format %d found, but \"PR+UM\" string not found.", demover);
+      I_Printf(VB_WARNING,
+            "Extended demo format %d found, but \"PR+UM\" string not found.",
+            demover);
+      InvalidDemo();
+      return;
     }
 
     demo_p += 6;
@@ -1681,7 +2018,7 @@ static void G_DoPlayDemo(void)
       I_Error("G_DoPlayDemo: Unknown demo format.");
     }
 
-    if (strncmp((const char *)demo_p, "UMAPINFO", 8))
+    if (memcmp(demo_p, "UMAPINFO", 8))
     {
       I_Error("G_DoPlayDemo: Unknown demo format.");
     }
@@ -1704,14 +2041,16 @@ static void G_DoPlayDemo(void)
   // [FG] PrBoom's own demo format starts with demo version 210
   if (demover >= 210 && !mbf21)
   {
-    INVALID_DEMO("Unknown demo format %d.", demover);
+    I_Printf(VB_WARNING, "Unknown demo format %d.", demover);
+    InvalidDemo();
+    return;
   }
 
   longtics = false;
 
-  if (demover < 200)     // Autodetect old demos
+  if (demover < DV_BOOM200)     // Autodetect old demos
     {
-      if (demover == 111)
+      if (demover == DV_LONGTIC)
       {
         longtics = true;
       }
@@ -1745,7 +2084,7 @@ static void G_DoPlayDemo(void)
       // killough 3/6/98: rearrange to fix savegame bugs (moved fastparm,
       // respawnparm, nomonsters flags to G_LoadOptions()/G_SaveOptions())
 
-      if ((skill=demover) >= 100)         // For demos from versions >= 1.4
+      if (demover >= 100)         // For demos from versions >= 1.4
         {
           skill = *demo_p++;
           episode = *demo_p++;
@@ -1758,6 +2097,7 @@ static void G_DoPlayDemo(void)
         }
       else
         {
+          skill = (int)demover;
           episode = *demo_p++;
           map = *demo_p++;
           deathmatch = respawnparm = fastparm =
@@ -1784,7 +2124,7 @@ static void G_DoPlayDemo(void)
       consoleplayer = *demo_p++;
 
       // killough 11/98: save option pointer for below
-      if (demover >= 203)
+      if (demover >= DV_MBF)
 	option_p = demo_p;
 
       // killough 3/1/98: Read game options
@@ -1793,7 +2133,7 @@ static void G_DoPlayDemo(void)
       else
         demo_p = G_ReadOptions(demo_p);
 
-      if (demover == 200)        // killough 6/3/98: partially fix v2.00 demos
+      if (demover == DV_BOOM200) // killough 6/3/98: partially fix v2.00 demos
         demo_p += 256-G_GameOptionSize();
     }
 
@@ -1870,11 +2210,9 @@ static void G_DoPlayDemo(void)
   }
 
   // [FG] report compatibility mode
-  I_Printf(VB_INFO, "G_DoPlayDemo: Playing demo with %s (%d) compatibility.",
-    G_GetCurrentComplevelName(), demover);
+  I_Printf(VB_INFO, "G_DoPlayDemo: %.8s (%s)", basename, W_WadNameForLump(lumpnum));
 
   D_NuggetUpdateCasual(); // [Nugget]
-
 }
 
 #define VERSIONSIZE   16
@@ -1882,7 +2220,7 @@ static void G_DoPlayDemo(void)
 // killough 2/22/98: version id string format for savegames
 #define VERSIONID "MBF %d"
 
-#define CURRENT_SAVE_VERSION "Nugget 2.1.0" // [Nugget]
+#define CURRENT_SAVE_VERSION "Nugget 2.4.0" // [Nugget]
 
 static char *savename = NULL;
 
@@ -1918,7 +2256,7 @@ void G_LoadGame(char *name, int slot, boolean command)
 static void G_LoadGameErr(const char *msg)
 {
   Z_Free(savebuffer);                // Free the savegame buffer
-  M_ForcedLoadGame(msg);             // Print message asking for 'Y' to force
+  MN_ForcedLoadGame(msg);             // Print message asking for 'Y' to force
   if (command_loadgame)              // If this was a command-line -loadgame
     {
       G_CheckDemoStatus();           // If there was also a -record
@@ -2047,10 +2385,10 @@ static void G_DoSaveGame(void)
 
   // killough 3/16/98: store pwad filenames in savegame
   {
-    char **w = wadfiles;
-    for (*save_p = 0; *w; w++)
+    int i;
+    for (*save_p = 0, i = 0; i < array_size(wadfiles); i++)
       {
-        const char *basename = M_BaseName(*w);
+        const char *basename = M_BaseName(wadfiles[i]);
         CheckSaveGame(strlen(basename)+2);
         strcat(strcat((char *) save_p, basename), "\n");
       }
@@ -2096,22 +2434,18 @@ static void G_DoSaveGame(void)
     memset(save_p, 0, 8);
   save_p += 8;
 
-  // [Nugget] Save extraspawns
-  CheckSaveGame(sizeof extraspawns);
-  saveg_write32(extraspawns);
-
-  // save extrakills
-  CheckSaveGame(sizeof extrakills);
-  saveg_write32(extrakills);
+  // save max_kill_requirement
+  CheckSaveGame(sizeof(max_kill_requirement));
+  saveg_write32(max_kill_requirement);
 
   // [Nugget] Save milestones
   CheckSaveGame(sizeof complete_milestones);
   saveg_write_enum(complete_milestones);
 
   // [FG] save snapshot
-  CheckSaveGame(M_SnapshotDataSize());
-  M_WriteSnapshot(save_p);
-  save_p += M_SnapshotDataSize();
+  CheckSaveGame(MN_SnapshotDataSize());
+  MN_WriteSnapshot(save_p);
+  save_p += MN_SnapshotDataSize();
 
   length = save_p - savebuffer;
 
@@ -2128,7 +2462,17 @@ static void G_DoSaveGame(void)
 
   if (name) free(name);
 
-  M_SetQuickSaveSlot(savegameslot);
+  MN_SetQuickSaveSlot(savegameslot);
+
+  drs_skip_frame = true;
+}
+
+static void CheckSaveVersion(const char *str, saveg_compat_t ver)
+{
+  if (strncmp((char *) save_p, str, strlen(str)) == 0)
+  {
+    saveg_compat = ver;
+  }
 }
 
 static void G_DoLoadGame(void)
@@ -2149,6 +2493,7 @@ static void G_DoLoadGame(void)
   {
     netdemo = false;
     netgame = false;
+    solonet = false;
     deathmatch = false;
   }
 
@@ -2162,19 +2507,14 @@ static void G_DoLoadGame(void)
   // killough 2/22/98: "proprietary" version string :-)
   sprintf (vcheck,VERSIONID,MBFVERSION);
 
-  if (strncmp((char *) save_p, CURRENT_SAVE_VERSION, strlen(CURRENT_SAVE_VERSION)) == 0)
-  {
-    saveg_compat = saveg_current;
-  }
-  // [Nugget]
-  #define SAVEIS(str) (strncmp((char *) save_p, str, strlen(CURRENT_SAVE_VERSION)) == 0)
-  else if (SAVEIS("Nugget 2.0.0")) { saveg_compat = saveg_nugget200; }
-  else if (SAVEIS("Woof 6.0.0"))   { saveg_compat = saveg_woof600; }
-  #undef SAVEIS
+  CheckSaveVersion(vcheck, saveg_mbf);
+  CheckSaveVersion("Woof 6.0.0", saveg_woof600);
+  CheckSaveVersion("Nugget 2.0.0", saveg_nugget200);
+  CheckSaveVersion("Nugget 2.1.0", saveg_nugget210);
+  CheckSaveVersion(CURRENT_SAVE_VERSION, saveg_current);
 
   // killough 2/22/98: Friendly savegame version difference message
-  if (!forced_loadgame && strncmp((char *) save_p, vcheck, VERSIONSIZE) &&
-                          saveg_compat != saveg_current)
+  if (!forced_loadgame && saveg_compat != saveg_mbf && saveg_compat < saveg_woof600)
     {
       G_LoadGameErr("Different Savegame Version!!!\n\nAre you sure?");
       return;
@@ -2188,7 +2528,7 @@ static void G_DoLoadGame(void)
   }
   else
   {
-    demo_version = 203;
+    demo_version = DV_MBF;
   }
 
   // killough 2/14/98: load compatibility mode
@@ -2300,21 +2640,32 @@ static void G_DoLoadGame(void)
     save_p += 8;
   }
 
-  // [Nugget] -------------------------
-  
-  // Restore extraspawns
-  if (save_p - savebuffer <= length - sizeof extraspawns)
-  { extraspawns = saveg_read32(); }
-  
-  // Restore extrakills
-  if (saveg_compat > saveg_woof600 && save_p - savebuffer <= length - sizeof extrakills)
-  { extrakills = saveg_read32(); }
+  // restore max_kill_requirement
+  max_kill_requirement = totalkills;
+  if (save_p - savebuffer <= length - sizeof(max_kill_requirement))
+  {
+    if (saveg_compat > saveg_nugget210) // [Nugget]
+    {
+      max_kill_requirement = saveg_read32();
+    }
+    // [Nugget]
+    else if (saveg_compat > saveg_woof510)
+    {
+      max_kill_requirement += saveg_read32();
+    }
+  }
+
+  // [Nugget] /---------------------------------------------------------------
+
+  // Was `extrakills`
+  if (saveg_nugget210 >= saveg_compat && saveg_compat > saveg_woof600)
+  { saveg_read32(); }
 
   // Restore milestones
   if (saveg_compat > saveg_nugget200 && save_p - savebuffer <= length - sizeof complete_milestones)
   { complete_milestones = saveg_read_enum(); }
 
-  // ----------------------------------
+  // [Nugget] ---------------------------------------------------------------/
   
   // done
   Z_Free(savebuffer);
@@ -2323,6 +2674,12 @@ static void G_DoLoadGame(void)
   // the same procedure is done in G_LoadLevel, but we have to repeat it here
   st_health = players[displayplayer].health;
   st_armor  = players[displayplayer].armorpoints;
+
+  // [Nugget] Rewind:
+  // Just like with `G_DoRewind`,
+  // this is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
 
   if (setsizeneeded)
     R_ExecuteSetViewSize();
@@ -2343,23 +2700,22 @@ static void G_DoLoadGame(void)
       if (demorecording) // So this can only possibly be a -recordfrom command.
 	G_BeginRecording();// Start the -recordfrom, since the game was loaded.
 
-  // [FG] log game loading
-  {
-    char *maplump = MAPNAME(gameepisode, gamemap);
-    int maplumpnum = W_CheckNumForName(maplump);
+  I_Printf(VB_INFO, "G_DoLoadGame: Slot %02d, Time ", 10 * savepage + savegameslot);
 
-    I_Printf(VB_INFO, "G_DoLoadGame: Slot %d, %.8s (%s)",
-      10*savepage+savegameslot, maplump, W_WadNameForLump(maplumpnum));
-  }
+  if (totalleveltimes)
+    I_Printf(VB_INFO, "(%d:%02d) ", ((totalleveltimes + leveltime) / TICRATE) / 60,
+                                  ((totalleveltimes + leveltime) / TICRATE) % 60);
+  I_Printf(VB_INFO, "%d:%05.2f", leveltime / TICRATE / 60,
+                                 (float)(leveltime % (60 * TICRATE)) / TICRATE);
 
-  M_SetQuickSaveSlot(savegameslot);
+  MN_SetQuickSaveSlot(savegameslot);
 }
 
 // [Nugget] Rewind /----------------------------------------------------------
 
-void G_ResetRewindCountdown(void)
+void G_SetRewindCountdown(int value)
 {
-  rewind_countdown = rewind_interval * TICRATE;
+  rewind_countdown = value;
 }
 
 static void G_SaveKeyFrame(void)
@@ -2421,13 +2777,9 @@ static void G_SaveKeyFrame(void)
     memset(save_p, 0, 8);
   save_p += 8;
 
-  // [Nugget] Save extraspawns
-  CheckSaveGame(sizeof extraspawns);
-  saveg_write32(extraspawns);
-
-  // save extrakills
-  CheckSaveGame(sizeof extrakills);
-  saveg_write32(extrakills);
+  // save max_kill_requirement
+  CheckSaveGame(sizeof(max_kill_requirement));
+  saveg_write32(max_kill_requirement);
 
   // [Nugget] Save milestones
   CheckSaveGame(sizeof complete_milestones);
@@ -2478,7 +2830,7 @@ static void G_SaveKeyFrame(void)
     rewind_on = false;
   }
 
-  G_ResetRewindCountdown();
+  G_SetRewindCountdown(rewind_interval * TICRATE);
 
   Z_Free(savebuffer);
   savebuffer = save_p = NULL;
@@ -2486,6 +2838,22 @@ static void G_SaveKeyFrame(void)
 
 static void G_DoRewind(void)
 {
+  static int last_rewind_time = 0;
+
+  if ((0 <= keyframe_index - 1)
+      && (gametic - last_rewind_time <= 21)) // 0.6 seconds
+  {
+    keyframe_index--;
+
+    Z_Free(keyframe_list_tail->frame);
+
+    keyframe_list_tail = keyframe_list_tail->prev;
+    Z_Free(keyframe_list_tail->next);
+    keyframe_list_tail->next = NULL;
+  }
+
+  last_rewind_time = gametic;
+
   int length, i;
 
   I_SetFastdemoTimer(false);
@@ -2586,21 +2954,14 @@ static void G_DoRewind(void)
     save_p += 8;
   }
 
-  // [Nugget] /---------------------------------------------------------------
-  
-  // Restore extraspawns
-  if (save_p - savebuffer <= length - sizeof extraspawns)
-  { extraspawns = saveg_read32(); }
-  
-  // Restore extrakills
-  if (saveg_compat > saveg_woof600 && save_p - savebuffer <= length - sizeof extrakills)
-  { extrakills = saveg_read32(); }
+  if (save_p - savebuffer <= length - sizeof(max_kill_requirement))
+  {
+    max_kill_requirement = saveg_read32();
+  }
 
-  // Restore milestones
-  if (saveg_compat > saveg_nugget200 && save_p - savebuffer <= length - sizeof complete_milestones)
+  // [Nugget] Restore milestones
+  if (save_p - savebuffer <= length - sizeof complete_milestones)
   { complete_milestones = saveg_read_enum(); }
-
-  // [Nugget] ---------------------------------------------------------------/
 
   keyframe_rw = false;
 
@@ -2615,18 +2976,9 @@ static void G_DoRewind(void)
 
   displaymsg("Restored key frame %i", keyframe_index);
 
-  if (0 <= keyframe_index - 1)
-  {
-    keyframe_index--;
-
-    Z_Free(savebuffer);
-
-    keyframe_list_tail = keyframe_list_tail->prev;
-    Z_Free(keyframe_list_tail->next);
-    keyframe_list_tail->next = NULL;
-  }
-
-  G_ResetRewindCountdown();
+  // This is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  G_SetRewindCountdown((rewind_interval * TICRATE) + 1);
 }
 
 void G_EnableRewind(void)
@@ -2753,7 +3105,7 @@ void G_Ticker(void)
 	  ST_ResetPalette();
 	}
 
-	M_ScreenShot();
+	V_ScreenShot();
 	gameaction = ga_nothing;
 	break;
       case ga_reloadlevel:
@@ -2773,10 +3125,8 @@ void G_Ticker(void)
       && gamestate == GS_LEVEL && oldleveltime < leveltime
       && players[consoleplayer].playerstate != PST_DEAD)
   {
-    if (!rewind_countdown)
+    if (--rewind_countdown <= 0)
     { G_SaveKeyFrame(); }
-    else
-    { rewind_countdown--; }
   }
   else if (!CASUALPLAY(rewind_depth) || gamestate != GS_LEVEL)
   {
@@ -2900,12 +3250,6 @@ void G_Ticker(void)
 
   oldleveltime = leveltime;
 
-  // [Nugget]:
-  // [crispy] distinguish classic status bar with background and player face from Crispy HUD
-  st_crispyhud = automap_off ? (CRISPY_HUD <= screenblocks && screenblocks <= CRISPY_HUD_WIDE)
-                               + (screenblocks == CRISPY_HUD_WIDE)
-                             : 0;
-
   // do main actions
 
   // killough 9/29/98: split up switch statement
@@ -2937,11 +3281,13 @@ void G_PlayerReborn(int player)
   int killcount;
   int itemcount;
   int secretcount;
+  int maxkilldiscount;
 
   memcpy (frags, players[player].frags, sizeof frags);
   killcount = players[player].killcount;
   itemcount = players[player].itemcount;
   secretcount = players[player].secretcount;
+  maxkilldiscount = players[player].maxkilldiscount;
 
   p = &players[player];
 
@@ -2956,6 +3302,7 @@ void G_PlayerReborn(int player)
   players[player].killcount = killcount;
   players[player].itemcount = itemcount;
   players[player].secretcount = secretcount;
+  players[player].maxkilldiscount = maxkilldiscount;
 
   p->usedown = p->attackdown = true;  // don't do anything immediately
   p->playerstate = PST_LIVE;
@@ -3305,106 +3652,134 @@ static int G_GetHelpers(void)
   return j ? (j+1 < myargc && myargv[j+1][0] != '-') ? M_ParmArgToInt(j) : 1 : default_dogs;
 }
 
-// [FG] support named complevels on the command line, e.g. "-complevel boom",
+// [FG] support named complevels on the command line, e.g. "-complevel boom"
 
-int G_GetNamedComplevel (const char *arg)
+demo_version_t G_GetNamedComplevel(const char *arg)
 {
-  int i;
-
-  const struct {
-    int level;
-    const char *const name;
-    int exe;
-  } named_complevel[] = {
-    {109, "vanilla", -1},
-    {109, "doom2",   exe_doom_1_9},
-    {109, "1.9",     exe_doom_1_9},
-    {109, "2",       exe_doom_1_9},
-    {109, "ultimate",exe_ultimate},
-    {109, "3",       exe_ultimate},
-    {109, "final",   exe_final},
-    {109, "tnt",     exe_final},
-    {109, "plutonia",exe_final},
-    {109, "4",       exe_final},
-    {202, "boom",    -1},
-    {202, "9",       -1},
-    {203, "mbf",     -1},
-    {203, "11",      -1},
-    {221, "mbf21",   -1},
-    {221, "21",      -1},
-  };
-
-  for (i = 0; i < sizeof(named_complevel)/sizeof(*named_complevel); i++)
-  {
-    if (!strcasecmp(arg, named_complevel[i].name))
+    const struct
     {
-      if (named_complevel[i].exe >= 0)
-        gameversion = named_complevel[i].exe;
+        demo_version_t demover;
+        const char *const name;
+        int exe;
+    } named_complevel[] = {
+        {DV_VANILLA, "vanilla",  exe_indetermined},
+        {DV_VANILLA, "doom2",    exe_doom_1_9    },
+        {DV_VANILLA, "1.9",      exe_doom_1_9    },
+        {DV_VANILLA, "2",        exe_doom_1_9    },
+        {DV_VANILLA, "ultimate", exe_ultimate    },
+        {DV_VANILLA, "3",        exe_ultimate    },
+        {DV_VANILLA, "final",    exe_final       },
+        {DV_VANILLA, "tnt",      exe_final       },
+        {DV_VANILLA, "plutonia", exe_final       },
+        {DV_VANILLA, "4",        exe_final       },
+        {DV_BOOM,    "boom",     exe_indetermined},
+        {DV_BOOM,    "9",        exe_indetermined},
+        {DV_MBF,     "mbf",      exe_indetermined},
+        {DV_MBF,     "11",       exe_indetermined},
+        {DV_MBF21,   "mbf21",    exe_indetermined},
+        {DV_MBF21,   "21",       exe_indetermined},
+    };
 
-      return named_complevel[i].level;
+    for (int i = 0; i < arrlen(named_complevel); i++)
+    {
+        if (!strcasecmp(arg, named_complevel[i].name))
+        {
+            if (named_complevel[i].exe != exe_indetermined)
+            {
+                gameversion = named_complevel[i].exe;
+            }
+
+            return named_complevel[i].demover;
+        }
     }
-  }
 
-  return -1;
+    return DV_NONE;
 }
 
-static int G_GetDefaultComplevel()
+static struct
 {
-  switch (default_complevel)
-  {
-    case 0:
-      return 109;
-    case 1:
-      return 202;
-    case 2:
-      return 203;
-    default:
-      return 221;
-  }
+    demo_version_t demover;
+    complevel_t complevel;
+} demover_complevel[] = {
+    {DV_VANILLA, CL_VANILLA},
+    {DV_BOOM,    CL_BOOM   },
+    {DV_MBF,     CL_MBF    },
+    {DV_MBF21,   CL_MBF21  }
+};
+
+static complevel_t GetComplevel(demo_version_t demover)
+{
+    for (int i = 0; i < arrlen(demover_complevel); ++i)
+    {
+        if (demover == demover_complevel[i].demover)
+        {
+            return demover_complevel[i].complevel;
+        }
+    }
+
+    return CL_NONE;
+}
+
+static demo_version_t GetDemover(complevel_t complevel)
+{
+    for (int i = 0; i < arrlen(demover_complevel); ++i)
+    {
+        if (complevel == demover_complevel[i].complevel)
+        {
+            return demover_complevel[i].demover;
+        }
+    }
+
+    return DV_NONE;
 }
 
 const char *G_GetCurrentComplevelName(void)
 {
-  switch (demo_version)
-  {
-    case 109:
-      return gameversions[gameversion].description;
-    case 202:
-      return "Boom";
-    case 203:
-      return "MBF";
-    case 221:
-      return "MBF21";
-    default:
-      return "Unknown";
-  }
+    switch (demo_version)
+    {
+        case DV_VANILLA:
+            return gameversions[gameversion].description;
+        case DV_BOOM:
+            return "Boom";
+        case DV_MBF:
+            return "MBF";
+        case DV_MBF21:
+            return "MBF21";
+        default:
+            return "Unknown";
+    }
 }
 
-static int G_GetWadComplevel(void)
+static demo_version_t GetWadDemover(void)
 {
-  int lumpnum;
+    int lumpnum = W_CheckNumForName("COMPLVL");
 
-  lumpnum = W_CheckNumForName("COMPLVL");
+    if (lumpnum < 0)
+    {
+        return DV_NONE;
+    }
 
-  if (lumpnum >= 0)
-  {
-    int length;
-    char *data = NULL;
-
-    length = W_LumpLength(lumpnum);
-    data = W_CacheLumpNum(lumpnum, PU_CACHE);
+    int length = W_LumpLength(lumpnum);
+    char *data = W_CacheLumpNum(lumpnum, PU_CACHE);
 
     if (length == 7 && !strncasecmp("vanilla", data, 7))
-      return 109;
+    {
+        return DV_VANILLA;
+    }
     else if (length == 4 && !strncasecmp("boom", data, 4))
-      return 202;
+    {
+        return DV_BOOM;
+    }
     else if (length == 3 && !strncasecmp("mbf", data, 3))
-      return 203;
+    {
+        return DV_MBF;
+    }
     else if (length == 5 && !strncasecmp("mbf21", data, 5))
-      return 221;
-  }
+    {
+        return DV_MBF21;
+    }
 
-  return -1;
+    return DV_NONE;
 }
 
 static void G_MBFDefaults(void)
@@ -3531,9 +3906,7 @@ void G_ReloadDefaults(boolean keep_demover)
 
   if (!keep_demover)
   {
-    int i;
-
-    demo_version = G_GetWadComplevel();
+    demo_version_t demover = DV_NONE;
 
     //!
     // @arg <version>
@@ -3544,21 +3917,33 @@ void G_ReloadDefaults(boolean keep_demover)
     // "vanilla", "boom", "mbf", "mbf21".
     //
 
-    i = M_CheckParmWithArgs("-complevel", 1);
+    int p = M_CheckParmWithArgs("-complevel", 1);
 
-    if (i > 0)
+    if (p > 0)
     {
-      int l = G_GetNamedComplevel(myargv[i+1]);
-      if (l > -1)
-        demo_version = l;
-      else
+      demover = G_GetNamedComplevel(myargv[p + 1]);
+      if (demover == DV_NONE)
+      {
         I_Error("Invalid parameter '%s' for -complevel, "
-                "valid values are vanilla, boom, mbf, mbf21.",
-                myargv[i+1]);
+                "valid values are vanilla, boom, mbf, mbf21.", myargv[p + 1]);
+      }
     }
 
-    if (demo_version == -1)
-      demo_version = G_GetDefaultComplevel();
+    if (demover == DV_NONE)
+    {
+      demover = GetWadDemover();
+    }
+
+    if (demover == DV_NONE)
+    {
+      demo_version = GetDemover(default_complevel);
+      force_complevel = CL_NONE;
+    }
+    else
+    {
+      demo_version = demover;
+      force_complevel = GetComplevel(demo_version);
+    }
   }
 
   strictmode = default_strictmode;
@@ -3571,8 +3956,12 @@ void G_ReloadDefaults(boolean keep_demover)
   //
 
   if (M_CheckParm("-strict"))
+  {
     strictmode = true;
+    force_strictmode = true;
+  }
 
+  G_UpdateSideMove();
   P_UpdateDirectVerticalAiming();
 
   pistolstart = default_pistolstart;
@@ -3590,15 +3979,17 @@ void G_ReloadDefaults(boolean keep_demover)
   // Reset MBF compatibility options in strict mode
   if (strictmode)
   {
-    if (demo_version == 203)
+    if (demo_version == DV_MBF)
       G_MBFDefaults();
     else if (mbf21)
       G_MBF21Defaults();
   }
 
+  D_SetMaxHealth();
+
   D_SetBloodColor();
 
-  D_SetPredefinedTranslucency();
+  R_InvulMode();
 
   if (!mbf21)
   {
@@ -3612,13 +4003,16 @@ void G_ReloadDefaults(boolean keep_demover)
   // haleyjd
   rngseed = time(NULL);
 
-  if (beta_emulation && demo_version != 203)
+  if (beta_emulation && demo_version != DV_MBF)
     I_Error("G_ReloadDefaults: Beta emulation requires complevel MBF.");
 
-  if ((M_CheckParm("-dog") || M_CheckParm("-dogs")) && demo_version < 203)
+  if ((M_CheckParm("-dog") || M_CheckParm("-dogs")) && demo_version < DV_MBF)
     I_Error("G_ReloadDefaults: Helper dogs require complevel MBF or MBF21.");
 
-  if (demo_version < 203)
+  if (M_CheckParm("-skill") && startskill == sk_none && !demo_compatibility)
+    I_Error("G_ReloadDefaults: '-skill 0' requires complevel Vanilla.");
+
+  if (demo_version < DV_MBF)
   {
     monster_infighting = 1;
     monster_backing = 0;
@@ -3631,12 +4025,12 @@ void G_ReloadDefaults(boolean keep_demover)
 
     monkeys = 0;
 
-    if (demo_version == 109)
+    if (demo_version == DV_VANILLA)
     {
       compatibility = true;
       memset(comp, 0xff, sizeof comp);
     }
-    else if (demo_version == 202)
+    else if (demo_version == DV_BOOM)
     {
       memset(comp, 0, sizeof comp);
       G_BoomComp();
@@ -3649,8 +4043,6 @@ void G_ReloadDefaults(boolean keep_demover)
     allow_pushers = 1;
     classic_bfg = 0;
   }
-
-  M_ResetSetupMenu();
 }
 
 void G_DoNewGame (void)
@@ -3658,6 +4050,7 @@ void G_DoNewGame (void)
   I_SetFastdemoTimer(false);
   G_ReloadDefaults(false); // killough 3/1/98
   netgame = false;               // killough 3/29/98
+  solonet = false;
   deathmatch = false;
   basetic = gametic;             // killough 9/29/98
 
@@ -3734,7 +4127,7 @@ int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap)
     return 0;
   strncpy(mapuname, mapname, 8);
   mapuname[8] = 0;
-  M_ForceUppercase(mapuname);
+  M_StringToUpper(mapuname);
 
   if (gamemode != commercial)
   {
@@ -3839,7 +4232,7 @@ void G_InitNew(skill_t skill, int episode, int map)
 
   M_LoadOptions();     // killough 11/98: read OPTIONS lump from wad
 
-  if (demo_version == 203)
+  if (demo_version == DV_MBF)
     G_MBFComp();
 
   G_DoLoadLevel();
@@ -4127,7 +4520,7 @@ byte *G_ReadOptions(byte *demo_p)
   rngseed += *demo_p++ & 0xff;
 
   // Options new to v2.03
-  if (demo_version >= 203)
+  if (demo_version >= DV_MBF)
     {
       monster_infighting = *demo_p++;   // killough 7/19/98
 
@@ -4162,10 +4555,6 @@ byte *G_ReadOptions(byte *demo_p)
       }
 
       G_MBFComp();
-
-      // Options new to v2.04, etc.
-      if (demo_version >= 204)
-	;
     }
   else  // defaults for versions < 2.02
     {
@@ -4173,7 +4562,7 @@ byte *G_ReadOptions(byte *demo_p)
       for (i=0; i < COMP_TOTAL; i++)
 	comp[i] = compatibility;
 
-      if (demo_version == 202)
+      if (demo_version == DV_BOOM || demo_version == DV_BOOM201)
         G_BoomComp();
 
       monster_infighting = 1;           // killough 7/19/98
@@ -4203,7 +4592,7 @@ void G_BeginRecording(void)
 
   demo_p = demobuffer;
 
-  if (demo_version == 203 || mbf21)
+  if (demo_version == DV_MBF || mbf21)
   {
   *demo_p++ = demo_version;
 
@@ -4239,7 +4628,7 @@ void G_BeginRecording(void)
   for (; i<MIN_MAXPLAYERS; i++)
     *demo_p++ = 0;
   }
-  else if (demo_version == 202)
+  else if (demo_version == DV_BOOM)
   {
     *demo_p++ = demo_version;
 
@@ -4272,11 +4661,11 @@ void G_BeginRecording(void)
     for (; i<MIN_MAXPLAYERS; i++)
       *demo_p++ = 0;
   }
-  else if (demo_version == 109)
+  else if (demo_version == DV_VANILLA)
   {
     if (longtics)
     {
-      *demo_p++ = 111;
+      *demo_p++ = DV_LONGTIC;
     }
     else
     {
@@ -4336,12 +4725,15 @@ static size_t WriteCmdLineLump(MEMFILE *stream)
   mem_fputs(tmp, stream);
   free(tmp);
 
-  for (i = 1; wadfiles[i]; i++)
+  for (i = 1; i < array_size(wadfiles); i++)
   {
     const char *basename = M_BaseName(wadfiles[i]);
 
-    if (!strcasecmp("brghtmps.lmp", basename))
+    if (!strcasecmp("brghtmps.lmp", basename) ||
+        !strcasecmp("woofhud.lmp", basename))
+    {
       continue;
+    }
 
     if (!has_files)
     {
@@ -4357,7 +4749,7 @@ static size_t WriteCmdLineLump(MEMFILE *stream)
   if (dehfiles)
   {
     mem_fputs(" -deh", stream);
-    for (i = 0; dehfiles[i]; ++i)
+    for (i = 0; i < array_size(dehfiles); ++i)
     {
       tmp = M_StringJoin(" \"", M_BaseName(dehfiles[i]), "\"", NULL);
       mem_fputs(tmp, stream);
@@ -4507,6 +4899,7 @@ boolean G_CheckDemoStatus(void)
 
       G_ReloadDefaults(false); // killough 3/1/98
       netgame = false;       // killough 3/29/98
+      solonet = false;
       deathmatch = false;
       D_AdvanceDemo();
       return true;

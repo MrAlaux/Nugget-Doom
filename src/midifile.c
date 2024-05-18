@@ -15,25 +15,22 @@
 //    Reading of MIDI files.
 //
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+
+#include "SDL_endian.h"
 
 #include "doomtype.h"
 #include "i_printf.h"
-#include "m_swap.h"
-#include "i_system.h"
 #include "memio.h"
 #include "midifile.h"
 
 #define HEADER_CHUNK_ID "MThd"
 #define TRACK_CHUNK_ID  "MTrk"
-#define MAX_BUFFER_SIZE 0x10000
 
 // haleyjd 09/09/10: packing required
 #if defined(_MSC_VER)
-#pragma pack(push, 1)
+#  pragma pack(push, 1)
 #endif
 
 typedef PACKED_PREFIX struct
@@ -52,7 +49,7 @@ typedef PACKED_PREFIX struct
 
 // haleyjd 09/09/10: packing off.
 #if defined(_MSC_VER)
-#pragma pack(pop)
+#  pragma pack(pop)
 #endif
 
 typedef struct
@@ -83,27 +80,27 @@ struct midi_file_s
     midi_track_t *tracks;
     unsigned int num_tracks;
 
-    // Data buffer used to store data read for SysEx or meta events:
-    byte *buffer;
-    unsigned int buffer_size;
+    // Number of RPG Maker loop events.
+    unsigned int num_rpg_events;
+
+    // Number of EMIDI events, without track exclusion.
+    unsigned int num_emidi_events;
 };
 
 // Check the header of a chunk:
 
-static boolean CheckChunkHeader(chunk_header_t *chunk,
-                                const char *expected_id)
+static boolean CheckChunkHeader(chunk_header_t *chunk, const char *expected_id)
 {
     boolean result;
-    
-    result = (memcmp((char *) chunk->chunk_id, expected_id, 4) == 0);
+
+    result = (memcmp((char *)chunk->chunk_id, expected_id, 4) == 0);
 
     if (!result)
     {
         I_Printf(VB_ERROR,
                  "CheckChunkHeader: Expected '%s' chunk header, "
                  "got '%c%c%c%c'",
-                 expected_id,
-                 chunk->chunk_id[0], chunk->chunk_id[1],
+                 expected_id, chunk->chunk_id[0], chunk->chunk_id[1],
                  chunk->chunk_id[2], chunk->chunk_id[3]);
     }
 
@@ -138,7 +135,7 @@ static boolean ReadVariableLength(unsigned int *result, MEMFILE *stream)
 
     *result = 0;
 
-    for (i=0; i<4; ++i)
+    for (i = 0; i < 4; ++i)
     {
         if (!ReadByte(&b, stream))
         {
@@ -185,12 +182,12 @@ static void *ReadByteSequence(unsigned int num_bytes, MEMFILE *stream)
 
     // Read the data:
 
-    for (i=0; i<num_bytes; ++i)
+    for (i = 0; i < num_bytes; ++i)
     {
         if (!ReadByte(&result[i], stream))
         {
             I_Printf(VB_ERROR, "ReadByteSequence: Error while reading byte %u",
-                               i);
+                     i);
             free(result);
             return NULL;
         }
@@ -203,9 +200,8 @@ static void *ReadByteSequence(unsigned int num_bytes, MEMFILE *stream)
 // two_param indicates that the event type takes two parameters
 // (three byte) otherwise it is single parameter (two byte)
 
-static boolean ReadChannelEvent(midi_event_t *event,
-                                byte event_type, boolean two_param,
-                                MEMFILE *stream)
+static boolean ReadChannelEvent(midi_event_t *event, byte event_type,
+                                boolean two_param, MEMFILE *stream)
 {
     byte b = 0;
 
@@ -244,9 +240,13 @@ static boolean ReadChannelEvent(midi_event_t *event,
 
 // Read sysex event:
 
+static midi_sysex_type_t GetSysExType(midi_event_t *event);
+
 static boolean ReadSysExEvent(midi_event_t *event, int event_type,
                               MEMFILE *stream)
 {
+    unsigned int i;
+
     event->event_type = event_type;
 
     if (!ReadVariableLength(&event->data.sysex.length, stream))
@@ -258,14 +258,28 @@ static boolean ReadSysExEvent(midi_event_t *event, int event_type,
 
     // Read the byte sequence:
 
-    event->data.sysex.data = ReadByteSequence(event->data.sysex.length, stream);
+    event->data.sysex.length++; // Extra byte for event type.
+    event->data.sysex.data = malloc(event->data.sysex.length);
 
     if (event->data.sysex.data == NULL)
     {
-        I_Printf(VB_ERROR, "ReadSysExEvent: Failed while reading SysEx event");
+        I_Printf(VB_ERROR, "ReadSysExEvent: Failed to allocate buffer");
         return false;
     }
 
+    event->data.sysex.data[0] = event->event_type;
+
+    for (i = 1; i < event->data.sysex.length; i++)
+    {
+        if (!ReadByte(&event->data.sysex.data[i], stream))
+        {
+            I_Printf(VB_ERROR, "ReadSysExEvent: Failed to read event");
+            free(event->data.sysex.data);
+            return false;
+        }
+    }
+
+    event->data.sysex.type = GetSysExType(event);
     return true;
 }
 
@@ -291,8 +305,8 @@ static boolean ReadMetaEvent(midi_event_t *event, MEMFILE *stream)
 
     if (!ReadVariableLength(&event->data.meta.length, stream))
     {
-        I_Printf(VB_ERROR, "ReadSysExEvent: Failed to read length of "
-                           "SysEx block");
+        I_Printf(VB_ERROR, "ReadMetaEvent: Failed to read length of "
+                           "meta event block");
         return false;
     }
 
@@ -302,7 +316,7 @@ static boolean ReadMetaEvent(midi_event_t *event, MEMFILE *stream)
 
     if (event->data.meta.data == NULL)
     {
-        I_Printf(VB_ERROR, "ReadSysExEvent: Failed while reading SysEx event");
+        I_Printf(VB_ERROR, "ReadMetaEvent: Failed while reading meta event");
         return false;
     }
 
@@ -326,7 +340,7 @@ static boolean ReadEvent(midi_event_t *event, unsigned int *last_event_type,
         return false;
     }
 
-    // All event types have their top bit set.  Therefore, if 
+    // All event types have their top bit set.  Therefore, if
     // the top bit is not set, it is because we are using the "same
     // as previous event type" shortcut to save a byte.  Skip back
     // a byte so that we read this byte again.
@@ -350,7 +364,7 @@ static boolean ReadEvent(midi_event_t *event, unsigned int *last_event_type,
 
     switch (event_type & 0xf0)
     {
-        // Two parameter channel events:
+            // Two parameter channel events:
 
         case MIDI_EVENT_NOTE_OFF:
         case MIDI_EVENT_NOTE_ON:
@@ -359,7 +373,7 @@ static boolean ReadEvent(midi_event_t *event, unsigned int *last_event_type,
         case MIDI_EVENT_PITCH_BEND:
             return ReadChannelEvent(event, event_type, true, stream);
 
-        // Single parameter channel events:
+            // Single parameter channel events:
 
         case MIDI_EVENT_PROGRAM_CHANGE:
         case MIDI_EVENT_CHAN_AFTERTOUCH:
@@ -436,7 +450,35 @@ static boolean ReadTrackHeader(midi_track_t *track, MEMFILE *stream)
     return true;
 }
 
-static boolean ReadTrack(midi_track_t *track, MEMFILE *stream)
+// "EMIDI track exclusion" and "RPG Maker loop point" share the same controller
+// number (CC#111) and are not compatible with each other. Count these events
+// and allow an RPG Maker loop point only if no other EMIDI events are present.
+
+static void CheckUndefinedEvent(midi_file_t *file, const midi_event_t *event)
+{
+    if (event->event_type == MIDI_EVENT_CONTROLLER)
+    {
+        switch (event->data.channel.param1)
+        {
+            case EMIDI_CONTROLLER_TRACK_EXCLUSION:
+                file->num_rpg_events++;
+                break;
+
+            case EMIDI_CONTROLLER_TRACK_DESIGNATION:
+            case EMIDI_CONTROLLER_PROGRAM_CHANGE:
+            case EMIDI_CONTROLLER_VOLUME:
+            case EMIDI_CONTROLLER_LOOP_BEGIN:
+            case EMIDI_CONTROLLER_LOOP_END:
+            case EMIDI_CONTROLLER_GLOBAL_LOOP_BEGIN:
+            case EMIDI_CONTROLLER_GLOBAL_LOOP_END:
+                file->num_emidi_events++;
+                break;
+        }
+    }
+}
+
+static boolean ReadTrack(midi_file_t *file, midi_track_t *track,
+                         MEMFILE *stream)
 {
     midi_event_t *new_events = NULL;
     midi_event_t *event;
@@ -460,7 +502,7 @@ static boolean ReadTrack(midi_track_t *track, MEMFILE *stream)
     {
         // Resize the track slightly larger to hold another event:
 
-        // new_events = realloc(track->events, 
+        // new_events = realloc(track->events,
         //                      sizeof(midi_event_t) * (track->num_events + 1));
 
         // Depending on the state of the heap and the malloc implementation,
@@ -470,7 +512,7 @@ static boolean ReadTrack(midi_track_t *track, MEMFILE *stream)
         {
             track->num_events_mem += 100;
             new_events = realloc(track->events,
-                                 sizeof (midi_event_t) * track->num_events_mem);
+                                 sizeof(midi_event_t) * track->num_events_mem);
         }
 
         if (new_events == NULL)
@@ -489,11 +531,12 @@ static boolean ReadTrack(midi_track_t *track, MEMFILE *stream)
         }
 
         ++track->num_events;
+        CheckUndefinedEvent(file, event);
 
         // End of track?
 
         if (event->event_type == MIDI_EVENT_META
-         && event->data.meta.type == MIDI_META_END_OF_TRACK)
+            && event->data.meta.type == MIDI_META_END_OF_TRACK)
         {
             break;
         }
@@ -508,7 +551,7 @@ static void FreeTrack(midi_track_t *track)
 {
     unsigned int i;
 
-    for (i=0; i<track->num_events; ++i)
+    for (i = 0; i < track->num_events; ++i)
     {
         FreeEvent(&track->events[i]);
     }
@@ -533,9 +576,9 @@ static boolean ReadAllTracks(midi_file_t *file, MEMFILE *stream)
 
     // Read each track:
 
-    for (i=0; i<file->num_tracks; ++i)
+    for (i = 0; i < file->num_tracks; ++i)
     {
-        if (!ReadTrack(&file->tracks[i], stream))
+        if (!ReadTrack(file, &file->tracks[i], stream))
         {
             return false;
         }
@@ -559,19 +602,19 @@ static boolean ReadFileHeader(midi_file_t *file, MEMFILE *stream)
     }
 
     if (!CheckChunkHeader(&file->header.chunk_header, HEADER_CHUNK_ID)
-     || SDL_SwapBE32(file->header.chunk_header.chunk_size) != 6)
+        || SDL_SwapBE32(file->header.chunk_header.chunk_size) != 6)
     {
-        I_Printf(VB_ERROR, "ReadFileHeader: Invalid MIDI chunk header! "
-                           "chunk_size=%i",
-                           SDL_SwapBE32(file->header.chunk_header.chunk_size));
+        I_Printf(VB_ERROR,
+                 "ReadFileHeader: Invalid MIDI chunk header! "
+                 "chunk_size=%i",
+                 SDL_SwapBE32(file->header.chunk_header.chunk_size));
         return false;
     }
 
     format_type = SDL_SwapBE16(file->header.format_type);
     file->num_tracks = SDL_SwapBE16(file->header.num_tracks);
 
-    if ((format_type != 0 && format_type != 1)
-     || file->num_tracks < 1)
+    if ((format_type != 0 && format_type != 1) || file->num_tracks < 1)
     {
         I_Printf(VB_ERROR, "ReadFileHeader: Only type 0/1 "
                            "MIDI files supported!");
@@ -587,7 +630,7 @@ void MIDI_FreeFile(midi_file_t *file)
 
     if (file->tracks != NULL)
     {
-        for (i=0; i<file->num_tracks; ++i)
+        for (i = 0; i < file->num_tracks; ++i)
         {
             FreeTrack(&file->tracks[i]);
         }
@@ -612,8 +655,8 @@ midi_file_t *MIDI_LoadFile(void *buf, size_t buflen)
 
     file->tracks = NULL;
     file->num_tracks = 0;
-    file->buffer = NULL;
-    file->buffer_size = 0;
+    file->num_rpg_events = 0;
+    file->num_emidi_events = 0;
 
     // Open file
 
@@ -661,8 +704,6 @@ unsigned int MIDI_NumTracks(midi_file_t *file)
 midi_track_iter_t *MIDI_IterateTrack(midi_file_t *file, unsigned int track)
 {
     midi_track_iter_t *iter;
-
-    assert(track < file->num_tracks);
 
     iter = malloc(sizeof(*iter));
     iter->track = &file->tracks[track];
@@ -720,8 +761,7 @@ unsigned int MIDI_GetFileTimeDivision(midi_file_t *file)
     // differently.
     if (result < 0)
     {
-        return (signed int)(-(result/256))
-             * (signed int)(result & 0xFF);
+        return (signed int)(-(result / 256)) * (signed int)(result & 0xFF);
     }
     else
     {
@@ -743,4 +783,146 @@ void MIDI_SetLoopPoint(midi_track_iter_t *iter)
 void MIDI_RestartAtLoopPoint(midi_track_iter_t *iter)
 {
     iter->position = iter->loop_point;
+}
+
+boolean MIDI_RPGLoop(const midi_file_t *file)
+{
+    return (file->num_rpg_events == 1 && file->num_emidi_events == 0);
+}
+
+static boolean RolandChecksum(const byte *data)
+{
+    const byte checksum =
+        128 - ((int)data[5] + data[6] + data[7] + data[8]) % 128;
+    return (data[9] == checksum);
+}
+
+static void RolandBlockToChannel(midi_event_t *event)
+{
+    const byte *data = event->data.sysex.data;
+    unsigned int *channel = &event->data.sysex.channel;
+
+    // Convert Roland "block number" to a channel number.
+    // [11-19, 10, 1A-1F] for channels 1-16. Note the position of 10.
+
+    if (data[6] == 0x10) // Channel 10
+    {
+        *channel = 9;
+    }
+    else if (data[6] < 0x1A) // Channels 1-9
+    {
+        *channel = (data[6] & 0x0F) - 1;
+    }
+    else // Channels 11-16
+    {
+        *channel = data[6] & 0x0F;
+    }
+}
+
+static midi_sysex_type_t GetSysExType(midi_event_t *event)
+{
+    const byte *data = event->data.sysex.data;
+    const unsigned int length = event->data.sysex.length;
+    unsigned int address;
+
+    if (length < 2 || data[0] != MIDI_EVENT_SYSEX
+        || data[length - 1] != MIDI_EVENT_SYSEX_SPLIT)
+    {
+        return MIDI_SYSEX_UNSUPPORTED;
+    }
+
+    if (length < 6)
+    {
+        return MIDI_SYSEX_OTHER;
+    }
+
+    switch (data[1])
+    {
+        case 0x7E: // Universal Non-Real Time
+            if (length == 6 && data[3] == 0x09 // General Midi
+                && (data[4] == 0x01 || data[4] == 0x02 || data[4] == 0x03))
+            {
+                // GM System On/Off, GM2 System On
+                // F0 7E <dev> 09 01 F7
+                // F0 7E <dev> 09 02 F7
+                // F0 7E <dev> 09 03 F7
+                return MIDI_SYSEX_RESET;
+            }
+            break;
+
+        case 0x41: // Roland
+            if (length == 11 && data[3] == 0x42 && data[4] == 0x12) // GS DT1
+            {
+                address = (data[5] << 16) | ((data[6] & 0xF0) << 8) | data[7];
+                switch (address)
+                {
+                    case 0x40007F: // Mode Set
+                        if (data[8] == 0x00 && data[9] == 0x41)
+                        {
+                            // GS Reset
+                            // F0 41 <dev> 42 12 40 00 7F 00 41 F7
+                            return MIDI_SYSEX_RESET;
+                        }
+                        break;
+
+                    case 0x00007F: // System Mode Set
+                        if ((data[8] == 0x00 && data[9] == 0x01)
+                            || (data[8] == 0x01 && data[9] == 0x00))
+                        {
+                            // System Mode Set MODE-1, MODE-2
+                            // F0 41 <dev> 42 12 00 00 7F 00 01 F7
+                            // F0 41 <dev> 42 12 00 00 7F 01 00 F7
+                            return MIDI_SYSEX_RESET;
+                        }
+                        break;
+
+                    case 0x401015: // Use for Rhythm Part
+                        if (RolandChecksum(data))
+                        {
+                            // Use for Rhythm Part (Drum Map)
+                            // F0 41 <dev> 42 12 40 <ch> 15 <map> <sum> F7
+                            RolandBlockToChannel(event);
+                            return MIDI_SYSEX_RHYTHM_PART;
+                        }
+                        break;
+
+                    case 0x401019: // Part Level
+                        if (RolandChecksum(data))
+                        {
+                            // Part Level (Channel Volume)
+                            // F0 41 <dev> 42 12 40 <ch> 19 <vol> <sum> F7
+                            RolandBlockToChannel(event);
+                            return MIDI_SYSEX_PART_LEVEL;
+                        }
+                        break;
+                }
+            }
+            break;
+
+        case 0x43: // Yamaha
+            if (length == 9 && data[3] == 0x4C) // XG
+            {
+                address = (data[4] << 16) | (data[5] << 8) | data[6];
+                if ((address == 0x7E || address == 0x7F) && data[7] == 0x00)
+                {
+                    // XG System On, XG All Parameter Reset
+                    // F0 43 <dev> 4C 00 00 7E 00 F7
+                    // F0 43 <dev> 4C 00 00 7F 00 F7
+                    return MIDI_SYSEX_RESET;
+                }
+            }
+            else if (length == 10 && data[3] == 0x2B) // TG300
+            {
+                address = (data[4] << 16) | (data[5] << 8) | data[6];
+                if (address == 0x7F && data[7] == 0x00 && data[8] == 0x01)
+                {
+                    // TG300 All Parameter Reset
+                    // F0 43 <dev> 2B 00 00 7F 00 01 F7
+                    return MIDI_SYSEX_RESET;
+                }
+            }
+            break;
+    }
+
+    return MIDI_SYSEX_OTHER;
 }

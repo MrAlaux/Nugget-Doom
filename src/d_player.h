@@ -24,19 +24,18 @@
 // of other structs: items (internal inventory),
 // animation states (closely tied to the sprites
 // used to represent them, unfortunately).
-#include "d_items.h"
 #include "p_pspr.h"
 
 // In addition, the player is just a special
 // case of the generic moving object/actor.
-#include "p_mobj.h"
+struct mobj_s;
 
 // Finally, for odd reasons, the player input
 // is buffered within the player data struct,
 // as commands per game tick.
 #include "d_ticcmd.h"
 
-#include "u_mapinfo.h"
+struct mapentry_s;
 
 //
 // Player states.
@@ -93,14 +92,14 @@ typedef enum
 } weapswitch_t;
 
 
-// [Nugget]: [crispy] blinking key or skull in the status bar
+// [crispy] blinking key or skull in the status bar
 typedef enum
 {
   KEYBLINK_NONE,
-  KEYBLINK_EITHER,
   KEYBLINK_CARD,
   KEYBLINK_SKULL,
   KEYBLINK_BOTH,
+  KEYBLINK_EITHER,
 } keyblink_t;
 
 //
@@ -108,7 +107,7 @@ typedef enum
 //
 typedef struct player_s
 {
-  mobj_t*             mo;
+  struct mobj_s       *mo;
   playerstate_t       playerstate;
   ticcmd_t            cmd;
 
@@ -176,7 +175,7 @@ typedef struct player_s
   int                 bonuscount;
 
   // Who did damage (NULL for floors/ceilings).
-  mobj_t*             attacker;
+  struct mobj_s       *attacker;
 
   // So gun flashes light up areas.
   int                 extralight;
@@ -202,18 +201,24 @@ typedef struct player_s
   // [Woof!] show centered "A secret is revealed!" message
   char*               secretmessage;
 
+  // [crispy] blinking key or skull in the status bar
+  keyblink_t          keyblinkkeys[3];
+  int                 keyblinktics;
+
+  int                 btuse, btuse_tics;
+
   // [crispy] free look / mouse look
-  int                 lookdir, oldlookdir;
+  fixed_t             pitch, oldpitch;
   boolean             centering;
   fixed_t             slope;
 
   // [crispy] weapon recoil pitch
   fixed_t             recoilpitch, oldrecoilpitch;
 
-  // [Nugget] Removed member for "variable player view bob",
-  // as bobbing is now percentage-based
-
   weapswitch_t switching;
+
+  // DSDA UV Max category requirements
+  int maxkilldiscount;
 
   // [Nugget] ----------------------------------------------------------------
 
@@ -222,13 +227,9 @@ typedef struct player_s
   int                 jumptics; // Jumping delay
   fixed_t             crouchoffset; // How many units the player is crouched
 
-  fixed_t             impactpitch, oldimpactpitch; // Pitch view on impact
+  fixed_t             flinch, oldflinch; // Flinching
 
-  // [crispy] blinking key or skull in the status bar
-  int                 keyblinkkeys[3], keyblinktics;
-
-  // Momentarily display the time at which an event occurred
-  int                 eventtype, eventtime, eventtics;
+  int                 eventtype;
 
 } player_t;
 
@@ -251,7 +252,7 @@ typedef struct
 
 } wbplayerstruct_t;
 
-typedef struct
+typedef struct wbstartstruct_s
 {
   int         epsd;   // episode # (0-2)
 
@@ -262,9 +263,9 @@ typedef struct
   int         last;
   int         next;
   int         nextep;	// for when MAPINFO progression crosses into another episode.
-  mapentry_t* lastmapinfo;
-  mapentry_t* nextmapinfo;
-
+  struct mapentry_s *lastmapinfo;
+  struct mapentry_s *nextmapinfo;
+    
   int         maxkills;
   int         maxitems;
   int         maxsecret;

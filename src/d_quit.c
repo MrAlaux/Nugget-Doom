@@ -17,17 +17,18 @@
 //
 
 #include <errno.h>
+#include <string.h>
 
 #include "SDL.h"
 
 #include "doomstat.h"
-#include "i_printf.h"
-#include "i_system.h"
-#include "m_misc.h"
 #include "g_game.h"
-#include "m_io.h"
-#include "w_wad.h"
 #include "i_glob.h"
+#include "i_printf.h"
+#include "m_array.h"
+#include "m_io.h"
+#include "m_config.h"
+#include "w_wad.h"
 
 //
 // I_Quit
@@ -50,13 +51,13 @@ void I_Quit(void)
 
     W_CloseFileDescriptors();
 
-    for (i = 0; tempdirs[i]; ++i)
+    for (i = 0; i < array_size(tempdirs); ++i)
     {
         glob_t *glob;
         const char *filename;
 
-        glob = I_StartMultiGlob(tempdirs[i], GLOB_FLAG_NOCASE|GLOB_FLAG_SORTED,
-                                "*.*", NULL);
+        glob = I_StartMultiGlob(
+            tempdirs[i], GLOB_FLAG_NOCASE | GLOB_FLAG_SORTED, "*.*", NULL);
         for (;;)
         {
             filename = I_NextGlob(glob);

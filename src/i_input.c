@@ -16,73 +16,78 @@
 
 #include "SDL.h"
 
-#include "doomtype.h"
-#include "doomkeys.h"
-#include "i_printf.h"
 #include "d_event.h"
 #include "d_main.h"
-#include "m_fixed.h"
-#include "i_timer.h"
-#include "i_video.h"
+#include "doomkeys.h"
+#include "doomtype.h"
+#include "i_gamepad.h"
+#include "i_printf.h"
+#include "i_system.h"
+#include "r_main.h"
+
+#define AXIS_BUTTON_DEADZONE (SDL_JOYSTICK_AXIS_MAX / 3)
 
 static SDL_GameController *controller;
 static int controller_index = -1;
-
-// When an axis is within the dead zone, it is set to zero.
-#define DEAD_ZONE (32768 / 3)
-
-#define TRIGGER_THRESHOLD 30 // from xinput.h
 
 // [FG] adapt joystick button and axis handling from Chocolate Doom 3.0
 
 static int GetAxisState(int axis)
 {
-    int result;
-
-    result = SDL_GameControllerGetAxis(controller, axis);
-
-    if (result < DEAD_ZONE && result > -DEAD_ZONE)
-    {
-        result = 0;
-    }
-
-    return result;
+    return SDL_GameControllerGetAxis(controller, axis);
 }
 
 static void AxisToButton(int value, int *state, int direction)
 {
-  int button = -1;
+    int button = -1;
 
-  if (value < 0)
-    button = direction;
-  else if (value > 0)
-    button = direction + 1;
-
-  if (button != *state)
-  {
-    if (*state != -1)
+    if (value < AXIS_BUTTON_DEADZONE && value > -AXIS_BUTTON_DEADZONE)
     {
-        static event_t up;
-        up.data1 = *state;
-        up.type = ev_joyb_up;
-        D_PostEvent(&up);
+        value = 0;
     }
 
-    if (button != -1)
+    if (value < 0)
     {
-        static event_t down;
-        down.data1 = button;
-        down.type = ev_joyb_down;
-        D_PostEvent(&down);
+        button = direction;
+    }
+    else if (value > 0)
+    {
+        button = direction + 1;
     }
 
-    *state = button;
-  }
+    if (button != *state)
+    {
+        if (*state != -1)
+        {
+            static event_t up;
+            up.data1 = *state;
+            up.type = ev_joyb_up;
+            D_PostEvent(&up);
+        }
+
+        if (button != -1)
+        {
+            static event_t down;
+            down.data1 = button;
+            down.type = ev_joyb_down;
+            D_PostEvent(&down);
+        }
+
+        *state = button;
+    }
 }
 
-static int axisbuttons[] = { -1, -1, -1, -1 };
+static int axisbuttons[] = {-1, -1, -1, -1};
 
-void I_UpdateJoystick(void)
+static void AxisToButtons(event_t *ev)
+{
+    AxisToButton(ev->data1, &axisbuttons[0], CONTROLLER_LEFT_STICK_LEFT);
+    AxisToButton(ev->data2, &axisbuttons[1], CONTROLLER_LEFT_STICK_UP);
+    AxisToButton(ev->data3, &axisbuttons[2], CONTROLLER_RIGHT_STICK_LEFT);
+    AxisToButton(ev->data4, &axisbuttons[3], CONTROLLER_RIGHT_STICK_UP);
+}
+
+void I_UpdateJoystick(boolean axis_buttons)
 {
     static event_t ev;
 
@@ -91,17 +96,36 @@ void I_UpdateJoystick(void)
         return;
     }
 
-    ev.type = ev_joystick;
     ev.data1 = GetAxisState(SDL_CONTROLLER_AXIS_LEFTX);
     ev.data2 = GetAxisState(SDL_CONTROLLER_AXIS_LEFTY);
     ev.data3 = GetAxisState(SDL_CONTROLLER_AXIS_RIGHTX);
     ev.data4 = GetAxisState(SDL_CONTROLLER_AXIS_RIGHTY);
 
-    AxisToButton(ev.data1, &axisbuttons[0], CONTROLLER_LEFT_STICK_LEFT);
-    AxisToButton(ev.data2, &axisbuttons[1], CONTROLLER_LEFT_STICK_UP);
-    AxisToButton(ev.data3, &axisbuttons[2], CONTROLLER_RIGHT_STICK_LEFT);
-    AxisToButton(ev.data4, &axisbuttons[3], CONTROLLER_RIGHT_STICK_UP);
+    if (axis_buttons)
+    {
+        AxisToButtons(&ev);
+    }
 
+    ev.type = ev_joystick;
+    D_PostEvent(&ev);
+}
+
+void I_UpdateJoystickMenu(void)
+{
+    static event_t ev;
+
+    if (controller == NULL)
+    {
+        return;
+    }
+
+    ev.data1 = GetAxisState(SDL_CONTROLLER_AXIS_LEFTX);
+    ev.data2 = GetAxisState(SDL_CONTROLLER_AXIS_LEFTY);
+    ev.data3 = GetAxisState(SDL_CONTROLLER_AXIS_RIGHTX);
+    ev.data4 = GetAxisState(SDL_CONTROLLER_AXIS_RIGHTY);
+
+    AxisToButtons(&ev);
+    ev.type = ev_joystick_state;
     D_PostEvent(&ev);
 }
 
@@ -130,12 +154,12 @@ static void UpdateControllerAxisState(unsigned int value, boolean left_trigger)
 
     if (left_trigger)
     {
-        if (value > TRIGGER_THRESHOLD && !left_trigger_on)
+        if (value > trigger_threshold && !left_trigger_on)
         {
             left_trigger_on = true;
             event.type = ev_joyb_down;
         }
-        else if (value <= TRIGGER_THRESHOLD && left_trigger_on)
+        else if (value <= trigger_threshold && left_trigger_on)
         {
             left_trigger_on = false;
             event.type = ev_joyb_up;
@@ -149,12 +173,12 @@ static void UpdateControllerAxisState(unsigned int value, boolean left_trigger)
     }
     else
     {
-        if (value > TRIGGER_THRESHOLD && !right_trigger_on)
+        if (value > trigger_threshold && !right_trigger_on)
         {
             right_trigger_on = true;
             event.type = ev_joyb_down;
         }
-        else if (value <= TRIGGER_THRESHOLD && right_trigger_on)
+        else if (value <= trigger_threshold && right_trigger_on)
         {
             right_trigger_on = false;
             event.type = ev_joyb_up;
@@ -171,6 +195,61 @@ static void UpdateControllerAxisState(unsigned int value, boolean left_trigger)
     D_PostEvent(&event);
 }
 
+boolean I_UseController(void)
+{
+    return (controller && joy_enable);
+}
+
+static void EnableControllerEvents(void)
+{
+    SDL_EventState(SDL_CONTROLLERAXISMOTION, SDL_ENABLE);
+    SDL_EventState(SDL_CONTROLLERBUTTONDOWN, SDL_ENABLE);
+    SDL_EventState(SDL_CONTROLLERBUTTONUP, SDL_ENABLE);
+}
+
+static void DisableControllerEvents(void)
+{
+    SDL_EventState(SDL_CONTROLLERAXISMOTION, SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERBUTTONDOWN, SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERBUTTONUP, SDL_IGNORE);
+
+    // Always ignore unsupported game controller events.
+    SDL_EventState(SDL_CONTROLLERDEVICEREMAPPED, SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERTOUCHPADDOWN, SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERTOUCHPADMOTION, SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERTOUCHPADUP, SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERSENSORUPDATE, SDL_IGNORE);
+}
+
+static void I_ShutdownController(void)
+{
+    SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+}
+
+void I_InitController(void)
+{
+    if (!joy_enable)
+    {
+        SDL_GameControllerEventState(SDL_IGNORE);
+        return;
+    }
+
+    if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0)
+    {
+        I_Printf(VB_WARNING,
+                 "I_InitController: Failed to initialize game controller: %s",
+                 SDL_GetError());
+        return;
+    }
+
+    SDL_GameControllerEventState(SDL_ENABLE);
+    DisableControllerEvents();
+
+    I_Printf(VB_INFO, "I_InitController: Initialize game controller.");
+
+    I_AtExit(I_ShutdownController, true);
+}
+
 void I_OpenController(int which)
 {
     if (controller)
@@ -184,15 +263,25 @@ void I_OpenController(int which)
         if (controller)
         {
             controller_index = which;
-            I_Printf(VB_INFO, "I_OpenController: Found a valid game controller, named: %s",
-                    SDL_GameControllerName(controller));
+            I_Printf(VB_INFO,
+                     "I_OpenController: Found a valid game controller"
+                     ", named: %s",
+                     SDL_GameControllerName(controller));
         }
     }
 
     if (controller == NULL)
     {
-        I_Printf(VB_ERROR, "I_OpenController: Could not open game controller %i: %s",
-                which, SDL_GetError());
+        I_Printf(VB_ERROR,
+                 "I_OpenController: Could not open game controller %i: %s",
+                 which, SDL_GetError());
+    }
+
+    I_ResetController();
+
+    if (controller)
+    {
+        EnableControllerEvents();
     }
 }
 
@@ -204,6 +293,9 @@ void I_CloseController(int which)
         controller = NULL;
         controller_index = -1;
     }
+
+    DisableControllerEvents();
+    I_ResetController();
 }
 
 void I_HandleJoystickEvent(SDL_Event *sdlevent)
@@ -268,11 +360,12 @@ static int TranslateKey(int scancode)
     }
 }
 
-static void UpdateMouseButtonState(unsigned int button, boolean on, unsigned int dclick)
+static void UpdateMouseButtonState(unsigned int button, boolean on,
+                                   unsigned int dclick)
 {
     static event_t event;
 
-    if (button < SDL_BUTTON_LEFT || button > MAX_MB)
+    if (button < SDL_BUTTON_LEFT || button > NUM_MOUSE_BUTTONS)
     {
         return;
     }
@@ -327,11 +420,11 @@ static void MapMouseWheelToButtons(SDL_MouseWheelEvent wheel)
     int button;
 
     if (wheel.y < 0)
-    {   // scroll down
+    {
         button = MOUSE_BUTTON_WHEELDOWN;
     }
-    else if (wheel.y >0)
-    {   // scroll up
+    else if (wheel.y > 0)
+    {
         button = MOUSE_BUTTON_WHEELUP;
     }
     else if (wheel.x < 0)
@@ -379,14 +472,18 @@ void I_DelayEvent(void)
 int mouse_acceleration;
 int mouse_acceleration_threshold;
 
-static int AccelerateMouse(int val)
+static double AccelerateMouse_Thresh(int val)
 {
     if (val < 0)
-        return -AccelerateMouse(-val);
+    {
+        return -AccelerateMouse_Thresh(-val);
+    }
 
     if (val > mouse_acceleration_threshold)
     {
-        return (val - mouse_acceleration_threshold) * (mouse_acceleration + 10) / 10 + mouse_acceleration_threshold;
+        return ((double)(val - mouse_acceleration_threshold)
+                    * (mouse_acceleration + 10) / 10
+                + mouse_acceleration_threshold);
     }
     else
     {
@@ -394,31 +491,29 @@ static int AccelerateMouse(int val)
     }
 }
 
-// [crispy] Distribute the mouse movement between the current tic and the next
-// based on how far we are into the current tic. Compensates for mouse sampling
-// jitter.
-
-static void SmoothMouse(int* x, int* y)
+static double AccelerateMouse_NoThresh(int val)
 {
-    static int x_remainder_old = 0;
-    static int y_remainder_old = 0;
-    int x_remainder, y_remainder;
-    fixed_t correction_factor;
-    fixed_t fractic;
+    return ((double)val * (mouse_acceleration + 10) / 10);
+}
 
-    *x += x_remainder_old;
-    *y += y_remainder_old;
+static double AccelerateMouse_Skip(int val)
+{
+    return val;
+}
 
-    fractic = I_GetFracTime();
-    correction_factor = FixedDiv(fractic, FRACUNIT + fractic);
+double (*I_AccelerateMouse)(int val) = AccelerateMouse_NoThresh;
 
-    x_remainder = FixedMul(*x, correction_factor);
-    *x -= x_remainder;
-    x_remainder_old = x_remainder;
-
-    y_remainder = FixedMul(*y, correction_factor);
-    *y -= y_remainder;
-    y_remainder_old = y_remainder;
+void I_UpdateAccelerateMouse(void)
+{
+    if (mouse_acceleration)
+    {
+        I_AccelerateMouse =
+            raw_input ? AccelerateMouse_NoThresh : AccelerateMouse_Thresh;
+    }
+    else
+    {
+        I_AccelerateMouse = AccelerateMouse_Skip;
+    }
 }
 
 void I_ReadMouse(void)
@@ -428,17 +523,12 @@ void I_ReadMouse(void)
 
     SDL_GetRelativeMouseState(&x, &y);
 
-    if (uncapped)
-    {
-        SmoothMouse(&x, &y);
-    }
-
     if (x != 0 || y != 0)
     {
         ev.type = ev_mouse;
         ev.data1 = 0;
-        ev.data2 = AccelerateMouse(x);
-        ev.data3 = -AccelerateMouse(y);
+        ev.data2 = x;
+        ev.data3 = -y;
 
         D_PostEvent(&ev);
     }
@@ -449,7 +539,8 @@ void I_HandleMouseEvent(SDL_Event *sdlevent)
     switch (sdlevent->type)
     {
         case SDL_MOUSEBUTTONDOWN:
-            UpdateMouseButtonState(sdlevent->button.button, true, sdlevent->button.clicks);
+            UpdateMouseButtonState(sdlevent->button.button, true,
+                                   sdlevent->button.clicks);
             break;
 
         case SDL_MOUSEBUTTONUP:

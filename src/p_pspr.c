@@ -18,24 +18,29 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "d_event.h"
+#include "d_items.h"
+#include "d_player.h"
 #include "doomstat.h"
-#include "r_main.h"
-#include "p_map.h"
-#include "p_inter.h"
-#include "p_pspr.h"
-#include "p_enemy.h"
+#include "i_printf.h"
+#include "i_video.h" // uncapped
 #include "m_random.h"
+#include "p_action.h"
+#include "p_enemy.h"
+#include "p_inter.h"
+#include "p_map.h"
+#include "p_mobj.h"
+#include "p_pspr.h"
+#include "p_tick.h"
+#include "r_main.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "d_event.h"
-#include "p_tick.h"
-#include "i_video.h" // uncapped
+#include "tables.h"
+
 // [Nugget]
 #include "g_game.h"
 #include "m_input.h"
 #include "w_wad.h" // W_CheckNumForName
-
-#include "p_action.h"
 
 #define LOWERSPEED   (FRACUNIT*6)
 #define RAISESPEED   (FRACUNIT*6)
@@ -53,14 +58,14 @@ static struct
   int pitch;
 } recoil_values[] = {    // phares
   { 10, 0 },   // wp_fist
-  { 10, 4 },   // wp_pistol
-  { 30, 8 },   // wp_shotgun
-  { 10, 4 },   // wp_chaingun
-  { 100, 16 }, // wp_missile
-  { 20, 4 },   // wp_plasma
-  { 100, 20 }, // wp_bfg
-  { 0, -2 },   // wp_chainsaw
-  { 80, 16 }   // wp_supershotgun
+  { 10, 2 },   // wp_pistol
+  { 30, 4 },   // wp_shotgun
+  { 10, 2 },   // wp_chaingun
+  { 100, 7 }, // wp_missile
+  { 20, 2 },   // wp_plasma
+  { 100, 9 }, // wp_bfg
+  { 0, -1 },   // wp_chainsaw
+  { 80, 7 }   // wp_supershotgun
 };
 
 // [crispy] add weapon recoil pitch
@@ -70,7 +75,7 @@ void A_Recoil(player_t* player)
 {
     if (player && weapon_recoilpitch)
     {
-        player->recoilpitch = recoil_values[player->readyweapon].pitch;
+        player->recoilpitch = recoil_values[player->readyweapon].pitch * ANG1;
     }
 }
 
@@ -80,8 +85,6 @@ void A_Recoil(player_t* player)
 
 static void P_SetPsprite(player_t *player, int position, statenum_t stnum)
 {
-  P_SetPspritePtr(player, &player->psprites[position], stnum);
-
   if (position == ps_weapon)
   {
     const weaponinfo_t wp = weaponinfo[player->readyweapon];
@@ -91,6 +94,8 @@ static void P_SetPsprite(player_t *player, int position, statenum_t stnum)
     else if (stnum == wp.downstate)
       player->switching = weapswitch_lowering;
   }
+
+  P_SetPspritePtr(player, &player->psprites[position], stnum);
 }
 
 //
@@ -110,7 +115,7 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
         }
 
       // killough 7/19/98: Pre-Beta BFG
-      if (stnum == S_BFG1 && (classic_bfg || beta_emulation))
+      if (stnum == S_BFG1 && (STRICTMODE(classic_bfg) || beta_emulation))
 	stnum = S_OLDBFG1;                 // Skip to alternative weapon frame
 
       state = &states[stnum];
@@ -156,7 +161,13 @@ static void P_BringUpWeapon(player_t *player)
     player->pendingweapon = player->readyweapon;
 
   if (player->pendingweapon == wp_chainsaw)
-    S_StartSound(player->mo, sfx_sawup);
+    S_StartSoundPitch(player->mo, sfx_sawup, PITCH_HALF);
+
+  if (player->pendingweapon >= NUMWEAPONS)
+  {
+    player->pendingweapon = NUMWEAPONS;
+    I_Printf(VB_WARNING, "P_BringUpWeapon: weaponinfo overrun has occurred.");
+  }
 
   newstate = weaponinfo[player->pendingweapon].upstate;
 
@@ -164,9 +175,8 @@ static void P_BringUpWeapon(player_t *player)
 
   // killough 12/98: prevent pistol from starting visibly at bottom of screen:
   player->psprites[ps_weapon].sy2 = // [Nugget]
-  player->psprites[ps_weapon].sy  = demo_version >= 203
-                                    ? WEAPONBOTTOM+FRACUNIT*2
-                                    : WEAPONBOTTOM;
+  player->psprites[ps_weapon].sy = demo_version >= DV_MBF ? 
+    WEAPONBOTTOM+FRACUNIT*2 : WEAPONBOTTOM;
 
   // [Nugget]: [crispy] squat down weapon sprite
   player->psprites[ps_weapon].dy = 0;
@@ -384,7 +394,6 @@ boolean P_CheckAmmo(player_t *player)
       player->pendingweapon = P_SwitchWeapon(player);      // phares
       // Now set appropriate weapon overlay.
       P_SetPsprite(player,ps_weapon,weaponinfo[player->readyweapon].downstate);
-      player->switching = weapswitch_lowering;
     }
 
 #if 0 /* PROBABLY UNSAFE */
@@ -485,9 +494,6 @@ static void P_ApplyBobbing(int *sx, int *sy, fixed_t bob)
 static void P_NuggetBobbing(player_t* player)
 {
   pspdef_t *psp = player->psprites;
-  fixed_t bob = player->bob;
-  const int angle = (128*leveltime) & FINEMASK;
-  const int style = STRICTMODE(bobbing_style);
 
   if ((player->attackdown && STRICTMODE(center_weapon) != WEAPON_BOBBING) // [FG] not attacking means idle
       || !psp->state || psp->state->misc1 || player->switching)
@@ -495,18 +501,19 @@ static void P_NuggetBobbing(player_t* player)
     return;
   }
 
-  // [Nugget] Weapon bobbing percentage setting
-  if (weapon_bobbing_percentage != 100)
-  { bob = FixedDiv(FixedMul(bob, weapon_bobbing_percentage), 100); }
+  // Extended weapon bobbing percentage setting
+  const fixed_t bob = player->bob * weapon_bobbing_pct / 100;
 
-  // sx - Default, differs in a few styles
+  const int angle = (128*leveltime) & FINEMASK;
+
+  // `sx` - Default, differs in a few styles
   psp->sx2 = ((1 - STRICTMODE(sx_fix)) * FRACUNIT) + FixedMul(bob, finecosine[angle]);
 
-  // sy - Used for all styles, their specific values are added to this one right after
+  // `sy` - Used for all styles, their specific values are added to this one right after
   psp->sy2 = WEAPONTOP + abs(psp->dy); // Squat weapon down on impact
 
   // Bobbing Styles, ported from Zandronum
-  switch (style)
+  switch (STRICTMODE(bobbing_style))
   {
     case BOBSTYLE_VANILLA:
       psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
@@ -557,7 +564,7 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
     P_SetMobjState(player->mo, S_PLAY);
 
   if (player->readyweapon == wp_chainsaw && psp->state == &states[S_SAW])
-    S_StartSound(player->mo, sfx_sawidl);
+    S_StartSoundPitch(player->mo, sfx_sawidl, PITCH_HALF);
 
   // check for change
   //  if player is dead, put the weapon away
@@ -630,7 +637,6 @@ void A_CheckReload(player_t *player, pspdef_t *psp)
     // for us later on.
     boom_weapon_state_injection = true;
     P_SetPsprite(player, ps_weapon, weaponinfo[player->readyweapon].downstate);
-    player->switching = weapswitch_lowering;
   }
 }
 
@@ -714,7 +720,7 @@ static void A_FireSomething(player_t* player,int adder)
 
   // killough 3/27/98: prevent recoil in no-clipping mode
   if (!(player->mo->flags & MF_NOCLIP))
-    if (weapon_recoil && (demo_version >= 203 || !compatibility))
+    if (weapon_recoil && (demo_version >= DV_MBF || !compatibility))
       P_Thrust(player, ANG180 + player->mo->angle,
                2048*recoil_values[player->readyweapon].thrust);          // phares
 }
@@ -759,7 +765,7 @@ void A_Punch(player_t *player, pspdef_t *psp)
 
     do {
       // killough 8/2/98: make autoaiming prefer enemies
-      const int mask = (demo_version < 203) ? 0 : MF_FRIEND;
+      const int mask = (demo_version < DV_MBF) ? 0 : MF_FRIEND;
       angle = player->mo->angle + ANG20 - (ANG2 * i);
 
       if (vertical_aiming == VERTAIM_DIRECT)
@@ -798,7 +804,7 @@ void A_Punch(player_t *player, pspdef_t *psp)
   }
   else {
     // killough 8/2/98: make autoaiming prefer enemies
-    if (demo_version<203 ||
+    if (demo_version < DV_MBF ||
         (slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND),
          !linetarget))
     {
@@ -818,7 +824,7 @@ void A_Punch(player_t *player, pspdef_t *psp)
 
   // turn to face target
   // [Nugget]
-  if (NOTSTRICTMODE(!comp_nomeleesnap))
+  if (!CASUALPLAY(comp_nomeleesnap))
   {
     player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y,
                                         linetarget->x, linetarget->y);
@@ -851,7 +857,7 @@ void A_Saw(player_t *player, pspdef_t *psp)
   }
   else {
     // killough 8/2/98: make autoaiming prefer enemies
-    if (demo_version<203 ||
+    if (demo_version < DV_MBF ||
         (slope = P_AimLineAttack(player->mo, angle, range, MF_FRIEND),
          !linetarget))
     {
@@ -868,15 +874,15 @@ void A_Saw(player_t *player, pspdef_t *psp)
 
   if (!linetarget)
     {
-      S_StartSound(player->mo, sfx_sawful);
+      S_StartSoundPitch(player->mo, sfx_sawful, PITCH_HALF);
       return;
     }
 
-  S_StartSound(player->mo, sfx_sawhit);
+  S_StartSoundPitch(player->mo, sfx_sawhit, PITCH_HALF);
 
   // turn to face target
   // [Nugget]
-  if (NOTSTRICTMODE(!comp_nomeleesnap))
+  if (!CASUALPLAY(comp_nomeleesnap))
   {
     angle = R_PointToAngle2(player->mo->x, player->mo->y,
                             linetarget->x, linetarget->y);
@@ -935,7 +941,7 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
 
   if (weapon_recoilpitch && (leveltime & 2))
   {
-    player->recoilpitch = recoil_values[wp_plasma].pitch;
+    player->recoilpitch = recoil_values[wp_plasma].pitch * ANG1;
   }
 
   P_SubtractAmmo(player, 1);
@@ -1029,7 +1035,7 @@ static void P_BulletSlope(mobj_t *mo)
   angle_t an = mo->angle;    // see which target is to be aimed at
 
   // killough 8/2/98: make autoaiming prefer enemies
-  int mask = demo_version < 203 ? 0 : MF_FRIEND;
+  int mask = demo_version < DV_MBF ? 0 : MF_FRIEND;
 
   if (vertical_aiming == VERTAIM_DIRECT) // [Nugget] Vertical aiming
   { bulletslope = mo->player->slope; }
@@ -1157,16 +1163,16 @@ void A_FireCGun(player_t *player, pspdef_t *psp)
   { sound = (W_CheckNumForName("dschgun") > -1 ? sfx_chgun : sfx_pistol); }
   
   // [Nugget] Fix "Chaingun sound without ammo" bug
-  if (STRICTMODE(!comp_cgundblsnd))
+  if (!strictmode && !comp_cgundblsnd)
     if (!player->ammo[weaponinfo[player->readyweapon].ammo])
-    { return; }
+      return;
 
   S_StartSound(player->mo, !strictmode ? sound : sfx_pistol); // [Nugget]
 
   // [Nugget] Fix "Chaingun sound without ammo" bug
-  if (NOTSTRICTMODE(comp_cgundblsnd))
+  if (strictmode || comp_cgundblsnd)
     if (!player->ammo[weaponinfo[player->readyweapon].ammo])
-    { return; }
+      return;
 
   // killough 8/2/98: workaround for beta chaingun sprites missing at bottom
   // The beta did not have fullscreen, and its chaingun sprites were chopped
@@ -1222,8 +1228,8 @@ void A_BFGSpray(mobj_t *mo)
 
       // killough 8/2/98: make autoaiming prefer enemies
       // [Nugget] Double Autoaim range
-      if (demo_version < 203 ||
-          (P_AimLineAttack(mo->target, an, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), MF_FRIEND),
+      if (demo_version < DV_MBF || 
+          (P_AimLineAttack(mo->target, an, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), MF_FRIEND), 
            !linetarget))
         P_AimLineAttack(mo->target, an, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), 0);
 
@@ -1277,7 +1283,7 @@ void P_SetupPsprites(player_t *player)
 
 #define EASE_SCALE(x, y) (FRACUNIT - (FixedDiv(FixedMul(FixedDiv((x) << FRACBITS, (y) << FRACBITS), (fixed_t) weapon_inertia_scale), FRACUNIT)))
 #define EASE_OUT(x, y) ((x) - FixedMul((x), FixedMul((y), (y))))
-#define MAX_DELTA (ORIGWIDTH << FRACBITS)
+#define MAX_DELTA (SCREENWIDTH << FRACBITS)
 
 fixed_t weapon_inertia_scale;
 
@@ -1320,14 +1326,14 @@ static void WeaponInertiaHorizontal(player_t* player, pspdef_t *psp)
 
 static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
 {
-  const fixed_t lookdir = player->lookdir - player->oldlookdir;
+  const fixed_t pitch = (player->pitch - player->oldpitch) >> ANGLETOFINESHIFT;
 
-  if (lookdir != 0)
+  if (pitch != 0)
   {
-    const fixed_t scale = EASE_SCALE(abs(lookdir), FINEANGLES);
+    const fixed_t scale = EASE_SCALE(abs(pitch), FINEANGLES);
     fixed_t delta = EASE_OUT(MAX_DELTA, scale);
     delta = MIN(delta, MAX_DELTA);
-    psp->wiy += lookdir < 0 ? -delta : delta;
+    psp->wiy += pitch < 0 ? -delta : delta;
   }
 
   if (psp->wiy != 0)
@@ -1358,7 +1364,7 @@ static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
 
     WeaponInertiaHorizontal(player, psp);
 
-    if (mouselook || padlook || player->lookdir || psp->wiy)
+    if (mouselook || padlook || player->pitch || psp->wiy)
       WeaponInertiaVertical(player, psp);
   }
 }
@@ -1378,6 +1384,8 @@ void P_NuggetResetWeaponInertia(void)
 // P_MovePsprites
 // Called every tic by player thinking routine.
 //
+
+// [Nugget] Moved weapon-alignment macros above
 
 void P_MovePsprites(player_t *player)
 {
@@ -1405,7 +1413,7 @@ void P_MovePsprites(player_t *player)
 
   if (psp->state)
   {
-    if (!weapon_bobbing_percentage)
+    if (!weapon_bobbing_pct)
     {
       static fixed_t last_sy = WEAPONTOP;
 
@@ -1422,7 +1430,7 @@ void P_MovePsprites(player_t *player)
         psp->sy2 -= (last_sy - WEAPONTOP);
       }
     }
-    else if (center_weapon_strict) // [Nugget] Removed some checks
+    else if (center_weapon_strict) // [Nugget] Removed `uncapped` check
     {
       // [FG] don't center during lowering and raising states
       if (psp->state->misc1 || player->switching)
@@ -1431,7 +1439,7 @@ void P_MovePsprites(player_t *player)
       // [FG] center the weapon sprite horizontally and push up vertically
       else if (player->attackdown && center_weapon_strict & WEAPON_CENTERED) // [Nugget] Horizontal weapon centering
       {
-        psp->sx2 = (1 - STRICTMODE(sx_fix))*FRACUNIT; // [Nugget] Correct first person sprite centering
+        psp->sx2 = (1 - STRICTMODE(sx_fix)) * FRACUNIT; // [Nugget] Correct first person sprite centering
         if (center_weapon_strict == WEAPON_CENTERED) // [Nugget] Horizontal weapon centering
           psp->sy2 = WEAPONTOP;
       }
@@ -1622,7 +1630,7 @@ void A_WeaponMeleeAttack(player_t *player, pspdef_t *psp)
 
   // turn to face target
   // [Nugget]
-  if (NOTSTRICTMODE(!comp_nomeleesnap))
+  if (!CASUALPLAY(comp_nomeleesnap))
   {
     player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, linetarget->x, linetarget->y);
   }

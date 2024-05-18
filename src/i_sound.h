@@ -22,10 +22,12 @@
 #ifndef __I_SOUND__
 #define __I_SOUND__
 
-#include "al.h"
+#include "config.h"
 
-#include "p_mobj.h"
-#include "sounds.h"
+#include "doomtype.h"
+#include "m_fixed.h"
+
+struct stream_module_s;
 
 // when to clip out sounds
 // Does not fit the large outdoor areas.
@@ -40,21 +42,21 @@ extern int S_CLIPPING_DIST;
 // killough 12/98: restore original
 // #define S_CLOSE_DIST (160<<FRACBITS)
 
-#define S_CLOSE_DIST (200 << FRACBITS)
+#define S_CLOSE_DIST    (200 << FRACBITS)
 
 // [Nugget] Now variable; initialized in `I_AdjustSoundParams()`
 extern int S_ATTENUATOR;
 
 // Adjustable by menu.
 // [FG] moved here from i_sound.c
-#define MAX_CHANNELS 32
+#define MAX_CHANNELS    32
 // [FG] moved here from s_sound.c
-#define NORM_PITCH 128
-#define NORM_PRIORITY 64
-#define NORM_SEP 128
-#define S_STEREO_SWING (96<<FRACBITS)
+#define NORM_PITCH      128
+#define NORM_PRIORITY   64
+#define NORM_SEP        128
+#define S_STEREO_SWING  (96 << FRACBITS)
 
-#define SND_SAMPLERATE 44100
+#define SND_SAMPLERATE  44100
 
 // [FG] variable pitch bend range
 extern int pitch_bend_range;
@@ -74,23 +76,28 @@ void I_ShutdownSound(void);
 
 extern int forceFlipPan;
 extern int snd_resampler;
+extern boolean snd_limiter;
 extern int snd_module;
 extern boolean snd_hrtf;
 extern int snd_absorption;
 extern int snd_doppler;
+
+struct mobj_s;
+
+struct sfxinfo_s;
 
 typedef struct sound_module_s
 {
     boolean (*InitSound)(void);
     boolean (*ReinitSound)(void);
     boolean (*AllowReinitSound)(void);
-    void (*UpdateUserSoundSettings)(void);
-    boolean (*CacheSound)(sfxinfo_t *sfx);
-    boolean (*AdjustSoundParams)(const mobj_t *listener, const mobj_t *source,
-                                 int chanvol, int *vol, int *sep, int *pri);
+    boolean (*CacheSound)(struct sfxinfo_s *sfx);
+    boolean (*AdjustSoundParams)(const struct mobj_s *listener,
+                                 const struct mobj_s *source, int chanvol,
+                                 int *vol, int *sep, int *pri);
     void (*UpdateSoundParams)(int channel, int vol, int sep);
-    void (*UpdateListenerParams)(const mobj_t *listener);
-    boolean (*StartSound)(int channel, sfxinfo_t *sfx, int pitch);
+    void (*UpdateListenerParams)(const struct mobj_s *listener);
+    boolean (*StartSound)(int channel, struct sfxinfo_s *sfx, int pitch);
     void (*StopSound)(int channel);
     boolean (*SoundIsPlaying)(int channel);
     void (*ShutdownSound)(void);
@@ -113,7 +120,6 @@ typedef enum snd_module_e
     NUM_SND_MODULES
 } snd_module_t;
 
-void I_UpdateUserSoundSettings(void);
 boolean I_AllowReinitSound(void);
 void I_SetSoundModule(int device);
 
@@ -121,10 +127,10 @@ void I_SetSoundModule(int device);
 void I_SetChannels(void);
 
 // Get raw data lump index for sound descriptor.
-int I_GetSfxLumpNum(sfxinfo_t *sfxinfo);
+int I_GetSfxLumpNum(struct sfxinfo_s *sfxinfo);
 
 // Starts a sound in a particular sound channel.
-int I_StartSound(sfxinfo_t *sound, int vol, int sep, int pitch);
+int I_StartSound(struct sfxinfo_s *sound, int vol, int sep, int pitch);
 
 // Stops a sound channel.
 void I_StopSound(int handle);
@@ -136,17 +142,18 @@ boolean I_SoundIsPlaying(int handle);
 
 // Outputs adjusted volume, separation, and priority from the sound module.
 // Returns false if no sound should be played.
-boolean I_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
-                            int chanvol, int *vol, int *sep, int *pri);
+boolean I_AdjustSoundParams(const struct mobj_s *listener,
+                            const struct mobj_s *source, int chanvol, int *vol,
+                            int *sep, int *pri);
 
 // Updates the volume, separation,
 //  and pitch of a sound channel.
 void I_UpdateSoundParams(int handle, int vol, int sep);
-void I_UpdateListenerParams(const mobj_t *listener);
+void I_UpdateListenerParams(const struct mobj_s *listener);
 void I_DeferSoundUpdates(void);
 void I_ProcessSoundUpdates(void);
 
-// haleyjd
+// haleyjds
 int I_SoundID(int handle);
 
 //
@@ -164,17 +171,17 @@ typedef struct
     void (*I_PlaySong)(void *handle, boolean looping);
     void (*I_StopSong)(void *handle);
     void (*I_UnRegisterSong)(void *handle);
-    int (*I_DeviceList)(const char *devices[], int size, int *current_device);
+    const char **(*I_DeviceList)(void);
 } music_module_t;
 
-extern int midi_player;
+// Music modules
+extern music_module_t music_oal_module;
+extern music_module_t music_mid_module;
 
 boolean I_InitMusic(void);
 void I_ShutdownMusic(void);
 
-#define DEFAULT_MIDI_DEVICE -1 // use saved music module device
-
-void I_SetMidiPlayer(int device);
+void I_SetMidiPlayer(int *menu_index);
 
 // Volume.
 void I_SetMusicVolume(int volume);
@@ -198,7 +205,7 @@ void I_StopSong(void *handle);
 // See above (register), then think backwards
 void I_UnRegisterSong(void *handle);
 
-int I_DeviceList(const char *devices[], int size, int *current_device);
+const char **I_DeviceList(void);
 
 // Determine whether memory block is a .mid file
 boolean IsMid(byte *mem, int len);

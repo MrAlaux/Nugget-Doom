@@ -20,12 +20,19 @@
 #ifndef __R_MAIN__
 #define __R_MAIN__
 
-#include "d_player.h"
-#include "r_data.h"
+#include "doomtype.h"
+#include "m_fixed.h"
+#include "tables.h"
+
+struct node_s;
+struct player_s;
+struct seg_s;
 
 //
 // POV related.
 //
+
+#define MAX_PITCH_ANGLE (32 * ANG1)
 
 extern fixed_t  viewcos;
 extern fixed_t  viewsin;
@@ -36,6 +43,7 @@ extern int      centery;
 extern fixed_t  centerxfrac;
 extern fixed_t  centeryfrac;
 extern fixed_t  projection;
+extern fixed_t  skyiscale;
 extern int      validcount;
 extern int      linecount;
 extern int      loopcount;
@@ -58,7 +66,7 @@ extern boolean chasecam_on;
 // Rendering stats
 //
 
-extern int rendered_visplanes, rendered_segs, rendered_vissprites;
+extern int rendered_visplanes, rendered_segs, rendered_vissprites, rendered_voxels;
 
 //
 // Lighting LUT.
@@ -82,6 +90,9 @@ extern lighttable_t **(*zlight);
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
+extern boolean setsmoothlight;
+void R_SmoothLight(void);
+
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
 
@@ -89,13 +100,6 @@ extern lighttable_t *fixedcolormap;
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
 
 #define NUMCOLORMAPS 32
-
-// [AM] Fractional part of the current tic, in the half-open
-//      range of [0.0, 1.0).  Used for interpolation.
-extern fixed_t          fractionaltic;
-
-// [AM] Interpolate between two angles.
-angle_t R_InterpolateAngle(angle_t oangle, angle_t nangle, fixed_t scale);
 
 //
 // Function pointer to switch refresh/drawing functions.
@@ -107,25 +111,22 @@ extern void (*colfunc)(void);
 // Utility functions.
 //
 
-int R_PointOnSide(fixed_t x, fixed_t y, node_t *node);
-int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
+int R_PointOnSide(fixed_t x, fixed_t y, struct node_s *node);
+int R_PointOnSegSide(fixed_t x, fixed_t y, struct seg_s *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 angle_t R_PointToAngleCrispy(fixed_t x, fixed_t y);
-subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
+struct subsector_s *R_PointInSubsector(fixed_t x, fixed_t y);
 
 //
 // REFRESH - the actual rendering functions.
 //
 
-void R_RenderPlayerView(player_t *player);   // Called by G_Drawer.
+void R_RenderPlayerView(struct player_s *player);   // Called by G_Drawer.
 void R_Init(void);                           // Called by startup code.
 void R_SetViewSize(int blocks);              // Called by M_Responder.
 
-// [Nugget] FOV from Doom Retro /---------------------------------------------
-
-extern boolean fovchange;
-extern float   fovdiff;
+// [Nugget] FOV effects /-----------------------------------------------------
 
 typedef struct fovfx_s {
   int old, current, target;
@@ -144,8 +145,6 @@ enum {
   ZOOM_ON    =  1,
 };
 
-extern void R_SetFOV(const int value);
-extern int  R_GetBFOV(void);
 extern void R_ClearFOVFX(void);
 extern int  R_GetFOVFX(const int fx);
 extern void R_SetFOVFX(const int fx);
@@ -159,12 +158,45 @@ extern void R_SetShake(int value);
 extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range);
 
 void R_InitLightTables(void);                // killough 8/9/98
+int R_GetLightIndex(fixed_t scale);
 
 extern boolean setsizeneeded;
 void R_ExecuteSetViewSize(void);
 
-// [crispy] smooth texture scrolling
-void R_InterpolateTextureOffsets (void);
+void R_InitAnyRes(void);
+
+// [AM] Fractional part of the current tic, in the half-open
+//      range of [0.0, 1.0).  Used for interpolation.
+extern fixed_t fractionaltic;
+
+inline static fixed_t LerpFixed(fixed_t oldvalue, fixed_t newvalue)
+{
+    return (oldvalue + FixedMul(newvalue - oldvalue, fractionaltic));
+}
+
+// [AM] Interpolate between two angles.
+inline static angle_t LerpAngle(angle_t oangle, angle_t nangle)
+{
+    if (nangle == oangle)
+        return nangle;
+    else if (nangle > oangle)
+    {
+        if (nangle - oangle < ANG270)
+            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+        else // Wrapped around
+            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+    }
+    else // nangle < oangle
+    {
+        if (oangle - nangle < ANG270)
+            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+        else // Wrapped around
+            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+    }
+}
+
+extern double deltatics;
+extern boolean raw_input;
 
 #endif
 

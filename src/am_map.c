@@ -17,28 +17,41 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomstat.h"
-#include "doomkeys.h"
-#include "st_stuff.h"
-#include "r_main.h"
-#include "r_things.h"
-#include "p_setup.h"
-#include "p_maputl.h"
-#include "w_wad.h"
-#include "v_video.h"
-#include "p_spec.h"
+#include <limits.h>
+#include <string.h>
+
 #include "am_map.h"
-#include "dstrings.h"
-#include "d_deh.h"    // Ty 03/27/98 - externalizations
-#include "m_input.h"
-#include "m_menu.h"
-// [Nugget]
+#include "d_deh.h"
+#include "d_event.h"
+#include "d_player.h"
+#include "doomdata.h"
+#include "doomdef.h"
+#include "doomstat.h"
 #include "hu_stuff.h"
+#include "i_video.h"
+#include "m_input.h"
+#include "mn_menu.h"
+#include "m_misc.h"
+#include "p_maputl.h"
+#include "p_mobj.h"
+#include "p_setup.h"
+#include "p_spec.h"
+#include "r_defs.h"
+#include "r_main.h"
+#include "r_state.h"
+#include "r_things.h"
+#include "st_stuff.h"
+#include "tables.h"
+#include "v_flextran.h"
+#include "v_video.h"
+#include "w_wad.h"
+#include "z_zone.h"
+
+// [Nugget]
+#include <math.h>
 #include "p_map.h"
 #include "s_sound.h"
 #include "sounds.h"
-
-extern int need_downscaling; // [Nugget]
 
 // [Nugget] Tag Finder from PrBoomX /-----------------------------------------
 
@@ -54,7 +67,7 @@ static int magic_line_color_pos = MAGIC_LINE_COLOR_MIN;
 static sector_t* magic_sector;
 static short     magic_tag = -1;
 
-// [Nugget] Tag Finder from PrBoomX -----------------------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
 //jff 1/7/98 default automap colors added
 int mapcolor_back;    // map background
@@ -71,7 +84,8 @@ int mapcolor_bdor;    // blue door color (of enabling one but not other )
 int mapcolor_ydor;    // yellow door color
 int mapcolor_tele;    // teleporter line color
 int mapcolor_secr;    // secret sector boundary color
-int mapcolor_uscr;    // [Nugget] Unrevealed secret sector boundary color
+int mapcolor_revsecr; // revealed secret sector boundary color
+int mapcolor_trig;    // [Nugget] Trigger-line color
 int mapcolor_exit;    // jff 4/23/98 add exit line color
 int mapcolor_unsn;    // computer map unseen line color
 int mapcolor_flat;    // line with no floor/ceiling changes
@@ -80,11 +94,13 @@ int mapcolor_hair;    // crosshair color
 int mapcolor_sngl;    // single player arrow color
 int mapcolor_plyr[4]; // colors for player arrows in multiplayer
 int mapcolor_frnd;    // colors for friends of player
+int mapcolor_item;    // item sprite color
+int mapcolor_enemy;   // enemy sprite color
 
 //jff 3/9/98 add option to not show secret sectors until entered
 int map_secret_after;
 
-int map_keyed_door_flash; // keyed doors are flashing
+int map_keyed_door; // keyed doors are colored or flashing
 
 int map_smooth_lines;
 
@@ -98,8 +114,6 @@ int map_smooth_lines;
 // PLAYERRADIUS macro can't be used in this implementation.
 #define MAPPLAYERRADIUS (16*(1<<MAPBITS))
 
-// drawing stuff
-#define FB    0
 // scale on entry
 #define INITSCALEMTOF (int)(.2*FRACUNIT)
 // how much the automap moves window per tic in frame-buffer coordinates
@@ -198,12 +212,6 @@ static mline_t cross_mark[] =
   { { -R, 0 }, { R, 0} },
   { { 0, -R }, { 0, R } },
 };
-static mline_t square_mark[] = {
-  { { -R,  0 }, {  0,  R } },
-  { {  0,  R }, {  R,  0 } },
-  { {  R,  0 }, {  0, -R } },
-  { {  0, -R }, { -R,  0 } },
-};
 #undef R
 #define NUMCROSSMARKLINES (sizeof(cross_mark)/sizeof(mline_t))
 //jff 1/5/98 end of new symbol
@@ -222,10 +230,6 @@ static mline_t thintriangle_guy[] =
 #undef R
 #define NUMTHINTRIANGLEGUYLINES (sizeof(thintriangle_guy)/sizeof(mline_t))
 
-#define REDS (256-5*16)
-#define GRAYS (6*16)
-#define YELLOWS (256-32+7)
-
 int ddt_cheating = 0;         // killough 2/7/98: make global, rename to ddt_*
 
 int automap_grid = 0;
@@ -233,7 +237,7 @@ int automap_grid = 0;
 int automapactive = false; // [Nugget] Minimap: now an int
 static boolean automapfirststart = true;
 
-overlay_t automapoverlay = overlay_off;
+overlay_t automapoverlay = AM_OVERLAY_OFF;
 
 // location of window on screen
 static int  f_x;
@@ -242,8 +246,6 @@ static int  f_y;
 // size of window on screen
 static int  f_w;
 static int  f_h;
-
-static byte*  fb;            // pseudo-frame buffer
 
 static mpoint_t m_paninc;    // how far the window pans each tic (map coords)
 static fixed_t mtof_zoommul; // how far the window zooms each tic (map coords)
@@ -301,11 +303,6 @@ int followplayer = 1; // specifies whether to follow the player around
 #define FOLLOW (followplayer || automapactive == AM_MINI) // [Nugget] Minimap
 
 static boolean stopped = true;
-
-// [crispy] Antialiased lines from Heretic with more colors
-#define NUMSHADES 8
-#define NUMSHADES_BITS 3 // log2(NUMSHADES)
-static byte color_shades[NUMSHADES * 256];
 
 // Forward declare for AM_LevelInit
 static void AM_drawFline_Vanilla(fline_t* fl, int color);
@@ -426,8 +423,8 @@ static void AM_findMinMaxBoundaries(void)
   fixed_t a;
   fixed_t b;
 
-  min_x = min_y =  D_MAXINT;
-  max_x = max_y = -D_MAXINT;
+  min_x = min_y =  INT_MAX;
+  max_x = max_y = -INT_MAX;
 
   for (i=0;i<numvertexes;i++)
   {
@@ -526,8 +523,6 @@ void AM_initVariables(void)
 {
   static event_t st_notify = { ev_keyup, AM_MSGENTERED };
 
-  fb = screens[0];
-
   m_paninc.x = m_paninc.y = 0;
   ftom_zoommul = FRACUNIT;
   mtof_zoommul = FRACUNIT;
@@ -572,7 +567,7 @@ static void AM_loadPics(void)
 
   for (i=0;i<10;i++)
   {
-    sprintf(namebuf, "AMMNUM%d", i);
+    M_snprintf(namebuf, sizeof(namebuf), "AMMNUM%d", i);
     marknums[i] = W_CacheLumpName(namebuf, PU_STATIC);
   }
 }
@@ -612,9 +607,49 @@ static void AM_clearLastMark(void)
     markpointnum--;
 }
 
-void AM_enableSmoothLines(void)
+void AM_EnableSmoothLines(void)
 {
   AM_drawFline = map_smooth_lines ? AM_drawFline_Smooth : AM_drawFline_Vanilla;
+}
+
+static void AM_initScreenSize(void)
+{
+  // killough 2/7/98: get rid of finit_ vars
+  // to allow runtime setting of width/height
+  //
+  // killough 11/98: ... finally add hires support :)
+
+  // [Nugget] Minimap
+  if (automapactive == AM_MINI)
+  {
+    f_x = V_ScaleY(8);
+    f_y = V_ScaleY(((message_list ? hud_msg_lines : 1) + 1) * 8 + 1);
+    f_w = f_h = V_ScaleY(80);
+
+    return;
+  }
+
+  f_w = video.width;
+  if (automapoverlay && scaledviewheight == SCREENHEIGHT)
+    f_h = video.height;
+  else
+    f_h = V_ScaleY(SCREENHEIGHT - ST_HEIGHT);
+}
+
+void AM_ResetScreenSize(void)
+{
+  int old_h = f_h;
+
+  AM_initScreenSize();
+
+  if (f_h != old_h)
+  {
+    // Change the scaling multipliers
+    scale_mtof = FixedDiv(f_w << FRACBITS, m_w);
+    scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+  }
+
+  AM_activateNewScale();
 }
 
 //
@@ -628,34 +663,13 @@ void AM_enableSmoothLines(void)
 //
 static void AM_LevelInit(void)
 {
-  // [crispy] Only need to precalculate color lookup tables once
-  static int precalc_once;
-
   automapfirststart = true;
-  
+
   f_x = f_y = 0;
 
-  // killough 2/7/98: get rid of finit_ vars
-  // to allow runtime setting of width/height
-  //
-  // killough 11/98: ... finally add hires support :)
+  AM_initScreenSize();
 
-  // [Nugget] Minimap
-  if (automapactive == AM_MINI)
-  {
-    f_x = 8 * hires;
-    f_y = (((message_list ? hud_msg_lines : 1) + 1) * 8 + 1) * hires;
-    f_w = f_h = 80 * hires;
-  }
-  else {
-    f_w = (SCREENWIDTH * hires);
-    if (automapoverlay && scaledviewheight == SCREENHEIGHT)
-      f_h = (SCREENHEIGHT * hires);
-    else
-      f_h = (SCREENHEIGHT-ST_HEIGHT) * hires;
-  }
-
-  AM_enableSmoothLines();
+  AM_EnableSmoothLines();
 
   AM_findMinMaxBoundaries();
 
@@ -664,33 +678,16 @@ static void AM_LevelInit(void)
   {
     fixed_t a = FixedDiv(f_w, (max_w>>MAPBITS < 2048) ? 2*(max_w>>MAPBITS) : 4096);
     fixed_t b = FixedDiv(f_h, (max_h>>MAPBITS < 2048) ? 2*(max_h>>MAPBITS) : 4096);
-    scale_mtof = FixedDiv(a < b ? a : b, (int) (0.7*MAPUNIT));
+    scale_mtof = FixedDiv((a < b ? a : b), (int) (0.7*MAPUNIT));
   }
 
   if (scale_mtof > max_scale_mtof)
-    scale_mtof = min_scale_mtof;
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+    scale_mtof = max_scale_mtof;
 
-  // [crispy] Precalculate color lookup tables for antialised line drawing using COLORMAP
-  if (!precalc_once)
-  {
-    precalc_once = 1;
-    for (int color = 0; color < 256; ++color)
-    {
-#define REINDEX(I) (color + I * 256)
-      // Pick a range of shades for a steep gradient to keep lines thin
-      int shade_index[NUMSHADES] =
-      {
-          REINDEX(0), REINDEX(1),  REINDEX(2),  REINDEX(3),
-          REINDEX(7), REINDEX(15), REINDEX(23), REINDEX(31),
-      };
-#undef REINDEX
-      for (int shade = 0; shade < NUMSHADES; ++shade)
-      {
-          color_shades[color * NUMSHADES + shade] = colormaps[0][shade_index[shade]];
-      }
-    }
-  }
+  if (scale_mtof < min_scale_mtof)
+    scale_mtof = min_scale_mtof;
+
+  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
 }
 
 //
@@ -713,8 +710,6 @@ void AM_Stop (void)
   findtag = false;
   magic_sector = NULL;
   magic_tag = -1;
-
-  HU_NughudAlignTime(); // [Nugget] NUGHUD
 }
 
 //
@@ -729,7 +724,7 @@ void AM_Stop (void)
 //
 void AM_Start()
 {
-  static int lastlevel = -1, lastepisode = -1, last_hires = -1, last_widescreen = -1, last_viewheight = -1,
+  static int lastlevel = -1, lastepisode = -1,
              last_automap = -1, last_messages = -1; // [Nugget] Minimap
 
   int messages_height = message_list ? hud_msg_lines : 1; // [Nugget]
@@ -737,22 +732,21 @@ void AM_Start()
   if (!stopped)
     AM_Stop();
   stopped = false;
-  if (lastlevel != gamemap || lastepisode != gameepisode || hires!=last_hires
-    || widescreen != last_widescreen || viewheight != last_viewheight
-    || automapactive != last_automap || messages_height != last_messages)
+  if (lastlevel != gamemap || lastepisode != gameepisode
+      || automapactive != last_automap || messages_height != last_messages)
   {
-    last_hires = hires;          // killough 11/98
-    last_widescreen = widescreen;
-    last_viewheight = viewheight;
-    last_automap = automapactive;
-    last_messages = messages_height;
     AM_LevelInit();
     lastlevel = gamemap;
     lastepisode = gameepisode;
+    last_automap = automapactive;
+    last_messages = messages_height;
+  }
+  else
+  {
+    AM_ResetScreenSize();
   }
   AM_initVariables();
   AM_loadPics();
-  HU_NughudAlignTime(); // [Nugget] NUGHUD
 }
 
 //
@@ -849,6 +843,37 @@ boolean AM_Responder
       AM_ChangeMode(AM_FULL);
       viewactive = false;
       rc = true;
+    }
+    // [Nugget] Minimap: allow zooming
+    else if (automapactive == AM_MINI)
+    {
+      if (ev->type == ev_keydown)
+      {
+        rc = true;
+
+        if (M_InputActivated(input_map_zoomout))
+        {
+          buttons_state[ZOOM_OUT] = 1;
+        }
+        else if (M_InputActivated(input_map_zoomin))
+        {
+          buttons_state[ZOOM_IN] = 1;
+        }
+        else { rc = false; }
+      }
+      else if (ev->type == ev_keyup)
+      {
+        rc = false;
+
+        if (M_InputDeactivated(input_map_zoomout))
+        {
+          buttons_state[ZOOM_OUT] = 0;
+        }
+        else if (M_InputDeactivated(input_map_zoomin))
+        {
+          buttons_state[ZOOM_IN] = 0;
+        }
+      }
     }
   }
   else if (ev->type == ev_keydown ||
@@ -949,8 +974,8 @@ boolean AM_Responder
     else
     if (M_InputActivated(input_map_overlay))
     {
-      if (++automapoverlay > overlay_dark)
-        automapoverlay = overlay_off;
+      if (++automapoverlay > AM_OVERLAY_DARK)
+        automapoverlay = AM_OVERLAY_OFF;
 
       switch (automapoverlay)
       {
@@ -959,11 +984,7 @@ boolean AM_Responder
         default: togglemsg("%s", s_AMSTR_OVERLAYOFF); break;
       }
 
-      if (automapoverlay && scaledviewheight == SCREENHEIGHT)
-        f_h = (SCREENHEIGHT * hires);
-      else
-        f_h = (SCREENHEIGHT-ST_HEIGHT) * hires;
-
+      AM_initScreenSize();
       AM_activateNewScale();
     }
     else if (M_InputActivated(input_map_rotate))
@@ -1065,15 +1086,17 @@ boolean AM_Responder
 
   if (!followplayer)
   {
+    int scaled_f_paninc = (f_paninc * video.xscale) >> FRACBITS;
     if (buttons_state[PAN_RIGHT])
-      m_paninc.x += FTOM(f_paninc * hires);
+      m_paninc.x += FTOM(scaled_f_paninc);
     if (buttons_state[PAN_LEFT])
-      m_paninc.x += -FTOM(f_paninc * hires);
+      m_paninc.x += -FTOM(scaled_f_paninc);
 
+    scaled_f_paninc = (f_paninc * video.yscale) >> FRACBITS;
     if (buttons_state[PAN_UP])
-      m_paninc.y += FTOM(f_paninc * hires);
+      m_paninc.y += FTOM(scaled_f_paninc);
     if (buttons_state[PAN_DOWN])
-      m_paninc.y += -FTOM(f_paninc * hires);
+      m_paninc.y += -FTOM(scaled_f_paninc);
   }
 
   if (!mousewheelzoom)
@@ -1239,11 +1262,13 @@ void AM_Ticker (void)
 static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
-  int x, y;
-
-  for (x = f_x;  x < f_x+f_w;  x++)
-    for (y = f_y;  y < f_y+f_h;  y++)
-      fb[y * (SCREENWIDTH * hires) + x] = color;
+  int h = f_h;
+  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  while (h--)
+  {
+    memset(src, color, f_w);
+    src += video.pitch;
+  }
 }
 
 //
@@ -1387,22 +1412,6 @@ static boolean AM_clipMline
 }
 #undef DOOUTCODE
 
-// [Nugget] Prevent potentially-disappearing lines when downscaling the window;
-//          Minimap: take `f_x` and `f_y` into account
-void PUTDOT(int x, int y, int color)
-{
-  if (need_downscaling && !smooth_scaling)
-  {
-    int i, j, pixels = MAX(1, hires / 2);
-
-    for (i = 0;  i < pixels && (f_x <= x+i && x+i < f_x+f_w);  i++)
-      for (j = 0;  j < pixels && (f_y <= y+j && y+j < f_y+f_h);  j++)
-        fb[(y + j) * (SCREENWIDTH * hires) + (x + i)] = color;
-  }
-  else if ((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h))
-    fb[y * (SCREENWIDTH * hires) + x] = color;
-}
-
 //
 // AM_drawFline()
 //
@@ -1438,6 +1447,11 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
     return;
   }
 #endif
+
+// [Nugget] Minimap: take `f_x` and `f_y` into account
+#define PUTDOT(xx,yy,cc)                                          \
+  if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h)) \
+    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc)
 
   dx = fl->b.x - fl->a.x;
   ax = 2 * (dx<0 ? -dx : dx);
@@ -1484,138 +1498,135 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   }
 }
 
-// [crispy] Adapted from Heretic's DrawWuLine
-static void AM_drawFline_Smooth(fline_t* fl, int color)
+//
+// AM_putWuDot
+//
+// haleyjd 06/13/09: Pixel plotter for Wu line drawing.
+//
+static void AM_putWuDot(int x, int y, int color, int weight)
 {
-    int X0 = fl->a.x, Y0 = fl->a.y, X1 = fl->b.x, Y1 = fl->b.y;
-    byte* BaseColor = &color_shades[color * NUMSHADES];
+   byte *dest = &I_VideoBuffer[y * video.pitch + x];
+   unsigned int *fg2rgb = Col2RGB8[weight];
+   unsigned int *bg2rgb = Col2RGB8[64 - weight];
+   unsigned int fg, bg;
 
-    unsigned short IntensityShift, ErrorAdj, ErrorAcc;
-    unsigned short ErrorAccTemp, Weighting, WeightingComplementMask;
-    short DeltaX, DeltaY, Temp, XDir;
+  // [Nugget] Minimap: take `f_x` and `f_y` into account
+  if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
+  { return; }
 
-    /* Make sure the line runs top to bottom */
-    if (Y0 > Y1)
-    {
-        Temp = Y0;
-        Y0 = Y1;
-        Y1 = Temp;
-        Temp = X0;
-        X0 = X1;
-        X1 = Temp;
-    }
-    /* Draw the initial pixel, which is always exactly intersected by
-       the line and so needs no weighting */
-    PUTDOT(X0, Y0, BaseColor[0]);
+   fg = fg2rgb[color];
+   bg = bg2rgb[*dest];
+   fg = (fg + bg) | 0x1f07c1f;
+   *dest = RGB32k[0][0][fg & (fg >> 15)];
+}
 
-    if ((DeltaX = X1 - X0) >= 0)
-    {
-        XDir = 1;
-    }
-    else
-    {
-        XDir = -1;
-        DeltaX = -DeltaX;       /* make DeltaX positive */
-    }
-    /* Special-case horizontal, vertical, and diagonal lines, which
-       require no weighting because they go right through the center of
-       every pixel */
-    if ((DeltaY = Y1 - Y0) == 0)
-    {
-        /* Horizontal line */
-        while (DeltaX-- != 0)
-        {
-            X0 += XDir;
-            PUTDOT(X0, Y0, BaseColor[0]);
-        }
-        return;
-    }
-    if (DeltaX == 0)
-    {
-        /* Vertical line */
-        do
-        {
-            Y0++;
-            PUTDOT(X0, Y0, BaseColor[0]);
-        }
-        while (--DeltaY != 0);
-        return;
-    }
-    //diagonal line.
-    if (DeltaX == DeltaY)
-    {
-        do
-        {
-            X0 += XDir;
-            Y0++;
-            PUTDOT(X0, Y0, BaseColor[0]);
-        }
-        while (--DeltaY != 0);
-        return;
-    }
-    /* Line is not horizontal, diagonal, or vertical */
-    ErrorAcc = 0;               /* initialize the line error accumulator to 0 */
-    /* # of bits by which to shift ErrorAcc to get intensity level */
-    IntensityShift = 16 - NUMSHADES_BITS;
-    /* Mask used to flip all bits in an intensity weighting, producing the
-       result (1 - intensity weighting) */
-    WeightingComplementMask = NUMSHADES - 1;
-    /* Is this an X-major or Y-major line? */
-    if (DeltaY > DeltaX)
-    {
-        /* Y-major line; calculate 16-bit fixed-point fractional part of a
-           pixel that X advances each time Y advances 1 pixel, truncating the
-           result so that we won't overrun the endpoint along the X axis */
-        ErrorAdj = ((unsigned int) DeltaX << 16) / (unsigned int) DeltaY;
-        /* Draw all pixels other than the first and last */
-        while (--DeltaY)
-        {
-            ErrorAccTemp = ErrorAcc;    /* remember currrent accumulated error */
-            ErrorAcc += ErrorAdj;       /* calculate error for next pixel */
-            if (ErrorAcc <= ErrorAccTemp)
-            {
-                /* The error accumulator turned over, so advance the X coord */
-                X0 += XDir;
-            }
-            Y0++;               /* Y-major, so always advance Y */
-            /* The IntensityBits most significant bits of ErrorAcc give us the
-               intensity weighting for this pixel, and the complement of the
-               weighting for the paired pixel */
-            Weighting = ErrorAcc >> IntensityShift;
-            PUTDOT(X0, Y0, BaseColor[Weighting]);
-            PUTDOT(X0 + XDir, Y0, BaseColor[(Weighting ^ WeightingComplementMask)]);
-        }
-        /* Draw the final pixel, which is always exactly intersected by the line
-           and so needs no weighting */
-        PUTDOT(X1, Y1, BaseColor[0]);
-        return;
-    }
-    /* It's an X-major line; calculate 16-bit fixed-point fractional part of a
-       pixel that Y advances each time X advances 1 pixel, truncating the
-       result to avoid overrunning the endpoint along the X axis */
-    ErrorAdj = ((unsigned int) DeltaY << 16) / (unsigned int) DeltaX;
-    /* Draw all pixels other than the first and last */
-    while (--DeltaX)
-    {
-        ErrorAccTemp = ErrorAcc;        /* remember currrent accumulated error */
-        ErrorAcc += ErrorAdj;   /* calculate error for next pixel */
-        if (ErrorAcc <= ErrorAccTemp)
-        {
-            /* The error accumulator turned over, so advance the Y coord */
-            Y0++;
-        }
-        X0 += XDir;             /* X-major, so always advance X */
-        /* The IntensityBits most significant bits of ErrorAcc give us the
-           intensity weighting for this pixel, and the complement of the
-           weighting for the paired pixel */
-        Weighting = ErrorAcc >> IntensityShift;
-        PUTDOT(X0, Y0, BaseColor[Weighting]);
-        PUTDOT(X0, Y0 + 1, BaseColor[(Weighting ^ WeightingComplementMask)]);
 
-    }
-    /* Draw the final pixel, which is always exactly intersected by the line
-       and so needs no weighting */
-    PUTDOT(X1, Y1, BaseColor[0]);
+// Given 65536, we need 2048; 65536 / 2048 == 32 == 2^5
+// Why 2048? ANG90 == 0x40000000 which >> 19 == 0x800 == 2048.
+// The trigonometric correction is based on an angle from 0 to 90.
+#define wu_fineshift 5
+
+// Given 64 levels in the Col2RGB8 table, 65536 / 64 == 1024 == 2^10
+#define wu_fixedshift 10
+
+//
+// AM_drawFlineWu
+//
+// haleyjd 06/12/09: Wu line drawing for the automap, with trigonometric
+// brightness correction by SoM. I call this the Wu-McGranahan line drawing
+// algorithm.
+//
+static void AM_drawFline_Smooth(fline_t *fl, int color)
+{
+   int dx, dy, xdir = 1;
+   int x, y;
+
+   // swap end points if necessary
+   if(fl->a.y > fl->b.y)
+   {
+      fpoint_t tmp = fl->a;
+
+      fl->a = fl->b;
+      fl->b = tmp;
+   }
+
+   // determine change in x, y and direction of travel
+   dx = fl->b.x - fl->a.x;
+   dy = fl->b.y - fl->a.y;
+
+   if(dx < 0)
+   {
+      dx   = -dx;
+      xdir = -xdir;
+   }
+
+   // detect special cases -- horizontal, vertical, and 45 degrees;
+   // revert to Bresenham
+   if(dx == 0 || dy == 0 || dx == dy)
+   {
+      AM_drawFline_Vanilla(fl, color);
+      return;
+   }
+
+   // draw first pixel
+   PUTDOT(fl->a.x, fl->a.y, color);
+
+   x = fl->a.x;
+   y = fl->a.y;
+
+   if(dy > dx)
+   {
+      // line is y-axis major.
+      uint16_t erroracc = 0,
+         erroradj = (uint16_t)(((uint32_t)dx << 16) / (uint32_t)dy);
+
+      while(--dy)
+      {
+         uint16_t erroracctmp = erroracc;
+
+         erroracc += erroradj;
+
+         // if error has overflown, advance x coordinate
+         if(erroracc <= erroracctmp)
+            x += xdir;
+
+         y += 1; // advance y
+
+         // the trick is in the trig!
+         AM_putWuDot(x, y, color,
+                     finecosine[erroracc >> wu_fineshift] >> wu_fixedshift);
+         AM_putWuDot(x + xdir, y, color,
+                     finesine[erroracc >> wu_fineshift] >> wu_fixedshift);
+      }
+   }
+   else
+   {
+      // line is x-axis major.
+      uint16_t erroracc = 0,
+         erroradj = (uint16_t)(((uint32_t)dy << 16) / (uint32_t)dx);
+
+      while(--dx)
+      {
+         uint16_t erroracctmp = erroracc;
+
+         erroracc += erroradj;
+
+         // if error has overflown, advance y coordinate
+         if(erroracc <= erroracctmp)
+            y += 1;
+
+         x += xdir; // advance x
+
+         // the trick is in the trig!
+         AM_putWuDot(x, y, color,
+                     finecosine[erroracc >> wu_fineshift] >> wu_fixedshift);
+         AM_putWuDot(x, y + 1, color,
+                     finesine[erroracc >> wu_fineshift] >> wu_fixedshift);
+      }
+   }
+
+   // draw last pixel
+   PUTDOT(fl->b.x, fl->b.y, color);
 }
 
 //
@@ -1744,6 +1755,11 @@ static void AM_drawGrid(int color)
 //
 static int AM_DoorColor(int type)
 {
+  if (map_keyed_door == MAP_KEYED_DOOR_OFF)
+  {
+    return -1;
+  }
+
   if (GenLockedBase <= type && type< GenDoorBase)
   {
     type -= GenLockedBase;
@@ -1786,6 +1802,17 @@ static int AM_DoorColor(int type)
 // jff 4/3/98 changed mapcolor_xxxx=-1 to disable drawing line completely
 //
 
+#define M_ARRAY_INIT_CAPACITY 500
+#include "m_array.h"
+
+typedef struct
+{
+  mline_t l;
+  int color;
+} am_line_t;
+
+static am_line_t *lines_1S = NULL;
+
 // [Nugget] Tag Finder from PrBoomX: Prototype this function
 static void AM_drawLineCharacter(mline_t*, int, fixed_t, angle_t, int, fixed_t, fixed_t);
 
@@ -1794,7 +1821,7 @@ static void AM_drawWalls(void)
   int i;
   static mline_t l;
 
-  const boolean keyed_door_flash = map_keyed_door_flash && (leveltime & 16);
+  const boolean keyed_door_flash = (map_keyed_door == MAP_KEYED_DOOR_FLASH) && (leveltime & 16);
 
   // draw the unclipped visible portions of all lines
   for (i=0;i<numlines;i++)
@@ -1814,81 +1841,19 @@ static void AM_drawWalls(void)
       if ((lines[i].flags & ML_DONTDRAW) && !ddt_cheating
           && lines[i].tag != magic_tag) // [Nugget] Tag Finder from PrBoomX
         continue;
-      if (!lines[i].backsector)
       {
-        if //jff 4/23/98 add exit lines to automap
-        (
-          mapcolor_exit &&
-          (
-            lines[i].special==11 ||
-            lines[i].special==52 ||
-            lines[i].special==197 ||
-            lines[i].special==51  ||
-            lines[i].special==124 ||
-            lines[i].special==198
-          )
-        )
-          AM_drawMline(&l, keyed_door_flash ? mapcolor_grid : mapcolor_exit); // exit line
-        // jff 1/10/98 add new color for 1S secret sector boundary
-        else if (mapcolor_secr && //jff 4/3/98 0 is disable
-                 P_WasSecret(lines[i].frontsector) &&
-                 !P_IsSecret(lines[i].frontsector)
-                )
-          AM_drawMline(&l, mapcolor_secr); // line bounding secret sector
-        // [Nugget] Unrevealed secret sector boundary
-        else if ((!strictmode ? mapcolor_uscr : mapcolor_secr)
-                 && !map_secret_after && P_IsSecret(lines[i].frontsector))
-          AM_drawMline(&l, (!strictmode ? mapcolor_uscr : mapcolor_secr));
-        else                               //jff 2/16/98 fixed bug
-          AM_drawMline(&l, mapcolor_wall); // special was cleared
-      }
-      else
-      {
-        // jff 1/10/98 add color change for all teleporter types
-        if
-        (
-            mapcolor_tele && !(lines[i].flags & ML_SECRET) &&
-            (lines[i].special == 39 || lines[i].special == 97 ||
-            lines[i].special == 125 || lines[i].special == 126)
-        )
-        { // teleporters
-          AM_drawMline(&l, mapcolor_tele);
-        }
-        else if //jff 4/23/98 add exit lines to automap
-        (
-          mapcolor_exit &&
-          (
-            lines[i].special==11 ||
-            lines[i].special==52 ||
-            lines[i].special==197 ||
-            lines[i].special==51  ||
-            lines[i].special==124 ||
-            lines[i].special==198
-          )
-        )
-          AM_drawMline(&l, keyed_door_flash ? mapcolor_grid : mapcolor_exit); // exit line
-        else if //jff 1/5/98 this clause implements showing keyed doors
-        (
-          (mapcolor_bdor || mapcolor_ydor || mapcolor_rdor) &&
-          ((lines[i].special >=26 && lines[i].special <=28) ||
-          (lines[i].special >=32 && lines[i].special <=34) ||
-          (lines[i].special >=133 && lines[i].special <=137) ||
-          lines[i].special == 99 ||
-          (lines[i].special>=GenLockedBase && lines[i].special<GenDoorBase))
+        /* cph - show keyed doors and lines */
+        const int amd = AM_DoorColor(lines[i].special);
+        if ((mapcolor_bdor || mapcolor_ydor || mapcolor_rdor) &&
+            !(lines[i].flags & ML_SECRET) &&    /* non-secret */
+            (amd != -1)
         )
         {
-    // Remove the closed door check for flashing keyed switches feature
-    // from Crispy Doom.
-#if 0
-          if ((lines[i].backsector->floorheight==lines[i].backsector->ceilingheight) ||
-              (lines[i].frontsector->floorheight==lines[i].frontsector->ceilingheight))
-          {
-#endif
             if (keyed_door_flash)
             {
                AM_drawMline(&l, mapcolor_grid);
             }
-            else switch (AM_DoorColor(lines[i].special)) // closed keyed door
+            else switch (amd) // closed keyed door
             {
               case 1:
                 /*bluekey*/
@@ -1911,10 +1876,85 @@ static void AM_drawWalls(void)
                   mapcolor_clsd? mapcolor_clsd : mapcolor_cchg);
                 break;
             }
-#if 0
-          }
-          else AM_drawMline(&l, mapcolor_cchg); // open keyed door
-#endif
+            continue;
+        }
+      }
+      if //jff 4/23/98 add exit lines to automap
+      (
+        mapcolor_exit &&
+        (
+          lines[i].special==11 ||
+          lines[i].special==52 ||
+          lines[i].special==197 ||
+          lines[i].special==51  ||
+          lines[i].special==124 ||
+          lines[i].special==198
+        )
+      )
+      {
+        AM_drawMline(&l, keyed_door_flash ? mapcolor_grid : mapcolor_exit); // exit line
+        continue;
+      }
+
+      // [Nugget] Trigger lines
+      #define IsTrigger(l) (        \
+        (l).special                 \
+        && !(   (l).special == 48   \
+             || (l).special == 85   \
+             || (l).special == 255) \
+      )
+
+      if (!lines[i].backsector)
+      {
+        // [Nugget] Trigger lines
+        if (ddt_cheating && mapcolor_trig && IsTrigger(lines[i]))
+        {
+          array_push(lines_1S, ((am_line_t){l, mapcolor_trig}));
+        }
+        else
+        // jff 1/10/98 add new color for 1S secret sector boundary
+        if (mapcolor_secr && //jff 4/3/98 0 is disable
+            (
+             !map_secret_after &&
+             P_IsSecret(lines[i].frontsector)
+            )
+          )
+        {
+          // line bounding secret sector
+          array_push(lines_1S, ((am_line_t){l, mapcolor_secr}));
+        }
+        else if (mapcolor_revsecr &&
+            (
+             P_WasSecret(lines[i].frontsector) &&
+             !P_IsSecret(lines[i].frontsector)
+            )
+          )
+        {
+          // line bounding revealed secret sector
+          array_push(lines_1S, ((am_line_t){l, mapcolor_revsecr}));
+        }
+        else                               //jff 2/16/98 fixed bug
+        {
+          // special was cleared
+          array_push(lines_1S, ((am_line_t){l, mapcolor_wall}));
+        }
+      }
+      else
+      {
+        // jff 1/10/98 add color change for all teleporter types
+        if
+        (
+            mapcolor_tele && !(lines[i].flags & ML_SECRET) && 
+            (lines[i].special == 39 || lines[i].special == 97 /* ||
+            lines[i].special == 125 || lines[i].special == 126 */ )
+        )
+        { // teleporters
+          AM_drawMline(&l, mapcolor_tele);
+        }
+        // [Nugget] Trigger lines
+        else if (ddt_cheating && mapcolor_trig && IsTrigger(lines[i]))
+        {
+          AM_drawMline(&l, mapcolor_trig);
         }
         else if (lines[i].flags & ML_SECRET)    // secret door
         {
@@ -1922,7 +1962,7 @@ static void AM_drawWalls(void)
         }
         else if
         (
-            mapcolor_clsd &&
+            mapcolor_clsd &&  
             !(lines[i].flags & ML_SECRET) &&    // non-secret closed door
             ((lines[i].backsector->floorheight==lines[i].backsector->ceilingheight) ||
             (lines[i].frontsector->floorheight==lines[i].frontsector->ceilingheight))
@@ -1933,24 +1973,29 @@ static void AM_drawWalls(void)
         else if
         (
             mapcolor_secr && //jff 2/16/98 fixed bug
-            (
-             (P_WasSecret(lines[i].frontsector)
-              && !P_IsSecret(lines[i].frontsector)) ||
-             (P_WasSecret(lines[i].backsector)
-              && !P_IsSecret(lines[i].backsector))
+            (                    // special was cleared after getting it
+              !map_secret_after &&
+               (
+                P_IsSecret(lines[i].frontsector) ||
+                P_IsSecret(lines[i].backsector)
+               )
             )
         )
         {
           AM_drawMline(&l, mapcolor_secr); // line bounding secret sector
         } //jff 1/6/98 end secret sector line change
-        // [Nugget] Unrevealed secret sector 2S lines
-        else if ((!strictmode ? mapcolor_uscr : mapcolor_secr)
-                 && !map_secret_after
-                 && (P_IsSecret(lines[i].frontsector)
-                     || P_IsSecret(lines[i].backsector))
-                )
+        else if
+        (
+            mapcolor_revsecr &&
+            (
+              (P_WasSecret(lines[i].frontsector)
+               && !P_IsSecret(lines[i].frontsector)) ||
+              (P_WasSecret(lines[i].backsector)
+               && !P_IsSecret(lines[i].backsector))
+            )
+        )
         {
-          AM_drawMline(&l, (!strictmode ? mapcolor_uscr : mapcolor_secr));
+          AM_drawMline(&l, mapcolor_revsecr); // line bounding revealed secret sector
         }
         else if (lines[i].backsector->floorheight !=
                   lines[i].frontsector->floorheight)
@@ -1963,8 +2008,8 @@ static void AM_drawWalls(void)
           AM_drawMline(&l, mapcolor_cchg); // ceiling level change
         }
         else if (mapcolor_flat && ddt_cheating)
-        {
-          AM_drawMline(&l, mapcolor_flat); //2S lines that appear only in IDDT
+        { 
+          AM_drawMline(&l, mapcolor_flat); //2S lines that appear only in IDDT  
         }
       }
     } // now draw the lines only visible because the player has computermap
@@ -1991,10 +2036,10 @@ static void AM_drawWalls(void)
     // [Nugget] Tag Finder from PrBoomX: Highlight sectors and lines
     if (magic_sector || magic_tag > 0)
     {
-      if (   (lines[i].frontsector && ((magic_sector && lines[i].frontsector->tag == magic_sector->tag)
-                                        || ((magic_tag > 0) && lines[i].frontsector->tag == magic_tag)))
-          || (lines[i].backsector  && ((magic_sector && lines[i].backsector->tag  == magic_sector->tag)
-                                        || ((magic_tag > 0) && lines[i].backsector->tag  == magic_tag))))
+      if (   (lines[i].frontsector && (   (magic_sector  && lines[i].frontsector->tag == magic_sector->tag)
+                                       || (magic_tag > 0 && lines[i].frontsector->tag == magic_tag)))
+          || (lines[i].backsector  && (   (magic_sector  && lines[i].backsector->tag  == magic_sector->tag)
+                                       || (magic_tag > 0 && lines[i].backsector->tag  == magic_tag))))
       {
         AM_drawMline(&l, magic_sector_color_pos);
 
@@ -2018,6 +2063,12 @@ static void AM_drawWalls(void)
       }
     }
   }
+
+  for (int i = 0; i < array_size(lines_1S); ++i)
+  {
+    AM_drawMline(&lines_1S[i].l, lines_1S[i].color);
+  }
+  array_clear(lines_1S);
 }
 
 //
@@ -2220,8 +2271,8 @@ static void AM_drawPlayers(void)
     // [crispy] interpolate other player arrows
     if (uncapped && leveltime > oldleveltime)
     {
-        pt.x = (p->mo->oldx + FixedMul(p->mo->x - p->mo->oldx, fractionaltic)) >> FRACTOMAPBITS;
-        pt.y = (p->mo->oldy + FixedMul(p->mo->y - p->mo->oldy, fractionaltic)) >> FRACTOMAPBITS;
+        pt.x = LerpFixed(p->mo->oldx, p->mo->x) >> FRACTOMAPBITS;
+        pt.y = LerpFixed(p->mo->oldy, p->mo->y) >> FRACTOMAPBITS;
     }
     else
     {
@@ -2236,7 +2287,7 @@ static void AM_drawPlayers(void)
     }
     else
     {
-      smoothangle = R_InterpolateAngle(p->mo->oldangle, p->mo->angle, fractionaltic);
+      smoothangle = LerpAngle(p->mo->oldangle, p->mo->angle);
     }
 
     AM_drawLineCharacter
@@ -2284,8 +2335,8 @@ static void AM_drawThings
       // [crispy] interpolate thing triangles movement
       if (leveltime > oldleveltime)
       {
-        pt.x = (t->oldx + FixedMul(t->x - t->oldx, fractionaltic)) >> FRACTOMAPBITS;
-        pt.y = (t->oldy + FixedMul(t->y - t->oldy, fractionaltic)) >> FRACTOMAPBITS;
+        pt.x = LerpFixed(t->oldx, t->x) >> FRACTOMAPBITS;
+        pt.y = LerpFixed(t->oldy, t->y) >> FRACTOMAPBITS;
       }
       else
       {
@@ -2347,36 +2398,6 @@ static void AM_drawThings
         }
       }
       //jff 1/5/98 end added code for keys
-      // [crispy] draw blood splats and puffs as small squares
-      if (t->type == MT_BLOOD || t->type == MT_PUFF)
-      {
-        AM_drawLineCharacter
-        (
-          square_mark,
-          arrlen(square_mark),
-          (t->radius / 4) >> FRACTOMAPBITS,
-          t->angle,
-          (t->type == MT_BLOOD) ? REDS : GRAYS,
-          pt.x,
-          pt.y
-        );
-      }
-      else
-      {
-      const int color =
-        // killough 8/8/98: mark friends specially
-        ((t->flags & MF_FRIEND) && !t->player) ? mapcolor_frnd :
-        // [crispy] show countable kills in red ...
-        ((t->flags & (MF_COUNTKILL | MF_CORPSE)) == MF_COUNTKILL) ? REDS :
-        // [crispy] ... show Lost Souls and missiles in orange ...
-        (t->flags & (MF_FLOAT | MF_MISSILE)) ? 216 :
-        // [crispy] ... show other shootable items in dark gold ...
-        (t->flags & MF_SHOOTABLE) ? 164 :
-        // [crispy] ... corpses in gray ...
-        (t->flags & MF_CORPSE) ? GRAYS :
-        // [crispy] ... and countable items in yellow
-        (t->flags & MF_COUNTITEM) ? YELLOWS :
-        mapcolor_sprt;
 
       //jff previously entire code
       AM_drawLineCharacter
@@ -2385,11 +2406,16 @@ static void AM_drawThings
         NUMTHINTRIANGLEGUYLINES,
         t->radius >> FRACTOMAPBITS, // [crispy] triangle size represents actual thing size
         t->angle,
-        color,
+        // killough 8/8/98: mark friends specially
+        ((t->flags & MF_FRIEND) && !t->player) ? mapcolor_frnd :
+        /* cph 2006/07/30 - Show count-as-kills in red. */
+        ((t->flags & (MF_COUNTKILL | MF_CORPSE)) == MF_COUNTKILL) ? mapcolor_enemy :
+        /* bbm 2/28/03 Show countable items in yellow. */
+        (t->flags & MF_COUNTITEM) ? mapcolor_item :
+        mapcolor_sprt,
         pt.x,
         pt.y
       );
-      }
       t = t->snext;
     }
   }
@@ -2415,8 +2441,8 @@ static void AM_drawMarks(void)
   for (i=0;i<markpointnum;i++) // killough 2/22/98: remove automap mark limit
     if (markpoints[i].x != -1)
       {
-	int w = 5 * hires;
-	int h = 6 * hires;
+	int w = (5 * video.xscale) >> FRACBITS;
+	int h = (6 * video.yscale) >> FRACBITS;
 	int fx;
 	int fy;
 	int j = i;
@@ -2435,17 +2461,17 @@ static void AM_drawMarks(void)
 	  {
 	    int d = j % 10;
 
-	    if (d==1)           // killough 2/22/98: less spacing for '1'
-	      fx += hires;
+	    if (d == 1)           // killough 2/22/98: less spacing for '1'
+	      fx += (video.xscale >> FRACBITS);
 
 	    // [Nugget] Minimap: take `f_x` and `f_y` into account
 	    if (fx >= f_x && fx < f_x+f_w - w && fy >= f_y && fy < f_y+f_h - h)
 	      // [Nugget] Blink marks
-	      V_DrawPatchTranslated((fx / hires) - WIDESCREENDELTA,
-	                            fy / hires, FB, marknums[d],
-	                            (markblinktimer & 8) ? cr_dark : NULL);
+	      V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
+                              (fy << FRACBITS) / video.yscale,
+                              marknums[d], (markblinktimer & 8) ? cr_dark : NULL);
 
-	    fx -= w - hires;     // killough 2/22/98: 1 space backwards
+	    fx -= w - (video.yscale >> FRACBITS); // killough 2/22/98: 1 space backwards
 
 	    j /= 10;
 	  }
@@ -2466,7 +2492,7 @@ static void AM_drawCrosshair(int color)
   // [crispy] do not draw the useless dot on the player arrow
   if (!FOLLOW)
   {
-  fb[(f_w*(f_h+1))/2] = color; // single point for now
+    PUTDOT((f_w + 1) / 2, (f_h + 1) / 2, color); // single point for now
   }
 }
 
@@ -2480,8 +2506,8 @@ void AM_shadeScreen(void)
 
     for (x = f_x;  x < f_x+f_w;  x++)
       for (y = f_y;  y < f_y+f_h;  y++) {
-        pixel = y * (SCREENWIDTH * hires) + x;
-        fb[pixel] = colormaps[0][automap_overlay_darkening * 256 + fb[pixel]];
+        pixel = y * video.pitch + x;
+        I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];
       }
   }
   else
@@ -2528,12 +2554,12 @@ void AM_Drawer (void)
   if (!automapoverlay)
   {
     AM_clearFB(mapcolor_back);       //jff 1/5/98 background default color
-    if (automapactive == AM_MINI) // [Nugget] Minimap
+    if (automapactive == AM_FULL) // [Nugget] Minimap
       pspr_interp = false;
   }
   // [Alaux] Dark automap overlay
-  else if (automapoverlay == overlay_dark && (!M_MenuIsShaded()
-                                              || automapactive == AM_MINI)) // [Nugget] Minimap
+  else if (automapoverlay == AM_OVERLAY_DARK && (!MN_MenuIsShaded()
+                                                 || automapactive == AM_MINI)) // [Nugget] Minimap
     AM_shadeScreen();
 
   if (automap_grid)                  // killough 2/28/98: change var name
@@ -2545,6 +2571,64 @@ void AM_Drawer (void)
   AM_drawCrosshair(mapcolor_hair);   //jff 1/7/98 default crosshair color
 
   AM_drawMarks();
+}
+
+int mapcolor_preset;
+
+void AM_ColorPreset(void)
+{
+  struct
+  {
+    int *var;
+    int color[3]; // Vanilla Doom, Boom, ZDoom
+  } mapcolors[] =
+  {                                       // ZDoom CVAR name
+    {&mapcolor_back,    {  0, 247, 139}}, // am_backcolor
+    {&mapcolor_grid,    {104, 104,  70}}, // am_gridcolor
+    {&mapcolor_wall,    {176,  23, 239}}, // am_wallcolor
+    {&mapcolor_fchg,    { 64,  55, 135}}, // am_fdwallcolor
+    {&mapcolor_cchg,    {231, 215,  76}}, // am_cdwallcolor
+    {&mapcolor_clsd,    {  0, 208,   0}},
+    {&mapcolor_rkey,    {176, 175, 176}}, // P_GetMapColorForLock()
+    {&mapcolor_bkey,    {200, 204, 200}}, // P_GetMapColorForLock()
+    {&mapcolor_ykey,    {231, 231, 231}}, // P_GetMapColorForLock()
+    {&mapcolor_rdor,    {176, 175, 176}}, // P_GetMapColorForLock()
+    {&mapcolor_bdor,    {200, 204, 200}}, // P_GetMapColorForLock()
+    {&mapcolor_ydor,    {231, 231, 231}}, // P_GetMapColorForLock()
+    {&mapcolor_tele,    {  0, 119, 200}}, // am_intralevelcolor
+    {&mapcolor_secr,    {  0, 252, 251}}, // am_unexploredsecretcolor
+    {&mapcolor_revsecr, {  0, 112, 251}}, // am_secretsectorcolor
+    {&mapcolor_exit,    {  0, 208, 176}}, // am_interlevelcolor
+    {&mapcolor_unsn,    { 99, 104, 100}}, // am_notseencolor
+    {&mapcolor_flat,    { 97,  88,  95}}, // am_tswallcolor
+    {&mapcolor_sprt,    {112, 112,   4}}, // am_thingcolor
+    {&mapcolor_hair,    { 96, 208,  97}}, // am_xhaircolor
+    {&mapcolor_sngl,    {209, 208, 209}}, // am_yourcolor
+    {&mapcolor_plyr[0], {112, 112, 112}},
+    {&mapcolor_plyr[1], { 88,  88,  88}},
+    {&mapcolor_plyr[2], { 64,  64,  64}},
+    {&mapcolor_plyr[3], {176, 176, 176}},
+    {&mapcolor_frnd,    {252, 252,   4}}, // am_thingcolor_friend
+    {&mapcolor_enemy,   {112, 177,   4}}, // am_thingcolor_monster
+    {&mapcolor_item,    {112, 231,   4}}, // am_thingcolor_item
+
+    {&hudcolor_titl,    {CR_NONE, CR_GOLD, CR_GRAY}}, // DrawAutomapHUD()
+
+    {NULL,              {  0,   0,   0}},
+  };
+
+  int i;
+
+  for (i = 0; mapcolors[i].var; i++)
+  {
+    *mapcolors[i].var = mapcolors[i].color[mapcolor_preset];
+  }
+
+  // [FG] immediately apply changes if the automap is visible through the menu
+  if (automapactive && menu_backdrop != MENU_BG_TEXTURE)
+  {
+    HU_Start();
+  }
 }
 
 //----------------------------------------------------------------------------

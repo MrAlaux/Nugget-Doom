@@ -19,7 +19,7 @@ set(NUGGETDOOM_SOURCES
                            d_ticcmd.h
                            dogs.h
                            doomdata.h
-    doomdef.c              doomdef.h
+                           doomdef.h
     doomstat.c             doomstat.h
                            doomtype.h
     dsdhacked.c            dsdhacked.h
@@ -33,11 +33,13 @@ set(NUGGETDOOM_SOURCES
     hu_stuff.c             hu_stuff.h
     i_3dsound.c
     i_endoom.c             i_endoom.h
+    i_gamepad.c            i_gamepad.h
     i_glob.c               i_glob.h
     i_input.c              i_input.h
     i_main.c
     i_mbfsound.c
-    i_oalmusic.c           i_oalmusic.h
+    i_midimusic.c
+    i_oalmusic.c
     i_oalsound.c           i_oalsound.h
                            i_oalstream.h
     i_oplmusic.c
@@ -49,22 +51,27 @@ set(NUGGETDOOM_SOURCES
     i_video.c              i_video.h
     info.c                 info.h
     m_argv.c               m_argv.h
+                           m_array.h
     m_bbox.c               m_bbox.h
     m_cheat.c              m_cheat.h
+    m_config.c             m_config.h
                            m_fixed.h
     m_input.c              m_input.h
     m_io.c                 m_io.h
-    m_menu.c               m_menu.h
+    mn_font.c              mn_font.h
+    mn_menu.c              mn_menu.h
+    mn_setup.c             mn_setup.h
     m_misc.c               m_misc.h
-    m_misc2.c              m_misc2.h
     m_nughud.c             m_nughud.h
     m_random.c             m_random.h
-    m_snapshot.c           m_snapshot.h
+    mn_snapshot.c          mn_snapshot.h
                            m_swap.h
     memio.c                memio.h
     midifallback.c         midifallback.h
     midifile.c             midifile.h
+    midiout.c              midiout.h
     mus2mid.c              mus2mid.h
+    nano_bsp.c             nano_bsp.h
     net_client.c           net_client.h
     net_common.c           net_common.h
     net_dedicated.c        net_dedicated.h
@@ -73,7 +80,6 @@ set(NUGGETDOOM_SOURCES
     net_io.c               net_io.h
     net_loop.c             net_loop.h
     net_packet.c           net_packet.h
-    net_petname.c          net_petname.h
     net_query.c            net_query.h
     net_sdl.c              net_sdl.h
     net_server.c           net_server.h
@@ -112,6 +118,7 @@ set(NUGGETDOOM_SOURCES
                            r_state.h
     r_swirl.c              r_swirl.h
     r_things.c             r_things.h
+    r_voxel.c              r_voxel.h
     s_musinfo.c            s_musinfo.h
     s_sound.c              s_sound.h
     sounds.c               sounds.h
@@ -119,9 +126,9 @@ set(NUGGETDOOM_SOURCES
     st_stuff.c             st_stuff.h
     statdump.c             statdump.h
     tables.c               tables.h
-                           thermo.h
     u_mapinfo.c            u_mapinfo.h
     u_scanner.c            u_scanner.h
+    v_flextran.c           v_flextran.h
     v_trans.c              v_trans.h
     v_video.c              v_video.h
     version.c              version.h
@@ -161,7 +168,8 @@ else()
 endif()
 
 target_nuggetdoom_settings(nugget-doom)
-target_include_directories(nugget-doom PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../")
+target_include_directories(nugget-doom PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}/../" "../miniz")
 
 target_link_libraries(nugget-doom PRIVATE
     ${SDL2_LIBRARIES}
@@ -181,7 +189,7 @@ if(HAVE_AL_BUFFER_CALLBACK)
 endif()
 
 if(WIN32)
-    target_sources(nugget-doom PRIVATE i_winmusic.c)
+    target_include_directories(nugget-doom PRIVATE "../win32")
     target_link_libraries(nugget-doom PRIVATE winmm)
     if(MSVC)
         target_sources(nugget-doom PRIVATE
@@ -190,9 +198,15 @@ if(WIN32)
 endif()
 
 if(APPLE)
-    target_sources(nugget-doom PRIVATE i_macmusic.c)
     target_link_libraries(nugget-doom PRIVATE
-        -Wl,-framework,AudioToolbox -Wl,-framework,AudioUnit -Wl,-framework,CoreServices)
+        -Wl,-framework,AudioToolbox -Wl,-framework,AudioUnit
+        -Wl,-framework,CoreServices -Wl,-framework,CoreAudio
+        -Wl,-framework,CoreMIDI)
+endif()
+
+if(ALSA_FOUND)
+    target_include_directories(nugget-doom PRIVATE ${ALSA_INCLUDE_DIR})
+    target_link_libraries(nugget-doom PRIVATE ALSA::ALSA)
 endif()
 
 if(FluidSynth_FOUND)
@@ -225,8 +239,9 @@ set(SETUP_SOURCES
     i_system.c              i_system.h
     i_timer.c               i_timer.h
     m_argv.c                m_argv.h
+                            m_array.h
     m_io.c                  m_io.h
-    m_misc2.c               m_misc2.h
+    m_misc.c                m_misc.h
     net_io.c                net_io.h
     net_packet.c            net_packet.h
     net_query.c             net_query.h

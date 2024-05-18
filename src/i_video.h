@@ -21,68 +21,87 @@
 #ifndef __I_VIDEO__
 #define __I_VIDEO__
 
-
 #include "doomtype.h"
 
-extern int SCREENWIDTH;
-extern int SCREENHEIGHT;
-extern int NONWIDEWIDTH; // [crispy] non-widescreen SCREENWIDTH
-extern int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
-void I_GetScreenDimensions (void); // [crispy] re-calculate WIDESCREENDELTA
+#define FOV_DEFAULT      90
+#define FOV_MIN          20  // [Nugget] Decreased
+#define FOV_MAX          140 // [Nugget] Increased
+#define ASPECT_RATIO_MAX 2.4  // Up to 21:9. TODO: Support up to 3.6 (32:9).
+#define ASPECT_RATIO_MIN (4.0 / 3.0)
 
-enum
+typedef enum
 {
-  RATIO_ORIG,
-  RATIO_MATCH_SCREEN,
-  RATIO_16_10,
-  RATIO_16_9,
-  RATIO_21_9,
-  NUM_RATIOS
-};
+    RATIO_ORIG,
+    RATIO_AUTO,
+    RATIO_16_10,
+    RATIO_16_9,
+    RATIO_21_9,
+    NUM_RATIOS
+} aspect_ratio_mode_t;
 
-// [FG] support more joystick and mouse buttons
-#define MAX_JSB NUM_CONTROLLER_BUTTONS
-#define MAX_MB NUM_MOUSE_BUTTONS
+typedef struct
+{
+    int max;
+    int step;
+} resolution_scaling_t;
+
+void I_GetResolutionScaling(resolution_scaling_t *rs);
 
 // Called by D_DoomMain,
 // determines the hardware configuration
 // and sets up the video mode
 
-void I_InitGraphics (void);
+void I_InitGraphics(void);
 void I_ShutdownGraphics(void);
 
 // Takes full 8 bit values.
-void I_SetPalette (byte* palette);
+void I_SetPalette(byte *palette);
 
-void I_FinishUpdate (void);
+void I_FinishUpdate(void);
 
-void I_ReadScreen (byte* scr);
+void I_ReadScreen(byte *dst);
 
-void I_ResetScreen(void);   // killough 10/98
+void I_ResetScreen(void); // killough 10/98
 void I_ToggleVsync(void); // [JN] Calls native SDL vsync toggle
 
-extern boolean use_vsync;  // killough 2/8/98: controls whether vsync is called
-extern boolean disk_icon;  // killough 10/98
-extern int hires, default_hires;      // killough 11/98
+void I_DynamicResolution(void);
+
+extern boolean drs_skip_frame;
+
+extern char *sdl_renderdriver; // [Nugget]
+
+extern boolean use_vsync; // killough 2/8/98: controls whether vsync is called
+extern boolean disk_icon; // killough 10/98
+
+extern int max_video_width, max_video_height;
+extern int current_video_height, default_current_video_height;
+
+#define DRS_MIN_HEIGHT 400
+extern boolean dynamic_resolution;
 
 extern boolean use_aspect;
+extern boolean uncapped,
+    default_uncapped; // [FG] uncapped rendering frame rate
+
 extern boolean stretch_to_fit; // [Nugget]
-extern boolean uncapped, default_uncapped; // [FG] uncapped rendering frame rate
 
 extern boolean fullscreen;
 extern boolean exclusive_fullscreen;
+extern boolean change_display_resolution;
 extern int fpslimit; // when uncapped, limit framerate to this value
-extern boolean integer_scaling; // [FG] force integer scales
+extern int fps;
 extern boolean vga_porch_flash; // emulate VGA "porch" behaviour
-extern int widescreen; // widescreen mode
+extern aspect_ratio_mode_t widescreen, default_widescreen; // widescreen mode
+extern int custom_fov;    // Custom FOV set by the player.
 extern int video_display; // display index
 extern boolean screenvisible;
-extern boolean need_reset;
+extern boolean window_focused;
+extern boolean resetneeded;
+extern boolean setrefreshneeded;
 extern boolean smooth_scaling;
 extern boolean toggle_fullscreen;
 extern boolean toggle_exclusive_fullscreen;
-
-extern boolean no_downscaling; // [Nugget]
+extern boolean default_grabmouse;
 
 // [Nugget]
 #define GAMMA2MAX 30
@@ -97,6 +116,9 @@ void *I_GetSDLWindow(void);
 void *I_GetSDLRenderer(void);
 
 void I_InitWindowIcon(void);
+
+void I_ShowMouseCursor(boolean toggle);
+void I_ResetRelativeMouseState(void);
 
 #endif
 

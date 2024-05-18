@@ -21,27 +21,26 @@
 #ifndef __DOOMTYPE__
 #define __DOOMTYPE__
 
-#include <stddef.h> // [FG] NULL
+#include <stddef.h> // size_t, NULL
 #include <stdint.h> // [FG] intptr_t types
 
 #include "config.h"
 
-#ifndef __BYTEBOOL__
-#define __BYTEBOOL__
-// Fixed to use builtin bool type with C++.
-#ifdef __cplusplus
-typedef bool boolean;
+#if __bool_true_false_are_defined
+typedef int boolean;
 #else
 typedef enum {false, true} boolean;
 #endif
-typedef unsigned char byte;
-#endif
 
-// haleyjd: resolve platform-specific range symbol issues
+typedef uint8_t byte;
 
-#include <limits.h>
-#define D_MAXINT INT_MAX
-#define D_MININT INT_MIN
+typedef byte pixel_t;
+
+// This could be wider for >8 bit display. Indeed, true color support is
+// posibble precalculating 24bpp lightmap/colormap LUT. from darkening PLAYPAL
+// to all black. Could use even more than 32 levels.
+
+typedef byte lighttable_t;
 
 // [FG] common definitions from Chocolate Doom
 
@@ -89,10 +88,16 @@ typedef unsigned char byte;
 #if defined(__GNUC__) || defined(__clang__)
  #define PRINTF_ATTR(fmt, first) __attribute__((format(printf, fmt, first)))
  #define PRINTF_ARG_ATTR(x) __attribute__((format_arg(x)))
- #define NORETURN __attribute__((noreturn))
 #else
  #define PRINTF_ATTR(fmt, first)
  #define PRINTF_ARG_ATTR(x)
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+ #define NORETURN __attribute__((noreturn))
+#elif defined (_MSC_VER)
+ #define NORETURN __declspec(noreturn)
+#else
  #define NORETURN
 #endif
 

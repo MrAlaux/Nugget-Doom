@@ -1,5 +1,5 @@
 //
-// Copyright(C) 2023 Roman Fomin
+// Copyright(C)      2023 Andrew Apted
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -11,17 +11,32 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// DESCRIPTION:
-//
 
-#ifndef __I_OALMUSIC__
-#define __I_OALMUSIC__
+#ifndef __R_VOXEL__
+#define __R_VOXEL__
 
 #include "doomtype.h"
 
-typedef uint32_t (*callback_func_t)(uint8_t *buffer, uint32_t buffer_samples);
+void VX_Init (void);
 
-boolean I_OAL_HookMusic(callback_func_t callback_func);
-void I_OAL_SetGain(float gain);
+void VX_ClearVoxels (void);
 
-#endif
+void VX_NearbySprites (void);
+
+struct mobj_s;
+boolean VX_ProjectVoxel (struct mobj_s * thing);
+
+struct vissprite_s;
+void VX_DrawVoxel (struct vissprite_s * vis);
+
+extern const char ** vxfiles;
+
+extern boolean voxels_rendering, default_voxels_rendering;
+
+void VX_IncreaseMaxDist (void);
+
+void VX_DecreaseMaxDist (void);
+
+void VX_ResetMaxDist (void);
+
+#endif  /* __R_VOXEL__ */

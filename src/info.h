@@ -22,8 +22,6 @@
 #ifndef __INFO__
 #define __INFO__
 
-#include "config.h"
-
 // Needed for action function pointer handling.
 #include "d_think.h"
 
@@ -1524,7 +1522,8 @@ typedef struct
     int bloodcolor;   // [FG] colored blood and gibs
     // DEHEXTRA
     mobjtype_t droppeditem; // mobj to drop after death
-    // [Nugget] Removed `actualheight`
+    // [FG] Obituaries
+    char *obituary, *obituary_melee;
 } mobjinfo_t;
 
 #define NO_ALTSPEED -1

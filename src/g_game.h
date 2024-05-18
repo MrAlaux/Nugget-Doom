@@ -18,8 +18,11 @@
 #define __G_GAME__
 
 #include "doomdef.h"
-#include "d_event.h"
-#include "d_ticcmd.h"
+#include "doomstat.h"
+#include "doomtype.h"
+#include "m_fixed.h"
+
+struct event_s;
 
 //
 // GAME
@@ -30,7 +33,10 @@
 
 #define MBF21_GAME_OPTION_SIZE (21 + MBF21_COMP_TOTAL)
 
-boolean G_Responder(event_t *ev);
+void G_PrepTiccmd(void);
+void G_ClearInput(void);
+boolean G_MovementResponder(struct event_s *ev);
+boolean G_Responder(struct event_s *ev);
 boolean G_CheckDemoStatus(void);
 void G_DeathMatchSpawnPlayer(int playernum);
 void G_InitNew(skill_t skill, int episode, int map);
@@ -47,6 +53,8 @@ void G_SecretExitLevel(void);
 void G_WorldDone(void);
 void G_Ticker(void);
 void G_ScreenShot(void);
+void G_UpdateSideMove(void);
+void G_UpdateCarryAngle(void);
 void G_ReloadDefaults(boolean keep_demover); // killough 3/1/98: loads game defaults
 char *G_SaveGameName(int); // killough 3/22/98: sets savegame filename
 char *G_MBFSaveGameName(int); // MBF savegame filename
@@ -63,19 +71,37 @@ int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap);
 
 void G_EnableWarp(boolean warp);
 
-int G_GetNamedComplevel (const char *arg);
+demo_version_t G_GetNamedComplevel(const char *arg);
 const char *G_GetCurrentComplevelName(void);
 
-extern int  default_complevel;
+int G_GotoNextLevel(int *pEpi, int *pMap);
+
+typedef enum
+{
+  CL_NONE = -1,
+  CL_VANILLA,
+  CL_BOOM,
+  CL_MBF,
+  CL_MBF21,
+} complevel_t;
+
+extern complevel_t force_complevel, default_complevel;
+
+extern int realtic_clock_rate;
 
 // killough 5/2/98: moved from m_misc.c:
 extern int  key_escape;
 extern int  key_enter;
 extern int  key_help;
 extern int  autorun;           // always running?                   // phares
+extern boolean autostrafe50;
 extern int  novert;
 extern boolean mouselook;
 extern boolean padlook;
+extern int  dclick_use; // [FG] double click acts as "use"
+
+extern fixed_t *forwardmove;
+extern fixed_t *sidemove;
 
 extern int  defaultskill;      //jff 3/24/98 default skill
 extern boolean haswolflevels;  //jff 4/18/98 wolf levels present
@@ -89,7 +115,7 @@ extern int cpars[];     // hardcoded array size
 
 // [Nugget] Rewind -----------------------------------------------------------
 
-extern void G_ResetRewindCountdown(void);
+extern void G_SetRewindCountdown(int value);
 extern void G_EnableRewind(void);
 extern void G_Rewind(void);
 extern void G_ClearExcessKeyFrames(void);

@@ -25,43 +25,35 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 ### General
 
-- **Support for higher resolutions:** 3X (600p), 4X (800p)... up to 9X (1800p) [by _ceski_]
-- **Selection of widescreen ratios** in the setup menu itself [i.b. Crispy Doom]
+- **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-Only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
-- **Gamma Correction slider ranging from 0.50 to 2.0 in steps of 0.05**
-- **Gamma Correction key cycling** setting, to cycle through either original or extended gamma levels (CFG-Only: `gammacycle`)
-- **Menu items for _Air Absorption_ and _Doppler Effect_**, both of which are **now set to 5 by default**
+- **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
 - **Tweaked _Stretch Short Skies_ algorithm**
-- **_Screen Wipe Style_** selection:
-  - _"Seizure"_ (**Warning**: this one might legitimately be seizure-inducing, use with caution);
-  - _"Fade"_.
-- **Fixed screen melt inconsistency across resolutions**
+- **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **_"Direct + Auto"_ mode for Vertical Aiming**
 - **_Direct Vertical Aiming_ for melee attacks**
 - **_Move Over/Under Things_** setting [partially p.f. Crispy Doom, DSDA-Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>, must be enabled first) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>, must be enabled first) [i.b. ZDoom]
-- **_Field of View_** setting [p.f. Doom Retro]
-- **_View Height_** setting, which allows to enter a custom height value between 32 and 56 for the player's POV [i.b. Brutal Doom]
-- **_View Bobbing Percentage_** setting [i.b. Crispy Doom, ZDoom]
-- **_Impact Pitch_** setting, to flinch upon hitting a floor and/or taking damage
+- **_View Height_** setting, which allows to enter a custom POV height value in the [32, 56] range [i.b. Brutal Doom]
+- **Flinching** setting, to flinch upon landing and/or taking damage
 - **_Explosion Shake Effect_** setting [i.b. Doom Retro]
 - **_Subtle Idle Bobbing/Breathing_** setting [p.f. International Doom]
 - **_Teleporter Zoom_** setting [i.b. ZDoom]
 - **_Death Camera_** setting [i.b. ZDoom]
 - **_Chasecam_** [i.b. ZDoom]
 - **_Background for all menus_** setting
-- **_Disable palette tint in menus_** setting [i.b. Crispy Doom]
-- **_Disable Berserk Tint_** setting
-- **_Disable Radiation Suit Tint_** setting
-- **_Damage Tint Cap_** and **_Bonus Tint Cap_**, to attenuate or disable the red and yellow screen tints
+- **_No palette tint in menus_** setting [i.b. Crispy Doom]
+- **_No Berserk Tint_** setting
+- **_No Radiation Suit Tint_** setting
+- **_Night-Vision Visor Effect_** setting [i.b. International Doom]
+- **_Damage Tint Cap_** and **_Bonus Tint Cap_**, to attenuate or disable said screen tinting
 - **_Fake Contrast_** setting
 - Toggle for **Diminished Lighting** (CFG-Only: `diminished_lighting`)
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened spinning camera view
-- **_Sound Clipping Distance_** selection, to optionally double the distance at which SFX become audible
-- **_Organize Saves by IWAD_** setting
+- **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **Rewinding** [i.b. DSDA-Doom]
 - **_Play Internal Demos_** setting
@@ -72,38 +64,41 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 
 ### Weapons
 
+- **Extended _View/Weapon Bob_ percentages**
 - Restored **_Weapon Recoil_** menu item
-- **_Disable Horizontal Autoaim_** setting
+- **_No Horizontal Autoaim_** setting
 - **_Switch [Weapon] on Pickup_** setting
 - Key to **equip last used weapon** [i.b. Cherry Doom]
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
 - **Always Bob** setting (CFG-Only: `always_bob`)
-- **_Weapon Bobbing Percentage_** setting [i.b. Crispy Doom, ZDoom]
 - **_Bobbing Styles_** selection [p.f. Zandronum]
 - **_Weapon Inertia_** setting (scale determined by the CFG-Only `weapon_inertia_scale_pct` CVAR) [by _ceski_]
-- **_Squat Weapon Down On Impact_** setting [p.f. Crispy Doom]
+- **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
 - **_Translucent Flashes_** setting [i.b. Crispy Doom]
 - **Show Berserk availability** setting [partially p.f. Crispy Doom]
-- **"Correct" first person sprite centering** setting, to toggle the 1px first person sprite misalignment (CFG-Only: `sx_fix`)
+- **"Correct" first person sprite centering** setting, to toggle the 1px first-person sprite misalignment (CFG-Only: `sx_fix`)
 
 ### Status Bar/HUD
 
-- **`NUGHUD` lump support**, making the Crispy HUD (now called Nugget HUD) customizable (see `docs/nughud.md`)
+- **Nugget HUD**, highly customizable through means of the **`NUGHUD` lump** (see `docs/nughud.md`)
 - **Crosshair:**
   - Vertical-only target lock-on;
-  - Horizontal autoaim indicators;
+  - Horizontal-autoaim indicators;
   - Option to account for fuzzy targets [i.b. From Doom With Love];
   - Dedicated toggle key.
+- **Secret count in "secret revealed" message** [p.f. Crispy Doom]
+- **Show Save Messages** setting (CFG-Only: `show_save_messages`)
+- **_Milestone Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
+- Restored **_Upward Message Scrolling_** setting, and enabled it by default
+- **Restored various message-related menu items**
 - **_Show Powerup Timers_** setting
 - **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-Only: `show_ssg`) [p.f. Crispy Doom]
+- **Support for Stats icons**, to be used in place of the "K/I/S" letter-labels: `HUDKILLS`, `HUDITEMS` and `HUDSCRTS` graphic lumps
+- **_Level Stats Format_** settings [i.b. Crispy Doom]
 - **_Alternative Arms Display_** setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
-- **Blink Missing Keys** setting (CFG-Only: `blink_keys`) [partially p.f. Crispy Doom]
-- **_Smart Totals_** setting [p.f. So Doom]
-- **_Show Kills Percentage [in Stats display]_** setting
 - **Event Timers:**
-  - _"Use" Button Timer_ [p.f. Crispy Doom]; 
-  - _Teleport Timer_ [i.b. the above];
-  - _Key Pickup Timer_ [same as above].
+  - _Teleport Timer_ [i.b. Crispy Doom];
+  - _Key-Pickup Timer_ [same as above].
 - **Extended HUD color customization**
 - **Armor count is colored gray when in God Mode**
 - **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
@@ -111,47 +106,42 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 ### Automap
 
 - **Minimap mode** [i.b. DSDA-Doom]
-- **Automap color for unrevealed secret sectors**
 - Key to **_Blink [Automap] Marks_** (default: <kbd>B</kbd>)
 - **_Tag Finder_**: Position the Automap pointer over a sector and press the _Tag Finder_ key to highlight its activator line(s), and vice versa [p.f. PrBoomX]
 - Key to **_Teleport to Automap pointer_**
+- **Color for trigger lines**, used with IDDT (CFG-Only: `mapcolor_trig`)
 
 ### Enemies
 
 - **_Extra Gibbing_** setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-Only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
 - **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
 - **_ZDoom-like item drops_** setting [of course, i.b. ZDoom]
-- **Improved vanilla fuzz effect** [by _ceski_]
-- **_Selective Fuzz Darkening_** setting [by _ceski_]
-
-### Messages
-
-- **Secret count in "secret revealed" message** [p.f. Crispy Doom]
-- **Show Save Messages** setting (CFG-Only: `show_save_messages`)
-- **_Announce Milestone Completion_** setting, to report completion of milestones (e.g. all items acquired)
-- Restored **_Message Listing Scrolls Upwards_** setting, and enabled it by default
+- **_Selective Fuzz Darkening_** setting [by @ceski-1]
 
 ### Doom Compatibility settings
 
-- Bruiser attack (A_BruisAttack) doesn't face target
-- Disable melee snapping
-- Double autoaim range
-- Fix Lost Soul colliding with items
-- Lost Soul forgets target upon impact
-- Fuzzy things bleed fuzzy blood [i.b. Crispy Doom]
-- Non-bleeders don't bleed when crushed [i.b. Crispy Doom]
-- Fix lopsided Icon of Sin explosions
-- Permanent IDCHOPPERS invulnerability
-- Blazing doors reopen with wrong sound [p.f. Crispy Doom]
-- Manually-toggled moving doors are silent [p.f. Crispy Doom]
-- Corrected switch sound source [p.f. Crispy Doom]
-- Chaingun makes two sounds with one bullet
-- Chaingunner uses pistol/chaingun sound
-- Arch-Vile fire plays flame start sound [p.f. Crispy Doom]
-- Higher god-mode face priority [p.f. International Doom]
-- Dead players can still play "oof" sound [p.f. Crispy Doom]
-- Use unused pain/bonus palettes
-- Key pickup resets palette
+All of these are CFG-Only, so their CVAR names are included.
+
+- Bruiser attack (A_BruisAttack) doesn't face target (`comp_bruistarget`)
+- Disable melee snapping (`comp_nomeleesnap`)
+- Double autoaim range (`comp_longautoaim`)
+- Fix Lost Soul colliding with items (`comp_lscollision`)
+- Lost Soul forgets target upon impact (`comp_lsamnesia`)
+- Fuzzy things bleed fuzzy blood (`comp_fuzzyblood`) [i.b. Crispy Doom]
+- Non-bleeders don't bleed when crushed (`comp_nonbleeders`) [i.b. Crispy Doom]
+- Attackers face fuzzy targets straight (`comp_faceshadow`)
+- Fix lopsided Icon of Sin explosions (`comp_iosdeath`)
+- Permanent IDCHOPPERS invulnerability (`comp_choppers`)
+- Blazing doors reopen with wrong sound (`comp_blazing2`) [p.f. Crispy Doom]
+- Manually-toggled moving doors are silent (`comp_manualdoor`) [p.f. Crispy Doom]
+- Corrected switch sound source (`comp_switchsource`) [p.f. Crispy Doom]
+- Chaingun makes two sounds with one bullet (`comp_cgundblsnd`)
+- Chaingunner uses pistol/chaingun sound (`comp_cgunnersfx`)
+- Arch-Vile fire plays flame start sound (`comp_flamst`) [p.f. Crispy Doom]
+- Higher god-mode face priority (`comp_godface`) [p.f. International Doom]
+- Dead players can still play "oof" sound (`comp_deadoof`) [p.f. Crispy Doom]
+- Use unused pain/bonus palettes (`comp_unusedpals`)
+- Key pickup resets palette (`comp_keypal`)
 
 ### Cheats
 
@@ -160,11 +150,12 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
   - **_'BOBBERS'_** serves as a shortcut to toggle the two cheats mentioned above, plus IDFA
 - **_'GIBBERS'_** to force gibbing on dying enemies, independently of damage dealt
 - **_'IDFLY'_** to fly (uses jumping/crouching keys) [i.b. PrBoom+, ZDoom]
-- **_'SUMMON'_** to spawn a hostile or friendly actor based on its mobjtype index [i.b. ZDoom]
+- **_'SUMMON'_** to spawn an actor based on its type index [i.b. ZDoom, PrBoomX]
+- **_'IDDF'_** to find a key on the Automap
 - **_'RESURRECT' / 'IDRES'_** to resurrect the player without toggling IDDQD [i.b. ZDoom]
 - **_'LINETARGET'_** to give some info on the player's linetarget [i.b. ZDoom]
-- **_'MDK'_** [i.b. ZDoom]
-- **_'SAITAMA'_** to enable the MDK Fist (replaces A_Punch's melee attack with the MDK attack, featuring an alternate multishot attack when holding down Strafe On)
+- **_'MDK'_** to perform a hitscan attack of 1-million damage [i.b. ZDoom]
+- **_'SAITAMA'_** to enable the MDK Fist
 - **_'BOOMCAN'_** for explosive hitscan attacks
 - **_'NEXTMAP'_** to exit the level [i.b. ZDoom]
 - **_'NEXTSECRET'_** to exit the level as if using a secret exit [i.b. ZDoom]
@@ -172,10 +163,14 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
 - **_'TNTEM'_** as an alternative to _'KILLEM'_
 - **_'FPS'_** as a replacement for _'SHOWFPS'_
 - **Mid-air control while in noclipping mode** [p.f. Crispy Doom]
+- **Key-binding for Computer Area Map cheat**
 - Reenabled **_'NOMOMENTUM'_** cheat [p.f. Crispy Doom]
+
+For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 
 ### Miscellaneous
 
+- **SDL render driver** setting (CFG-Only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - Key to **toggle zoom**
 - **Autoload folder for all games** (`autoload/all`)
 - **Setting of savegame and screenshot paths in config file** (CFG-Only: `savegame_dir` and `screenshot_dir`)
@@ -192,10 +187,11 @@ For these settings, their CVAR names are provided alongside the _CFG-Only_ label
   - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS`;
   - Health-based player pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom].
 - **Customizable darkening level for dark menu background and Automap overlay** (CFG-Only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
-- **Tweaked dark menu background and Automap overlay algorithm**
 - The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
+- Toggle to **disable the Killough-face easter egg** (CFG-Only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-Only: `sp_chat`)
 - Restored `-cdrom` command-line parameter
+- Decreased minimum window size to 200p (240p with aspect-ratio correction)
 
 # Releases
 
@@ -209,11 +205,13 @@ A complete history of changes and releases can be found on the [Releases](https:
 
 Nugget Doom follows a fairly simple (albeit arbitrary) **X.Y.Z** versioning system:
 
-- **X** is increased in the event of at least one major implementation, such as a new spec like _UMAPINFO_;
-- **Y** is increased in the event of at least one minor implementation, such as a new cheat;
-- **Z** is increased in the event of at least one bug fix, text/code reformatting, or merging of _Woof!_ updates, even if the changes to the latter are considered minor or major.
+- **X** is increased in the event of major implementations, as were arbitrary/dynamic resolution and voxel support;
+- **Y** is increased in the event of minor implementations, such as a new cheat;
+- **Z** is increased in the event of bug fixes or text/code reformatting.
 
 Incrementing any of the first values will reset the latter (i.e. a major change to 1.1.2 would shift it to 2.0.0).
+
+The merging of changes from Woof! releases may affect any of the version values, but not necessarily in the same way as Woof!'s own version (i.e. `Woof! 11.Y.Z -> 12.Y.Z` doesn't necessarily mean `Nugget 2.Y.Z -> 3.Y.Z`).
 
 # Compiling
 
@@ -223,8 +221,9 @@ The Nugget Doom source code is available at GitHub: <https://github.com/MrAlaux/
 
 ## Linux, and Windows with MSYS2
 
-The following libraries need to be installed:
-
+The following build system and libraries need to be installed:
+ 
+ * [CMake](https://cmake.org) (>= 3.9)
  * [SDL2](https://github.com/libsdl-org/SDL/tree/SDL2) (>= 2.0.18)
  * [SDL2_net](https://github.com/libsdl-org/SDL_net)
  * [openal-soft](https://github.com/kcat/openal-soft) (>= 1.22.0 for PC Speaker emulation)
@@ -284,23 +283,25 @@ Copyright:
  © 1993-1996 Id Software, Inc.;  
  © 1993-2008 Raven Software;  
  © 1999 by id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman;  
+ © 1999-2004 by Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze;  
  © 2004 James Haley;  
+ © 2005-2006 by Florian Schulze, Colin Phipps, Neil Stevens, Andrey Budko;  
  © 2005-2018 Simon Howard;  
  © 2006 Ben Ryves;  
+ © 2007-2011 Moritz "Ripper" Kroll;  
+ © 2008-2019 Simon Judd;  
  © 2017 Christoph Oelckers;  
- © 2017-2022 Brad Harding;  
  © 2019 Fernando Carmona Varo;  
- © 2019 Jonathan Dowland;  
  © 2020 Alex Mayfield;  
  © 2020 JadingTsunami;  
+ © 2020-2024 Fabian Greffrath;  
+ © 2020-2024 Roman Fomin;  
  © 2021 Ryan Krafnick;  
+ © 2021-2024 Alaux;  
  © 2022 Julia Nechaevskaya;  
- © 2022 Vladislav Melnichuk;  
- © 2022-2023 ceski;  
- © 2023 liPillON;  
- © 2020-2023 Fabian Greffrath;  
- © 2020-2023 Roman Fomin;  
- © 2021-2024 Alaux.  
+ © 2022-2024 ceski;  
+ © 2023 Andrew Apted;  
+ © 2023 liPillON.   
 License: [GPL-2.0+](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
 Files: `src/beta.h`  
@@ -314,23 +315,35 @@ Copyright:
  © TobiasKosmos.  
 License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/) and [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
+Files: `src/nano_bsp.*`  
+Copyright: © 2023 Andrew Apted.  
+License: [MIT](https://opensource.org/licenses/MIT)
+
 Files: `src/u_scanner.*`  
 Copyright:  
  © 2010 Braden "Blzut3" Obrzut;  
  © 2019 Fernando Carmona Varo.  
 License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
 
+Files: `src/v_flextran.*`  
+Copyright:  
+ © 2013 James Haley et al.;  
+ © 1998-2012 Marisa Heit.  
+License: [GPL-3.0+](https://www.gnu.org/licenses/gpl-3.0)
+
+Files: `src/v_video.*`  
+Copyright:  
+ © 1999 by id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman;  
+ © 2013 James Haley et al.  
+License: [GPL-3.0+](https://www.gnu.org/licenses/gpl-3.0)
+
 Files: `cmake/FindSDL2.cmake, cmake/FindSDL2_net.cmake`  
 Copyright: © 2018 Alex Mayfield.  
 License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
 
-Files: `data/nugget-doom.ico, data/nugget-doom.png, data/nugget-doom8.ico, src/icon.c, data/setup.ico, data/setup8.ico, setup/setup_icon.c, data/nugget-doom-setup.png`  
+Files: `data/nugget-doom.ico, data/nugget-doom.png, src/icon.c, data/setup.ico, data/nugget-doom-setup.png, setup/setup_icon.c`  
 Copyright: © 2022 Korp.  
 License: [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-
-Files: `src/thermo.h`  
-Copyright: © 2020-2022 Julia Nechaevskaya.  
-License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/)
 
 Files: `miniz/*`  
 Copyright:  

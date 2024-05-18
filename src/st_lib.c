@@ -18,17 +18,19 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomdef.h"
-#include "doomstat.h"
+#include "st_lib.h"
+
+#include "m_swap.h"
+#include "r_defs.h"
 #include "v_video.h"
 #include "w_wad.h"
-#include "st_stuff.h"
-#include "st_lib.h"
-#include "r_main.h"
-#include "m_swap.h"
-#include "m_nughud.h" // [Nugget]
+#include "z_zone.h"
 
-int sts_always_red;      //jff 2/18/98 control to disable status color changes
+// [Nugget]
+#include "m_nughud.h"
+#include "st_stuff.h"
+
+int sts_colored_numbers; //jff 2/18/98 control to disable status color changes
 int sts_pct_always_gray; // killough 2/21/98: always gray %'s? bug or feature?
 
 patch_t*    sttminus;
@@ -95,9 +97,9 @@ void STlib_initNum
 // Passed a st_number_t widget and a color range for output.
 // Returns nothing
 //
-void STlib_drawNum
+static void STlib_drawNum
 ( st_number_t*  n,
-  char *outrng )       //jff 2/16/98 add color translation to digit output
+  byte *outrng )       //jff 2/16/98 add color translation to digit output
 {
   int   numdigits = n->width;
   int   num = *n->num;
@@ -125,11 +127,12 @@ void STlib_drawNum
   }
 
   // if non-number, do not draw it
-  if (num == 1994)
+  if (num == LARGENUMBER)
     return;
 
   // [Nugget] NUGHUD: Custom alignment
-  if (n->align != 1) {
+  if (n->align != 1)
+  {
     int tnum = num, tnumdigits = 0;
 
     do {
@@ -137,17 +140,17 @@ void STlib_drawNum
       tnumdigits++;
     } while (tnum);
 
-    x += (!n->align ? w/2 : w) * (tnumdigits + neg - (!n->align && n->haspercent));
+    x += (w / (!n->align ? 2 : 1)) * (tnumdigits + neg - (!n->align && n->haspercent));
   }
 
   //jff 2/16/98 add color translation to digit output
   // in the special case of 0, you draw 0
   if (!num)
   {
-    if (outrng && !sts_always_red)
-      V_DrawPatchTranslated(x - w, n->y, FG, n->p[ 0 ],outrng);
+    if (outrng && sts_colored_numbers)
+      V_DrawPatchTranslated(x - w, n->y, n->p[ 0 ],outrng);
     else //jff 2/18/98 allow use of faster draw routine from config
-      V_DrawPatch(x - w, n->y, FG, n->p[ 0 ]);
+      V_DrawPatch(x - w, n->y, n->p[ 0 ]);
   }
 
   // draw the new number
@@ -155,10 +158,10 @@ void STlib_drawNum
   while (num && numdigits--)
   {
     x -= w;
-    if (outrng && !sts_always_red)
-      V_DrawPatchTranslated(x, n->y, FG, n->p[ num % 10 ],outrng);
+    if (outrng && sts_colored_numbers)
+      V_DrawPatchTranslated(x, n->y, n->p[ num % 10 ],outrng);
     else //jff 2/18/98 allow use of faster draw routine from config
-      V_DrawPatch(x, n->y, FG, n->p[ num % 10 ]);
+      V_DrawPatch(x, n->y, n->p[ num % 10 ]);
     num /= 10;
   }
 
@@ -167,10 +170,10 @@ void STlib_drawNum
   if (neg && minus)
   {
     w = SHORT(minus->width);
-    if (outrng && !sts_always_red)
-      V_DrawPatchTranslated(x - w, n->y, FG, minus,outrng);
+    if (outrng && sts_colored_numbers)
+      V_DrawPatchTranslated(x - w, n->y, minus,outrng);
     else //jff 2/18/98 allow use of faster draw routine from config
-      V_DrawPatch(x - w, n->y, FG, minus);
+      V_DrawPatch(x - w, n->y, minus);
   }
 }
 
@@ -184,7 +187,7 @@ void STlib_drawNum
 //
 void STlib_updateNum
 ( st_number_t*    n,
-  char *outrng ) //jff 2/16/98 add color translation to digit output
+  byte *outrng ) //jff 2/16/98 add color translation to digit output
 {
   if (*n->on) STlib_drawNum(n, outrng);
 }
@@ -223,20 +226,21 @@ void STlib_initPercent
 //
 void STlib_updatePercent
 ( st_percent_t*   per,
-  char *outrng )            //jff 2/16/98 add color translation to digit output
+  byte *outrng )            //jff 2/16/98 add color translation to digit output
 {
   // Remove the check for 'refresh' because this causes percent symbols to always appear
   // in automap overlay mode.
   if (*per->n.on  // killough 2/21/98: fix percents not updated;
       && (!st_crispyhud || nughud.percents)) // [Nugget]
   {
-    // [Nugget] Custom alignment
+    // [Nugget] Custom alignment /--------------------------------------------
 
     int tx = per->n.x;
 
-    if (per->n.align != 1) {
+    if (per->n.align != 1)
+    {
       int tnum = *(per->n.num), tnumdigits = 0;
-      const int tw = (!per->n.align ? SHORT(per->n.p[0]->width)/2 : SHORT(per->n.p[0]->width));
+      const int tw = SHORT(per->n.p[0]->width) / (!per->n.align ? 2 : 1);
 
       do {
         tnum /= 10;
@@ -246,15 +250,16 @@ void STlib_updatePercent
       tx += tw * (tnumdigits - !per->n.align);
     }
 
+    // [Nugget] -------------------------------------------------------------/
+
     V_DrawPatchTranslated
     (
       tx,
       per->n.y,
-      FG,
       per->p,
       // [FG] fix always gray percent / always red mismatch
       sts_pct_always_gray ? cr_gray :
-      sts_always_red ? NULL :
+      !sts_colored_numbers ? NULL :
       outrng
     );
     
@@ -307,7 +312,7 @@ void STlib_updateMultIcon
   if (*mi->on)
   {
     if (*mi->inum != -1)  // killough 2/16/98: redraw only if != -1
-      V_DrawPatch(mi->x, mi->y, FG, mi->p[*mi->inum]);
+      V_DrawPatch(mi->x, mi->y, mi->p[*mi->inum]);
   }
 }
 

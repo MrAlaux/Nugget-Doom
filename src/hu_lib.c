@@ -17,11 +17,21 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomstat.h"
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "doomdef.h"
 #include "doomkeys.h"
-#include "m_swap.h"
+#include "doomstat.h"
 #include "hu_lib.h"
 #include "hu_stuff.h"
+#include "m_misc.h"
+#include "m_swap.h"
+#include "r_defs.h"
+#include "r_draw.h"
+#include "r_state.h"
+#include "v_video.h"
+
 // [Nugget]
 #include "m_nughud.h"
 #include "st_stuff.h"
@@ -38,10 +48,10 @@ void HUlib_set_margins (void)
 
   if (hud_widescreen_widgets)
   {
-    left_margin -= WIDESCREENDELTA;
+    left_margin -= video.deltaw;
   }
 
-  right_margin = ORIGWIDTH - left_margin;
+  right_margin = SCREENWIDTH - left_margin;
 }
 
 // [FG] vertical alignment
@@ -60,10 +70,10 @@ static int align_offset[num_offsets];
 
 void HUlib_reset_align_offsets (void)
 {
-  int bottom = ORIGHEIGHT - 1;
+  int bottom = SCREENHEIGHT;
 
   if (scaledviewheight < SCREENHEIGHT ||
-      // [Nugget] Removed `crispy_hud` code
+      draw_crispy_hud ||
       automap_on)
   {
     bottom -= 32; // ST_HEIGHT
@@ -103,7 +113,7 @@ void HUlib_clear_all_lines (hu_multiline_t *const m)
 
 static boolean add_char_to_line(hu_line_t *const t, const char ch)
 {
-  if (t->len == HU_MAXLINELENGTH)
+  if (t->len == HU_MAXLINELENGTH - 1)
     return false;
   else
   {
@@ -124,13 +134,12 @@ boolean HUlib_add_key_to_line(hu_line_t *const l, unsigned char ch)
 {
   if (ch >= ' ' && ch <= '_')
     add_char_to_line(l, (char) ch);
-  else
-    if (ch == KEY_BACKSPACE)                  // phares
-      del_char_from_line(l);
-  else
-    if (ch != KEY_ENTER)                      // phares
-      return false;                            // did not eat key
-  return true;                                 // ate the key
+  else if (ch == KEY_BACKSPACE)                  // phares
+    del_char_from_line(l);
+  else if (ch != KEY_ENTER)                      // phares
+    return false;                                // did not eat key
+
+  return true;                                   // ate the key
 }
 
 boolean HUlib_add_key_to_cur_line(hu_multiline_t *const m, unsigned char ch)
@@ -166,7 +175,7 @@ static void add_string_to_line (hu_line_t *const l, const hu_font_t *const f, co
 
   while (*s)
   {
-    c = toupper(*s++);
+    c = M_ToUpper(*s++);
 
     if (c == '\x1b')
     {
@@ -176,7 +185,7 @@ static void add_string_to_line (hu_line_t *const l, const hu_font_t *const f, co
     }
     else if (c == '\t')
       w = (w + f->tab_width) & f->tab_mask;
-    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6)
+    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + 3) // [Nugget] Stats icons
       w += SHORT(p[c - HU_FONTSTART]->width);
     else
       w += f->space_width;
@@ -217,37 +226,44 @@ void HUlib_add_string_to_cur_line (hu_multiline_t *const m, const char *s)
 
 static int horz_align_widget(const hu_widget_t *const w, const hu_line_t *const l, const align_t h_align)
 {
-  int x; // [Nugget]
-
-  if (h_align == align_left)
-  {
-    x = left_margin;
-  }
-  else if (h_align == align_right)
-  {
-    x = right_margin - l->width;
-  }
-  else if (h_align == align_center)
-  {
-    x = ORIGWIDTH/2 - l->width/2;
-  }
-  else { x = w->x; } // [Nugget]: [FG] align_direct
-
   // [Nugget] NUGHUD
-  if (st_crispyhud) {
-    // Messages hack
-    if (w->x == 1994)
-    { return x - ((h_align == align_left && !hud_widescreen_widgets) ? WIDESCREENDELTA : 0); }
-
+  if (st_crispyhud)
+  {
     switch (h_align) {
-      case align_left:    x += w->x - left_margin;   break;
-      case align_center:  x += w->x - ORIGWIDTH/2;   break;
-      case align_right:   x += w->x - right_margin;  break;
-      default:                                       break;
+      default:
+      case align_left:   return w->x;
+      case align_center: return w->x - l->width/2;
+      case align_right:  return w->x - l->width;
     }
   }
 
-  return x;
+  if (h_align == align_left)
+  {
+    return left_margin;
+  }
+  else if (h_align == align_right)
+  {
+    return right_margin - l->width;
+  }
+  else if (h_align == align_center)
+  {
+    return SCREENWIDTH/2 - l->width/2;
+  }
+
+  // [FG] align_direct
+  if (hud_widescreen_widgets)
+  {
+    if (w->x < SCREENWIDTH/2)
+    {
+      return w->x - video.deltaw;
+    }
+    else
+    {
+      return w->x + video.deltaw;
+    }
+  }
+
+  return w->x;
 }
 
 static int currentline = 0; // [Nugget] NUGHUD: List hack
@@ -266,7 +282,7 @@ static int vert_align_widget(const hu_widget_t *const w, const hu_multiline_t *c
   }
   // [FG] centered and Vanilla widgets are always exclusive,
   //      i.e. they don't allow any other widget on the same line
-  else if (h_align == align_center || m->on)
+  else if (h_align == align_center || m->exclusive)
   {
     if (v_align == align_top)
     {
@@ -319,15 +335,16 @@ static int vert_align_widget(const hu_widget_t *const w, const hu_multiline_t *c
 
 static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, const hu_font_t *const f, int x, int y)
 {
+  const int x0 = x;
   int i;
   unsigned char c;
-  char *cr = m->cr;
+  byte *cr = m->cr;
   patch_t *const *const p = f->patches;
 
   // draw the new stuff
   for (i = 0; i < l->len; i++)
   {
-    c = toupper(l->line[i]); //jff insure were not getting a cheap toupper conv.
+    c = M_ToUpper(l->line[i]);
 
 #if 0
     if (c == '\n')
@@ -338,7 +355,7 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
 #endif
     if (c == '\t')    // killough 1/23/98 -- support tab stops
     {
-      x = (x + f->tab_width) & f->tab_mask;
+      x = x0 + (((x - x0) + f->tab_width) & f->tab_mask);
     }
     else if (c == '\x1b')  //jff 2/17/98 escape code for color change
     {               //jff 3/26/98 changed to actual escape char
@@ -350,29 +367,29 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
           cr = m->cr;
       }
     }
-    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6)
+    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + 3) // [Nugget] Stats icons
     {
       int w = SHORT(p[c-HU_FONTSTART]->width);
 
-      if (x+w > right_margin && !st_crispyhud) // [Nugget] NUGHUD
+      if (x+w > right_margin + HU_GAPX && !st_crispyhud) // [Nugget] NUGHUD
         break;
 
       // killough 1/18/98 -- support multiple lines:
-      V_DrawPatchTranslated(x, y, 0, p[c-HU_FONTSTART], cr);
+      V_DrawPatchTranslated(x, y, p[c-HU_FONTSTART], cr);
       x += w;
     }
-    else if ((x += f->space_width) >= right_margin && !st_crispyhud) // [Nugget] NUGHUD
+    else if ((x += f->space_width) >= right_margin + HU_GAPX && !st_crispyhud) // [Nugget] NUGHUD
       break;
   }
 
   // draw the cursor if requested
   // killough 1/18/98 -- support multiple lines
   if (m->drawcursor &&
-      x + SHORT(p['_'-HU_FONTSTART]->width) < right_margin &&
+      x + SHORT(p['_'-HU_FONTSTART]->width) <= right_margin + HU_GAPX &&
       leveltime & 16)
   {
     cr = m->cr; //jff 2/17/98 restore original color
-    V_DrawPatchTranslated(x, y, 0, p['_' - HU_FONTSTART], cr);
+    V_DrawPatchTranslated(x, y, p['_' - HU_FONTSTART], cr);
   }
 }
 
@@ -472,7 +489,7 @@ void HUlib_draw_widget (const hu_widget_t *const w)
     draw_widget_topdown(w, f);
   // [FG] Vanilla widget with top alignment,
   //      or Boom widget with bottom alignment
-  else if ((m->on != NULL) ^ (w->v_align == align_bottom))
+  else if (m->bottomup ^ (w->v_align == align_bottom))
     draw_widget_bottomup(w, f);
   else
     draw_widget_topdown(w, f);
@@ -481,7 +498,7 @@ void HUlib_draw_widget (const hu_widget_t *const w)
 void HUlib_init_multiline(hu_multiline_t *m,
                           int nl,
                           hu_font_t **f,
-                          char *cr,
+                          byte *cr,
                           boolean *on,
                           void (*builder)(void))
 {
@@ -517,6 +534,36 @@ void HUlib_init_multiline(hu_multiline_t *m,
 
   m->builder = builder;
   m->built = false;
+
+  m->exclusive = (on != NULL);
+  m->bottomup = (on != NULL);
+}
+
+void HUlib_erase_widget (const hu_widget_t *const w)
+{
+  const hu_multiline_t *const m = w->multiline;
+  const hu_font_t *const f = *m->font;
+
+  const int height = m->numlines * f->line_height;
+
+  int y = 0;
+  for (int i = 0; i < m->numlines; ++i)
+  {
+    y = vert_align_widget(w, m, f, w->h_align, w->v_align);
+  }
+
+  if (w->v_align == align_top)
+    y += f->line_height - height;
+
+  if (y > scaledviewy && y < scaledviewy + scaledviewheight - height)
+  {
+    R_VideoErase(0, y, scaledviewx, height);
+    R_VideoErase(scaledviewx + scaledviewwidth, y, scaledviewx, height);
+  }
+  else
+  {
+    R_VideoErase(0, y, video.unscaledw, height);
+  }
 }
 
 //----------------------------------------------------------------------------

@@ -21,19 +21,6 @@
 #ifndef __DOOMDEF__
 #define __DOOMDEF__
 
-// This must come first, since it redefines malloc(), free(), etc. -- killough:
-#include "z_zone.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <limits.h>
-
-#include "config.h"
-
-#include "version.h"
-
 // Game mode handling - identify IWAD version
 //  to handle IWAD dependend animations etc.
 typedef enum {
@@ -68,6 +55,7 @@ typedef enum {
 
 typedef enum
 {
+    exe_indetermined = -1,
     exe_doom_1_9,    // Doom 1.9: for shareware, registered and commercial
     exe_ultimate,    // Ultimate Doom (retail)
     exe_final,       // Final Doom
@@ -77,17 +65,10 @@ typedef enum
 // [FG] flashing disk icon
 #define DISK_ICON_THRESHOLD (20 * 1024)
 
-// killough 2/8/98: MAX versions for maximum screen sizes
-// allows us to avoid the overhead of dynamic allocation
-// when multiple screen sizes are supported
-
-#define ORIGWIDTH  320 // [crispy]
-#define ORIGHEIGHT 200 // [crispy]
-
-// [Nugget] We now multiply and divide by `hires` rather than bit-shifting
-#define MAX_HIRES 9
-#define MAX_SCREENWIDTH  (576 * MAX_HIRES) // [FG] corresponds to 2.4:1 in hires mode
-#define MAX_SCREENHEIGHT (ORIGHEIGHT * MAX_HIRES) // [crispy]
+#define SCREENWIDTH  320
+#define SCREENHEIGHT 200
+#define NONWIDEWIDTH SCREENWIDTH // [crispy] non-widescreen SCREENWIDTH
+#define ACTUALHEIGHT 240
 
 // The maximum number of players, multiplayer/networking.
 #define MAXPLAYERS       4
@@ -207,14 +188,12 @@ typedef enum {
 // Used when resetting the defaults for every item in a Setup group.
 
 typedef enum {
-  ss_none,
+  ss_none = -1,
   ss_keys,
   ss_weap,
   ss_stat,
   ss_auto,
   ss_enem,
-  ss_mess,
-  ss_chat,
   ss_gen,       // killough 10/98
   ss_comp,      // killough 10/98
   ss_max

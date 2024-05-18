@@ -1,5 +1,5 @@
 //
-// Copyright(C) 2019 Jonathan Dowland
+// Copyright(C) 2024 Roman Fomin
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -10,9 +10,22 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-// DESCRIPTION:
-//     Generate a randomized, private, memorable name for a Player
-//
 
-char *NET_GetRandomPetName();
+#ifndef MIDIOUT_H
+#define MIDIOUT_H
+
+#include "doomtype.h"
+
+void MIDI_SendShortMsg(const byte *message, unsigned int length);
+
+void MIDI_SendLongMsg(const byte *message, unsigned int length);
+
+int MIDI_CountDevices(void);
+
+const char *MIDI_GetDeviceName(int device);
+
+boolean MIDI_OpenDevice(int device);
+
+void MIDI_CloseDevice(void);
+
+#endif

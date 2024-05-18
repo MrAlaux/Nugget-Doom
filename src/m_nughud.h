@@ -1,7 +1,7 @@
 //  Copyright (C) 1999 by
 //  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
 //  Copyright(C) 2020-2021 Fabian Greffrath
-//  Copyright(C) 2021-2023 Alaux
+//  Copyright(C) 2021-2024 Alaux
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -22,8 +22,11 @@
 
 #include "m_fixed.h"
 
-#define NUGHUDWIDESHIFT(x) ((abs(x) == 2) ? WIDESCREENDELTA * (st_crispyhud != 0) * (2 / (x)) :  \
-                            (abs(x) == 1) ? WIDESCREENDELTA * (st_crispyhud == 2) *      (x)  : 0)
+#define NUGHUDWIDESHIFT(x) (                                       \
+  st_crispyhud ? (abs(x) == 2) ? video.deltaw      * (2 / (x)) :   \
+                 (abs(x) == 1) ? distributed_delta *      (x)  : 0 \
+               : 0                                                 \
+)
 
 typedef struct nughud_widget_s {
   int x, y;
@@ -51,7 +54,24 @@ typedef struct nughud_bar_s {
   int gap;
 } nughud_bar_t;
 
+typedef struct nughud_textline_s {
+  int x, y;
+  int wide;
+  int align;
+  int vlign;
+  int stack;
+  int order;
+} nughud_textline_t;
+
+typedef struct nughud_sbchunk_s {
+  int x, y;
+  int wide;
+  int sx, sy, sw, sh;
+} nughud_sbchunk_t;
+
 #define NUMNUGHUDPATCHES 8
+#define NUMNUGHUDSTACKS 8
+#define NUMSBCHUNKS 8
 
 typedef struct nughud_s {
   nughud_alignable_t ammo;
@@ -71,24 +91,31 @@ typedef struct nughud_s {
   nughud_widget_t    keys[3];
   nughud_alignable_t ammos[4];
   nughud_alignable_t maxammos[4];
-  nughud_alignable_t time;
-  boolean            time_sts;
-  nughud_alignable_t sts;
-  boolean            sts_ml;
-  nughud_alignable_t title;
-  nughud_alignable_t powers;
-  nughud_alignable_t coord;
-  boolean            coord_ml;
-  nughud_alignable_t fps;
-  nughud_alignable_t message;
-  nughud_alignable_t secret;
+
+  nughud_textline_t  time;
+  nughud_textline_t  sts;
+  int                sts_ml;
+  nughud_textline_t  title;
+  nughud_textline_t  powers;
+  nughud_textline_t  coord;
+  int                coord_ml;
+  nughud_textline_t  fps;
+  nughud_textline_t  rate;
+  nughud_textline_t  message;
+  boolean            message_defx;
+  nughud_textline_t  secret;
+
+  nughud_vlignable_t stacks[NUMNUGHUDSTACKS];
+
   nughud_vlignable_t patches[NUMNUGHUDPATCHES];
   char               *patchnames[NUMNUGHUDPATCHES];
   boolean            patch_offsets;
 
-  boolean            percents;
-  fixed_t            weapheight;
-  int                viewoffset;
+  nughud_sbchunk_t   sbchunks[NUMSBCHUNKS];
+
+  boolean percents;
+  fixed_t weapheight;
+  int     viewoffset;
 } nughud_t;
 
 extern nughud_t nughud;

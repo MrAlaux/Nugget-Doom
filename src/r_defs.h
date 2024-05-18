@@ -20,22 +20,17 @@
 #ifndef __R_DEFS__
 #define __R_DEFS__
 
-// sqrt, etc.-- killough
-#include <math.h>
-
-// Screenwidth.
-#include "doomdef.h"
-
 // Some more or less basic data types
 // we depend on.
 #include "m_fixed.h"
+#include "tables.h"
 
 // We rely on the thinker data struct
 // to handle sound origins in sectors.
 #include "d_think.h"
 
 // SECTORS do store MObjs anyway.
-#include "p_mobj.h"
+struct mobj_s;
 
 // Silhouette, needed for clipping Segs (mainly)
 // and sprites representing things.
@@ -45,6 +40,8 @@
 #define SIL_BOTH    3
 
 #define MAXDRAWSEGS   256
+
+#define NO_TEXTURE (-1)
 
 //
 // INTERNAL MAP TYPES
@@ -56,7 +53,7 @@
 // Note: transformed values not buffered locally,
 // like some DOOM-alikes ("wt", "WebView") do.
 //
-typedef struct
+typedef struct vertex_s
 {
   fixed_t x, y;
 
@@ -76,7 +73,7 @@ typedef struct
 // Stores things/mobjs.
 //
 
-typedef struct
+typedef struct sector_s
 {
   fixed_t floorheight;
   fixed_t ceilingheight;
@@ -88,11 +85,11 @@ typedef struct
   short tag;
   int nexttag,firsttag;  // killough 1/30/98: improves searches for tags.
   int soundtraversed;    // 0 = untraversed, 1,2 = sndlines-1
-  mobj_t *soundtarget;   // thing that made a sound (or null)
+  struct mobj_s *soundtarget; // thing that made a sound (or null)
   int blockbox[4];       // mapblock bounding box for height changes
   degenmobj_t soundorg;  // origin for any sounds played by the sector
   int validcount;        // if == validcount, already checked
-  mobj_t *thinglist;     // list of mobjs in sector
+  struct mobj_s *thinglist; // list of mobjs in sector
 
   // killough 8/28/98: friction is a sector property, not an mobj property.
   // these fields used to be in mobj_t, but presented performance problems
@@ -175,7 +172,7 @@ typedef struct
 // The SideDef.
 //
 
-typedef struct
+typedef struct side_s
 {
   fixed_t textureoffset; // add this to the calculated texture column
   fixed_t rowoffset;     // add this to the calculated texture top
@@ -196,7 +193,6 @@ typedef struct
   fixed_t basetextureoffset;
   fixed_t baserowoffset;
   int oldgametic;
-
 } side_t;
 
 //
@@ -276,7 +272,7 @@ typedef struct msecnode_s
 //
 // The LineSeg.
 //
-typedef struct
+typedef struct seg_s
 {
   vertex_t *v1, *v2;
   fixed_t offset;
@@ -295,12 +291,15 @@ typedef struct
   uint32_t r_length;
   angle_t r_angle;
   int fakecontrast;
+
+  // NanoBSP
+  struct seg_s *next;
 } seg_t;
 
 //
 // BSP node.
 //
-typedef struct
+typedef struct node_s
 {
   fixed_t  x,  y, dx, dy;        // Partition line.
   fixed_t bbox[2][4];            // Bounding box for each child.
@@ -321,14 +320,6 @@ typedef post_t column_t;
 //
 // OTHER TYPES
 //
-
-// This could be wider for >8 bit display.
-// Indeed, true color support is posibble
-// precalculating 24bpp lightmap/colormap LUT.
-// from darkening PLAYPAL to all black.
-// Could use even more than 32 levels.
-
-typedef byte  lighttable_t;
 
 //
 // Masked 2s linedefs
@@ -357,11 +348,11 @@ typedef struct drawseg_s
 // of patches.
 //
 
-typedef struct
-{
-  short width, height;  // bounding box size
-  short leftoffset;     // pixels to the left of origin
-  short topoffset;      // pixels below the origin
+typedef struct patch_s
+{ 
+  short width, height;  // bounding box size 
+  short leftoffset;     // pixels to the left of origin 
+  short topoffset;      // pixels below the origin 
   int columnofs[8];     // only [width] used
 } patch_t;
 
@@ -392,6 +383,9 @@ typedef struct vissprite_s
   // [FG] colored blood and gibs
   int color;
   const byte *brightmap;
+
+  // andrewj: voxel support
+  int voxel_index;
 } vissprite_t;
 
 //
@@ -442,17 +436,15 @@ typedef struct
 // Go to http://classicgaming.com/doom/editing/ to find out -- killough
 //
 
-typedef struct visplane
+typedef struct visplane_s
 {
-  struct visplane *next;        // Next visplane in hash chain -- killough
+  struct visplane_s *next;        // Next visplane in hash chain -- killough
   int picnum, lightlevel, minx, maxx;
   fixed_t height;
   fixed_t xoffs, yoffs;         // killough 2/28/98: Support scrolling flats
+  unsigned short *bottom;
   unsigned short pad1;          // leave pads for [minx-1]/[maxx+1]
-  unsigned short top[MAX_SCREENWIDTH];
-  unsigned short pad2, pad3;    // killough 2/8/98, 4/25/98
-  unsigned short bottom[MAX_SCREENWIDTH];
-  unsigned short pad4;
+  unsigned short top[3];
 } visplane_t;
 
 #endif

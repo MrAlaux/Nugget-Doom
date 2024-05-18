@@ -17,17 +17,32 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <string.h>
+
+#include "am_map.h"
+#include "d_player.h"
+#include "d_think.h"
+#include "d_ticcmd.h"
+#include "doomdata.h"
+#include "doomdef.h"
 #include "doomstat.h"
-#include "r_main.h"
+#include "i_system.h"
+#include "info.h"
+#include "m_random.h"
+#include "p_enemy.h"
 #include "p_maputl.h"
+#include "p_mobj.h"
+#include "p_pspr.h"
+#include "p_saveg.h"
 #include "p_spec.h"
 #include "p_tick.h"
-#include "p_saveg.h"
-#include "m_random.h"
-#include "am_map.h"
-#include "p_enemy.h"
+#include "r_defs.h"
+#include "r_state.h"
 #include "w_wad.h" // [FG] W_LumpLength()
-#include "g_game.h" // [Nugget]
+#include "z_zone.h"
+
+// [Nugget]
+#include "g_game.h"
 
 byte *save_p;
 
@@ -192,7 +207,7 @@ static void saveg_writep(const void *p)
     saveg_write32((intptr_t) p);
 }
 
-// [Nugget] Moved enum macros to header
+// [Nugget] Moved enum R/W macros to `p_saveg.h`
 
 // [crispy] enumerate all thinker pointers
 static int P_ThinkerToIndex(thinker_t* thinker)
@@ -304,7 +319,7 @@ static void saveg_read_thinker_t(thinker_t *str)
     str->next = saveg_readp();
 
     // think_t function;
-    str->function.v = (actionf_v)(intptr_t)saveg_readp();
+    str->function.v = (actionf_v)saveg_readp();
 
     // struct thinker_s* cnext;
     str->cnext = saveg_readp();
@@ -423,12 +438,12 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     if (saveg_compat > saveg_woof510)
     {
-    // [Woof!]: mbf21: int flags2;
-    str->flags2 = saveg_read32();
+        // [Woof!]: mbf21: int flags2;
+        str->flags2 = saveg_read32();
     }
     else
     {
-      str->flags2 = mobjinfo[str->type].flags2;
+        str->flags2 = mobjinfo[str->type].flags2;
     }
 
     // int intflags
@@ -487,11 +502,11 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     if (saveg_compat > saveg_mbf)
     {
-    // [Woof!]: int friction;
-    str->friction = saveg_read32();
+        // [Woof!]: int friction;
+        str->friction = saveg_read32();
 
-    // [Woof!]: int movefactor;
-    str->movefactor = saveg_read32();
+        // [Woof!]: int movefactor;
+        str->movefactor = saveg_read32();
     }
     else
     {
@@ -504,20 +519,20 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     if (saveg_compat > saveg_mbf)
     {
-    // [Woof!]: int interp;
-    str->interp = saveg_read32();
+        // [Woof!]: int interp;
+        str->interp = saveg_read32();
 
-    // [Woof!]: fixed_t oldx;
-    str->oldx = saveg_read32();
+        // [Woof!]: fixed_t oldx;
+        str->oldx = saveg_read32();
 
-    // [Woof!]: fixed_t oldy;
-    str->oldy = saveg_read32();
+        // [Woof!]: fixed_t oldy;
+        str->oldy = saveg_read32();
 
-    // [Woof!]: fixed_t oldz;
-    str->oldz = saveg_read32();
+        // [Woof!]: fixed_t oldz;
+        str->oldz = saveg_read32();
 
-    // [Woof!]: angle_t oldangle;
-    str->oldangle = saveg_read32();
+        // [Woof!]: angle_t oldangle;
+        str->oldangle = saveg_read32();
     }
     else
     {
@@ -530,13 +545,15 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     if (saveg_compat > saveg_woof510)
     {
-    // [Woof!]: int bloodcolor;
-    str->bloodcolor = saveg_read32();
+        // [Woof!]: int bloodcolor;
+        str->bloodcolor = saveg_read32();
     }
     else
     {
-      str->bloodcolor = 0;
+        str->bloodcolor = 0;
     }
+
+    // [Nugget] Removed `actualheight`
 }
 
 static void saveg_write_mobj_t(mobj_t *str)
@@ -619,11 +636,8 @@ static void saveg_write_mobj_t(mobj_t *str)
     // int flags;
     saveg_write32(str->flags);
 
-    if (saveg_compat > saveg_woof510)
-    {
     // [Woof!]: mbf21: int flags2;
     saveg_write32(str->flags2);
-    }
 
     // int intflags;
     saveg_write32(str->intflags);
@@ -703,11 +717,8 @@ static void saveg_write_mobj_t(mobj_t *str)
     // [Woof!]: int oldangle;
     saveg_write32(str->oldangle);
 
-    if (saveg_compat > saveg_woof510)
-    {
     // [Woof!]: int bloodcolor;
     saveg_write32(str->bloodcolor);
-    }
 }
 
 //
@@ -788,11 +799,11 @@ static void saveg_read_pspdef_t(pspdef_t *str)
 
     if (saveg_compat > saveg_mbf)
     {
-    // [Woof!]: fixed_t sx2;
-    str->sx2 = saveg_read32();
+        // [Woof!]: fixed_t sx2;
+        str->sx2 = saveg_read32();
 
-    // [Woof!]: fixed_t sy2;
-    str->sy2 = saveg_read32();
+        // [Woof!]: fixed_t sy2;
+        str->sy2 = saveg_read32();
     }
     else
     {
@@ -810,7 +821,6 @@ static void saveg_read_pspdef_t(pspdef_t *str)
 
 static void saveg_write_pspdef_t(pspdef_t *str)
 {
-    // state_t* state;
     if (str->state)
     {
         saveg_write32(str->state - states);
@@ -886,13 +896,13 @@ static void saveg_read_player_t(player_t *str)
     str->armortype = saveg_read32();
 
     // int powers[NUMPOWERS];
-    for (i=0; i<NUMPOWERS; ++i)
+    for (i = 0; i < NUMPOWERS; ++i)
     {
         str->powers[i] = saveg_read32();
     }
 
     // boolean cards[NUMCARDS];
-    for (i=0; i<NUMCARDS; ++i)
+    for (i = 0; i < NUMCARDS; ++i)
     {
         str->cards[i] = saveg_read32();
     }
@@ -901,7 +911,7 @@ static void saveg_read_player_t(player_t *str)
     str->backpack = saveg_read32();
 
     // int frags[MAXPLAYERS];
-    for (i=0; i<MAXPLAYERS; ++i)
+    for (i = 0; i < MAXPLAYERS; ++i)
     {
         str->frags[i] = saveg_read32();
     }
@@ -913,19 +923,19 @@ static void saveg_read_player_t(player_t *str)
     str->pendingweapon = saveg_read_enum();
 
     // boolean weaponowned[NUMWEAPONS];
-    for (i=0; i<NUMWEAPONS; ++i)
+    for (i = 0; i < NUMWEAPONS; ++i)
     {
         str->weaponowned[i] = saveg_read32();
     }
 
     // int ammo[NUMAMMO];
-    for (i=0; i<NUMAMMO; ++i)
+    for (i = 0; i < NUMAMMO; ++i)
     {
         str->ammo[i] = saveg_read32();
     }
 
     // int maxammo[NUMAMMO];
-    for (i=0; i<NUMAMMO; ++i)
+    for (i = 0; i < NUMAMMO; ++i)
     {
         str->maxammo[i] = saveg_read32();
     }
@@ -973,7 +983,7 @@ static void saveg_read_player_t(player_t *str)
     str->colormap = saveg_read32();
 
     // pspdef_t psprites[NUMPSPRITES];
-    for (i=0; i<NUMPSPRITES; ++i)
+    for (i = 0; i < NUMPSPRITES; ++i)
     {
         saveg_read_pspdef_t(&str->psprites[i]);
     }
@@ -986,15 +996,37 @@ static void saveg_read_player_t(player_t *str)
 
     if (saveg_compat > saveg_mbf)
     {
-    // [Woof!]: angle_t oldviewz;
-    str->oldviewz = saveg_read32();
+        // [Woof!]: angle_t oldviewz;
+        str->oldviewz = saveg_read32();
     }
     else
     {
-      str->oldviewz = 0;
+        str->oldviewz = 0;
     }
 
-    // [Nugget]
+    if (saveg_compat > saveg_nugget210) // [Nugget]
+    {
+        // [Woof!]: fixed_t pitch;
+        str->pitch = saveg_read32();
+
+        // [Woof!]: fixed_t oldpitch;
+        str->oldpitch = saveg_read32();
+
+        // [Woof!]: fixed_t slope;
+        str->slope = saveg_read32();
+
+        // [Woof!]: int maxkilldiscount;
+        str->maxkilldiscount = saveg_read32();
+    }
+    else
+    {
+        str->pitch = 0;
+        str->oldpitch = 0;
+        str->slope = 0;
+        str->maxkilldiscount = 0;
+    }
+
+    // [Nugget] --------------------------------------------------------------
 
     if (saveg_compat > saveg_woof600) {
       str->jumptics     = saveg_read32(); // int jumptics;
@@ -1054,13 +1086,13 @@ static void saveg_write_player_t(player_t *str)
     saveg_write32(str->armortype);
 
     // int powers[NUMPOWERS];
-    for (i=0; i<NUMPOWERS; ++i)
+    for (i = 0; i < NUMPOWERS; ++i)
     {
         saveg_write32(str->powers[i]);
     }
 
     // boolean cards[NUMCARDS];
-    for (i=0; i<NUMCARDS; ++i)
+    for (i = 0; i < NUMCARDS; ++i)
     {
         saveg_write32(str->cards[i]);
     }
@@ -1069,7 +1101,7 @@ static void saveg_write_player_t(player_t *str)
     saveg_write32(str->backpack);
 
     // int frags[MAXPLAYERS];
-    for (i=0; i<MAXPLAYERS; ++i)
+    for (i = 0; i < MAXPLAYERS; ++i)
     {
         saveg_write32(str->frags[i]);
     }
@@ -1081,19 +1113,19 @@ static void saveg_write_player_t(player_t *str)
     saveg_write_enum(str->pendingweapon);
 
     // boolean weaponowned[NUMWEAPONS];
-    for (i=0; i<NUMWEAPONS; ++i)
+    for (i = 0; i < NUMWEAPONS; ++i)
     {
         saveg_write32(str->weaponowned[i]);
     }
 
     // int ammo[NUMAMMO];
-    for (i=0; i<NUMAMMO; ++i)
+    for (i = 0; i < NUMAMMO; ++i)
     {
         saveg_write32(str->ammo[i]);
     }
 
     // int maxammo[NUMAMMO];
-    for (i=0; i<NUMAMMO; ++i)
+    for (i = 0; i < NUMAMMO; ++i)
     {
         saveg_write32(str->maxammo[i]);
     }
@@ -1141,7 +1173,7 @@ static void saveg_write_player_t(player_t *str)
     saveg_write32(str->colormap);
 
     // pspdef_t psprites[NUMPSPRITES];
-    for (i=0; i<NUMPSPRITES; ++i)
+    for (i = 0; i < NUMPSPRITES; ++i)
     {
         saveg_write_pspdef_t(&str->psprites[i]);
     }
@@ -1152,7 +1184,20 @@ static void saveg_write_player_t(player_t *str)
     // [Woof!]: angle_t oldviewz;
     saveg_write32(str->oldviewz);
 
-    // [Nugget]
+    // [Woof!]: fixed_t pitch;
+    saveg_write32(str->pitch);
+
+    // [Woof!]: fixed_t oldpitch;
+    saveg_write32(str->oldpitch);
+
+    // [Woof!]: fixed_t slope;
+    saveg_write32(str->slope);
+
+    // [Woof!]: int maxkilldiscount;
+    saveg_write32(str->maxkilldiscount);
+
+    // [Nugget] --------------------------------------------------------------
+
     saveg_write32(str->jumptics); // int jumptics;
     saveg_write32(str->crouchoffset); // fixed_t crouchoffset;
     saveg_write_enum(str->lastweapon); // weapontype_t lastweapon;
@@ -1274,7 +1319,7 @@ static void saveg_write_ceiling_t(ceiling_t *str)
 
 static void saveg_read_vldoor_t(vldoor_t *str)
 {
-    int sector;
+    int sector, line;
 
     // thinker_t thinker;
     saveg_read_thinker_t(&str->thinker);
@@ -1302,7 +1347,16 @@ static void saveg_read_vldoor_t(vldoor_t *str)
     str->topcountdown = saveg_read32();
 
     // line_t *line;
-    str->line = saveg_readp();
+    //jff 1/31/98 unarchive line remembered by door as well
+    line = saveg_read32();
+    if (line == -1)
+    {
+        str->line = NULL;
+    }
+    else
+    {
+        str->line = &lines[line];
+    }
 
     // int lighttag;
     str->lighttag = saveg_read32();
@@ -1337,9 +1391,13 @@ static void saveg_write_vldoor_t(vldoor_t *str)
     // line_t *line;
     //jff 1/31/98 archive line remembered by door as well
     if (str->line)
-      saveg_write32(str->line - lines);
+    {
+        saveg_write32(str->line - lines);
+    }
     else
-      saveg_write32(-1);
+    {
+        saveg_write32(-1);
+    }
 
     // int lighttag;
     saveg_write32(str->lighttag);
@@ -2663,10 +2721,6 @@ void P_UnArchiveSpecials (void)
         {
           vldoor_t *door = Z_Malloc (sizeof(*door), PU_LEVEL, NULL);
           saveg_read_vldoor_t(door);
-
-          //jff 1/31/98 unarchive line remembered by door as well
-          door->line = (size_t)door->line!=-1? &lines[(size_t)door->line] : NULL;
-
           door->sector->ceilingdata = door;       //jff 2/22/98
           door->thinker.function.p1 = (actionf_p1)T_VerticalDoor;
           P_AddThinker (&door->thinker);

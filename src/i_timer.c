@@ -19,10 +19,19 @@
 
 #include "SDL.h"
 
-#include "i_timer.h"
+#include "doomdef.h"
+#include "doomtype.h"
+#include "i_system.h"
 #include "m_fixed.h"
-#include "doomstat.h"
-#include "m_argv.h"
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+HANDLE hTimer = NULL;
+#else
+#include <unistd.h>
+#endif
 
 static uint64_t basecounter = 0;
 static uint64_t basefreq = 0;
@@ -42,7 +51,9 @@ int I_GetTimeMS(void)
     uint64_t counter = SDL_GetPerformanceCounter();
 
     if (basecounter == 0)
+    {
         basecounter = counter;
+    }
 
     return ((counter - basecounter) * 1000ull) / basefreq;
 }
@@ -52,7 +63,9 @@ uint64_t I_GetTimeUS(void)
     uint64_t counter = SDL_GetPerformanceCounter();
 
     if (basecounter == 0)
+    {
         basecounter = counter;
+    }
 
     return ((counter - basecounter) * 1000000ull) / basefreq;
 }
@@ -66,7 +79,9 @@ static uint64_t GetPerfCounter_Scaled(void)
     counter = SDL_GetPerformanceCounter() * time_scale / 100;
 
     if (basecounter == 0)
+    {
         basecounter = counter;
+    }
 
     return counter - basecounter;
 }
@@ -78,7 +93,9 @@ static uint32_t GetTimeMS_Scaled(void)
     counter = SDL_GetPerformanceCounter() * time_scale / 100;
 
     if (basecounter == 0)
+    {
         basecounter = counter;
+    }
 
     return ((counter - basecounter) * 1000ull) / basefreq;
 }
@@ -116,8 +133,29 @@ static int I_GetFracTime_FastDemo(void)
 
 int (*I_GetFracTime)(void) = I_GetFracTime_Scaled;
 
+void I_ShutdownTimer(void)
+{
+    SDL_QuitSubSystem(SDL_INIT_TIMER);
+}
+
 void I_InitTimer(void)
 {
+    if (SDL_Init(SDL_INIT_TIMER) < 0)
+    {
+        I_Error("I_InitTimer: Failed to initialize timer: %s", SDL_GetError());
+    }
+
+#ifdef _WIN32
+    // Create an unnamed waitable timer.
+    hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+    if (hTimer == NULL)
+    {
+        I_Error("I_InitTimer: CreateWaitableTimer failed");
+    }
+#endif
+
+    I_AtExit(I_ShutdownTimer, true);
+
     basefreq = SDL_GetPerformanceFrequency();
 
     I_GetTime = I_GetTime_Scaled;
@@ -162,6 +200,20 @@ void I_SetFastdemoTimer(boolean on)
 void I_Sleep(int ms)
 {
     SDL_Delay(ms);
+}
+
+void I_SleepUS(uint64_t us)
+{
+#if defined(_WIN32)
+    LARGE_INTEGER liDueTime;
+    liDueTime.QuadPart = -(LONGLONG)(us * 1000 / 100);
+    if (SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0))
+    {
+        WaitForSingleObject(hTimer, INFINITE);
+    }
+#else
+    usleep(us);
+#endif
 }
 
 void I_WaitVBL(int count)

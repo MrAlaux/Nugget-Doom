@@ -19,6 +19,7 @@
 #ifndef __D_LOOP__
 #define __D_LOOP__
 
+#include "doomtype.h"
 #include "net_defs.h"
 
 // Callback function invoked while waiting for the netgame to start.
@@ -29,14 +30,14 @@ typedef boolean (*netgame_startup_callback_t)(int ready_players,
                                               int num_players);
 
 // Create any new ticcmds and broadcast to other players.
-void NetUpdate (void);
+void NetUpdate(void);
 
 // Broadcasts special packets to other players
 //  to notify of game exit
-void D_QuitNetGame (void);
+void D_QuitNetGame(void);
 
 //? how many ticks to run?
-void TryRunTics (void);
+void TryRunTics(void);
 
 // Called at start of game loop to initialize timers
 void D_StartGameLoop(void);

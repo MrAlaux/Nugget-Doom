@@ -20,7 +20,15 @@
 #ifndef __S_SOUND__
 #define __S_SOUND__
 
-#include "p_mobj.h"
+#include "doomtype.h"
+
+typedef enum {
+  PITCH_FULL,
+  PITCH_HALF,
+  PITCH_NONE
+} pitchrange_t;
+
+struct mobj_s;
 
 //
 // Initializes sound stuff, including volume
@@ -40,15 +48,16 @@ void S_Start(void);
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
 //
-void S_StartSound(const mobj_t *origin, int sound_id);
+#define S_StartSound(o,i) S_StartSoundPitch((o),(i),PITCH_FULL)
+void S_StartSoundPitch(const struct mobj_s *origin, int sound_id, const pitchrange_t pitch_range);
 
 // Stop sound for thing at <origin>
-void S_StopSound(const mobj_t *origin);
+void S_StopSound(const struct mobj_s *origin);
 
 // [FG] play sounds in full length
 extern boolean full_sounds;
 // [FG] removed map objects may finish their sounds
-void S_UnlinkSound(mobj_t *origin);
+void S_UnlinkSound(struct mobj_s *origin);
 
 // Start music using <music_id> from sounds.h
 void S_StartMusic(int music_id);
@@ -69,24 +78,27 @@ void S_RestartMusic(void);
 //
 // Updates music & sounds
 //
-void S_InitListener(const mobj_t *listener);
-void S_UpdateSounds(const mobj_t *listener);
+void S_InitListener(const struct mobj_s *listener);
+void S_UpdateSounds(const struct mobj_s *listener);
 void S_SetMusicVolume(int volume);
 void S_SetSfxVolume(int volume);
 
 // machine-independent sound params
 extern int numChannels;
-extern int default_numChannels;  // killough 10/98
+extern int default_numChannels; // killough 10/98
 
-//jff 3/17/98 holds last IDMUS number, or -1
+// jff 3/17/98 holds last IDMUS number, or -1
 extern int idmusnum;
 
 // [Nugget] ------------------------------------------------------------------
 
 // [NS] Try to play an optional sound.
-void S_StartSoundOptional(const mobj_t *const origin, const int sfx_id, const int old_sfx_id);
+#define S_StartSoundOptional(o, p, i) S_StartSoundPitchOptional((o), (p), (i), PITCH_FULL)
+void S_StartSoundPitchOptional(const struct mobj_s *const origin,
+                               const int opt_sound_id, const int sound_id,
+                               const pitchrange_t pitch_range);
 
-void S_PlayerPainSound(const mobj_t *const origin);
+void S_PlayerPainSound(const struct mobj_s *const origin);
 
 #endif
 

@@ -18,6 +18,7 @@
 #ifndef NET_PACKET_H
 #define NET_PACKET_H
 
+#include "doomtype.h"
 #include "net_defs.h"
 
 net_packet_t *NET_NewPacket(int initial_size);
@@ -42,4 +43,3 @@ void NET_WriteInt32(net_packet_t *packet, unsigned int i);
 void NET_WriteString(net_packet_t *packet, const char *string);
 
 #endif /* #ifndef NET_PACKET_H */
-

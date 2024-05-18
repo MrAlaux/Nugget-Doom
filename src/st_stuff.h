@@ -22,8 +22,12 @@
 #ifndef __STSTUFF_H__
 #define __STSTUFF_H__
 
+#include "doomdef.h"
 #include "doomtype.h"
-#include "d_event.h"
+
+struct event_s;
+struct player_s;
+
 // [Nugget]
 #include "d_player.h"
 #include "r_defs.h"
@@ -32,14 +36,10 @@
 // Now sensitive for scaling.
 
 #define ST_HEIGHT 32
-#define ST_WIDTH  ORIGWIDTH
-#define ST_Y      (ORIGHEIGHT - ST_HEIGHT)
+#define ST_WIDTH  SCREENWIDTH
+#define ST_Y      (SCREENHEIGHT - ST_HEIGHT)
 
-// [Nugget] Crispy minimalistic HUD
-#define CRISPY_HUD      11
-#define CRISPY_HUD_WIDE (CRISPY_HUD+1)
-
-// [Nugget] Macros brought over from st_stuff.c
+// [Nugget] Macros brought over from `st_stuff.c` /---------------------------
 
 #define ST_FACESX               143
 #define ST_FACESY               168
@@ -115,13 +115,15 @@
 #define ST_MAXAMMO3X            314
 #define ST_MAXAMMO3Y            185
 
+// [Nugget] -----------------------------------------------------------------/
+
 
 //
 // STATUS BAR
 //
 
 // Called by main loop.
-boolean ST_Responder(event_t* ev);
+boolean ST_Responder(struct event_s *ev);
 
 // Called by main loop.
 void ST_Ticker(void);
@@ -137,14 +139,18 @@ void ST_Init(void);
 void ST_Warnings(void);
 
 // [crispy] forcefully initialize the status bar backing screen
-extern void ST_refreshBackground(boolean force);
+void ST_refreshBackground(void);
+
+void ST_InitRes(void);
+
+void ST_InitChunkBar(void); // [Nugget] NUGHUD: Status-Bar chunks
 
 extern void ST_createWidgets(void); // [Nugget]
 
 // killough 5/2/98: moved from m_misc.c:
 
 // [Alaux]
-extern int smooth_counts;
+extern int hud_animated_counts;
 extern int st_health;
 extern int st_armor;
 
@@ -156,21 +162,26 @@ extern int armor_yellow;  // armor amount less than which status is yellow
 extern int armor_green;   // armor amount above is blue, below is green
 extern int ammo_red;      // ammo percent less than which status is red
 extern int ammo_yellow;   // ammo percent less is yellow more green
-extern int sts_always_red;// status numbers do not change colors
+extern int sts_colored_numbers;// status numbers do not change colors
 extern int sts_pct_always_gray;// status percents do not change colors
 extern int sts_traditional_keys;  // display keys the traditional way
 
-// [Nugget]: [crispy] blinking key or skull in the status bar
+// [crispy] blinking key or skull in the status bar
+extern int hud_blink_keys;
 #define KEYBLINKMASK 0x8
 #define KEYBLINKTICS (7*KEYBLINKMASK)
-extern void ST_blinkKeys(player_t* player, int blue, int yellow, int red);
+extern void ST_SetKeyBlink(struct player_s *player, int blue, int yellow, int red);
+extern int  ST_BlinkKey(struct player_s *player, int index);
+extern int  st_keyorskull[3];
 
 extern int hud_backpack_thresholds; // backpack changes thresholds
 extern int hud_armor_type; // color of armor depends on type
 
 extern int st_solidbackground;
 
-extern int st_crispyhud; // [Nugget] Included here; now an int
+// [Nugget] Brought from `st_stuff.c`
+extern boolean st_crispyhud;
+extern int distributed_delta;
 
 extern patch_t *nhtminus, *nhrminus; // [Nugget]
 

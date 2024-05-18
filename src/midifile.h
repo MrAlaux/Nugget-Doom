@@ -18,10 +18,14 @@
 #ifndef MIDIFILE_H
 #define MIDIFILE_H
 
+#include "doomtype.h"
+
 typedef struct midi_file_s midi_file_t;
 typedef struct midi_track_iter_s midi_track_iter_t;
 
-#define MIDI_CHANNELS_PER_TRACK 16
+#define MIDI_CHANNELS_PER_TRACK      16
+#define MIDI_DEFAULT_VOLUME          100
+#define MIDI_DEFAULT_TEMPO           500000 // 120 bpm
 
 #define MIDI_RPN_MSB                 0x00
 #define MIDI_RPN_PITCH_BEND_SENS_LSB 0x00
@@ -75,30 +79,32 @@ typedef enum
     MIDI_CONTROLLER_RESET_ALL_CTRLS = 0x79,
     MIDI_CONTROLLER_ALL_NOTES_OFF   = 0x7B,
 
+    MIDI_CONTROLLER_OMNI_MODE_OFF   = 0x7C,
+    MIDI_CONTROLLER_OMNI_MODE_ON    = 0x7D,
     MIDI_CONTROLLER_POLY_MODE_OFF   = 0x7E,
     MIDI_CONTROLLER_POLY_MODE_ON    = 0x7F,
 } midi_controller_t;
 
 typedef enum
 {
-    MIDI_META_SEQUENCE_NUMBER       = 0x00,
+    MIDI_META_SEQUENCE_NUMBER    = 0x00,
 
-    MIDI_META_TEXT                  = 0x01,
-    MIDI_META_COPYRIGHT             = 0x02,
-    MIDI_META_TRACK_NAME            = 0x03,
-    MIDI_META_INSTR_NAME            = 0x04,
-    MIDI_META_LYRICS                = 0x05,
-    MIDI_META_MARKER                = 0x06,
-    MIDI_META_CUE_POINT             = 0x07,
+    MIDI_META_TEXT               = 0x01,
+    MIDI_META_COPYRIGHT          = 0x02,
+    MIDI_META_TRACK_NAME         = 0x03,
+    MIDI_META_INSTR_NAME         = 0x04,
+    MIDI_META_LYRICS             = 0x05,
+    MIDI_META_MARKER             = 0x06,
+    MIDI_META_CUE_POINT          = 0x07,
 
-    MIDI_META_CHANNEL_PREFIX        = 0x20,
-    MIDI_META_END_OF_TRACK          = 0x2F,
+    MIDI_META_CHANNEL_PREFIX     = 0x20,
+    MIDI_META_END_OF_TRACK       = 0x2F,
 
-    MIDI_META_SET_TEMPO             = 0x51,
-    MIDI_META_SMPTE_OFFSET          = 0x54,
-    MIDI_META_TIME_SIGNATURE        = 0x58,
-    MIDI_META_KEY_SIGNATURE         = 0x59,
-    MIDI_META_SEQUENCER_SPECIFIC    = 0x7F,
+    MIDI_META_SET_TEMPO          = 0x51,
+    MIDI_META_SMPTE_OFFSET       = 0x54,
+    MIDI_META_TIME_SIGNATURE     = 0x58,
+    MIDI_META_KEY_SIGNATURE      = 0x59,
+    MIDI_META_SEQUENCER_SPECIFIC = 0x7F,
 } midi_meta_event_type_t;
 
 #define EMIDI_LOOP_FLAG 0x7F
@@ -130,6 +136,15 @@ typedef enum
     EMIDI_CONTROLLER_GLOBAL_LOOP_END   = 0x77,
 } emidi_controller_t;
 
+typedef enum
+{
+    MIDI_SYSEX_UNSUPPORTED,
+    MIDI_SYSEX_RESET,
+    MIDI_SYSEX_RHYTHM_PART,
+    MIDI_SYSEX_PART_LEVEL,
+    MIDI_SYSEX_OTHER,
+} midi_sysex_type_t;
+
 typedef struct
 {
     // Meta event type:
@@ -147,6 +162,9 @@ typedef struct
 
 typedef struct
 {
+    unsigned int type;
+    unsigned int channel;
+
     // Length:
 
     unsigned int length;
@@ -228,5 +246,8 @@ void MIDI_SetLoopPoint(midi_track_iter_t *iter);
 
 void MIDI_RestartAtLoopPoint(midi_track_iter_t *iter);
 
-#endif /* #ifndef MIDIFILE_H */
+// Check if this MIDI file contains a valid RPG Maker loop point.
 
+boolean MIDI_RPGLoop(const midi_file_t *file);
+
+#endif /* #ifndef MIDIFILE_H */

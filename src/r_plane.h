@@ -20,7 +20,9 @@
 #ifndef __R_PLANE__
 #define __R_PLANE__
 
-#include "r_data.h"
+#include "m_fixed.h"
+
+struct visplane_s;
 
 // killough 10/98: special mask indicates sky flat comes from sidedef
 #define PL_SKYFLAT (0x80000000)
@@ -28,25 +30,25 @@
 // Visplane related.
 extern  int *lastopening; // [FG] 32-bit integer math
 
-extern int floorclip[], ceilingclip[]; // [FG] 32-bit integer math
-extern fixed_t *yslope, yslopes[LOOKDIRS][MAX_SCREENHEIGHT], distscale[];
+extern int *floorclip, *ceilingclip; // [FG] 32-bit integer math
+extern fixed_t *yslope, *distscale;
 
 void R_InitPlanes(void);
 void R_ClearPlanes(void);
 void R_DrawPlanes (void);
 
-visplane_t *R_FindPlane(
-                        fixed_t height,
-                        int picnum,
-                        int lightlevel,
-                        fixed_t xoffs,  // killough 2/28/98: add x-y offsets
-                        fixed_t yoffs
-                       );
+struct visplane_s *R_FindPlane(fixed_t height, int picnum, int lightlevel,
+                               fixed_t xoffs,  // killough 2/28/98: add x-y offsets
+                               fixed_t yoffs);
 
-visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop);
+struct visplane_s *R_CheckPlane(struct visplane_s *pl, int start, int stop);
 
 // cph 2003/04/18 - create duplicate of existing visplane and set initial range
-visplane_t *R_DupPlane(const visplane_t *pl, int start, int stop);
+struct visplane_s *R_DupPlane(const struct visplane_s *pl, int start, int stop);
+
+void R_InitPlanesRes(void);
+
+void R_InitVisplanesRes(void);
 
 #endif
 

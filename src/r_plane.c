@@ -31,17 +31,27 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "z_zone.h"  /* memory allocation wrappers -- killough */
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "doomdef.h"
 #include "doomstat.h"
-#include "w_wad.h"
-#include "r_main.h"
-#include "r_draw.h"
-#include "r_things.h"
-#include "r_sky.h"
-#include "r_plane.h"
+#include "doomtype.h"
+#include "i_system.h"
 #include "r_bmaps.h" // [crispy] R_BrightmapForTexName()
+#include "r_data.h"
+#include "r_defs.h"
+#include "r_draw.h"
+#include "r_main.h"
+#include "r_plane.h"
+#include "r_sky.h"
+#include "r_state.h"
 #include "r_swirl.h" // [crispy] R_DistortedFlat()
+#include "tables.h"
+#include "v_video.h"
+#include "w_wad.h"
+#include "z_zone.h"
 
 #define MAXVISPLANES 128    /* must be a power of 2 */
 
@@ -58,18 +68,18 @@ visplane_t *floorplane, *ceilingplane;
 
 // killough 8/1/98: set static number of openings to be large enough
 // (a static limit is okay in this case and avoids difficulties in r_segs.c)
-#define MAXOPENINGS (MAX_SCREENWIDTH*MAX_SCREENHEIGHT)
-int openings[MAXOPENINGS],*lastopening; // [FG] 32-bit integer math
+static int *openings = NULL;
+int *lastopening; // [FG] 32-bit integer math
 
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
 //  ceilingclip starts out -1
 
-int floorclip[MAX_SCREENWIDTH], ceilingclip[MAX_SCREENWIDTH]; // [FG] 32-bit integer math
+int *floorclip = NULL, *ceilingclip = NULL; // [FG] 32-bit integer math
 
 // spanstart holds the start of a plane span; initialized to 0 at start
 
-static int spanstart[MAX_SCREENHEIGHT];                // killough 2/8/98
+static int *spanstart = NULL;                // killough 2/8/98
 
 //
 // texture mapping
@@ -80,13 +90,13 @@ static fixed_t planeheight;
 
 // killough 2/8/98: make variables static
 
-static fixed_t cachedheight[MAX_SCREENHEIGHT];
-static fixed_t cacheddistance[MAX_SCREENHEIGHT];
-static fixed_t cachedxstep[MAX_SCREENHEIGHT];
-static fixed_t cachedystep[MAX_SCREENHEIGHT];
+static fixed_t *cachedheight = NULL;
+static fixed_t *cacheddistance = NULL;
+static fixed_t *cachedxstep = NULL;
+static fixed_t *cachedystep = NULL;
 static fixed_t xoffs,yoffs;    // killough 2/28/98: flat offsets
 
-fixed_t *yslope, yslopes[LOOKDIRS][MAX_SCREENHEIGHT], distscale[MAX_SCREENWIDTH];
+fixed_t *yslope = NULL, *distscale = NULL;
 
 // [FG] linear horizontal sky scrolling
 boolean linearsky;
@@ -99,6 +109,52 @@ static angle_t *xtoskyangle;
 void R_InitPlanes (void)
 {
   xtoskyangle = linearsky ? linearskyangle : xtoviewangle;
+}
+
+void R_InitPlanesRes(void)
+{
+  if (floorclip) Z_Free(floorclip);
+  if (ceilingclip) Z_Free(ceilingclip);
+  if (spanstart) Z_Free(spanstart);
+
+  if (cachedheight) Z_Free(cachedheight);
+  if (cacheddistance) Z_Free(cacheddistance);
+  if (cachedxstep) Z_Free(cachedxstep);
+  if (cachedystep) Z_Free(cachedystep);
+
+  if (yslope) Z_Free(yslope);
+  if (distscale) Z_Free(distscale);
+
+  if (openings) Z_Free(openings);
+
+  floorclip = Z_Calloc(1, video.width * sizeof(*floorclip), PU_STATIC, NULL);
+  ceilingclip = Z_Calloc(1, video.width * sizeof(*ceilingclip), PU_STATIC, NULL);
+  spanstart = Z_Calloc(1, video.height * sizeof(*spanstart), PU_STATIC, NULL);
+
+  cachedheight = Z_Calloc(1, video.height * sizeof(*cachedheight), PU_STATIC, NULL);
+  cacheddistance = Z_Calloc(1, video.height * sizeof(*cacheddistance), PU_STATIC, NULL);
+  cachedxstep = Z_Calloc(1, video.height * sizeof(*cachedxstep), PU_STATIC, NULL);
+  cachedystep = Z_Calloc(1, video.height * sizeof(*cachedystep), PU_STATIC, NULL);
+
+  yslope = Z_Calloc(1, video.height * sizeof(*yslope), PU_STATIC, NULL);
+  distscale = Z_Calloc(1, video.width * sizeof(*distscale), PU_STATIC, NULL);
+
+  openings = Z_Calloc(1, video.width * video.height * sizeof(*openings), PU_STATIC, NULL);
+
+  xtoskyangle = linearsky ? linearskyangle : xtoviewangle;
+}
+
+void R_InitVisplanesRes(void)
+{
+  int i;
+
+  freetail = NULL;
+  freehead = &freetail;
+
+  for (i = 0; i < MAXVISPLANES; i++)
+  {
+    visplanes[i] = 0;
+  }
 }
 
 //
@@ -208,7 +264,11 @@ static visplane_t *new_visplane(unsigned hash)
 {
   visplane_t *check = freetail;
   if (!check)
-    check = Z_Calloc(1, sizeof *check, PU_STATIC, 0);
+  {
+    const int size = sizeof(*check) + (video.width * 2) * sizeof(*check->top);
+    check = Z_Calloc(1, size, PU_VALLOC, NULL);
+    check->bottom = &check->top[video.width + 2];
+  }
   else
     if (!(freetail = freetail->next))
       freehead = &freetail;
@@ -231,7 +291,7 @@ visplane_t *R_DupPlane(const visplane_t *pl, int start, int stop)
       new_pl->yoffs = pl->yoffs;
       new_pl->minx = start;
       new_pl->maxx = stop;
-      memset(new_pl->top, UCHAR_MAX, viewwidth * sizeof(*new_pl->top));
+      memset(new_pl->top, UCHAR_MAX, video.width * sizeof(*new_pl->top));
 
       return new_pl;
 }
@@ -246,6 +306,9 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel,
 {
   visplane_t *check;
   unsigned hash;                      // killough
+
+  if (picnum == NO_TEXTURE)
+    return NULL;
 
   if (picnum == skyflatnum || picnum & PL_SKYFLAT)  // killough 10/98
   {
@@ -281,7 +344,7 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel,
   check->xoffs = xoffs;               // killough 2/28/98: Save offsets
   check->yoffs = yoffs;
 
-  memset(check->top, UCHAR_MAX, viewwidth * sizeof(*check->top));
+  memset(check->top, UCHAR_MAX, video.width * sizeof(*check->top));
 
   return check;
 }
@@ -342,7 +405,8 @@ static void do_draw_plane(visplane_t *pl)
 	int texture;
 	angle_t an, flip;
 	boolean vertically_scrolling = false;
-	int skyheight_target; // [Nugget] Adjust sky stretching based on FOV
+	boolean stretch;
+	int skyheight_target; // [Nugget] Stretch sky just as much as necessary
 
 	// killough 10/98: allow skies to come from sidedefs.
 	// Allows scrolling and/or animated skies, as well as
@@ -400,30 +464,31 @@ static void do_draw_plane(visplane_t *pl)
 	  dc_colormap[0] = dc_colormap[1] = fullcolormap;          // killough 3/20/98
 
         dc_texheight = textureheight[texture]>>FRACBITS; // killough
-        dc_iscale = pspriteiscale / fovdiff; // [Nugget] FOV from Doom Retro
+        dc_iscale = skyiscale;
 
         // [FG] stretch short skies
         
-        { // [Nugget] Stretch sky just as much as necessary
-          const int bfov = R_GetBFOV();
-          skyheight_target = (200 - (dc_texturemid >> FRACBITS)) + (((bfov - ORIGFOV) > 0) ? (bfov - ORIGFOV) * (1.0 + (1.0 / 9.0)) : 0);
-        }
+        // [Nugget] Stretch sky just as much as necessary
+        skyheight_target = 200 - (dc_texturemid >> FRACBITS);
         
-        if (stretchsky && dc_texheight < skyheight_target)
+        stretch = (stretchsky && dc_texheight < skyheight_target);
+        if (stretch || !vertically_scrolling)
         {
-          dc_iscale = dc_iscale * dc_texheight / skyheight_target;
-          dc_texturemid = dc_texturemid * dc_texheight / skyheight_target;
-          colfunc = R_DrawColumn;
-        }
-        else if (!vertically_scrolling)
-        {
+          fixed_t diff;
+
+          if (stretch)
+          {
+            dc_iscale = dc_iscale * dc_texheight / skyheight_target;
+            dc_texturemid = dc_texturemid * dc_texheight / skyheight_target;
+          }
+
           // Make sure the fade-to-color effect doesn't happen too early
-          fixed_t diff = dc_texturemid - ORIGHEIGHT / 2 * FRACUNIT;
+          diff = dc_texturemid - SCREENHEIGHT / 2 * FRACUNIT;
           if (diff < 0)
           {
             diff += textureheight[texture];
             diff %= textureheight[texture];
-            dc_texturemid = ORIGHEIGHT / 2 * FRACUNIT + diff;
+            dc_texturemid = SCREENHEIGHT / 2 * FRACUNIT + diff;
           }
           dc_skycolor = R_GetSkyColor(texture);
           colfunc = R_DrawSkyColumn;

@@ -17,15 +17,23 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "d_deh.h" // Ty 03/27/98 - externalized
+#include "d_player.h"
+#include "d_think.h"
+#include "doomdata.h"
+#include "doomdef.h"
 #include "doomstat.h"
+#include "doomtype.h"
+#include "m_fixed.h"
+#include "p_mobj.h"
 #include "p_spec.h"
 #include "p_tick.h"
+#include "r_defs.h"
+#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "r_main.h"
-#include "dstrings.h"
-#include "d_deh.h"  // Ty 03/27/98 - externalized
-#include "st_stuff.h" // [Nugget]
+#include "st_stuff.h"
+#include "z_zone.h"
 
 ///////////////////////////////////////////////////////////////
 //
@@ -261,8 +269,7 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
         {
           doomprintf(p, MESSAGES_NONE, "%s", s_PD_BLUEO);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
-          // [Nugget]: [crispy] blinking key or skull in the status bar
-          ST_blinkKeys(p, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
+          ST_SetKeyBlink(p, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
           return 0;
         }
       break;
@@ -273,8 +280,7 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
         {
           doomprintf(p, MESSAGES_NONE, "%s", s_PD_REDO); // Ty 03/27/98 - externalized
           S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
-          // [Nugget]: [crispy] blinking key or skull in the status bar
-          ST_blinkKeys(p, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
+          ST_SetKeyBlink(p, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
           return 0;
         }
       break;
@@ -285,8 +291,7 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
         {
           doomprintf(p, MESSAGES_NONE, "%s", s_PD_YELLOWO);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
-          // [Nugget]: [crispy] blinking key or skull in the status bar
-          ST_blinkKeys(p, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
+          ST_SetKeyBlink(p, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
           return 0;
         }
       break;
@@ -414,8 +419,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
         {
           doomprintf(player, MESSAGES_NONE, "%s", s_PD_BLUEK);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
-          // [Nugget]: [crispy] blinking key or skull in the status bar
-          ST_blinkKeys(player, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
+          ST_SetKeyBlink(player, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
           return 0;
         }
       break;
@@ -428,8 +432,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
         {
           doomprintf(player, MESSAGES_NONE, "%s", s_PD_YELLOWK);  // Ty 03/27/98 - externalized
           S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
-          // [Nugget]: [crispy] blinking key or skull in the status bar
-          ST_blinkKeys(player, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
+          ST_SetKeyBlink(player, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
           return 0;
         }
       break;
@@ -442,8 +445,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
         {
           doomprintf(player, MESSAGES_NONE, "%s", s_PD_REDK); // Ty 03/27/98 - externalized
           S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
-          // [Nugget]: [crispy] blinking key or skull in the status bar
-          ST_blinkKeys(player, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
+          ST_SetKeyBlink(player, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
           return 0;
         }
       break;

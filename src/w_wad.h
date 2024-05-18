@@ -20,6 +20,7 @@
 #ifndef __W_WAD__
 #define __W_WAD__
 
+#include "doomtype.h"
 #include "z_zone.h"
 
 //
@@ -89,7 +90,7 @@ extern void       **lumpcache;
 extern lumpinfo_t *lumpinfo;
 extern int        numlumps;
 
-void W_InitMultipleFiles(char *const*filenames);
+void W_InitMultipleFiles(void);
 
 // killough 4/17/98: if W_CheckNumForName() called with only
 // one argument, pass ns_global as the default namespace
@@ -99,7 +100,7 @@ int     (W_CheckNumForName)(const char* name, int);   // killough 4/17/98
 int     W_GetNumForName (const char* name);
 int     W_LumpLength (int lump);
 void    W_ReadLump (int lump, void *dest);
-void*   W_CacheLumpNum (int lump, pu_tag tag);
+void    *W_CacheLumpNum(int lump, pu_tag tag);
 
 #define W_CacheLumpName(name,tag) W_CacheLumpNum (W_GetNumForName(name),(tag))
 
@@ -118,6 +119,8 @@ const char *W_WadNameForLump (const int lump);
 boolean W_IsIWADLump (const int lump);
 // check if lump is from WAD
 boolean W_IsWADLump (const int lump);
+boolean W_LumpExistsWithName(int lump, char *name);
+int W_LumpLengthWithName(int lump, char *name);
 void W_DemoLumpNameCollision(char **name);
 
 void W_CloseFileDescriptors(void);

@@ -15,16 +15,24 @@
 //      System interface for 3D sound.
 //
 
-#include <stdio.h>
+#include "al.h"
+
 #include <stdlib.h>
 
+#include "d_player.h"
+#include "d_think.h"
+#include "doomdef.h"
 #include "doomstat.h"
+#include "doomtype.h"
 #include "i_oalsound.h"
-#include "r_data.h"
-#include "r_main.h"
+#include "i_sound.h"
+#include "m_fixed.h"
+#include "p_mobj.h"
 #include "p_setup.h"
+#include "sounds.h"
+#include "tables.h"
 
-#define FIXED_TO_ALFLOAT(x) ((ALfloat)((double)(x) / FRACUNIT))
+#define FIXED_TO_ALFLOAT(x) ((ALfloat)(FIXED2DOUBLE(x)))
 
 typedef struct oal_listener_params_s
 {
@@ -44,33 +52,33 @@ typedef struct oal_source_params_s
 
 static oal_source_params_t src;
 
-static void CalcPitchAngle(const player_t *player, angle_t *pitch)
+static int CalcFinePitch(const player_t *player)
 {
-    fixed_t slope;
+    fixed_t pitch;
 
-    if (player->slope == 0)
+    if (player->pitch == 0)
     {
-        *pitch = 0;
-        return;
+        return 0;
     }
 
     // Flip sign due to right-hand rule.
-    slope = -player->slope;
-    if (slope < 0)
+    pitch = -player->pitch;
+    if (pitch < 0)
     {
-        *pitch = (ANGLE_MAX - tantoangle[-slope >> DBITS]) >> ANGLETOFINESHIFT;
+        return ((ANGLE_MAX + pitch) >> ANGLETOFINESHIFT);
     }
     else
     {
-        *pitch = tantoangle[slope >> DBITS] >> ANGLETOFINESHIFT;
+        return (pitch >> ANGLETOFINESHIFT);
     }
 }
 
-static void CalcListenerParams(const mobj_t *listener, oal_listener_params_t *lis)
+static void CalcListenerParams(const mobj_t *listener,
+                               oal_listener_params_t *lis)
 {
     const player_t *player = listener->player;
-    const angle_t yaw = listener->angle >> ANGLETOFINESHIFT;
-    angle_t pitch;
+    const int yaw = listener->angle >> ANGLETOFINESHIFT;
+    const int pitch = CalcFinePitch(player);
 
     // Doom to OpenAL space: {x, y, z} to {x, z, -y}
 
@@ -91,7 +99,6 @@ static void CalcListenerParams(const mobj_t *listener, oal_listener_params_t *li
         lis->velocity[2] = 0.0f;
     }
 
-    CalcPitchAngle(player, &pitch);
     if (pitch == 0)
     {
         // "At" vector after yaw rotation.
@@ -107,14 +114,18 @@ static void CalcListenerParams(const mobj_t *listener, oal_listener_params_t *li
     else
     {
         // "At" vector after yaw and pitch rotations.
-        lis->orientation[0] = FIXED_TO_ALFLOAT(FixedMul(finecosine[yaw], finecosine[pitch]));
+        lis->orientation[0] =
+            FIXED_TO_ALFLOAT(FixedMul(finecosine[yaw], finecosine[pitch]));
         lis->orientation[1] = FIXED_TO_ALFLOAT(-finesine[pitch]);
-        lis->orientation[2] = FIXED_TO_ALFLOAT(-FixedMul(finesine[yaw], finecosine[pitch]));
+        lis->orientation[2] =
+            FIXED_TO_ALFLOAT(-FixedMul(finesine[yaw], finecosine[pitch]));
 
         // "Up" vector after yaw and pitch rotations.
-        lis->orientation[3] = FIXED_TO_ALFLOAT(FixedMul(finecosine[yaw], finesine[pitch]));
+        lis->orientation[3] =
+            FIXED_TO_ALFLOAT(FixedMul(finecosine[yaw], finesine[pitch]));
         lis->orientation[4] = FIXED_TO_ALFLOAT(finecosine[pitch]);
-        lis->orientation[5] = FIXED_TO_ALFLOAT(-FixedMul(finesine[yaw], finesine[pitch]));
+        lis->orientation[5] =
+            FIXED_TO_ALFLOAT(-FixedMul(finesine[yaw], finesine[pitch]));
     }
 }
 
@@ -165,15 +176,18 @@ static void CalcHypotenuse(fixed_t adx, fixed_t ady, fixed_t *dist)
 static void CalcDistance(const mobj_t *listener, const mobj_t *source,
                          oal_source_params_t *src, fixed_t *dist)
 {
-    const fixed_t adx = abs((listener->x >> FRACBITS) - (source->x >> FRACBITS));
-    const fixed_t ady = abs((listener->y >> FRACBITS) - (source->y >> FRACBITS));
+    const fixed_t adx =
+        abs((listener->x >> FRACBITS) - (source->x >> FRACBITS));
+    const fixed_t ady =
+        abs((listener->y >> FRACBITS) - (source->y >> FRACBITS));
     fixed_t distxy;
 
     CalcHypotenuse(adx, ady, &distxy);
 
     // Treat monsters and projectiles as point sources.
-    src->point_source = (source->thinker.function.v != (actionf_v)P_DegenMobjThinker &&
-                        source->info && source->info->height); // [Nugget] Removed `actualheight`
+    src->point_source =
+        (source->thinker.function.p1 != (actionf_p1)P_DegenMobjThinker
+         && source->info && source->info->height); // [Nugget] Removed `actualheight`
 
     if (src->point_source)
     {
@@ -213,8 +227,8 @@ static boolean CalcVolumePriority(fixed_t dist, int *vol, int *pri)
     {
         // OpenAL inverse distance model never reaches zero volume. Gradually
         // ramp down the volume as the distance approaches the limit.
-        pri_volume = *vol * ((S_CLIPPING_DIST >> FRACBITS) - dist) /
-                            (S_CLOSE_DIST >> FRACBITS);
+        pri_volume = *vol * ((S_CLIPPING_DIST >> FRACBITS) - dist)
+                     / (S_CLOSE_DIST >> FRACBITS);
         *vol = pri_volume;
     }
     else
@@ -229,7 +243,9 @@ static boolean CalcVolumePriority(fixed_t dist, int *vol, int *pri)
     *pri += (127 - pri_volume);
 
     if (*pri > 255)
+    {
         *pri = 255;
+    }
 
     return (pri_volume > 0);
 }
@@ -239,15 +255,20 @@ static boolean ScaleVolume(int chanvol, int *vol)
     *vol = (snd_SfxVolume * chanvol) / 15;
 
     if (*vol < 1)
+    {
         return false;
+    }
     else if (*vol > 127)
+    {
         *vol = 127;
+    }
 
     return true;
 }
 
-static boolean I_3D_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
-                                      int chanvol, int *vol, int *sep, int *pri)
+static boolean I_3D_AdjustSoundParams(const mobj_t *listener,
+                                      const mobj_t *source, int chanvol,
+                                      int *vol, int *sep, int *pri)
 {
     fixed_t dist;
 
@@ -256,8 +277,8 @@ static boolean I_3D_AdjustSoundParams(const mobj_t *listener, const mobj_t *sour
         return false;
     }
 
-    if (!source || source == players[displayplayer].mo || !listener ||
-        !listener->player)
+    if (!source || source == players[displayplayer].mo || !listener
+        || !listener->player)
     {
         src.use_3d = false;
         return true;
@@ -318,7 +339,6 @@ const sound_module_t sound_3d_module =
     I_OAL_InitSound,
     I_OAL_ReinitSound,
     I_OAL_AllowReinitSound,
-    I_OAL_UpdateUserSoundSettings,
     I_OAL_CacheSound,
     I_3D_AdjustSoundParams,
     I_3D_UpdateSoundParams,

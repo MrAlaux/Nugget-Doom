@@ -20,13 +20,17 @@
 #include "SDL.h"
 
 #include "doomtype.h"
-#include "d_event.h"
 
+boolean I_UseController(void);
+void I_InitController(void);
 void I_OpenController(int which);
 void I_CloseController(int which);
 
+extern double (*I_AccelerateMouse)(int val);
+void I_UpdateAccelerateMouse(void);
 void I_ReadMouse(void);
-void I_UpdateJoystick(void);
+void I_UpdateJoystick(boolean axis_buttons);
+void I_UpdateJoystickMenu(void);
 
 void I_DelayEvent(void);
 void I_HandleJoystickEvent(SDL_Event *sdlevent);

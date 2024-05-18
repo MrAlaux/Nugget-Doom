@@ -18,13 +18,19 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "d_think.h"
 #include "doomstat.h"
-#include "r_main.h"
+#include "doomtype.h"
+#include "m_fixed.h"
+#include "m_random.h"
+#include "p_mobj.h"
 #include "p_spec.h"
 #include "p_tick.h"
-#include "m_random.h"
+#include "r_defs.h"
+#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "z_zone.h"
 
 //////////////////////////////////////////////////////////
 //
@@ -748,7 +754,7 @@ manual_stair:
 
 	// jff 6/19/98 prevent double stepsize
 	// killough 10/98: corrected use of demo compatibility flag
-        if (demo_version < 202)
+        if (demo_version < DV_BOOM)
           height += floor->direction * stairsize;
 
         //jff 2/26/98 special lockout condition for retriggering
@@ -757,7 +763,7 @@ manual_stair:
 
 	// jff 6/19/98 increase height AFTER continue        
 	// killough 10/98: corrected use of demo compatibility flag
-        if (demo_version >= 202)
+        if (demo_version >= DV_BOOM)
           height += floor->direction * stairsize;
 
         // jff 2/26/98

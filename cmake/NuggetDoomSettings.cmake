@@ -35,7 +35,6 @@ endfunction()
 # that pretend to be MSVC can take both GCC and MSVC-style parameters at the
 # same time, like clang-cl.exe.
 
-_checked_add_compile_option(-Wdeclaration-after-statement)
 _checked_add_compile_option(-Werror=array-bounds)
 _checked_add_compile_option(-Werror=clobbered)
 _checked_add_compile_option(-Werror=format-security)
@@ -69,6 +68,8 @@ if(MSVC)
     # Using the token operator to compare signed and unsigned numbers required
     # the compiler to convert the signed value to unsigned.
     _checked_add_compile_option(/wd4018)
+    # Different 'modifier' qualifiers (const, volatile). For older MSVC versions.
+    _checked_add_compile_option(/wd4090)
 
     # Extra warnings for clang-cl.exe - prevents warning spam in SDL headers.
     _checked_add_compile_option(-Wno-pragma-pack)
@@ -87,9 +88,28 @@ endif()
 
 option(ENABLE_ASAN "Enable ASan" OFF)
 if(ENABLE_ASAN)
-    _checked_add_compile_option(-fsanitize=address)
+    if(MSVC)
+        _checked_add_compile_option(-fsanitize=address)
+    else()
+        # Set -Werror to catch "argument unused during compilation" warnings.
+        # Also needs to be a link flag for test to pass.
+        set(CMAKE_REQUIRED_FLAGS "-Werror -fsanitize=address")
+        _checked_add_compile_option(-fsanitize=address)
+        unset(CMAKE_REQUIRED_FLAGS)
+    endif()
     _checked_add_compile_option(-fno-omit-frame-pointer)
     _checked_add_link_option(-fsanitize=address)
+endif()
+
+option(ENABLE_TSAN "Enable TSan" OFF)
+if(ENABLE_TSAN)
+    # Set -Werror to catch "argument unused during compilation" warnings.
+    # Also needs to be a link flag for test to pass.
+    set(CMAKE_REQUIRED_FLAGS "-Werror -fsanitize=thread")
+    _checked_add_compile_option(-g)
+    _checked_add_compile_option(-fsanitize=thread)
+    unset(CMAKE_REQUIRED_FLAGS)
+    _checked_add_link_option(-fsanitize=thread)
 endif()
 
 option(ENABLE_HARDENING "Enable hardening flags" OFF)

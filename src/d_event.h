@@ -21,10 +21,6 @@
 #ifndef __D_EVENT__
 #define __D_EVENT__
 
-
-#include "doomtype.h"
-
-
 //
 // Event handling.
 //
@@ -37,9 +33,11 @@ typedef enum
   ev_mouseb_down,
   ev_mouseb_up,
   ev_mouse,
+  ev_mouse_state,
   ev_joyb_down,
   ev_joyb_up,
   ev_joystick,
+  ev_joystick_state,
 
   // Quit event. Triggered when the user clicks the "close" button
   // to terminate the application.
@@ -47,7 +45,7 @@ typedef enum
 } evtype_t;
 
 // Event structure.
-typedef struct
+typedef struct event_s
 {
   evtype_t  type;
   int       data1;    // keys / mouse/joystick buttons / left axis x
@@ -56,7 +54,8 @@ typedef struct
   int       data4;    // right axis y
 } event_t;
 
-
+#define EV_RESIZE_VIEWPORT 1
+ 
 typedef enum
 {
   ga_nothing,
