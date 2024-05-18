@@ -1641,7 +1641,7 @@ void ST_loadGraphics(void)
     // Load NHAMBAR0 to NHAMBAR1 if available
     for (i = 0;  i < 2;  i++)
     {
-      sprintf(namebuf, "NHAMBAR%d", i);
+      M_snprintf(namebuf, sizeof(namebuf), "NHAMBAR%d", i);
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
@@ -1672,7 +1672,7 @@ void ST_loadGraphics(void)
     // Load NHHLBAR0 to NHHLBAR1 if available
     for (i = 0;  i < 2;  i++)
     {
-      sprintf(namebuf, "NHHLBAR%d", i);
+      M_snprintf(namebuf, sizeof(namebuf), "NHHLBAR%d", i);
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
@@ -1703,7 +1703,7 @@ void ST_loadGraphics(void)
     // Load NHARBAR0 to NHARBAR1 if available
     for (i = 0;  i < 2;  i++)
     {
-      sprintf(namebuf, "NHARBAR%d", i);
+      M_snprintf(namebuf, sizeof(namebuf), "NHARBAR%d", i);
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {

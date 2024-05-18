@@ -53,16 +53,16 @@ The following Status-Bar widgets are available:
 | :-----------------: | :-------: | :---------- |
 | `nughud_ammo`       | Yes       | Ammo count for the currently-equipped weapon |
 | `nughud_ammoicon`   | Yes       | Ammo icon, which changes depending on the ammo type of the current weapon |
-| `nughud_ammobar`    | Yes         | Yes       | Ammo bar |
+| `nughud_ammobar`    | Yes       | Ammo bar |
 | `nughud_health`     | Yes       | Health count |
 | `nughud_healthicon` | Yes       | Health icon, which changes depending on whether the player has Berserk |
-| `nughud_healthbar`  | Yes         | Yes       | Health bar |
+| `nughud_healthbar`  | Yes       | Health bar |
 | `nughud_arms#`      | No        | Arms (weapon) number, where `#` is an integer in the [1, 9] range |
 | `nughud_frags`      | Yes       | Frag count, only shown during Deathmatch games |
 | `nughud_face`       | No        | Face (mugshot) |
 | `nughud_armor`      | Yes       | Armor count |
 | `nughud_armoricon`  | Yes       | Armor icon, which changes depending on the current armor type |
-| `nughud_armorbar`   | Yes         | Yes       | Armor bar |
+| `nughud_armorbar`   | Yes       | Armor bar |
 | `nughud_key#`       | No        | Key display, where `#` is an integer in the [0, 2] range (in order: Blue Key; Yellow Key; Red Key) |
 | `nughud_ammo#`      | Yes       | Ammo count for each type, where `#` is an integer in the [0, 3] range (in order: Bullets; Shells; Cells; Rockets) |
 | `nughud_maxammo#`   | Yes       | Same as the above, but for Max. Ammo |
