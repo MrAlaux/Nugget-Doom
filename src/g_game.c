@@ -128,6 +128,10 @@ int             gameepisode;
 int             gamemap;
 mapentry_t*     gamemapinfo;
 
+// [Nugget]
+boolean         doubleammo;
+boolean         halfdamage;
+
 // If non-zero, exit the level after this number of minutes.
 int             timelimit;
 
@@ -4094,6 +4098,13 @@ void G_SetFastParms(int fast_pending)
   }
 }
 
+// [Nugget]
+void G_SetBabyModeParms(const skill_t skill)
+{
+  doubleammo = skill == sk_baby || skill == sk_nightmare || CASUALPLAY(doubleammoparm);
+  halfdamage = skill == sk_baby || CASUALPLAY(halfdamageparm);
+}
+
 mapentry_t *G_LookupMapinfo(int episode, int map)
 {
   int i;
@@ -4204,6 +4215,8 @@ void G_InitNew(skill_t skill, int episode, int map)
   M_ClearRandom();
 
   respawnmonsters = skill == sk_nightmare || respawnparm;
+
+  G_SetBabyModeParms(skill); // [Nugget]
 
   // force players to be initialized upon first level load
   for (i=0 ; i<MAXPLAYERS ; i++)

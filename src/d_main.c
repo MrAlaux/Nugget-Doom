@@ -147,6 +147,10 @@ boolean nomonsters;     // working -nomonsters
 boolean respawnparm;    // working -respawn
 boolean fastparm;       // working -fast
 
+// [Nugget]
+boolean doubleammoparm;
+boolean halfdamageparm;
+
 boolean singletics = false; // debug flag to cancel adaptiveness
 
 //jff 1/22/98 parms for disabling music and sound
@@ -2190,6 +2194,10 @@ void D_DoomMain(void)
   //
 
   devparm = M_CheckParm ("-devparm");
+
+  // [Nugget]
+  doubleammoparm = false;
+  halfdamageparm = false;
 
   //!
   // @category net

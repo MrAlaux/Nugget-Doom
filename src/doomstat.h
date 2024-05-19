@@ -42,6 +42,10 @@ extern  boolean respawnparm;  // checkparm of -respawn
 extern  boolean fastparm; // checkparm of -fast
 extern  boolean devparm;  // DEBUG: launched with -devparm
 
+// [Nugget]
+extern  boolean doubleammoparm;
+extern  boolean halfdamageparm;
+
 extern  int screenblocks;     // killough 11/98
 
 // -----------------------------------------------------
@@ -211,6 +215,10 @@ extern  int             timelimit;
 
 // Nightmare mode flag, single player.
 extern  boolean         respawnmonsters;
+
+// [Nugget]
+extern  boolean         doubleammo;
+extern  boolean         halfdamage;
 
 // Netgame? Only true if >1 player.
 extern  boolean netgame;

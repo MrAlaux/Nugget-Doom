@@ -111,6 +111,7 @@ static void cheat_showfps(); // [FG] FPS counter widget
 
 static void cheat_nomomentum();
 static void cheat_fauxdemo();   // Emulates demo/net play state, for debugging
+static void cheat_babymode();   // Toggles double ammo and half damage as in ITYTD
 static void cheat_infammo();    // Infinite ammo cheat
 static void cheat_fastweaps();  // Fast weapons cheat
 static void cheat_bobbers();    // Shortcut to the two cheats above
@@ -382,6 +383,7 @@ struct cheat_s cheat[] = {
 
   {"nomomentum", NULL, not_net | not_demo, {cheat_nomomentum}     },
   {"fauxdemo",   NULL, not_net | not_demo, {cheat_fauxdemo}       }, // Emulates demo/net play state, for debugging
+  {"babymode",   NULL, not_net | not_demo, {cheat_babymode}       }, // Toggles double ammo and half damage as in ITYTD
   {"fullclip",   NULL, not_net | not_demo, {cheat_infammo}        }, // Infinite ammo cheat
   {"valiant",    NULL, not_net | not_demo, {cheat_fastweaps}      }, // Fast weapons cheat
   {"bobbers",    NULL, not_net | not_demo, {cheat_bobbers}        }, // Shortcut for the two above cheats
@@ -457,6 +459,17 @@ static void cheat_fauxdemo()
 
   S_StartSound(plyr->mo, sfx_tink);
   displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
+}
+
+// Toggles double ammo and half damage as in ITYTD
+static void cheat_babymode()
+{
+  static boolean status = false;
+
+  displaymsg("Baby Mode %s", (status = !status) ? "ON" : "OFF");
+
+  doubleammoparm = halfdamageparm = status;
+  G_SetBabyModeParms(gameskill);
 }
 
 // Infinite ammo
@@ -1253,6 +1266,8 @@ static void cheat_skill(char *buf)
 
     G_SetFastParms(fastparm || gameskill == sk_nightmare);
     respawnmonsters = gameskill == sk_nightmare || respawnparm;
+
+    G_SetBabyModeParms(gameskill); // [Nugget]
   }
 }
 
