@@ -14,6 +14,14 @@ nughud_ammoicon_align -1
 nughud_ammoicon_vlign 1
 nughud_ammoicon_big   0
 
+; Ammo bar
+nughud_ammobar_x     -1
+nughud_ammobar_y     0
+nughud_ammobar_wide  0
+nughud_ammobar_align -1
+nughud_ammobar_ups   100
+nughud_ammobar_gap   0
+
 ; Health count
 nughud_health_x     90
 nughud_health_y     171
@@ -26,6 +34,14 @@ nughud_healthicon_y     0
 nughud_healthicon_wide  0
 nughud_healthicon_align -1
 nughud_healthicon_vlign 1
+
+; Health bar
+nughud_healthbar_x     -1
+nughud_healthbar_y     0
+nughud_healthbar_wide  0
+nughud_healthbar_align -1
+nughud_healthbar_ups   100
+nughud_healthbar_gap   0
 
 ; Arms numbers
 
@@ -89,6 +105,14 @@ nughud_armoricon_y     0
 nughud_armoricon_wide  0
 nughud_armoricon_align -1
 nughud_armoricon_vlign 1
+
+; Armor bar
+nughud_armorbar_x     -1
+nughud_armorbar_y     0
+nughud_armorbar_wide  0
+nughud_armorbar_align -1
+nughud_armorbar_ups   100
+nughud_armorbar_gap   0
 
 ; Blue Key
 nughud_key0_x    239
