@@ -618,37 +618,34 @@ static int nx, ny;
 #define FUZZDARK (256 * (Woof_Random() < 32 ? (Woof_Random() & 1 ? 4 : 8) : 6))
 #define FUZZSELECT (fuzzoffset[fuzzpos] ? 0 : FUZZDARK)
 
-static void DrawFuzz(byte **dest, int dark, int a, int b)
-{
-  const int offset = ny * linesize * (fuzzoffset[fuzzpos] ? a : b);
-  const byte fuzz = fullcolormap[dark + (*dest)[offset]];
-
-  for (int i = 0; i < ny; i++)
-  {
-    memset(*dest, fuzz, nx);
-    *dest += linesize;
-  }
-
-  fuzzpos = (fuzzpos + 1) % FUZZTABLE;
-}
-
 static void R_DrawSelectiveFuzzColumn(void)
 {
   int count;
   byte *dest;
-  boolean cutoff;
+  boolean cutoff = false;
 
-  if (dc_x % nx)
-    return;
+  if (nx > 1 || ny > 1)
+  {
+    if (dc_x % nx)
+      return;
 
-  dc_yl += ny - 1;
-  dc_yl -= dc_yl % ny;
-  dc_yh -= dc_yh % ny;
+    dc_yl += ny;
+    dc_yl -= dc_yl % ny;
+    dc_yh -= dc_yh % ny;
+  }
 
-  if (dc_yh > viewheight - ny)
-    dc_yh = viewheight - ny;
+  if (!dc_yl)
+    dc_yl = ny;
 
-  if ((count = (dc_yh - dc_yl) / ny) < 0)
+  if (dc_yh >= viewheight - ny)
+  {
+    dc_yh = viewheight - 2 * ny;
+    cutoff = true;
+  }
+
+  count = dc_yh - dc_yl;
+
+  if (count < 0)
     return;
 
 #ifdef RANGECHECK
@@ -657,19 +654,33 @@ static void R_DrawSelectiveFuzzColumn(void)
 #endif
 
   dest = ylookup[dc_yl] + columnofs[dc_x];
-  cutoff = (dc_yh == viewheight - ny);
+  count += ny;
 
-  if (!cutoff)
-    count++;
+  do
+  {
+    const int offset = (fuzzoffset[fuzzpos] ? -1 : 1) * ny * linesize;
+    const byte fuzz = fullcolormap[FUZZSELECT + dest[offset]];
 
-  if (count-- > 0)
-    DrawFuzz(&dest, FUZZDARK, (dc_yl ? -1 : 0), 1);
+    for (int i = 0; i < ny && count - i > 0; i++)
+    {
+      memset(dest, fuzz, nx);
+      dest += linesize;
+    }
 
-  while (count-- > 0)
-    DrawFuzz(&dest, FUZZSELECT, -1, 1);
+    fuzzpos = (fuzzpos + 1) % FUZZTABLE;
+  } while ((count -= ny) > 0);
 
   if (cutoff)
-    DrawFuzz(&dest, FUZZSELECT, -1, 0);
+  {
+    const int offset = ny * linesize * fuzzoffset[fuzzpos];
+    const byte fuzz = fullcolormap[FUZZSELECT + dest[offset]];
+
+    for (int i = 0; i < ny; i++)
+    {
+      memset(dest, fuzz, nx);
+      dest += linesize;
+    }
+  }
 }
 
 // [Nugget] -----------------------------------------------------------------/
