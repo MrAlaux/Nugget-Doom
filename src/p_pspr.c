@@ -153,6 +153,8 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
 // Uses player
 //
 
+static boolean switch_interrupted = false; // [Nugget] Weapon-switch interruption
+
 static void P_BringUpWeapon(player_t *player)
 {
   statenum_t newstate;
@@ -173,6 +175,12 @@ static void P_BringUpWeapon(player_t *player)
 
   player->pendingweapon = wp_nochange;
 
+  // [Nugget] Weapon-switch interruption
+  if (switch_interrupted)
+  {
+    switch_interrupted = false;
+  }
+  else
   // killough 12/98: prevent pistol from starting visibly at bottom of screen:
   player->psprites[ps_weapon].sy2 = // [Nugget]
   player->psprites[ps_weapon].sy = demo_version >= DV_MBF ? 
@@ -571,10 +579,17 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
 
   if (player->pendingweapon != wp_nochange || !player->health)
     {
-      // change weapon (pending weapon should already be validated)
-      statenum_t newstate = weaponinfo[player->readyweapon].downstate;
-      P_SetPsprite(player, ps_weapon, newstate);
-      return;
+      // [Nugget] Weapon-switch interruption
+      if (true && player->pendingweapon == player->readyweapon && player->health)
+      {
+        player->pendingweapon = wp_nochange;
+      }
+      else {
+        // change weapon (pending weapon should already be validated)
+        statenum_t newstate = weaponinfo[player->readyweapon].downstate;
+        P_SetPsprite(player, ps_weapon, newstate);
+        return;
+      }
     }
   else
     player->switching = weapswitch_none;
@@ -612,7 +627,10 @@ void A_ReFire(player_t *player, pspdef_t *psp)
   //  (if a weaponchange is pending, let it go through instead)
 
   if ( (player->cmd.buttons & BT_ATTACK)
-       && player->pendingweapon == wp_nochange && player->health)
+       && (player->pendingweapon == wp_nochange
+           // [Nugget] Weapon-switch interruption
+           || (true && player->pendingweapon == player->readyweapon))
+       && player->health)
     {
       player->refire++;
       P_FireWeapon(player);
@@ -648,6 +666,14 @@ void A_CheckReload(player_t *player, pspdef_t *psp)
 
 void A_Lower(player_t *player, pspdef_t *psp)
 {
+  // [Nugget] Weapon-switch interruption
+  if (true && player->pendingweapon == player->readyweapon && player->health)
+  {
+    switch_interrupted = true;
+    P_BringUpWeapon(player);
+    return;
+  }
+
   // [Nugget] Double speed with Fast Weapons
   const int speed = (player->cheats & CF_FASTWEAPS) ? LOWERSPEED*2 : LOWERSPEED;
 
@@ -686,6 +712,14 @@ void A_Lower(player_t *player, pspdef_t *psp)
 
 void A_Raise(player_t *player, pspdef_t *psp)
 {
+  // [Nugget] Weapon-switch interruption
+  if (true && player->pendingweapon != wp_nochange)
+  {
+    switch_interrupted = true;
+    P_SetPsprite(player, ps_weapon, weaponinfo[player->readyweapon].downstate);
+    return;
+  }
+
   statenum_t newstate;
   // [Nugget] Double speed with Fast Weapons
   const int speed = (player->cheats & CF_FASTWEAPS) ? RAISESPEED*2 : RAISESPEED;
