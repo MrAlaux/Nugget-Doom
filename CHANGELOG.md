@@ -3,6 +3,7 @@
 - **Custom skill level**
 - **_Freecam_**
 - **Autosaving**
+- **NUGHUD bars**
 - **_Prev/Next [Weapon Buttons] Skip Ammoless Weapons_** setting
 - **_Highlight Current/Pending Weapon_** setting
 - **_HUD/Menu Shadows_** setting
