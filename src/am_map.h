@@ -116,6 +116,7 @@ extern int mapcolor_plyr[4];  // colors for player arrows in multiplayer
 extern int mapcolor_frnd;     // killough 8/8/98: colors for friends
 extern int mapcolor_enemy;
 extern int mapcolor_item;
+extern int mapcolor_hitbox;   // [Nugget] Hitbox color
 extern int mapcolor_preset;
 //jff 3/9/98
 extern int map_secret_after;  // secrets do not appear til after bagged
@@ -131,6 +132,8 @@ extern int map_keyed_door; // keyed doors are colored or flashing
 extern int map_smooth_lines;
 
 extern int map_point_coordinates;  // killough 10/98
+
+extern int map_hitboxes; // [Nugget] Show thing hitboxes
 
 #endif
 

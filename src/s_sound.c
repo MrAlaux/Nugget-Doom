@@ -37,6 +37,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "r_main.h"
+#include "r_state.h"
+
 // jff end sound enabling variables readable here
 
 typedef struct channel_s
@@ -237,7 +241,12 @@ void S_StartSoundPitch(const mobj_t *origin, int sfx_id, const pitchrange_t pitc
     // Check to see if it is audible, modify the params
     // killough 3/7/98, 4/25/98: code rearranged slightly
 
-    if (!S_AdjustSoundParams(players[displayplayer].mo, origin, volumeScale,
+    // [Nugget] Freecam
+    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+                             ? viewplayer->mo
+                             : players[displayplayer].mo;
+
+    if (!S_AdjustSoundParams(playermo, origin, volumeScale,
                              &volume, &sep, &priority))
     {
         return;
@@ -449,6 +458,9 @@ void S_UpdateSounds(const mobj_t *listener)
     {
         return;
     }
+
+    // [Nugget] Freecam
+    if (R_GetFreecamOn() && !nodrawers) { listener = viewplayer->mo; }
 
     I_DeferSoundUpdates();
 

@@ -53,22 +53,6 @@
 #include "s_sound.h"
 #include "sounds.h"
 
-// [Nugget] Tag Finder from PrBoomX /-----------------------------------------
-
-static boolean findtag;
-
-#define MAGIC_SECTOR_COLOR_MIN 168
-#define MAGIC_SECTOR_COLOR_MAX 180
-#define MAGIC_LINE_COLOR_MIN 112
-#define MAGIC_LINE_COLOR_MAX 124
-static int magic_sector_color_pos = MAGIC_SECTOR_COLOR_MIN;
-static int magic_line_color_pos = MAGIC_LINE_COLOR_MIN;
-
-static sector_t* magic_sector;
-static short     magic_tag = -1;
-
-// [Nugget] -----------------------------------------------------------------/
-
 //jff 1/7/98 default automap colors added
 int mapcolor_back;    // map background
 int mapcolor_grid;    // grid lines color
@@ -96,6 +80,7 @@ int mapcolor_plyr[4]; // colors for player arrows in multiplayer
 int mapcolor_frnd;    // colors for friends of player
 int mapcolor_item;    // item sprite color
 int mapcolor_enemy;   // enemy sprite color
+int mapcolor_hitbox;  // [Nugget] Hitbox color
 
 //jff 3/9/98 add option to not show secret sectors until entered
 int map_secret_after;
@@ -103,6 +88,8 @@ int map_secret_after;
 int map_keyed_door; // keyed doors are colored or flashing
 
 int map_smooth_lines;
+
+int map_hitboxes; // [Nugget] Show thing hitboxes
 
 // [Woof!] FRACTOMAPBITS: overflow-safe coordinate system.
 // Written by Andrey Budko (entryway), adapted from prboom-plus/src/am_map.*
@@ -230,6 +217,26 @@ static mline_t thintriangle_guy[] =
 #undef R
 #define NUMTHINTRIANGLEGUYLINES (sizeof(thintriangle_guy)/sizeof(mline_t))
 
+// [Nugget] Square hitbox /---------------------------------------------------
+
+#define R (FRACUNIT)
+
+static mline_t square_hitbox[] =
+{
+  { { -R,  R }, {  R,  R } }, // Top
+  { { -R, -R }, {  R, -R } }, // Bottom
+  { { -R,  R }, { -R, -R } }, // Left
+  { {  R,  R }, {  R, -R } }, // Right
+  { { -R,  R }, {  R, -R } }, // Cross line, UL to LR
+  { { -R, -R }, {  R,  R } }  // Cross line, LL to UR
+};
+
+#undef R
+
+#define NUMSQUAREHITBOXLINES (sizeof(square_hitbox) / sizeof(mline_t))
+
+// [Nugget] -----------------------------------------------------------------/
+
 int ddt_cheating = 0;         // killough 2/7/98: make global, rename to ddt_*
 
 int automap_grid = 0;
@@ -297,10 +304,7 @@ static patch_t *marknums[10];   // numbers used for marking by the automap
 mpoint_t *markpoints = NULL;    // where the points are
 int markpointnum = 0; // next point to be assigned (also number of points now)
 int markpointnum_max = 0;       // killough 2/22/98
-static int markblinktimer; // [Nugget] Blink marks
 int followplayer = 1; // specifies whether to follow the player around
-
-#define FOLLOW (followplayer || automapactive == AM_MINI) // [Nugget] Minimap
 
 static boolean stopped = true;
 
@@ -319,6 +323,35 @@ static angle_t mapangle;
 // [FG] prev/next weapon keys and buttons
 extern int mousebprevweapon;
 extern int mousebnextweapon;
+
+// [Nugget] /=================================================================
+
+// Tag Finder from PrBoomX ---------------------------------------------------
+
+static boolean findtag;
+
+#define MAGIC_SECTOR_COLOR_MIN 168
+#define MAGIC_SECTOR_COLOR_MAX 180
+#define MAGIC_LINE_COLOR_MIN 112
+#define MAGIC_LINE_COLOR_MAX 124
+static int magic_sector_color_pos = MAGIC_SECTOR_COLOR_MIN;
+static int magic_line_color_pos = MAGIC_LINE_COLOR_MIN;
+
+static sector_t* magic_sector;
+static short     magic_tag = -1;
+
+// Minimap -------------------------------------------------------------------
+
+static boolean reset_older = true;
+static int64_t older_m_x, older_m_y, older_m_w, older_m_h;
+
+#define FOLLOW (followplayer || automapactive == AM_MINI)
+
+// Blink marks ---------------------------------------------------------------
+
+static int markblinktimer;
+
+// [Nugget] =================================================================/
 
 //
 // AM_activateNewScale()
@@ -724,10 +757,11 @@ void AM_Stop (void)
 //
 void AM_Start()
 {
-  static int lastlevel = -1, lastepisode = -1,
-             last_automap = -1, last_messages = -1; // [Nugget] Minimap
+  static int lastlevel = -1, lastepisode = -1;
 
-  int messages_height = message_list ? hud_msg_lines : 1; // [Nugget]
+  // [Nugget] Minimap
+  static int last_automap = -1, last_messages = -1;
+  const int messages_height = message_list ? hud_msg_lines : 1;
 
   if (!stopped)
     AM_Stop();
@@ -736,6 +770,10 @@ void AM_Start()
       || automapactive != last_automap || messages_height != last_messages)
   {
     AM_LevelInit();
+
+    // [Nugget] Minimap
+    reset_older = reset_older || lastlevel != gamemap || lastepisode != gameepisode;
+
     lastlevel = gamemap;
     lastepisode = gameepisode;
     last_automap = automapactive;
@@ -793,15 +831,46 @@ static int buttons_state[STATE_NUM] = { 0 };
 // [Nugget]
 void AM_ChangeMode(automapmode_t mode)
 {
+  const boolean modechange = mode && automapactive && mode != automapactive;
+  fixed_t rx=0, ry=0, rw=0, rh=0; // Restored values
+
   automapactive = mode;
 
   if (automapactive == AM_MINI)
   { memset(buttons_state, 0, sizeof(buttons_state)); }
 
+  if (modechange)
+  {
+    rx = older_m_x;
+    ry = older_m_y;
+    rw = older_m_w;
+    rh = older_m_h;
+    older_m_x = m_x;
+    older_m_y = m_y;
+    older_m_w = m_w;
+    older_m_h = m_h;
+  }
+
   if (!automapactive)
     AM_Stop();
   else
     AM_Start();
+
+  if (modechange)
+  {
+    if (reset_older)
+    {
+      reset_older = false;
+    }
+    else {
+      old_m_x = rx;
+      old_m_y = ry;
+      old_m_w = rw;
+      old_m_h = rh;
+      AM_restoreScaleAndLoc();
+      AM_activateNewScale();
+    }
+  }
 }
 
 //
@@ -1012,25 +1081,39 @@ boolean AM_Responder
       findtag = !strictmode;
     }
     // Teleport to Automap pointer
-    else if (M_InputActivated(input_map_teleport) && !followplayer && casual_play)
+    else if (M_InputActivated(input_map_teleport) && casual_play)
     {
-      mobj_t *const mo = plr->mo;
-    
-      P_MapStart();
+      const fixed_t x = (m_x + m_w/2) << FRACTOMAPBITS,
+                    y = (m_y + m_h/2) << FRACTOMAPBITS;
 
-      P_TeleportMove(mo, (m_x+m_w/2)<<FRACTOMAPBITS, (m_y+m_h/2)<<FRACTOMAPBITS, false);
-      mo->z = mo->floorz;
-      plr->viewz = mo->z + plr->viewheight - plr->crouchoffset;
-
-      if (fancy_teleport) {
-        R_SetFOVFX(FOVFX_TELEPORT); // Teleporter zoom
-        S_StartSound(P_SpawnMobj(mo->x + 20 * finecosine[mo->angle>>ANGLETOFINESHIFT],
-                                 mo->y + 20 *   finesine[mo->angle>>ANGLETOFINESHIFT],
-                                 mo->z, MT_TFOG),
-                     sfx_telept);
+      if (!followplayer && R_GetFreecamMode() == FREECAM_CAM)
+      {
+        R_MoveFreecam(
+          x, y,
+          R_PointInSubsector(x, y)->sector->floorheight + FRACUNIT
+        );
       }
+      else if (!followplayer || R_GetFreecamMode() == FREECAM_CAM)
+      {
+        mobj_t *const mo = plr->mo;
+      
+        P_MapStart();
 
-      P_MapEnd();
+        P_TeleportMove(mo, x, y, false);
+        mo->z = mo->floorz;
+        plr->viewz = mo->z + plr->viewheight - plr->crouchoffset;
+
+        if (fancy_teleport) {
+          R_SetFOVFX(FOVFX_TELEPORT); // Teleporter zoom
+          S_StartSound(P_SpawnMobj(mo->x + 20 * finecosine[mo->angle>>ANGLETOFINESHIFT],
+                                   mo->y + 20 *   finesine[mo->angle>>ANGLETOFINESHIFT],
+                                   mo->z, MT_TFOG),
+                       sfx_telept);
+        }
+
+        P_MapEnd();
+      }
+      
     }
 
     // [Nugget] -------------------------------------------------------------/
@@ -1200,7 +1283,8 @@ void AM_Ticker (void)
     if (subsec && subsec->sector)
     {
       // if we are close to a tagged line in the sector, choose it instead
-      float min_distance = 24 << MAPBITS;
+      float min_distance = MAX(followplayer ? 24 << MAPBITS : 0,
+                               8 * FixedMul(scale_ftom, video.xscale));
       short int min_tag = 0;
 
       magic_sector = (subsec->sector->tag > 0) ? subsec->sector : NULL;
@@ -1209,8 +1293,11 @@ void AM_Ticker (void)
       for (int i = 0;  i < subsec->sector->linecount;  i++)
       {
         line_t* l = subsec->sector->lines[i];
-        if (l && (l->tag > 0)) {
-          if (l->v1 && l->v2) {
+
+        if (l && l->tag > 0)
+        {
+          if (l->v1 && l->v2)
+          {
             const float
               x1 = (l->v1->x >> FRACTOMAPBITS),
               x2 = (l->v2->x >> FRACTOMAPBITS),
@@ -1226,6 +1313,7 @@ void AM_Ticker (void)
           }
         }
       }
+
       // only pick the line if the crosshair is "close" to it
       if (min_tag > 0) {
         magic_tag = min_tag;
@@ -1823,6 +1911,17 @@ static void AM_drawWalls(void)
 
   const boolean keyed_door_flash = (map_keyed_door == MAP_KEYED_DOOR_FLASH) && (leveltime & 16);
 
+  // [Nugget] Tag Finder from PrBoomX /---------------------------------------
+
+  typedef struct {
+    fixed_t x, y;
+    int color;
+  } crossmark_t;
+
+  crossmark_t *crossmarks = NULL;
+
+  // [Nugget] ---------------------------------------------------------------/
+
   // draw the unclipped visible portions of all lines
   for (i=0;i<numlines;i++)
   {
@@ -2041,25 +2140,25 @@ static void AM_drawWalls(void)
           || (lines[i].backsector  && (   (magic_sector  && lines[i].backsector->tag  == magic_sector->tag)
                                        || (magic_tag > 0 && lines[i].backsector->tag  == magic_tag))))
       {
-        AM_drawMline(&l, magic_sector_color_pos);
+        if (!lines[i].backsector)
+        { array_push(lines_1S, ((am_line_t) {l, magic_sector_color_pos})); }
+        else
+        { AM_drawMline(&l, magic_sector_color_pos); }
 
         if (magic_sector_color_pos <= MAGIC_SECTOR_COLOR_MIN+1)
-        {
-          AM_drawLineCharacter(cross_mark, NUMCROSSMARKLINES,
-                               128<<MAPBITS, 0, 229, l.a.x, l.a.y);
-        }
+        { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 229 })); }
       }
       
       if (   (lines[i].tag > 0)
           && (lines[i].tag == magic_tag || (magic_sector && (lines[i].tag == magic_sector->tag))))
       {
-        AM_drawMline(&l, magic_line_color_pos);
+        if (!lines[i].backsector)
+        { array_push(lines_1S, ((am_line_t) {l, magic_line_color_pos})); }
+        else
+        { AM_drawMline(&l, magic_line_color_pos); }
 
         if (magic_line_color_pos <= MAGIC_LINE_COLOR_MIN+1)
-        {
-          AM_drawLineCharacter(cross_mark, NUMCROSSMARKLINES,
-                               128<<MAPBITS, 0, 251, l.a.x, l.a.y);
-        }
+        { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 251 })); }
       }
     }
   }
@@ -2069,6 +2168,14 @@ static void AM_drawWalls(void)
     AM_drawMline(&lines_1S[i].l, lines_1S[i].color);
   }
   array_clear(lines_1S);
+
+  // [Nugget] Tag Finder from PrBoomX
+  for (int i = 0;  i < array_size(crossmarks);  i++)
+  {
+    AM_drawLineCharacter(cross_mark, NUMCROSSMARKLINES, 128<<MAPBITS, 0,
+                         crossmarks[i].color, crossmarks[i].x, crossmarks[i].y);
+  }
+  array_clear(crossmarks);
 }
 
 //
@@ -2204,16 +2311,17 @@ static void AM_drawPlayers(void)
   int   color;
   mpoint_t pt;
 
-  if (!netgame)
+  if (!netgame || R_GetFreecamOn()) // [Nugget] Freecam
   {
     // [crispy] smooth player arrow rotation
     const angle_t smoothangle = (automaprotate ? plr->mo->angle : viewangle) - chaseaofs; // [Nugget]
 
     // interpolate player arrow
-    if (uncapped && leveltime > oldleveltime)
+    if ((uncapped && leveltime > oldleveltime) || R_GetFreecamOn()) // [Nugget]
     {
-        pt.x = (viewx - chasexofs) >> FRACTOMAPBITS; // [Nugget]
-        pt.y = (viewy - chaseyofs) >> FRACTOMAPBITS; // [Nugget]
+        // [Nugget] Prevent Chasecam from shifting the map view
+        pt.x = (viewx - chasexofs) >> FRACTOMAPBITS;
+        pt.y = (viewy - chaseyofs) >> FRACTOMAPBITS;
     }
     else
     {
@@ -2246,7 +2354,10 @@ static void AM_drawPlayers(void)
         mapcolor_sngl,      //jff color
         pt.x,
         pt.y);
-    return;
+
+    // [Nugget] Freecam: draw the other arrows
+    if (!R_GetFreecamOn())
+      return;
   }
 
   for (i=0;i<MAXPLAYERS;i++)
@@ -2325,12 +2436,7 @@ static void AM_drawThings
     t = sectors[i].thinglist;
     while (t) // for all things in that sector
     {
-      // [crispy] do not draw an extra triangle for the player
-      if (t == plr->mo)
-      {
-          t = t->snext;
-          continue;
-      }
+      // [Nugget] Moved player check below, since we want to draw its hitbox
 
       // [crispy] interpolate thing triangles movement
       if (leveltime > oldleveltime)
@@ -2346,6 +2452,28 @@ static void AM_drawThings
       if (automaprotate)
       {
         AM_rotatePoint(&pt);
+      }
+
+      // [Nugget] Show hitbox
+      if (map_hitboxes)
+      {
+        AM_drawLineCharacter(
+          square_hitbox,
+          NUMSQUAREHITBOXLINES,
+          t->radius >> FRACTOMAPBITS,
+          0,
+          mapcolor_hitbox,
+          pt.x,
+          pt.y
+        );
+      }
+
+      // [Nugget] Brought here
+      // [crispy] do not draw an extra triangle for the player
+      if (t == plr->mo)
+      {
+          t = t->snext;
+          continue;
       }
 
       //jff 1/5/98 case over doomednum of thing being drawn

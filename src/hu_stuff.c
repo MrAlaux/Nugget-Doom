@@ -437,9 +437,10 @@ void HU_Init(void)
   }
 
   // [Nugget] Load Stats icons
-  for (i = HU_FONTSIZE + 6, j = 0; j < 3; i++, j++)
+  for (i = HU_FONTSIZE + 6, j = 0;  j < 3;  i++, j++)
   {
     static const char *names[] = { "HUDKILLS", "HUDITEMS", "HUDSCRTS" };
+    static const char fallback[] = { 'K', 'I', 'S' };
     const char *icon = names[j];
 
     if (W_CheckNumForName(icon) != -1)
@@ -447,7 +448,10 @@ void HU_Init(void)
       sml_font.patches[i] =
       big_font.patches[i] = (patch_t *) W_CacheLumpName(icon, PU_STATIC);
     }
-    else { sml_font.patches[i] = big_font.patches[i] = NULL; }
+    else {
+      sml_font.patches[i] = sml_font.patches[fallback[j] - HU_FONTSTART];
+      big_font.patches[i] = big_font.patches[fallback[j] - HU_FONTSTART];
+    }
   }
 
   // [FG] calculate font height once right here
@@ -557,6 +561,11 @@ static void HU_widget_build_weapon (void);
 static hu_multiline_t *w_stats;
 
 // [Nugget] /-----------------------------------------------------------------
+
+boolean HU_IsSmallFont(const patch_t *const patch)
+{
+  return patch == sml_font.patches['A' - HU_FONTSTART];
+}
 
 #define NUMSQWIDGETS 10
 
@@ -1369,6 +1378,12 @@ static void HU_widget_build_monsec(void)
       M_snprintf(item_str,   sizeof(item_str),   "%d", totalitems           - fullitemcount);
       M_snprintf(secret_str, sizeof(secret_str), "%d", totalsecret          - fullsecretcount);
       break;
+
+    case STATSFORMAT_COUNT:
+      M_snprintf(kill_str,   sizeof(kill_str),   "%d", fullkillcount);
+      M_snprintf(item_str,   sizeof(item_str),   "%d", fullitemcount);
+      M_snprintf(secret_str, sizeof(secret_str), "%d", fullsecretcount);
+      break;
   }
 
   // [Nugget] ---------------------------------------------------------------/
@@ -1442,7 +1457,7 @@ static void HU_widget_build_monsec(void)
 
 static void HU_widget_build_sttime(void)
 {
-  char hud_timestr[HU_MAXLINELENGTH/2];
+  char hud_timestr[HU_MAXLINELENGTH/2] = {0};
   int offset = 0;
   extern int time_scale;
 
@@ -1502,25 +1517,25 @@ static void HU_widget_build_powers(void)
 
   if (plr->powers[pw_invisibility] > 0) {
     offset += M_snprintf(hud_powerstr, sizeof(hud_powerstr), "\x1b%cINVIS %i\" ",
-                         '0' + ((plr->powers[pw_invisibility] > 4*32 || plr->powers[pw_invisibility] & 8) ? CR_RED : CR_BLACK),
+                         '0' + (POWER_RUNOUT(plr->powers[pw_invisibility]) ? CR_RED : CR_BLACK),
                          MIN(INVISTICS/TICRATE, 1 + (plr->powers[pw_invisibility] / TICRATE)));
   }
 
   if (plr->powers[pw_invulnerability] > 0) {
     offset += M_snprintf(hud_powerstr + offset, sizeof(hud_powerstr), "\x1b%cINVUL %i\" ",
-                         '0' + ((plr->powers[pw_invulnerability] > 4*32 || plr->powers[pw_invulnerability] & 8) ? CR_GREEN : CR_BLACK),
+                         '0' + (POWER_RUNOUT(plr->powers[pw_invulnerability]) ? CR_GREEN : CR_BLACK),
                          MIN(INVULNTICS/TICRATE, 1 + (plr->powers[pw_invulnerability] / TICRATE)));
   }
 
   if (plr->powers[pw_infrared] > 0) {
     offset += M_snprintf(hud_powerstr + offset, sizeof(hud_powerstr), "\x1b%cLIGHT %i\" ",
-                         '0' + ((plr->powers[pw_infrared] > 4*32 || plr->powers[pw_infrared] & 8) ? CR_BRICK : CR_BLACK),
+                         '0' + (POWER_RUNOUT(plr->powers[pw_infrared]) ? CR_BRICK : CR_BLACK),
                          MIN(INFRATICS/TICRATE, 1 + (plr->powers[pw_infrared] / TICRATE)));
   }
 
   if (plr->powers[pw_ironfeet] > 0) {
     offset += M_snprintf(hud_powerstr + offset, sizeof(hud_powerstr), "\x1b%cSUIT %i\"",
-                         '0' + ((plr->powers[pw_ironfeet] > 4*32 || plr->powers[pw_ironfeet] & 8) ? CR_GRAY : CR_BLACK),
+                         '0' + (POWER_RUNOUT(plr->powers[pw_ironfeet]) ? CR_GRAY : CR_BLACK),
                          MIN(IRONTICS/TICRATE, 1 + (plr->powers[pw_ironfeet] / TICRATE)));
   }
 
@@ -1590,6 +1605,7 @@ static void HU_widget_build_rate (void)
 // Crosshair
 
 int hud_crosshair; // [Nugget] Crosshair type to be used
+int hud_crosshair_tran_pct; // [Nugget] Translucent crosshair
 boolean hud_crosshair_health;
 crosstarget_t hud_crosshair_target;
 crosslockon_t hud_crosshair_lockon; // [Alaux] Crosshair locks on target
@@ -1733,6 +1749,9 @@ static void HU_UpdateCrosshair(void)
       }
     }
   }
+
+  // [Nugget] Freecam
+  if (R_GetFreecamOn()) { crosshair.cr = colrngs[hud_crosshair_color]; }
 }
 
 void HU_UpdateCrosshairLock(int x, int y)
@@ -1756,9 +1775,14 @@ void HU_DrawCrosshair(void)
       menuactive ||
       paused ||
       // [Nugget] New conditions
-      !crosshair.cr || // Crash fix
-      (chasecam_mode && !chasecam_crosshair) || // Chasecam
-      (gamestate == GS_INTERMISSION)) // Alt. intermission background
+      // Crash fix
+      !crosshair.cr ||
+      // Chasecam
+      (R_GetChasecamOn() && !chasecam_crosshair) ||
+      // Freecam
+      (R_GetFreecamOn() && (R_GetFreecamMode() != FREECAM_CAM || R_GetFreecamMobj())) ||
+      // Alt. intermission background
+      (gamestate == GS_INTERMISSION))
   {
     return;
   }
@@ -1767,23 +1791,24 @@ void HU_DrawCrosshair(void)
   const int y = crosshair.y + (nughud.viewoffset * STRICTMODE(st_crispyhud));
 
   if (crosshair.patch)
-    V_DrawPatchTranslated(crosshair.x - crosshair.w,
-                                    y - crosshair.h,
-                          crosshair.patch, crosshair.cr);
+    // [Nugget] Translucent crosshair
+    V_DrawPatchTranslatedTL(crosshair.x - crosshair.w,
+                                      y - crosshair.h,
+                            crosshair.patch, crosshair.cr, xhair_tranmap);
 
   // [Nugget] Horizontal-autoaim indicators ----------------------------------
 
   if (crosshair.side == -1)
   {
-    V_DrawPatchTranslated(crosshair.x - crosshair.w - crosshair.lw,
-                                    y - crosshair.lh,
-                          crosshair.patchl, crosshair.cr);
+    V_DrawPatchTranslatedTL(crosshair.x - crosshair.w - crosshair.lw,
+                                      y - crosshair.lh,
+                            crosshair.patchl, crosshair.cr, xhair_tranmap);
   }
   else if (crosshair.side == 1)
   {
-    V_DrawPatchTranslated(crosshair.x + crosshair.w,
-                                    y - crosshair.rh,
-                          crosshair.patchr, crosshair.cr);
+    V_DrawPatchTranslatedTL(crosshair.x + crosshair.w,
+                                      y - crosshair.rh,
+                            crosshair.patchr, crosshair.cr, xhair_tranmap);
   }
 }
 

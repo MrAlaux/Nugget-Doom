@@ -442,7 +442,7 @@ void F_TextWrite (void)
     // [cispy] prevent text from being drawn off-screen vertically
     if (cy + SHORT(hu_font[c]->height) > SCREENHEIGHT)
       break;
-    V_DrawPatch(cx, cy, hu_font[c]);
+    V_DrawPatchSH(cx, cy, hu_font[c]); // [Nugget] HUD/menu shadows
     cx+=w;
   }
 }
@@ -853,7 +853,7 @@ void F_CastPrint (char* text)
     }
               
     w = SHORT (hu_font[c]->width);
-    V_DrawPatch(cx, 180, hu_font[c]);
+    V_DrawPatchSH(cx, 180, hu_font[c]); // [Nugget] HUD/menu shadows
     cx+=w;
   }
 }
@@ -889,9 +889,9 @@ void F_CastDrawer (void)
                         
   patch = W_CacheLumpNum (lump+firstspritelump, PU_CACHE);
   if (flip)
-    V_DrawPatchFlipped (160, 170, patch);
+    V_DrawPatchFlippedSH (160, 170, patch); // [Nugget] HUD/menu shadows
   else
-    V_DrawPatch (160, 170, patch);
+    V_DrawPatchSH (160, 170, patch); // [Nugget] HUD/menu shadows
 }
 
 //
@@ -938,9 +938,10 @@ void F_BunnyScroll (void)
     return;
   if (finalecount < 1180)
   {
-    V_DrawPatch ((SCREENWIDTH-13*8)/2,
-                 (SCREENHEIGHT-8*8)/2,
-                 W_CacheLumpName ("END0",PU_CACHE));
+    // [Nugget] HUD/menu shadows
+    V_DrawPatchSH ((SCREENWIDTH-13*8)/2,
+                   (SCREENHEIGHT-8*8)/2,
+                   W_CacheLumpName ("END0",PU_CACHE));
     laststage = 0;
     return;
   }
@@ -955,9 +956,10 @@ void F_BunnyScroll (void)
   }
       
   M_snprintf(name, sizeof(name), "END%i", stage);
-  V_DrawPatch ((SCREENWIDTH-13*8)/2,
-               (SCREENHEIGHT-8*8)/2,
-               W_CacheLumpName (name,PU_CACHE));
+  // [Nugget] HUD/menu shadows
+  V_DrawPatchSH ((SCREENWIDTH-13*8)/2,
+                 (SCREENHEIGHT-8*8)/2,
+                 W_CacheLumpName (name,PU_CACHE));
 }
 
 

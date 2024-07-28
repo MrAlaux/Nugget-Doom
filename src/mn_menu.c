@@ -62,6 +62,7 @@
 
 // [Nugget]
 #include "am_map.h"
+#include "m_nughud.h"
 #include "st_stuff.h"
 
 // [crispy] remove DOS reference from the game quit confirmation dialogs
@@ -151,6 +152,8 @@ typedef enum
     MF_THRM     = 0x00000002,
     MF_THRM_STR = 0x00000004,
     MF_PAGE     = 0x00000008,
+
+    MF_OPTLUMP  = 0x00000010, // [Nugget] Optional graphic lump
 } mflags_t;
 
 typedef enum
@@ -612,6 +615,11 @@ enum
     hurtme,
     violence,
     nightmare,
+
+    // [Nugget]
+    newg_stub,
+    newg_custom,
+
     newg_end
 } newgame_e;
 
@@ -622,12 +630,73 @@ enum
 #define NEW_GAME_RECT(n) \
     {0, M_Y_NEWGAME + (n) * LINEHEIGHT, SCREENWIDTH, LINEHEIGHT}
 
+// [Nugget] Custom Skill menu /-----------------------------------------------
+
+static void M_CustomSkill(int choice)
+{
+  if (demorecording || netgame)
+  {
+      M_StartMessage("Custom skill is disallowed\n"
+                     "during non-casual play.\n\n" PRESSKEY,
+                     NULL, false);
+
+      return;
+  }
+
+  if (default_strictmode || force_strictmode)
+  {
+      M_StartMessage("Custom skill is disallowed\n"
+                     "in strict mode.\n\n" PRESSKEY,
+                     NULL, false);
+
+      return;
+  }
+
+  MN_CustomSkill();
+}
+
+void M_StartCustomSkill(const int mode)
+{
+  G_SetUserCustomSkill();
+
+  if (mode == 0 || gamestate == GS_DEMOSCREEN)
+  {
+    if (!EpiCustom)
+    {
+      G_DeferedInitNew(sk_custom, epiChoice + 1, 1);
+    }
+    else {
+      G_DeferedInitNew(sk_custom, EpiMenuEpi[epiChoice], EpiMenuMap[epiChoice]);
+    }
+  }
+  else if (mode == 1 || !usergame)
+  {
+    G_DeferedInitNew(sk_custom, gameepisode, gamemap);
+  }
+  else if (mode == 2)
+  {
+    G_RestartWithLoadout(false);
+  }
+  else if (mode == 3)
+  {
+    G_RestartWithLoadout(true);
+  }
+
+  MN_ClearMenus();
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 static menuitem_t NewGameMenu[] = {
     {1, "M_JKILL", M_ChooseSkill, 'i', "I'm too young to die.", NEW_GAME_RECT(0)},
     {1, "M_ROUGH", M_ChooseSkill, 'h', "Hey, not too rough.",   NEW_GAME_RECT(1)},
     {1, "M_HURT",  M_ChooseSkill, 'h', "Hurt me plenty.",       NEW_GAME_RECT(2)},
     {1, "M_ULTRA", M_ChooseSkill, 'u', "Ultra-Violence.",       NEW_GAME_RECT(3)},
-    {1, "M_NMARE", M_ChooseSkill, 'n', "Nightmare!",            NEW_GAME_RECT(4)}
+    {1, "M_NMARE", M_ChooseSkill, 'n', "Nightmare!",            NEW_GAME_RECT(4)},
+
+    // [Nugget]
+    {-1},
+    {1, "M_CSTSKL", M_CustomSkill, 'c', "Custom Skill...", NEW_GAME_RECT(6), MF_OPTLUMP},
 };
 
 static menu_t NewDef = {
@@ -898,15 +967,15 @@ static void M_DrawSaveLoadBorder(int x, int y, byte *cr)
 {
     int i;
 
-    V_DrawPatchTranslated(x - 8, y + 7, W_CacheLumpName("M_LSLEFT", PU_CACHE), cr);
+    V_DrawPatchTranslatedSH(x - 8, y + 7, W_CacheLumpName("M_LSLEFT", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 
     for (i = 0; i < 24; i++)
     {
-        V_DrawPatchTranslated(x, y + 7, W_CacheLumpName("M_LSCNTR", PU_CACHE), cr);
+        V_DrawPatchTranslatedSH(x, y + 7, W_CacheLumpName("M_LSCNTR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
         x += 8;
     }
 
-    V_DrawPatchTranslated(x, y + 7, W_CacheLumpName("M_LSRGHT", PU_CACHE), cr);
+    V_DrawPatchTranslatedSH(x, y + 7, W_CacheLumpName("M_LSRGHT", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 }
 
 //
@@ -1802,7 +1871,8 @@ static menuitem_t Generic_Setup[] = {
 // with the main Setup screen.
 
 static menu_t SetupDef = {
-    ss_max,        // number of Setup Menu items (Key Bindings, etc.)
+    ss_max - 1,    // number of Setup Menu items (Key Bindings, etc.)
+                   // [Nugget] Custom Skill menu: don't count said menu
     &MainDef,      // menu to return to when BACKSPACE is hit on this menu
     SetupMenu,     // definition of items to show on the Setup Screen
     M_DrawSetup,   // program that draws the Setup Screen
@@ -1888,11 +1958,23 @@ static menu_t CompatDef = // killough 10/98
     0
 };
 
+static menu_t CustomSkillDef = // [Nugget] Custom Skill menu
+{
+    generic_setup_end,
+    &NewDef,
+    Generic_Setup,
+    MN_DrawCustomSkill,
+    34, 5, // skull drawn here
+    0
+};
+
 void MN_SetNextMenuAlt(ss_types type)
 {
     static menu_t *setup_defs[] = {
         &KeybndDef, &WeaponDef,  &StatusHUDDef, &AutoMapDef,
         &EnemyDef,  &GeneralDef, &CompatDef,
+
+        &CustomSkillDef // [Nugget] Custom Skill menu
     };
 
     SetNextMenu(setup_defs[type]);
@@ -2270,9 +2352,18 @@ static boolean ShortcutResponder(const event_t *ev)
         }
         else
         {
+            const boolean old_active = !!hud_active; // [Nugget]
+
             hud_displayed = 1;                 // jff 3/3/98 turn hud on
             hud_active = (hud_active + 1) % 3; // cycle hud_active
             HU_disable_all_widgets();
+
+            // [Nugget] NUGHUD
+            if (hud_type == HUD_TYPE_CRISPY && old_active != !!hud_active
+                && nughud.viewoffset)
+            {
+              R_SetViewSize(screenblocks);
+            }
         }
         return true;
     }
@@ -2361,14 +2452,26 @@ static boolean ShortcutResponder(const event_t *ev)
         togglemsg("Crosshair %s", hud_crosshair_on ? "Enabled" : "Disabled");
     }
 
-    // Chasecam
     if (STRICTMODE(M_InputActivated(input_chasecam)))
     {
-        if (++chasecam_mode > CHASECAMMODE_FRONT)
+        // Freecam
+        if (R_GetFreecamOn() && !R_GetFreecamMobj())
+        {
+          const freecammode_t mode = R_CycleFreecamMode();
+
+          togglemsg("Freecam: controlling %s",
+                    (mode == FREECAM_PLAYER) ? "player" : "camera");
+        }
+        // Chasecam
+        else if (++chasecam_mode > CHASECAMMODE_FRONT)
         { chasecam_mode = CHASECAMMODE_OFF; }
     }
 
-    // Rewind
+    if (STRICTMODE(M_InputActivated(input_freecam)))
+    {
+        R_SetFreecamOn(!R_GetFreecamOn());
+    }
+
     if (STRICTMODE(M_InputActivated(input_rewind)))
     {
         G_Rewind();
@@ -2826,7 +2929,7 @@ boolean M_Responder(event_t *ev)
 
     if (!menuactive)
     {
-        if ((demoplayback && (action == MENU_ENTER || action == MENU_BACKSPACE))
+        if ((demoplayback && (action == MENU_ENTER || action == MENU_BACKSPACE) && !R_GetFreecamOn()) // [Nugget] Freecam
             || action == MENU_ESCAPE) // phares
         {
             MN_StartControlPanel();
@@ -3089,6 +3192,9 @@ void MN_StartControlPanel(void)
 
     NewDef.lastOn = defaultskill - 1;
 
+    // [Nugget] Custom Skill
+    if (defaultskill - 1 == sk_custom) { NewDef.lastOn++; }
+
     default_verify = 0; // killough 10/98
     menuactive = 1;
     currentMenu = &MainDef;              // JDC
@@ -3195,7 +3301,8 @@ void M_Drawer(void)
                 patch_lump = W_CheckNumForName(name);
             }
 
-            if (patch_lump < 0 && currentMenu->menuitems[i].alttext)
+            if (patch_lump < 0 && currentMenu->menuitems[i].alttext
+                && !(currentMenu->menuitems[i].flags & MF_OPTLUMP)) // [Nugget] 
             {
                 currentMenu->lumps_missing++;
                 break;
@@ -3234,9 +3341,12 @@ void M_Drawer(void)
         // due to the MainMenu[] hacks, we have to set `y` here
         rect->y = y;
 
+        const int lumpnum = W_CheckNumForName(name); // [Nugget]
+
         // [FG] at least one menu graphics lump is missing, draw alternative
         // text
-        if (currentMenu->lumps_missing > 0)
+        if (currentMenu->lumps_missing > 0
+            || (item->flags & MF_OPTLUMP && lumpnum < 0)) // [Nugget]
         {
             if (alttext)
             {
@@ -3251,7 +3361,7 @@ void M_Drawer(void)
         {
             patch_t *patch = W_CacheLumpName(name, PU_CACHE);
             rect->y -= SHORT(patch->topoffset);
-            V_DrawPatchTranslated(x, y, patch, cr);
+            V_DrawPatchTranslatedSH(x, y, patch, cr); // [Nugget] HUD/menu shadows
         }
 
         y += LINEHEIGHT;
@@ -3261,8 +3371,9 @@ void M_Drawer(void)
 
     y = setup_active ? SCREENHEIGHT - 19 : currentMenu->y;
 
-    V_DrawPatch(x + SKULLXOFF, y - 5 + itemOn * LINEHEIGHT,
-                W_CacheLumpName(skullName[whichSkull], PU_CACHE));
+    // [Nugget] HUD/menu shadows
+    V_DrawPatchTranslatedSH(x + SKULLXOFF, y - 5 + itemOn * LINEHEIGHT,
+                            W_CacheLumpName(skullName[whichSkull], PU_CACHE), NULL);
 
     if (delete_verify)
     {
@@ -3302,14 +3413,23 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
     char num[4];
 
     xx = x;
-    V_DrawPatchTranslated(xx, y, W_CacheLumpName("M_THERML", PU_CACHE), cr);
+    V_DrawPatchTranslatedSH(xx, y, W_CacheLumpName("M_THERML", PU_CACHE), cr); // [Nugget] HUD/menu shadows
     xx += 8;
+
+    { // [Nugget] HUD/menu shadows
+      const patch_t *const patch = W_CacheLumpName("M_THERMM", PU_CACHE);
+      V_SetShadowCrop(SHORT(patch->width) - M_THRM_STEP);
+    }
+
     for (i = 0; i < thermWidth; i++)
     {
-        V_DrawPatchTranslated(xx, y, W_CacheLumpName("M_THERMM", PU_CACHE), cr);
+        V_DrawPatchTranslatedSH(xx, y, W_CacheLumpName("M_THERMM", PU_CACHE), cr); // [Nugget] HUD/menu shadows
         xx += 8;
     }
-    V_DrawPatchTranslated(xx, y, W_CacheLumpName("M_THERMR", PU_CACHE), cr);
+
+    V_SetShadowCrop(0); // [Nugget] HUD/menu shadows
+
+    V_DrawPatchTranslatedSH(xx, y, W_CacheLumpName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 
     // [FG] write numerical values next to thermometer
     M_snprintf(num, 4, "%3d", thermDot);
@@ -3367,7 +3487,7 @@ static void WriteText(int x, int y, const char *string)
         {
             break;
         }
-        V_DrawPatch(cx, cy, hu_font[c]);
+        V_DrawPatchSH(cx, cy, hu_font[c]); // [Nugget] HUD/menu shadows
         cx += w;
     }
 }

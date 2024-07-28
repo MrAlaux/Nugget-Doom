@@ -375,7 +375,7 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
         break;
 
       // killough 1/18/98 -- support multiple lines:
-      V_DrawPatchTranslated(x, y, p[c-HU_FONTSTART], cr);
+      V_DrawPatchTranslatedSH(x, y, p[c-HU_FONTSTART], cr); // [Nugget] HUD/menu shadows
       x += w;
     }
     else if ((x += f->space_width) >= right_margin + HU_GAPX && !st_crispyhud) // [Nugget] NUGHUD
@@ -389,7 +389,7 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
       leveltime & 16)
   {
     cr = m->cr; //jff 2/17/98 restore original color
-    V_DrawPatchTranslated(x, y, p['_' - HU_FONTSTART], cr);
+    V_DrawPatchTranslatedSH(x, y, p['_' - HU_FONTSTART], cr); // [Nugget] HUD/menu shadows
   }
 }
 
@@ -480,6 +480,9 @@ void HUlib_draw_widget (const hu_widget_t *const w)
   const hu_multiline_t *const m = w->multiline;
   const hu_font_t *const f = *m->font;
 
+  // [Nugget] HUD/menu shadows
+  V_ToggleShadows(!HU_IsSmallFont(f->patches['A' - HU_FONTSTART]));
+
   currentline = 0; // [Nugget] NUGHUD: List hack
 
   if (m->numlines == 1)
@@ -493,6 +496,9 @@ void HUlib_draw_widget (const hu_widget_t *const w)
     draw_widget_bottomup(w, f);
   else
     draw_widget_topdown(w, f);
+
+  // [Nugget] HUD/menu shadows
+  V_ToggleShadows(true);
 }
 
 void HUlib_init_multiline(hu_multiline_t *m,

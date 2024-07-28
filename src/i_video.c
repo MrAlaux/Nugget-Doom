@@ -165,14 +165,14 @@ static boolean MouseShouldBeGrabbed(void)
     }
 
     // when menu is active or game is paused, release the mouse
-    if (menuactive || paused)
+    if (menuactive || (paused && R_GetFreecamMode() != FREECAM_CAM)) // [Nugget] Freecam
     {
         return false;
     }
 
     // only grab mouse when playing levels (but not demos)
     return (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
-           && !demoplayback && !advancedemo;
+           && ((!demoplayback && !advancedemo) || R_GetFreecamMode() == FREECAM_CAM); // [Nugget] Freecam
 }
 
 // [FG] mouse grabbing from Chocolate Doom 3.0

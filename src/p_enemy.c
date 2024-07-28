@@ -1222,7 +1222,7 @@ void A_Chase(mobj_t *actor)
   if (actor->flags & MF_JUSTATTACKED)
     {
       actor->flags &= ~MF_JUSTATTACKED;
-      if (gameskill != sk_nightmare && !fastparm)
+      if (!aggressive && !fastmonsters) // [Nugget] Custom Skill
         P_NewChaseDir(actor);
       return;
     }
@@ -1240,7 +1240,7 @@ void A_Chase(mobj_t *actor)
 
   // check for missile attack
   if (actor->info->missilestate)
-    if (!actor->movecount || gameskill >= sk_nightmare || fastparm)
+    if (!actor->movecount || aggressive || fastmonsters) // [Nugget] Custom Skill
       if (P_CheckMissileRange(actor))
         {
           P_SetMobjState(actor, actor->info->missilestate);
@@ -2668,7 +2668,7 @@ void A_BrainSpit(mobj_t *mo)
     return;
 
   brain.easy ^= 1;          // killough 3/26/98: use brain struct
-  if (gameskill <= sk_easy && !brain.easy)
+  if (slowbrain && !brain.easy) // [Nugget] Custom Skill: use `slowbrain`
     return;
 
   // shoot a cube at current target

@@ -1028,20 +1028,23 @@ static void saveg_read_player_t(player_t *str)
 
     // [Nugget] --------------------------------------------------------------
 
-    if (saveg_compat > saveg_woof600) {
-      str->jumptics     = saveg_read32(); // int jumptics;
-      str->crouchoffset = saveg_read32(); // fixed_t crouchoffset;
+    if (saveg_compat > saveg_woof600)
+    {
+        str->jumptics     = saveg_read32(); // int jumptics;
+        str->crouchoffset = saveg_read32(); // fixed_t crouchoffset;
     }
     else {
-      str->jumptics = str->crouchoffset = 0;
-      return;
+        str->jumptics = str->crouchoffset = 0;
+        return;
     }
 
     if (saveg_compat > saveg_nugget200)
-    { str->lastweapon = saveg_read_enum(); } // weapontype_t lastweapon;
+    {
+        str->lastweapon = saveg_read_enum(); // weapontype_t lastweapon;
+    }
     else {
-      str->lastweapon = wp_nochange;
-      return;
+        str->lastweapon = wp_nochange;
+        return;
     }
 }
 

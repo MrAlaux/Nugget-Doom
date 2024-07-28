@@ -52,6 +52,7 @@
 #include "m_nughud.h"
 #include "m_random.h"
 #include "p_map.h"
+#include "s_sound.h"
 #include "wi_stuff.h"
 
 // Fineangles in the SCREENWIDTH wide window.
@@ -79,18 +80,6 @@ extern lighttable_t **walllights;
 fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
 
 static fixed_t focallength, lightfocallength;
-
-// [Nugget] Chasecam /--------------------------------------------------------
-
-chasecam_t chasecam;
-
-boolean chasecam_on;
-
-// For Automap
-fixed_t  chasexofs, chaseyofs;
-angle_t  chaseaofs;
-
-// [Nugget] -----------------------------------------------------------------/
 
 //
 // precalculated math tables
@@ -140,9 +129,11 @@ lighttable_t **colormaps;
 int extralight;                           // bumped light from gun blasts
 int extra_level_brightness;               // level brightness feature
 
-// [Nugget] FOV effects /-----------------------------------------------------
+// [Nugget] /=================================================================
 
-static int r_fov; // Rendered (currently-applied) FOV, with effects added to it
+// FOV effects ---------------------------------------------------------------
+
+static int r_fov; // Rendered (currently applied) FOV, with effects added to it
 
 static fovfx_t fovfx[NUMFOVFX]; // FOV effects (recoil, teleport)
 static int     zoomed = 0;      // Current zoom state
@@ -153,10 +144,6 @@ void R_ClearFOVFX(void)
 
   for (int i = FOVFX_ZOOM+1;  i < NUMFOVFX;  i++)
   {
-    // Note: the `R_SetZoom()` call above sets `setsizeneeded = true` already,
-    // but we'll do it here anyways for future-proofing
-    if (fovfx[i].current != 0) { setsizeneeded = true; }
-
     fovfx[i] = (fovfx_t) { .target = 0, .current = 0, .old = 0 };
   }
 }
@@ -172,14 +159,13 @@ void R_SetFOVFX(const int fx)
 
   switch (fx) {
     case FOVFX_ZOOM:
-      // Handled by R_Get/SetZoom
+      // Handled by `R_Get/SetZoom()`
       break;
 
     case FOVFX_TELEPORT:
       if (!teleporter_zoom) { break; }
       R_SetZoom(ZOOM_RESET);
       fovfx[FOVFX_TELEPORT].target = 50;
-      setsizeneeded = true;
       break;
   }
 }
@@ -194,20 +180,17 @@ void R_SetZoom(const int state)
   if (state == ZOOM_RESET || zoomed == ZOOM_RESET)
   {
     zoomed = ZOOM_RESET;
-    setsizeneeded = true;
     return;
   }
-  else if (zoomed != state) { setsizeneeded = true; }
 
   if (STRICTMODE(zoom_fov - custom_fov))
-  { zoomed = state; }
-  else
-  { zoomed = ZOOM_OFF; }
+  {
+    zoomed = state;
+  }
+  else { zoomed = ZOOM_OFF; }
 }
 
-// [Nugget] -----------------------------------------------------------------/
-
-// [Nugget] Explosion shake effect /------------------------------------------
+// Explosion shake effect ----------------------------------------------------
 
 static fixed_t shake;
 #define MAXSHAKE 50
@@ -249,7 +232,198 @@ void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
   #undef SHAKERANGEMULT
 }
 
-// [Nugget] -----------------------------------------------------------------/
+// Chasecam ------------------------------------------------------------------
+
+static struct {
+  fixed_t x, y, z;
+  boolean hit;
+} chasecam;
+
+boolean chasecam_on = false;
+
+// For Automap
+fixed_t  chasexofs, chaseyofs;
+angle_t  chaseaofs;
+
+boolean R_GetChasecamOn(void)
+{
+  return chasecam_on;
+}
+
+void R_SetChasecamHit(const boolean value)
+{
+  chasecam.hit = value;
+}
+
+void R_UpdateChasecam(fixed_t x, fixed_t y, fixed_t z)
+{
+  chasecam.x = x;
+  chasecam.y = y;
+  chasecam.z = z;
+}
+
+// Freecam -------------------------------------------------------------------
+
+static boolean       freecam_on = false;
+static freecammode_t freecam_mode = FREECAM_OFF + 1;
+
+static struct {
+  fixed_t x, ox,
+          y, oy,
+          z, oz;
+  angle_t angle, oangle;
+  fixed_t pitch, opitch;
+
+  int     reset;
+  boolean interp, centering;
+  mobj_t *mobj;
+} freecam;
+
+boolean R_GetFreecamOn(void)
+{
+  return freecam_on;
+}
+
+void R_SetFreecamOn(const boolean value)
+{
+  freecam_on = STRICTMODE(value);
+}
+
+freecammode_t R_GetFreecamMode(void)
+{
+  return freecam_on * freecam_mode;
+}
+
+freecammode_t R_CycleFreecamMode(void)
+{
+  return (++freecam_mode >= NUMFREECAMMODES) ? freecam_mode = FREECAM_OFF + 1 : freecam_mode;
+}
+
+angle_t R_GetFreecamAngle(void)
+{
+  return freecam.angle;
+}
+
+void R_ResetFreecam(const boolean newmap)
+{
+  freecam.reset = (int) true + newmap;
+}
+
+void R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z)
+{
+  if (freecam.mobj) { R_UpdateFreecamMobj(NULL); }
+
+  freecam.x = x;
+  freecam.y = y;
+  freecam.z = z;
+
+  freecam.interp = false;
+}
+
+void R_UpdateFreecamMobj(mobj_t *const mobj)
+{
+  if (freecam.mobj) { freecam.mobj->thinker.references--; }
+  if         (mobj) {         mobj->thinker.references++; }
+
+  freecam.mobj = mobj;
+}
+
+const mobj_t *R_GetFreecamMobj(void)
+{
+  return freecam_on ? freecam.mobj : NULL;
+}
+
+void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
+                     fixed_t pitch, boolean center, boolean lock)
+{
+  if (freecam.reset)
+  {
+    const player_t *const player = &players[displayplayer];
+
+    freecam.x     = player->mo->x;
+    freecam.y     = player->mo->y;
+    freecam.z     = player->mo->z + player->viewheight;
+    freecam.angle = player->mo->angle;
+    freecam.pitch = player->pitch;
+
+    freecam.interp = false;
+    freecam.centering = false;
+
+    if (freecam.reset == 2)
+    { freecam.mobj = NULL; }
+    else
+    { R_UpdateFreecamMobj(NULL); }
+
+    freecam.reset = false;
+
+    return;
+  }
+
+  freecam.interp = true;
+
+  if (lock)
+  {
+    if (freecam.mobj) {
+      R_UpdateFreecamMobj(NULL);
+    }
+    else {
+      const boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
+      overflow[emu_intercepts].enabled = false;
+
+      player_t dummyplayer = {0};
+      dummyplayer.slope = P_PitchToSlope(freecam.pitch);
+
+      mobj_t dummymo = {0};
+      dummymo.x = freecam.x;
+      dummymo.y = freecam.y;
+      dummymo.z = freecam.z;
+      dummymo.player = &dummyplayer;
+
+      P_AimLineAttack(&dummymo, freecam.angle, 16*64*FRACUNIT * (comp_longautoaim+1), CROSSHAIR_AIM);
+
+      overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
+
+      if (linetarget && linetarget != players[consoleplayer].mo)
+      {
+        R_UpdateFreecamMobj(linetarget);
+        freecam.interp = false;
+        freecam.mobj->interp = -1;
+        freecam.pitch = 0;
+      }
+    }
+  }
+
+  freecam.ox     = freecam.x;
+  freecam.oy     = freecam.y;
+  freecam.oz     = freecam.z;
+  freecam.oangle = freecam.angle;
+  freecam.opitch = freecam.pitch;
+
+  if (freecam.mobj && freecam.mobj->health > 0)
+  {
+    freecam.x     = freecam.mobj->x;
+    freecam.y     = freecam.mobj->y;
+    freecam.z     = freecam.mobj->z + (freecam.mobj->height * 13/16);
+    freecam.angle = freecam.mobj->angle;
+  }
+  else {
+    freecam.x     += x;
+    freecam.y     += y;
+    freecam.z     += z;
+    freecam.angle += angle;
+
+    R_UpdateFreecamMobj(NULL);
+  }
+
+  if ((freecam.centering |= center))
+  {
+    if (!(freecam.pitch = MAX(0, abs(freecam.pitch) - 4*ANG1) * ((freecam.pitch > 0) ? 1 : -1)))
+    { freecam.centering = false; }
+  }
+  else { freecam.pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, freecam.pitch + pitch); }
+}
+
+// [Nugget] =================================================================/
 
 void (*colfunc)(void) = R_DrawColumn;     // current column draw function
 
@@ -631,7 +805,7 @@ static void R_SetupFreelook(void)
     dy = 0;
   }
 
-  if (STRICTMODE(st_crispyhud) && !(WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION)))
+  if (STRICTMODE(st_crispyhud) && gamestate == GS_LEVEL)
   {
     dy += (nughud.viewoffset * viewheight / SCREENHEIGHT) << FRACBITS;
   }
@@ -675,7 +849,7 @@ void R_ExecuteSetViewSize (void)
   setsizeneeded = false;
 
   // [Nugget] Alt. intermission background
-  if (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
+  if (WI_UsingAltInterpic() && gamestate == GS_INTERMISSION)
   { setblocks = 11; }
 
   if (setblocks == 11)
@@ -724,88 +898,6 @@ void R_ExecuteSetViewSize (void)
   viewheight  = view.sh;
 
   viewwidth_nonwide = V_ScaleX(scaledviewwidth_nonwide);
-
-  { // [Nugget] FOV changes
-    static int oldtic = -1;
-    int fx = 0;
-    int zoomtarget;
-
-    if (strictmode || zoomed == ZOOM_RESET) { // Force zoom reset
-      zoomtarget = 0;
-      fovfx[FOVFX_ZOOM] = (fovfx_t) { .target = 0, .current = 0, .old = 0 };
-      zoomed = ZOOM_OFF;
-    }
-    else {
-      zoomtarget = (zoomed ? zoom_fov - custom_fov : 0);
-      // In case `custom_fov` changes while zoomed in...
-      if (zoomed && abs(fovfx[FOVFX_ZOOM].target) > abs(zoomtarget))
-      { fovfx[FOVFX_ZOOM] = (fovfx_t) { .target = zoomtarget, .current = zoomtarget, .old = zoomtarget }; }
-    }
-
-    if (!strictmode)
-    {
-      if (fovfx[FOVFX_ZOOM].target != zoomtarget)
-      {
-        setsizeneeded = true;
-      }
-      else for (i = 0;  i < NUMFOVFX;  i++)
-        if (fovfx[i].target || fovfx[i].current)
-        {
-          setsizeneeded = true;
-          break;
-        }
-    }
-
-    if (setsizeneeded)
-    {
-      if (oldtic != gametic)
-      {
-        setsizeneeded = false;
-
-        fovfx[FOVFX_ZOOM].old = fovfx[FOVFX_ZOOM].current = fovfx[FOVFX_ZOOM].target;
-
-        if (zoomtarget || fovfx[FOVFX_ZOOM].target)
-        {
-          // Special handling for zoom
-          int step = zoomtarget - fovfx[FOVFX_ZOOM].target;
-          const int sign = ((step > 0) ? 1 : -1);
-          step = BETWEEN(1, 16, round(abs(step) / 3.0));
-
-          fovfx[FOVFX_ZOOM].target += step*sign;
-
-          if (   (sign > 0 && fovfx[FOVFX_ZOOM].target > zoomtarget)
-              || (sign < 0 && fovfx[FOVFX_ZOOM].target < zoomtarget))
-          {
-            fovfx[FOVFX_ZOOM].target = zoomtarget;
-          }
-
-          if (fovfx[FOVFX_ZOOM].current != fovfx[FOVFX_ZOOM].target)
-          { setsizeneeded = true; }
-        }
-
-        fovfx[FOVFX_TELEPORT].old = fovfx[FOVFX_TELEPORT].current = fovfx[FOVFX_TELEPORT].target;
-
-        if (fovfx[FOVFX_TELEPORT].target)
-        {
-          if ((fovfx[FOVFX_TELEPORT].target -= 5) < 0)
-          { fovfx[FOVFX_TELEPORT].target = 0; }
-          else
-          { setsizeneeded = true; }
-        }
-      }
-      else if (uncapped)
-        for (i = 0;  i < NUMFOVFX;  i++)
-        { fovfx[i].current = fovfx[i].old + ((fovfx[i].target - fovfx[i].old) * ((float) fractionaltic/FRACUNIT)); }
-    }
-
-    oldtic = gametic;
-
-    for (i = 0;  i < NUMFOVFX;  i++)
-    { fx += fovfx[i].current; }
-
-    r_fov = (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
-            ? MAX(140, custom_fov) : custom_fov + fx;
-  }
 
   centerxfrac = (viewwidth << FRACBITS) / 2;
   centerx = centerxfrac >> FRACBITS;
@@ -872,7 +964,9 @@ void R_ExecuteSetViewSize (void)
     }
 
   // [crispy] forcefully initialize the status bar backing screen
-  ST_refreshBackground();
+  // [Nugget] Unless the alt. intermission background is enabled
+  if (!WI_UsingAltInterpic())
+    ST_refreshBackground();
 
   pspr_interp = false;
 }
@@ -921,7 +1015,9 @@ static inline boolean CheckLocalView(const player_t *player)
     // Don't use localview when interpolation is preferred.
     raw_input &&
     // Don't use localview if the player is spying.
-    player == &players[consoleplayer] &&
+    (player == &players[consoleplayer]
+     // [Nugget] Freecam: or locked onto a mobj, or not controlling the camera
+     || (freecam_on && !(freecam.mobj || freecam_mode != FREECAM_CAM))) &&
     // Don't use localview if the player is dead.
     player->playerstate != PST_DEAD &&
     // Don't use localview if the player just teleported.
@@ -947,7 +1043,48 @@ void R_SetupFrame (player_t *player)
   static angle_t old_interangle, target_interangle;
   static fixed_t chasecamheight;
 
+  // [Nugget] Freecam
+  if (freecam_on && gamestate == GS_LEVEL)
+  {
+    static player_t dummyplayer = {0};
+    static mobj_t dummymobj = {0};
+
+    if (freecam.mobj)
+    {
+      dummymobj = *freecam.mobj;
+    }
+    else {
+      memset(&dummymobj, 0, sizeof(mobj_t));
+
+      dummymobj.oldx = freecam.ox;
+      dummymobj.x    = freecam.x;
+      dummymobj.oldy = freecam.oy;
+      dummymobj.y    = freecam.y;
+      dummymobj.oldz = freecam.oz;
+      dummymobj.z    = freecam.z;
+
+      dummymobj.oldangle = freecam.oangle;
+      dummymobj.angle    = freecam.angle;
+
+      dummymobj.interp = freecam.interp;
+      dummymobj.subsector = R_PointInSubsector(freecam.x, freecam.y);
+    }
+
+    dummyplayer.oldviewz = freecam.oz;
+    dummyplayer.viewz    = freecam.z;
+    dummyplayer.oldpitch = freecam.opitch;
+    dummyplayer.pitch    = freecam.pitch;
+
+    dummyplayer.centering = (dummyplayer.centering && freecam.opitch != freecam.pitch)
+                          | freecam.centering;
+
+    dummymobj.player = &dummyplayer;
+    dummyplayer.mo = &dummymobj;
+    player = &dummyplayer;
+  }
+
   viewplayer = player;
+
   // [AM] Interpolate the player camera if the feature is enabled.
   if (uncapped &&
       // Don't interpolate on the first tic of a level,
@@ -957,7 +1094,8 @@ void R_SetupFrame (player_t *player)
       // that would necessitate turning it off for a tic.
       player->mo->interp == true &&
       // Don't interpolate during a paused state
-      leveltime > oldleveltime)
+      (leveltime > oldleveltime
+       || (freecam_on && !freecam.mobj && gamestate == GS_LEVEL))) // [Nugget] Freecam
   {
     // Use localview unless the player or game is in an invalid state, in which
     // case fall back to interpolation.
@@ -1013,10 +1151,11 @@ void R_SetupFrame (player_t *player)
     pitch += player->flinch; // Flinching
   }
 
-  // [Nugget] /---------------------------------------------------------------
+  // [Nugget] /===============================================================
 
-  // Alt. intermission background
-  if (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))
+  // Alt. intermission background --------------------------------------------
+
+  if (WI_UsingAltInterpic() && gamestate == GS_INTERMISSION)
   {
     static int oldtic = -1;
 
@@ -1033,17 +1172,20 @@ void R_SetupFrame (player_t *player)
   }
   else { target_interangle = viewangle; }
 
-  // Explosion shake effect
-  chasecamheight = chasecam_height * FRACUNIT;
+  // Explosion shake effect --------------------------------------------------
+
+  chasecamheight = R_GetFreecamMobj() ? freecam.z - freecam.mobj->z : chasecam_height * FRACUNIT;
+
   if (shake > 0)
   {
-    static fixed_t xofs=0, yofs=0, zofs=0;
+    static fixed_t xofs = 0, yofs = 0, zofs = 0;
 
     if (!((menuactive && !demoplayback && !netgame) || paused))
     {
       static int oldtime = -1;
+      const fixed_t intensity = FRACUNIT * explosion_shake_intensity_pct / 100;
 
-      #define CALCSHAKE (((Woof_Random() - 128) % 3) * FRACUNIT) * shake / MAXSHAKE
+      #define CALCSHAKE (((Woof_Random() - 128) % 3) * intensity) * shake / MAXSHAKE
       xofs = CALCSHAKE;
       yofs = CALCSHAKE;
       zofs = CALCSHAKE;
@@ -1060,16 +1202,17 @@ void R_SetupFrame (player_t *player)
     chasecamheight += zofs;
   }
 
-  // Chasecam
+  // Chasecam ----------------------------------------------------------------
 
-  chasecam_on = STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0 && player->playerstate == PST_DEAD))
-                && !(WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION));
+  chasecam_on = gamestate == GS_LEVEL
+                && STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0 && player->playerstate == PST_DEAD))
+                && !(freecam_on && !freecam.mobj);
 
   if (chasecam_on)
   {
-    fixed_t slope = basepitch ? (fixed_t) ((int64_t) finetangent[(ANG90 - basepitch) >> ANGLETOFINESHIFT] * SCREENHEIGHT / ACTUALHEIGHT) : 0;
+    fixed_t slope = -P_PitchToSlope(basepitch);
 
-    static fixed_t oldextradist = 0, extradist = 0;
+    static fixed_t oldeffort = 0, effort = 0;
 
     const fixed_t z = MIN(playerz + ((player->mo->health <= 0 && player->playerstate == PST_DEAD) ? 6*FRACUNIT : chasecamheight),
                           player->mo->ceilingz - (2*FRACUNIT));
@@ -1081,7 +1224,8 @@ void R_SetupFrame (player_t *player)
 
     const angle_t oldviewangle = viewangle;
 
-    if (chasecam_mode == CHASECAMMODE_FRONT) {
+    if (chasecam_mode == CHASECAMMODE_FRONT)
+    {
       viewangle += ANG180;
       slope      = -slope;
       basepitch  = -basepitch;
@@ -1091,10 +1235,23 @@ void R_SetupFrame (player_t *player)
     {
       static int oldtic = -1;
 
-      if (oldtic != gametic) {
-        oldextradist = extradist;
-        extradist = FixedMul(player->mo->momx, finecosine[viewangle >> ANGLETOFINESHIFT])
-                  + FixedMul(player->mo->momy,   finesine[viewangle >> ANGLETOFINESHIFT]);
+      if (oldtic != gametic)
+      {
+        oldeffort = effort;
+
+        fixed_t momx, momy;
+
+        if (demo_version < DV_MBF) {
+          momx = player->mo->momx;
+          momy = player->mo->momy;
+        }
+        else {
+          momx = player->momx;
+          momy = player->momy;
+        }
+
+        effort = FixedMul(momx, finecosine[viewangle >> ANGLETOFINESHIFT])
+               + FixedMul(momy,   finesine[viewangle >> ANGLETOFINESHIFT]);
       }
 
       oldtic = gametic;
@@ -1102,9 +1259,9 @@ void R_SetupFrame (player_t *player)
 
     if (uncapped && leveltime > 1 && player->mo->interp == true && leveltime > oldleveltime)
     {
-      dist += LerpFixed(oldextradist, extradist);
+      dist += LerpFixed(oldeffort, effort);
     }
-    else { dist += extradist; }
+    else { dist += effort; }
 
     P_PositionChasecam(z, dist, slope);
 
@@ -1142,7 +1299,7 @@ void R_SetupFrame (player_t *player)
   }
   else { chasexofs = chaseyofs = chaseaofs = 0; }
 
-  // [Nugget] ---------------------------------------------------------------/
+  // [Nugget] ===============================================================/
 
   if (pitch != viewpitch)
   {
@@ -1219,6 +1376,104 @@ int autodetect_hom = 0;       // killough 2/7/98: HOM autodetection flag
 void R_RenderPlayerView (player_t* player)
 {
   R_ClearStats();
+
+  { // [Nugget] FOV effects
+    int targetfov = custom_fov;
+
+    if (WI_UsingAltInterpic() && gamestate == GS_INTERMISSION)
+    {
+      targetfov = MAX(140, targetfov);
+    }
+    else {
+      static int oldtic = -1;
+
+      int zoomtarget;
+
+      // Force zoom reset
+      if (strictmode || zoomed == ZOOM_RESET)
+      {
+        zoomtarget = 0;
+        fovfx[FOVFX_ZOOM] = (fovfx_t) { .target = 0, .current = 0, .old = 0 };
+        zoomed = ZOOM_OFF;
+      }
+      else {
+        zoomtarget = zoomed ? zoom_fov - custom_fov : 0;
+
+        // In case `custom_fov` changes while zoomed in...
+        if (zoomed && abs(fovfx[FOVFX_ZOOM].target) > abs(zoomtarget))
+        { fovfx[FOVFX_ZOOM] = (fovfx_t) { .target = zoomtarget, .current = zoomtarget, .old = zoomtarget }; }
+      }
+
+      boolean fovchange = false;
+
+      if (!strictmode)
+      {
+        if (fovfx[FOVFX_ZOOM].target != zoomtarget)
+        {
+          fovchange = true;
+        }
+        else for (int i = 0;  i < NUMFOVFX;  i++)
+        {
+          if (fovfx[i].target || fovfx[i].current)
+          {
+            fovchange = true;
+            break;
+          }
+        }
+      }
+
+      if (fovchange)
+      {
+        if (oldtic != gametic)
+        {
+          fovchange = false;
+
+          int *target;
+
+          target = &fovfx[FOVFX_ZOOM].target;
+          fovfx[FOVFX_ZOOM].old = fovfx[FOVFX_ZOOM].current = *target;
+
+          // Special handling for zoom
+          if (zoomtarget || *target)
+          {
+            int step = zoomtarget - *target;
+            const int sign = ((step > 0) ? 1 : -1);
+
+            *target += BETWEEN(1, 16, round(abs(step) / 3.0)) * sign;
+
+            if (   (sign > 0 && *target > zoomtarget)
+                || (sign < 0 && *target < zoomtarget))
+            {
+              *target = zoomtarget;
+            }
+          }
+
+          target = &fovfx[FOVFX_TELEPORT].target;
+          fovfx[FOVFX_TELEPORT].old = fovfx[FOVFX_TELEPORT].current = *target;
+
+          if (*target) { *target = MAX(0, *target - 5); }
+        }
+        else if (uncapped)
+          for (int i = 0;  i < NUMFOVFX;  i++)
+          { fovfx[i].current = fovfx[i].old + ((fovfx[i].target - fovfx[i].old) * ((float) fractionaltic/FRACUNIT)); }
+      }
+
+      oldtic = gametic;
+
+      for (int i = 0;  i < NUMFOVFX;  i++)
+      {
+        if (FOVFX_ZOOM < i && freecam_on) { break; }
+
+        targetfov += fovfx[i].current;
+      }
+    }
+
+    if (r_fov != targetfov)
+    {
+      r_fov = targetfov;
+      R_ExecuteSetViewSize();
+    }
+  }
 
   R_SetupFrame (player);
 

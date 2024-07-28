@@ -96,6 +96,8 @@ void M_StartSound(int sound_id);
 
 void M_StartSoundOptional(const int opt_sound_id, const int sound_id); // [Nugget]
 
+void M_StartCustomSkill(const int mode); // [Nugget] Custom Skill
+
 #endif
 
 //----------------------------------------------------------------------------

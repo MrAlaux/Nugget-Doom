@@ -144,6 +144,7 @@ enum
     input_crosshair,
     input_zoom,
     input_chasecam,
+    input_freecam,
 
     input_rewind,
 

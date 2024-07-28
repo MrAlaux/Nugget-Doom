@@ -268,7 +268,8 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
       if (!p->cards[it_bluecard] && !p->cards[it_blueskull])
         {
           doomprintf(p, MESSAGES_NONE, "%s", s_PD_BLUEO);  // Ty 03/27/98 - externalized
-          S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
+          S_StartSoundOptional(p->mo, sfx_locked, // [Nugget]: [NS] Locked door sound.
+                               STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
           ST_SetKeyBlink(p, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
           return 0;
         }
@@ -279,7 +280,8 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
       if (!p->cards[it_redcard] && !p->cards[it_redskull])
         {
           doomprintf(p, MESSAGES_NONE, "%s", s_PD_REDO); // Ty 03/27/98 - externalized
-          S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
+          S_StartSoundOptional(p->mo, sfx_locked, // [Nugget]: [NS] Locked door sound.
+                               STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
           ST_SetKeyBlink(p, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
           return 0;
         }
@@ -290,7 +292,8 @@ int EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
       if (!p->cards[it_yellowcard] && !p->cards[it_yellowskull])
         {
           doomprintf(p, MESSAGES_NONE, "%s", s_PD_YELLOWO);  // Ty 03/27/98 - externalized
-          S_StartSoundOptional(p->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
+          S_StartSoundOptional(p->mo, sfx_locked, // [Nugget]: [NS] Locked door sound.
+                               STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
           ST_SetKeyBlink(p, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
           return 0;
         }
@@ -418,7 +421,8 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
       if (!player->cards[it_bluecard] && !player->cards[it_blueskull])
         {
           doomprintf(player, MESSAGES_NONE, "%s", s_PD_BLUEK);  // Ty 03/27/98 - externalized
-          S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
+          S_StartSoundOptional(player->mo, sfx_locked, // [Nugget]: [NS] Locked door sound.
+                               STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
           ST_SetKeyBlink(player, KEYBLINK_EITHER, KEYBLINK_NONE, KEYBLINK_NONE);
           return 0;
         }
@@ -431,7 +435,8 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
       if (!player->cards[it_yellowcard] && !player->cards[it_yellowskull])
         {
           doomprintf(player, MESSAGES_NONE, "%s", s_PD_YELLOWK);  // Ty 03/27/98 - externalized
-          S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
+          S_StartSoundOptional(player->mo, sfx_locked, // [Nugget]: [NS] Locked door sound.
+                               STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
           ST_SetKeyBlink(player, KEYBLINK_NONE, KEYBLINK_EITHER, KEYBLINK_NONE);
           return 0;
         }
@@ -444,7 +449,8 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
       if (!player->cards[it_redcard] && !player->cards[it_redskull])
         {
           doomprintf(player, MESSAGES_NONE, "%s", s_PD_REDK); // Ty 03/27/98 - externalized
-          S_StartSoundOptional(player->mo, sfx_locked, sfx_oof); // [Nugget]: [NS] Locked door sound.
+          S_StartSoundOptional(player->mo, sfx_locked, // [Nugget]: [NS] Locked door sound.
+                               STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
           ST_SetKeyBlink(player, KEYBLINK_NONE, KEYBLINK_NONE, KEYBLINK_EITHER);
           return 0;
         }

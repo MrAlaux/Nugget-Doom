@@ -73,6 +73,8 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 
+static boolean drawingpspr = false; // [Nugget]
+
 lighttable_t **spritelights;        // killough 1/25/98 made static
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
@@ -456,6 +458,8 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         {
           colfunc = R_DrawTLColumn;
           tranmap = main_tranmap;       // killough 4/11/98
+
+          if (drawingpspr) { tranmap = pspr_tranmap; } // [Nugget] Translucent flashes
         }
       else
         colfunc = R_DrawColumn;         // killough 3/14/98, 4/11/98
@@ -507,6 +511,10 @@ void R_ProjectSprite (mobj_t* thing)
   // [FG] moved declarations here
   fixed_t tr_x, tr_y, gxt, gyt, tz;
   fixed_t interpx, interpy, interpz, interpangle;
+
+  // [Nugget] Freecam
+  if (thing == R_GetFreecamMobj() && !R_GetChasecamOn())
+  { return; }
 
   // andrewj: voxel support
   if (VX_ProjectVoxel (thing))
@@ -836,8 +844,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   vis->patch = lump;
 
   // killough 7/11/98: beta psprites did not draw shadows
-  if ((viewplayer->powers[pw_invisibility] > 4*32
-      || viewplayer->powers[pw_invisibility] & 8) && !beta_emulation)
+  if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
 
     vis->colormap[0] = vis->colormap[1] = NULL;                    // shadow draw
   else if (fixedcolormap)
@@ -892,11 +899,12 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // [crispy] free look
   vis->texturemid += (centery - viewheight/2) * pspriteiscale
-                     - (STRICTMODE(st_crispyhud) ? nughud.weapheight*FRACUNIT : 0); // [Nugget] NUGHUD
+                   - (STRICTMODE(st_crispyhud) ? nughud.weapheight*FRACUNIT : 0); // [Nugget] NUGHUD
 
   if (STRICTMODE(hide_weapon)
       // [Nugget]
-      || chasecam_on // Chasecam
+      || R_GetChasecamOn() // Chasecam
+      || R_GetFreecamOn() // Freecam
       || (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))) // Alt. intermission background
     return;
 
@@ -938,6 +946,8 @@ void R_DrawPlayerSprites(void)
   if (hud_crosshair_on) // [Nugget] Use crosshair toggle
     HU_DrawCrosshair();
 
+  drawingpspr = true; // [Nugget]
+
   // add all active psprites
   for (i=0, psp=viewplayer->psprites;
        // [Nugget]: [crispy] A11Y number of player (first person) sprites to draw
@@ -945,6 +955,8 @@ void R_DrawPlayerSprites(void)
        i++,psp++)
     if (psp->state)
       R_DrawPSprite (psp, i == ps_flash && STRICTMODE(translucent_pspr)); // [Nugget] Translucent flashes
+
+  drawingpspr = false; // [Nugget]
 }
 
 //

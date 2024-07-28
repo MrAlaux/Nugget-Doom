@@ -104,8 +104,9 @@ General options: \n\
 \n\
 Game start options: \n\
   -pistolstart        Enables automatic pistol starts on each level.\n\
-  -skill <skill>      Set the game skill, 1-5 (1: easiest, 5: hardest). A\n\
-                      skill of 0 disables all monsters only in -complevel\n\
+  -skill <skill>      Set the game skill,\n\
+                      1-6 (1: easiest, 5: hardest, 6: custom).\n\
+                      A skill of 0 disables all monsters only in -complevel\n\
                       vanilla.\n\
   -warp <x> <y>|<xy>  Start a game immediately, warping to ExMy (Doom 1) or\n\
                       MAPxy (Doom 2).\n\

@@ -93,6 +93,10 @@ void MN_DrawAutoMap(void);
 void MN_DrawWeapons(void);
 void MN_DrawEnemy(void);
 
+// [Nugget] Custom Skill menu
+void MN_CustomSkill(void);
+void MN_DrawCustomSkill(void);
+
 extern int resolution_scale;
 extern int midi_player_menu;
 extern const char *midi_player_string;
@@ -135,8 +139,9 @@ extern const char *midi_player_string;
 #define S_PCT         0x40000000 // Show % sign
 
 // [Nugget]
-#define S_CRITICAL    0x00000008 // Disable during non-casual play
-#define S_RES         0x80000000 // Report current resolution
+#define S_CRITICAL    0x0000000100000000 // Disable during non-casual play
+#define S_RES         0x0000000200000000 // Report current resolution
+#define S_FUNCTION    0x0000000400000000 // Used only to call a function
 
 // S_SHOWDESC  = the set of items whose description should be displayed
 // S_SHOWSET   = the set of items whose setting should be displayed
@@ -145,7 +150,8 @@ extern const char *midi_player_string;
 
 #define S_SHOWDESC                                                       \
     (S_TITLE | S_ONOFF | S_CRITEM | S_RESET | S_INPUT | S_WEAP | S_NUM   \
-     | S_CREDIT | S_CHOICE | S_THERMO)
+     | S_CREDIT | S_CHOICE | S_THERMO                                    \
+     | S_FUNCTION) // [Nugget]
 
 #define S_SHOWSET \
     (S_ONOFF | S_CRITEM | S_INPUT | S_WEAP | S_NUM | S_CHOICE | S_THERMO)
@@ -187,7 +193,8 @@ typedef enum
 typedef struct setup_menu_s
 {
     const char *m_text;  // text to display
-    int m_flags;         // phares 4/17/98: flag bits S_* (defined above)
+    int64_t m_flags;     // phares 4/17/98: flag bits S_* (defined above)
+                         // [Nugget] Made 64-bit
     short m_x;           // screen x position (left is 0)
     short m_y;           // screen y position (top is 0)
 

@@ -28,6 +28,9 @@ struct node_s;
 struct player_s;
 struct seg_s;
 
+// [Nugget]
+struct mobj_s;
+
 //
 // POV related.
 //
@@ -48,19 +51,6 @@ extern int      validcount;
 extern int      linecount;
 extern int      loopcount;
 extern fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
-
-// [Nugget] Chasecam /--------------------------------------------------------
-
-typedef struct chasecam_s {
-  fixed_t x, y, z;
-  boolean hit;
-} chasecam_t;
-
-extern chasecam_t chasecam;
-
-extern boolean chasecam_on;
-
-// [Nugget] -----------------------------------------------------------------/
 
 //
 // Rendering stats
@@ -126,7 +116,12 @@ void R_RenderPlayerView(struct player_s *player);   // Called by G_Drawer.
 void R_Init(void);                           // Called by startup code.
 void R_SetViewSize(int blocks);              // Called by M_Responder.
 
-// [Nugget] FOV effects /-----------------------------------------------------
+// [Nugget] /=================================================================
+
+#define POWER_RUNOUT(power) \
+  ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
+
+// FOV effects ---------------------------------------------------------------
 
 typedef struct fovfx_s {
   int old, current, target;
@@ -151,11 +146,42 @@ extern void R_SetFOVFX(const int fx);
 extern int  R_GetZoom(void);
 extern void R_SetZoom(const int state);
 
-// [Nugget] -----------------------------------------------------------------/
+// Explosion shake effect ----------------------------------------------------
 
-// [Nugget] Explosion shake effect
 extern void R_SetShake(int value);
 extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range);
+
+// Chasecam ------------------------------------------------------------------
+
+extern boolean R_GetChasecamOn(void);
+extern void    R_SetChasecamHit(const boolean value);
+extern void    R_UpdateChasecam(fixed_t x, fixed_t y, fixed_t z);
+
+// Freecam -------------------------------------------------------------------
+
+typedef enum freecammode_s {
+  FREECAM_OFF,
+  FREECAM_CAM,
+  FREECAM_PLAYER,
+  
+  NUMFREECAMMODES
+} freecammode_t;
+
+extern boolean       R_GetFreecamOn(void);
+extern void          R_SetFreecamOn(const boolean value);
+extern freecammode_t R_GetFreecamMode(void);
+extern freecammode_t R_CycleFreecamMode(void);
+extern angle_t       R_GetFreecamAngle(void);
+extern void          R_ResetFreecam(const boolean newmap);
+extern void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
+
+extern void                 R_UpdateFreecamMobj(struct mobj_s *const mobj);
+extern const struct mobj_s *R_GetFreecamMobj(void);
+
+extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
+                            fixed_t pitch, boolean center, boolean lock);
+
+// [Nugget] =================================================================/
 
 void R_InitLightTables(void);                // killough 8/9/98
 int R_GetLightIndex(fixed_t scale);

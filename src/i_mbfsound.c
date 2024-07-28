@@ -29,6 +29,9 @@
 #include "r_main.h"
 #include "tables.h"
 
+// [Nugget]
+#include "r_state.h"
+
 int forceFlipPan;
 
 static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
@@ -37,6 +40,11 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
 {
     fixed_t adx, ady, dist;
     angle_t angle;
+
+    // [Nugget] Freecam
+    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+                             ? viewplayer->mo
+                             : players[displayplayer].mo;
 
     // haleyjd 05/29/06: allow per-channel volume scaling
     *vol = (snd_SfxVolume * chanvol) / 15;
@@ -52,7 +60,7 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
 
     *sep = NORM_SEP;
 
-    if (!source || source == players[displayplayer].mo)
+    if (!source || source == playermo)
     {
         return true;
     }
@@ -92,8 +100,8 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
         return false;
     }
 
-    if (source->x != players[displayplayer].mo->x
-        || source->y != players[displayplayer].mo->y)
+    if (source->x != playermo->x
+        || source->y != playermo->y)
     {
         // angle of source to listener
         angle = R_PointToAngle2(listener->x, listener->y, source->x, source->y);

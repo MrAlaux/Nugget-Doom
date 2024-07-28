@@ -312,7 +312,10 @@ void STlib_updateMultIcon
   if (*mi->on)
   {
     if (*mi->inum != -1)  // killough 2/16/98: redraw only if != -1
-      V_DrawPatch(mi->x, mi->y, mi->p[*mi->inum]);
+      // [Nugget] Highlight the current/pending weapon
+      // (As of writing this, `w_arms[]` are the only multicons that use `.data`)
+      V_DrawPatchTranslated(mi->x, mi->y, mi->p[*mi->inum],
+                            mi->data == 2997 ? cr_gray_vc : NULL);
   }
 }
 

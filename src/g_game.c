@@ -85,6 +85,9 @@
 #include "wi_stuff.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "d_items.h"
+
 #define SAVEGAMESIZE  0x20000
 #define SAVESTRINGSIZE  24
 
@@ -98,7 +101,23 @@ static size_t   maxdemosize;
 static byte     *demo_p;
 static byte     consistancy[MAXPLAYERS][BACKUPTICS];
 
-// [Nugget] Rewind /----------------------------------------------------------
+// [Nugget] /=================================================================
+
+boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
+
+boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
+
+// Autosave ------------------------------------------------------------------
+
+static boolean autosaving = false;
+static int autosave_countdown = 0;
+
+void G_SetAutosaveCountdown(int value)
+{
+  autosave_countdown = value;
+}
+
+// Rewind --------------------------------------------------------------------
 
 static boolean keyframe_rw = false;
 
@@ -116,7 +135,118 @@ static keyframe_t *keyframe_list_head = NULL, *keyframe_list_tail = NULL;
 
 static int keyframe_index = -1;
 
-// [Nugget] -----------------------------------------------------------------/
+// Custom Skill --------------------------------------------------------------
+
+// Actual custom-skill settings, set either by menu or savegames
+static struct {
+  int     things;
+  boolean coopspawns;
+  boolean nomonsters;
+  boolean doubleammo;
+  boolean halfdamage;
+  boolean slowbrain;
+  boolean fast;
+  boolean respawn;
+  boolean aggressive;
+} customskill;
+
+int     thingspawns;
+boolean realnomonsters;
+boolean doubleammo;
+boolean halfdamage;
+boolean slowbrain;
+boolean fastmonsters;
+boolean aggressive;
+
+static struct {
+  int          mohealth;
+  int          health;
+  int          armorpoints;
+  int          armortype;
+  boolean      backpack;
+  weapontype_t readyweapon;
+  weapontype_t lastweapon;
+  boolean      weaponowned[NUMWEAPONS];
+  int          ammo[NUMAMMO];
+  int          maxammo[NUMAMMO];
+} initial_loadout;
+
+void G_SetBabyModeParms(const skill_t skill)
+{
+  if (skill == sk_custom)
+  {
+    doubleammo = customskill.doubleammo;
+    halfdamage = customskill.halfdamage;
+  }
+  else {
+    doubleammo = skill == sk_baby || skill == sk_nightmare;
+    halfdamage = skill == sk_baby;
+  }
+
+  doubleammo |= CASUALPLAY(doubleammoparm);
+  halfdamage |= CASUALPLAY(halfdamageparm);
+}
+
+// [Nugget]
+void G_SetSkillParms(const skill_t skill)
+{
+  if (skill == sk_custom)
+  {
+    thingspawns     = customskill.things;
+    coop_spawns     = customskill.coopspawns;
+    realnomonsters  = customskill.nomonsters;
+    slowbrain       = customskill.slowbrain;
+    fastmonsters    = customskill.fast;
+    respawnmonsters = customskill.respawn;
+    aggressive      = customskill.aggressive;
+  }
+  else {
+    thingspawns = (skill == sk_baby || skill == sk_easy)      ? THINGSPAWNS_EASY :
+                  (skill == sk_hard || skill == sk_nightmare) ? THINGSPAWNS_HARD : THINGSPAWNS_NORMAL;
+
+    coop_spawns     = coopspawnsparm;
+    realnomonsters  = nomonsters;
+    slowbrain       = skill <= sk_easy;
+    fastmonsters    = fastparm || skill == sk_nightmare;
+    respawnmonsters = skill == sk_nightmare || respawnparm;
+    aggressive      = skill == sk_nightmare;
+  }
+
+  G_SetBabyModeParms(skill);
+  G_SetFastParms(fastmonsters);
+}
+
+void G_SetUserCustomSkill(void)
+{
+  customskill.things     = custom_skill_things;
+  customskill.coopspawns = custom_skill_coopspawns;
+  customskill.nomonsters = custom_skill_nomonsters;
+  customskill.doubleammo = custom_skill_doubleammo;
+  customskill.halfdamage = custom_skill_halfdamage;
+  customskill.slowbrain  = custom_skill_slowbrain;
+  customskill.fast       = custom_skill_fast;
+  customskill.respawn    = custom_skill_respawn;
+  customskill.aggressive = custom_skill_aggressive;
+}
+
+static void G_UpdateInitialLoadout(void)
+{
+  player_t *const player = &players[consoleplayer];
+
+  initial_loadout.mohealth    = player->mo->health;
+  initial_loadout.health      = player->health;
+  initial_loadout.armorpoints = player->armorpoints;
+  initial_loadout.armortype   = player->armortype;
+  initial_loadout.backpack    = player->backpack;
+  initial_loadout.readyweapon = player->readyweapon;
+  initial_loadout.lastweapon  = player->lastweapon;
+
+  memcpy(initial_loadout.weaponowned, player->weaponowned, sizeof(player->weaponowned));
+  memcpy(initial_loadout.ammo,        player->ammo,        sizeof(player->ammo));
+  memcpy(initial_loadout.maxammo,     player->maxammo,     sizeof(player->maxammo));
+}
+
+// [Nugget] =================================================================/
 
 static int G_GameOptionSize(void);
 
@@ -127,10 +257,6 @@ boolean         respawnmonsters;
 int             gameepisode;
 int             gamemap;
 mapentry_t*     gamemapinfo;
-
-// [Nugget]
-boolean         doubleammo;
-boolean         halfdamage;
 
 // If non-zero, exit the level after this number of minutes.
 int             timelimit;
@@ -186,8 +312,6 @@ boolean         pistolstart, default_pistolstart;
 boolean         strictmode, default_strictmode;
 boolean         force_strictmode;
 boolean         critical;
-
-boolean         minimap_was_on = false; // [Nugget] Minimap: keep it when advancing through levels
 
 // [crispy] store last cmd to track joins
 static ticcmd_t* last_cmd = NULL;
@@ -305,6 +429,19 @@ static boolean WeaponSelectable(weapontype_t weapon)
     {
         return false;
     }
+
+    // [Nugget] /-------------------------------------------------------------
+
+    const weaponinfo_t *const info = &weaponinfo[weapon];
+
+    if (CASUALPLAY(skip_ammoless_weapons)
+        && players[consoleplayer].ammo[info->ammo] < info->ammopershot
+        && !(players[consoleplayer].cheats & CF_INFAMMO))
+    {
+        return false;
+    }
+
+    // [Nugget] -------------------------------------------------------------/
 
     return true;
 }
@@ -560,8 +697,10 @@ void G_PrepTiccmd(void)
 
   float zoomdiv = 1.0f;
 
-  if (!strictmode) {
+  if (!strictmode)
+  {
     const int zoom = R_GetFOVFX(FOVFX_ZOOM);
+
     if (zoom)
     { zoomdiv = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
   }
@@ -926,7 +1065,10 @@ void G_ClearInput(void)
 static void G_DoLoadLevel(void)
 {
   int i;
-  int old_gameaction = gameaction; // [Nugget]
+
+  // [Nugget]
+  int lastaction  = gameaction;
+  static int lastepisode = -1, lastmap = -1;
 
   // Set the sky map.
   // First thing, we have a dummy sky texture name,
@@ -1009,6 +1151,12 @@ static void G_DoLoadLevel(void)
 
   P_UpdateCheckSight();
 
+  // [Nugget] Custom Skill
+  if (ignore_pistolstart)
+  {
+    ignore_pistolstart = false;
+  }
+  else
   // [crispy] pistol start
   if (CRITICAL(pistolstart))
   {
@@ -1035,7 +1183,7 @@ static void G_DoLoadLevel(void)
 
   // clear cmd building stuff
   // [Nugget] Rewind: unless we just rewound
-  if (old_gameaction != ga_rewind) {
+  if (lastaction != ga_rewind) {
     memset (gamekeydown, 0, sizeof(gamekeydown));
     G_ClearInput();
     sendpause = sendsave = paused = false;
@@ -1062,7 +1210,10 @@ static void G_DoLoadLevel(void)
         }
     }
 
-  // [Nugget] ----------------------------------------------------------------
+  // [Nugget] ================================================================
+
+  // Autosave
+  G_SetAutosaveCountdown(autosave_interval * TICRATE);
 
   // Rewind
   G_SetRewindCountdown(0);
@@ -1073,10 +1224,29 @@ static void G_DoLoadLevel(void)
     minimap_was_on = false;
   }
 
+  // Clear visual effects
+  R_ClearFOVFX();
+  R_SetShake(-1);
+
   // Alt. intermission background
-  if (WI_UsingAltInterpic()) {
+  if (WI_UsingAltInterpic())
+  {
     R_SetViewSize(screenblocks);
     R_ExecuteSetViewSize();
+
+    WI_DisableAltInterpic();
+  }
+
+  // Freecam -----------------------------------------------------------------
+
+  R_UpdateFreecamMobj(NULL);
+
+  if (lastepisode != gameepisode || lastmap  != gamemap)
+  {
+    lastepisode = gameepisode;
+    lastmap     = gamemap;
+
+    R_ResetFreecam(true);
   }
 }
 
@@ -1364,14 +1534,16 @@ boolean G_Responder(event_t* ev)
       // of demo playback, or if automap active.
       // Don't suck up keys, which may be cheats
 
-      return gamestate == GS_DEMOSCREEN &&
-	!(paused & 2) && automapactive != AM_FULL &&
-	((ev->type == ev_keydown) ||
-	 (ev->type == ev_mouseb_down) ||
-	 (ev->type == ev_joyb_down)) ?
-	(!menuactive ? S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn) // [Nugget]: [NS] Optional menu sounds.
-	             : true),
-	MN_StartControlPanel(), true : false;
+      // [Nugget] Freecam
+      if (!R_GetFreecamOn())
+        return gamestate == GS_DEMOSCREEN &&
+	  !(paused & 2) && automapactive != AM_FULL &&
+	  ((ev->type == ev_keydown) ||
+	   (ev->type == ev_mouseb_down) ||
+	   (ev->type == ev_joyb_down)) ?
+	  (!menuactive ? S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn) // [Nugget]: [NS] Optional menu sounds.
+	               : true),
+	  MN_StartControlPanel(), true : false;
     }
 
   if (gamestate == GS_FINALE && F_Responder(ev))
@@ -1700,6 +1872,45 @@ static void G_WriteLevelStat(void)
             playerItems, totalitems, playerSecrets, totalsecret);
 }
 
+// [Nugget] Custom Skill
+void G_RestartWithLoadout(const boolean current)
+{
+  G_SetSkillParms(sk_custom);
+
+  gameaction = ga_loadlevel;
+
+  G_PlayerFinishLevel(consoleplayer);
+
+  if (!current)
+  {
+    player_t *const player = &players[consoleplayer];
+
+    player->playerstate = PST_LIVE;
+    player->mo->health  = initial_loadout.mohealth;
+    player->health      = initial_loadout.health;
+    player->armorpoints = initial_loadout.armorpoints;
+    player->armortype   = initial_loadout.armortype;
+    player->backpack    = initial_loadout.backpack;
+    player->readyweapon = initial_loadout.readyweapon;
+    player->lastweapon  = initial_loadout.lastweapon;
+
+    memcpy(player->weaponowned, initial_loadout.weaponowned, sizeof(player->weaponowned));
+    memcpy(player->ammo,        initial_loadout.ammo,        sizeof(player->ammo));
+    memcpy(player->maxammo,     initial_loadout.maxammo,     sizeof(player->maxammo));
+  }
+
+  if (automapactive)
+  {
+    if (automapactive == AM_MINI) { minimap_was_on = true; }
+
+    AM_ChangeMode(AM_OFF);
+  }
+
+  AM_clearMarks();
+
+  ignore_pistolstart = true;
+}
+
 //
 // G_DoCompleted
 //
@@ -1709,9 +1920,6 @@ boolean um_pars = false;
 static void G_DoCompleted(void)
 {
   int i;
-
-  // [Nugget] Rebuild the Time widget to get rid of event timers
-  HU_widget_rebuild_sttime();
 
   //!
   // @category demo
@@ -1938,6 +2146,12 @@ static void G_DoWorldDone(void)
   gameaction = ga_nothing;
   viewactive = true;
   AM_clearMarks();           //jff 4/12/98 clear any marks on the automap
+
+  // [Nugget] ----------------------------------------------------------------
+
+  G_SetAutosaveCountdown(0); // Autosave
+  
+  G_UpdateInitialLoadout(); // Custom Skill
 }
 
 // killough 2/28/98: A ridiculously large number
@@ -2216,7 +2430,7 @@ static void G_DoPlayDemo(void)
   // [FG] report compatibility mode
   I_Printf(VB_INFO, "G_DoPlayDemo: %.8s (%s)", basename, W_WadNameForLump(lumpnum));
 
-  D_NuggetUpdateCasual(); // [Nugget]
+  D_UpdateCasualPlay(); // [Nugget]
 }
 
 #define VERSIONSIZE   16
@@ -2224,7 +2438,7 @@ static void G_DoPlayDemo(void)
 // killough 2/22/98: version id string format for savegames
 #define VERSIONID "MBF %d"
 
-#define CURRENT_SAVE_VERSION "Nugget 2.4.0" // [Nugget]
+#define CURRENT_SAVE_VERSION "Nugget 3.2.0" // [Nugget]
 
 static char *savename = NULL;
 
@@ -2303,7 +2517,18 @@ char* G_SaveGameName(int slot)
   // Ty 05/04/98 - use savegamename variable (see d_deh.c)
   // killough 12/98: add .7 to truncate savegamename
   char buf[16] = {0};
-  sprintf(buf, "%.7s%d.dsg", savegamename, 10*savepage+slot);
+
+  // [Nugget] Autosave
+  if (autosaving)
+  {
+    static int autoslot = 0;
+
+    sprintf(buf, "nuggaut%d.dsg", autoslot);
+
+    autoslot = (autoslot + 1) % 4;
+  }
+  else
+    sprintf(buf, "%.7s%d.dsg", savegamename, 10*savepage+slot);
 
 // [Nugget] Restored `-cdrom` parm
 #ifdef _WIN32
@@ -2357,7 +2582,14 @@ static void G_DoSaveGame(void)
 
   name = G_SaveGameName(savegameslot);
 
-  description = savedescription;
+  // [Nugget] Autosave
+  if (autosaving)
+  {
+    static char *const autodesc = "Autosave";
+    description = autodesc;
+  }
+  else
+    description = savedescription;
 
   save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, 0);
 
@@ -2442,20 +2674,61 @@ static void G_DoSaveGame(void)
   CheckSaveGame(sizeof(max_kill_requirement));
   saveg_write32(max_kill_requirement);
 
-  // [Nugget] Save milestones
-  CheckSaveGame(sizeof complete_milestones);
+  // [Nugget] /===============================================================
+
+  // Save milestones
+  CheckSaveGame(sizeof(complete_milestones));
   saveg_write_enum(complete_milestones);
 
-  // [FG] save snapshot
-  CheckSaveGame(MN_SnapshotDataSize());
-  MN_WriteSnapshot(save_p);
-  save_p += MN_SnapshotDataSize();
+  // Save custom-skill settings ----------------------------------------------
+
+  CheckSaveGame(sizeof(customskill));
+
+  saveg_write32(customskill.things);
+  saveg_write32(customskill.coopspawns);
+  saveg_write32(customskill.nomonsters);
+  saveg_write32(customskill.doubleammo);
+  saveg_write32(customskill.halfdamage);
+  saveg_write32(customskill.slowbrain);
+  saveg_write32(customskill.fast);
+  saveg_write32(customskill.respawn);
+  saveg_write32(customskill.aggressive);
+
+  CheckSaveGame(sizeof(initial_loadout));
+
+  saveg_write32(initial_loadout.mohealth);
+  saveg_write32(initial_loadout.health);
+  saveg_write32(initial_loadout.armorpoints);
+  saveg_write32(initial_loadout.armortype);
+  saveg_write32(initial_loadout.backpack);
+  saveg_write_enum(initial_loadout.readyweapon);
+  saveg_write_enum(initial_loadout.lastweapon);
+
+  for (int i = 0;  i < NUMWEAPONS;  i++)
+  { saveg_write32(initial_loadout.weaponowned[i]); }
+
+  for (int i = 0;  i < NUMAMMO;  i++)
+  { saveg_write32(initial_loadout.ammo[i]); }
+
+  for (int i = 0;  i < NUMAMMO;  i++)
+  { saveg_write32(initial_loadout.maxammo[i]); }
+
+  // [Nugget] ===============================================================/
+
+  // [Nugget] Autosave
+  if (!autosaving)
+  {
+    // [FG] save snapshot
+    CheckSaveGame(MN_SnapshotDataSize());
+    MN_WriteSnapshot(save_p);
+    save_p += MN_SnapshotDataSize();
+  }
 
   length = save_p - savebuffer;
 
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
-  else if (show_save_messages) // [Nugget]
+  else if (show_save_messages && !autosaving) // [Nugget]
     displaymsg("%s", s_GGSAVED);  // Ty 03/27/98 - externalized
 
   Z_Free(savebuffer);  // killough
@@ -2466,9 +2739,15 @@ static void G_DoSaveGame(void)
 
   if (name) free(name);
 
-  MN_SetQuickSaveSlot(savegameslot);
+  // [Nugget] Autosave
+  if (!autosaving)
+    MN_SetQuickSaveSlot(savegameslot);
 
   drs_skip_frame = true;
+
+  // [Nugget] Autosave:
+  // reset the countdown, even if this was a manual save
+  G_SetAutosaveCountdown(autosave_interval * TICRATE);
 }
 
 static void CheckSaveVersion(const char *str, saveg_compat_t ver)
@@ -2515,6 +2794,8 @@ static void G_DoLoadGame(void)
   CheckSaveVersion("Woof 6.0.0", saveg_woof600);
   CheckSaveVersion("Nugget 2.0.0", saveg_nugget200);
   CheckSaveVersion("Nugget 2.1.0", saveg_nugget210);
+  CheckSaveVersion("Nugget 2.4.0", saveg_nugget300);
+  CheckSaveVersion("Nugget 3.0.0", saveg_nugget300); // To be removed
   CheckSaveVersion(CURRENT_SAVE_VERSION, saveg_current);
 
   // killough 2/22/98: Friendly savegame version difference message
@@ -2666,8 +2947,41 @@ static void G_DoLoadGame(void)
   { saveg_read32(); }
 
   // Restore milestones
-  if (saveg_compat > saveg_nugget200 && save_p - savebuffer <= length - sizeof complete_milestones)
+  if (saveg_compat > saveg_nugget200 && (save_p - savebuffer) <= (length - sizeof(complete_milestones)))
   { complete_milestones = saveg_read_enum(); }
+
+  // Restore custom-skill settings
+  if (saveg_compat > saveg_nugget300 && (save_p - savebuffer) <= (length - sizeof(customskill)))
+  {
+    customskill.things     = saveg_read32();
+    customskill.coopspawns = saveg_read32();
+    customskill.nomonsters = saveg_read32();
+    customskill.doubleammo = saveg_read32();
+    customskill.halfdamage = saveg_read32();
+    customskill.slowbrain  = saveg_read32();
+    customskill.fast       = saveg_read32();
+    customskill.respawn    = saveg_read32();
+    customskill.aggressive = saveg_read32();
+
+    if (gameskill == sk_custom) { G_SetSkillParms(sk_custom); }
+
+    initial_loadout.mohealth    = saveg_read32();
+    initial_loadout.health      = saveg_read32();
+    initial_loadout.armorpoints = saveg_read32();
+    initial_loadout.armortype   = saveg_read32();
+    initial_loadout.backpack    = saveg_read32();
+    initial_loadout.readyweapon = saveg_read_enum();
+    initial_loadout.lastweapon  = saveg_read_enum();
+
+    for (int i = 0;  i < NUMWEAPONS;  i++)
+    { initial_loadout.weaponowned[i] = saveg_read32(); }
+
+    for (int i = 0;  i < NUMAMMO;  i++)
+    { initial_loadout.ammo[i] = saveg_read32(); }
+
+    for (int i = 0;  i < NUMAMMO;  i++)
+    { initial_loadout.maxammo[i] = saveg_read32(); }
+  }
 
   // [Nugget] ---------------------------------------------------------------/
   
@@ -2678,6 +2992,10 @@ static void G_DoLoadGame(void)
   // the same procedure is done in G_LoadLevel, but we have to repeat it here
   st_health = players[displayplayer].health;
   st_armor  = players[displayplayer].armorpoints;
+
+  // [Nugget] Autosave:
+  // we already have a save (the one we just loaded), so reset the countdown
+  G_SetAutosaveCountdown(autosave_interval * TICRATE);
 
   // [Nugget] Rewind:
   // Just like with `G_DoRewind`,
@@ -2785,9 +3103,46 @@ static void G_SaveKeyFrame(void)
   CheckSaveGame(sizeof(max_kill_requirement));
   saveg_write32(max_kill_requirement);
 
-  // [Nugget] Save milestones
-  CheckSaveGame(sizeof complete_milestones);
+  // [Nugget] /===============================================================
+
+  // Save milestones
+  CheckSaveGame(sizeof(complete_milestones));
   saveg_write_enum(complete_milestones);
+
+  // Save custom-skill settings ----------------------------------------------
+
+  CheckSaveGame(sizeof(customskill));
+
+  saveg_write32(customskill.things);
+  saveg_write32(customskill.coopspawns);
+  saveg_write32(customskill.nomonsters);
+  saveg_write32(customskill.doubleammo);
+  saveg_write32(customskill.halfdamage);
+  saveg_write32(customskill.slowbrain);
+  saveg_write32(customskill.fast);
+  saveg_write32(customskill.respawn);
+  saveg_write32(customskill.aggressive);
+
+  CheckSaveGame(sizeof(initial_loadout));
+
+  saveg_write32(initial_loadout.mohealth);
+  saveg_write32(initial_loadout.health);
+  saveg_write32(initial_loadout.armorpoints);
+  saveg_write32(initial_loadout.armortype);
+  saveg_write32(initial_loadout.backpack);
+  saveg_write_enum(initial_loadout.readyweapon);
+  saveg_write_enum(initial_loadout.lastweapon);
+
+  for (int i = 0;  i < NUMWEAPONS;  i++)
+  { saveg_write32(initial_loadout.weaponowned[i]); }
+
+  for (int i = 0;  i < NUMAMMO;  i++)
+  { saveg_write32(initial_loadout.ammo[i]); }
+
+  for (int i = 0;  i < NUMAMMO;  i++)
+  { saveg_write32(initial_loadout.maxammo[i]); }
+
+  // [Nugget] ===============================================================/
 
   keyframe_rw = false;
 
@@ -2964,8 +3319,41 @@ static void G_DoRewind(void)
   }
 
   // [Nugget] Restore milestones
-  if (save_p - savebuffer <= length - sizeof complete_milestones)
+  if ((save_p - savebuffer) <= (length - sizeof(complete_milestones)))
   { complete_milestones = saveg_read_enum(); }
+
+  // [Nugget] Restore custom-skill settings
+  if ((save_p - savebuffer) <= (length - sizeof(customskill)))
+  {
+    customskill.things     = saveg_read32();
+    customskill.coopspawns = saveg_read32();
+    customskill.nomonsters = saveg_read32();
+    customskill.doubleammo = saveg_read32();
+    customskill.halfdamage = saveg_read32();
+    customskill.slowbrain  = saveg_read32();
+    customskill.fast       = saveg_read32();
+    customskill.respawn    = saveg_read32();
+    customskill.aggressive = saveg_read32();
+
+    if (gameskill == sk_custom) { G_SetSkillParms(sk_custom); }
+
+    initial_loadout.mohealth    = saveg_read32();
+    initial_loadout.health      = saveg_read32();
+    initial_loadout.armorpoints = saveg_read32();
+    initial_loadout.armortype   = saveg_read32();
+    initial_loadout.backpack    = saveg_read32();
+    initial_loadout.readyweapon = saveg_read_enum();
+    initial_loadout.lastweapon  = saveg_read_enum();
+
+    for (int i = 0;  i < NUMWEAPONS;  i++)
+    { initial_loadout.weaponowned[i] = saveg_read32(); }
+
+    for (int i = 0;  i < NUMAMMO;  i++)
+    { initial_loadout.ammo[i] = saveg_read32(); }
+
+    for (int i = 0;  i < NUMAMMO;  i++)
+    { initial_loadout.maxammo[i] = saveg_read32(); }
+  }
 
   keyframe_rw = false;
 
@@ -3124,6 +3512,19 @@ void G_Ticker(void)
 	break;
     }
 
+  // [Nugget] Autosave
+  if (CASUALPLAY(autosave_interval)
+      && gamestate == GS_LEVEL && oldleveltime < leveltime
+      && players[consoleplayer].playerstate != PST_DEAD)
+  {
+    if (--autosave_countdown <= 0)
+    {
+      autosaving = true;
+      G_DoSaveGame();
+      autosaving = false;
+    }
+  }
+
   // [Nugget] Rewind
   if (CASUALPLAY(rewind_depth && rewind_on)
       && gamestate == GS_LEVEL && oldleveltime < leveltime
@@ -3252,6 +3653,30 @@ void G_Ticker(void)
 	  }
     }
 
+  // [Nugget] /===============================================================
+
+  // Zoom --------------------------------------------------------------------
+
+  static boolean zoomKeyDown = false;
+
+  if (!M_InputGameActive(input_zoom)
+      || !(gamestate == GS_LEVEL || gamestate == GS_DEMOSCREEN))
+  {
+    zoomKeyDown = false;
+  }
+  else if (STRICTMODE(!zoomKeyDown))
+  {
+    zoomKeyDown = true;
+    R_SetZoom(!R_GetZoom());
+  }
+
+  // Freecam -----------------------------------------------------------------
+
+  if (casual_play && R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL)
+  { memset(&players[consoleplayer].cmd, 0, sizeof(ticcmd_t)); }
+
+  // [Nugget] ===============================================================/
+
   oldleveltime = leveltime;
 
   // do main actions
@@ -3264,6 +3689,98 @@ void G_Ticker(void)
       gamestate == GS_INTERMISSION ? WI_Ticker() :
 	gamestate == GS_FINALE ? F_Ticker() :
 	  gamestate == GS_DEMOSCREEN ? D_PageTicker() : (void) 0;
+
+  // [Nugget] Freecam
+  if (R_GetFreecamOn())
+  {
+    fixed_t x = 0,
+            y = 0,
+            z = 0;
+    angle_t angle = 0;
+    fixed_t pitch = 0;
+    boolean center = false,
+            lock = false;
+    
+    if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL && !menuactive)
+    {
+      const ticcmd_t *const cmd = &netcmds[consoleplayer];
+
+      #define INPUT(input) M_InputGameActive(input)
+
+      static boolean usedown = false, firedown = false;
+
+      if (!INPUT(input_use))  {  usedown = false; }
+      if (!INPUT(input_fire)) { firedown = false; }
+
+      if (INPUT(input_use) && !usedown)
+      {
+        usedown = true;
+        R_ResetFreecam(false);
+      }
+      else if (INPUT(input_fire) && !firedown)
+      {
+        firedown = true;
+        lock = true;
+      }
+      else {
+        if (!R_GetFreecamMobj())
+        {
+          angle = cmd->angleturn << 16;
+
+          static fixed_t basespeed = 8*FRACUNIT;
+          const int speedchange = INPUT(input_nextweapon) - INPUT(input_prevweapon);
+
+          if (speedchange)
+          {
+            basespeed = BETWEEN(FRACUNIT, 20*FRACUNIT, basespeed + (FRACUNIT * speedchange));
+
+            const int scaledspeed = basespeed / FRACUNIT;
+            displaymsg("Freecam Speed: %i unit%s", scaledspeed, (scaledspeed == 1) ? "" : "s");
+          }
+
+          fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed)));
+
+          fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward)),
+                  sidemove    = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));
+
+          angle_t fangle = R_GetFreecamAngle() + angle;
+
+          x = FixedMul(forwardmove, finecosine[ fangle          >> ANGLETOFINESHIFT])
+            + FixedMul(sidemove,    finecosine[(fangle - ANG90) >> ANGLETOFINESHIFT]);
+
+          y = FixedMul(forwardmove, finesine[ fangle          >> ANGLETOFINESHIFT])
+            + FixedMul(sidemove,    finesine[(fangle - ANG90) >> ANGLETOFINESHIFT]);
+
+          z = speed * (INPUT(input_jump) - INPUT(input_crouch));
+        }
+
+        pitch = cmd->pitch;
+
+        static int strafetic = -10;
+        static boolean strafedown = false;
+
+        if (!INPUT(input_strafe))
+        {
+          strafedown = false;
+        }
+        else if (!strafedown)
+        {
+          strafedown = true;
+
+          if (gametic - strafetic < 10)
+          {
+            center = true;
+          }
+
+          strafetic = gametic;
+        }
+      }
+
+      #undef INPUT
+    }
+
+    R_UpdateFreecam(x, y, z, angle, pitch, center, lock);
+  }
 }
 
 //
@@ -4098,13 +4615,6 @@ void G_SetFastParms(int fast_pending)
   }
 }
 
-// [Nugget]
-void G_SetBabyModeParms(const skill_t skill)
-{
-  doubleammo = skill == sk_baby || skill == sk_nightmare || CASUALPLAY(doubleammoparm);
-  halfdamage = skill == sk_baby || CASUALPLAY(halfdamageparm);
-}
-
 mapentry_t *G_LookupMapinfo(int episode, int map)
 {
   int i;
@@ -4179,8 +4689,12 @@ void G_InitNew(skill_t skill, int episode, int map)
       S_ResumeSound();
     }
 
-  if (skill > sk_nightmare)
+  if (skill > sk_nightmare && skill != sk_custom) // [Nugget] Custom Skill
     skill = sk_nightmare;
+
+  // [Nugget] Custom Skill
+  if (skill == sk_custom && strictmode)
+  { skill = (defaultskill - 1 < sk_custom) ? defaultskill - 1 : sk_hard; }
 
   if (episode < 1)
     episode = 1;
@@ -4210,13 +4724,9 @@ void G_InitNew(skill_t skill, int episode, int map)
     map = 9;
   }
 
-  G_SetFastParms(fastparm || skill == sk_nightmare);  // killough 4/10/98
-
   M_ClearRandom();
 
-  respawnmonsters = skill == sk_nightmare || respawnparm;
-
-  G_SetBabyModeParms(skill); // [Nugget]
+  G_SetSkillParms(skill); // [Nugget]
 
   // force players to be initialized upon first level load
   for (i=0 ; i<MAXPLAYERS ; i++)
@@ -4232,10 +4742,6 @@ void G_InitNew(skill_t skill, int episode, int map)
   gameskill = skill;
   gamemapinfo = G_LookupMapinfo(gameepisode, gamemap);
 
-  // [Nugget] Clear visual effects
-  R_ClearFOVFX();
-  R_SetShake(-1);
-
   // [FG] total time for all completed levels
   totalleveltimes = 0;
   playback_tic = 0;
@@ -4248,9 +4754,11 @@ void G_InitNew(skill_t skill, int episode, int map)
   if (demo_version == DV_MBF)
     G_MBFComp();
 
+  D_UpdateCasualPlay(); // [Nugget]
+
   G_DoLoadLevel();
 
-  D_NuggetUpdateCasual(); // [Nugget]
+  G_UpdateInitialLoadout(); // [Nugget] Custom Skill
 }
 
 //
@@ -4780,7 +5288,7 @@ static size_t WriteCmdLineLump(MEMFILE *stream)
       mem_fputs(" -complevel 4", stream);
   }
 
-  if (coop_spawns)
+  if (coopspawnsparm)
   {
     mem_fputs(" -coop_spawns", stream);
   }

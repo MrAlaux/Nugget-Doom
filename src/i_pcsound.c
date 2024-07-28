@@ -31,6 +31,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "r_main.h"
+#include "r_state.h"
+
 // C doesn't allow casting between function and non-function pointer types, so
 // with C99 we need to use a union to reinterpret the pointer type. Pre-C99
 // still needs to use a normal cast and live with the warning (C++ is fine with
@@ -394,7 +398,12 @@ static boolean I_PCS_AdjustSoundParams(const mobj_t *listener,
 {
     fixed_t adx, ady, approx_dist;
 
-    if (!source || source == players[displayplayer].mo)
+    // [Nugget] Freecam
+    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+                             ? viewplayer->mo
+                             : players[displayplayer].mo;
+
+    if (!source || source == playermo)
     {
         return true;
     }

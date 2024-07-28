@@ -148,8 +148,9 @@ boolean respawnparm;    // working -respawn
 boolean fastparm;       // working -fast
 
 // [Nugget]
-boolean doubleammoparm;
-boolean halfdamageparm;
+boolean coopspawnsparm = false;
+boolean doubleammoparm = false;
+boolean halfdamageparm = false;
 
 boolean singletics = false; // debug flag to cancel adaptiveness
 
@@ -303,7 +304,7 @@ void D_Display (void)
   st_crispyhud = (hud_type == HUD_TYPE_CRISPY) && hud_displayed && automap_off
                  && hud_active > 0; // [Nugget] NUGHUD
 
-  input_ready = (!menuactive && gamestate == GS_LEVEL && !paused);
+  input_ready = (!menuactive && ((gamestate == GS_LEVEL && !paused) || R_GetFreecamOn())); // [Nugget] Freecam
 
   if (uncapped)
   {
@@ -2040,8 +2041,18 @@ static boolean CheckHaveSSG (void)
   return true;
 }
 
-// [Nugget]
-void D_NuggetUpdateCasual(void)
+// [Nugget] /-----------------------------------------------------------------
+
+void D_ValidateStartSkill(void)
+{
+  if (startskill == sk_custom
+      && (demorecording || demoplayback || netgame || strictmode))
+  {
+    startskill = (defaultskill - 1 < sk_custom) ? defaultskill - 1 : sk_hard;
+  }
+}
+
+void D_UpdateCasualPlay(void)
 {
   static int old_casual = -1;
 
@@ -2053,11 +2064,14 @@ void D_NuggetUpdateCasual(void)
   {
     old_casual = casual_play;
 
+    R_SetFuzzColumnMode();
     R_SetZoom(ZOOM_RESET); // Reset FOV
 
     MN_SetupResetMenu();
   }
 }
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // D_DoomMain
@@ -2395,28 +2409,30 @@ void D_DoomMain(void)
   startmap = 1;
   autostart = false;
 
+  // [Nugget] Take custom skill into account below
+
   //!
   // @category game
   // @arg <skill>
   // @vanilla
   // @help
   //
-  // Set the game skill, 1-5 (1: easiest, 5: hardest). A skill of 0 disables all
-  // monsters only in -complevel vanilla.
+  // Set the game skill, 1-6 (1: easiest, 5: hardest, 6: custom).
+  // A skill of 0 disables all monsters only in -complevel vanilla.
   //
 
   if ((p = M_CheckParm ("-skill")) && p < myargc-1)
    {
      startskill = M_ParmArgToInt(p);
      startskill--;
-     if (startskill >= sk_none && startskill <= sk_nightmare)
+     if (startskill >= sk_none && startskill <= sk_custom)
       {
         autostart = true;
       }
      else
       {
-        I_Error("Invalid parameter '%s' for -skill, valid values are 1-5 "
-                "(1: easiest, 5: hardest).\n"
+        I_Error("Invalid parameter '%s' for -skill, valid values are 1-6\n"
+                "(1: easiest, 5: hardest, 6: custom).\n"
                 "In complevel Vanilla, '-skill 0' disables all monsters.", myargv[p+1]);
       }
    }
@@ -2802,6 +2818,8 @@ void D_DoomMain(void)
   // Initial netgame startup. Connect to server etc.
   D_ConnectNetGame();
 
+  D_ValidateStartSkill(); // [Nugget]
+
   I_Printf(VB_INFO, "D_CheckNetGame: Checking network game status.");
   D_CheckNetGame();
 
@@ -2849,7 +2867,7 @@ void D_DoomMain(void)
 
   if (M_ParmExists("-coop_spawns"))
     {
-      coop_spawns = true;
+      coopspawnsparm = true;
     }
 
   //!
@@ -2972,6 +2990,8 @@ void D_DoomMain(void)
     I_SetFastdemoTimer(true);
   }
 
+  D_ValidateStartSkill(); // [Nugget]
+
   // [FG] init graphics (video.widedelta) before HUD widgets
   I_InitGraphics();
 
@@ -3009,7 +3029,7 @@ void D_DoomMain(void)
 
   D_StartGameLoop();
 
-  D_NuggetUpdateCasual(); // [Nugget]
+  D_UpdateCasualPlay(); // [Nugget]
 
   weapon_inertia_scale = weapon_inertia_scale_pct * ORIG_WEAPON_INERTIA_SCALE / 100; // [Nugget] Weapon inertia
 

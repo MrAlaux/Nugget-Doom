@@ -511,6 +511,20 @@ static const inline fixed_t thingheight (const mobj_t *const thing, const mobj_t
   return thing->height; // [Nugget] Removed `actualheight`
 }
 
+// [Nugget] Factored out from `p_user.c`
+fixed_t P_PitchToSlope(const fixed_t pitch)
+{
+  if (pitch)
+  {
+    const fixed_t slope = -finetangent[(ANG90 - pitch) >> ANGLETOFINESHIFT];
+    return (fixed_t)((int64_t)slope * SCREENHEIGHT / ACTUALHEIGHT);
+  }
+  else
+  {
+    return 0;
+  }
+}
+
 // [Nugget] Over/Under /------------------------------------------------------
 
 // Potential over/under mobjs
@@ -531,17 +545,43 @@ static void P_SetOverUnderMobjs(mobj_t *thing)
     thing->above_thing = p_above_tmthing;
 
     if (p_below_thing_g
-        && ((!pbtg) || ((pbtg->z + pbtg->height) < (pbts->z + pbts->height))))
+        && (!pbtg || (pbtg->z + pbtg->height) < (pbts->z + pbts->height)))
     {
       p_below_thing_g->below_thing = p_below_thing_s;
     }
 
     if (p_above_thing_g
-        && ((!patg) || (pats->z < patg->z)))
+        && (!patg || pats->z < patg->z))
     {
       p_above_thing_g->above_thing = p_above_thing_s;
     }
   }
+}
+
+// Factored out from `PIT_CheckThing()`
+boolean P_SkullSlam(mobj_t *skull, mobj_t *hitthing)
+{
+  // A flying skull is smacking something.
+  // Determine damage amount, and the skull comes to a dead stop.
+
+  int damage = ((P_Random(pr_skullfly)%8)+1)*skull->info->damage;
+
+  // [Nugget] Fix lost soul collision
+  if (casual_play && comp_lscollision && !(hitthing->flags & MF_SHOOTABLE))
+  { return !(hitthing->flags & MF_SOLID); }
+
+  P_DamageMobj (hitthing, skull, skull, damage);
+
+  skull->flags &= ~MF_SKULLFLY;
+  skull->momx = skull->momy = skull->momz = 0;
+
+  // [Nugget] Fix forgetful lost soul
+  if (casual_play && comp_lsamnesia)
+    P_SetMobjState(skull, skull->info->seestate);
+  else
+    P_SetMobjState (skull, skull->info->spawnstate);
+
+  return false;   // stop moving
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -598,7 +638,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   // [Nugget]: [DSDA] check if a mobj passed over/under another object
   if (casual_play && over_under
       && (tmthing->flags & MF_SOLID) && !(thing->flags & MF_SPECIAL)
-      && ((over_under == 2) || tmthing->player || thing->player)) 
+      && (over_under == 2 || tmthing->player || thing->player))
   {
     if (thing->z + thing->height <= tmthing->z)
     {
@@ -644,27 +684,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
 
   if (tmthing->flags & MF_SKULLFLY)
     {
-      // A flying skull is smacking something.
-      // Determine damage amount, and the skull comes to a dead stop.
-
-      int damage = ((P_Random(pr_skullfly)%8)+1)*tmthing->info->damage;
-
-      // [Nugget] Fix lost soul collision
-      if (casual_play && comp_lscollision && !(thing->flags & MF_SHOOTABLE))
-      { return !(thing->flags & MF_SOLID); }
-
-      P_DamageMobj (thing, tmthing, tmthing, damage);
-
-      tmthing->flags &= ~MF_SKULLFLY;
-      tmthing->momx = tmthing->momy = tmthing->momz = 0;
-
-      // [Nugget] Fix forgetful lost soul
-      if (casual_play && comp_lsamnesia)
-        P_SetMobjState(tmthing, tmthing->info->seestate);
-      else
-        P_SetMobjState (tmthing, tmthing->info->spawnstate);
-
-      return false;   // stop moving
+      return P_SkullSlam(tmthing, thing); // [Nugget] Factored out
     }
 
   // missiles can hit other things
@@ -949,7 +969,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean dropoff)
   if (casual_play && over_under)
   {
     // `tmfloorz` may have changed, so make sure the thing fits
-    if (p_above_tmthing && (p_above_tmthing->z < (tmfloorz + thing->height)))
+    if (p_above_tmthing && p_above_tmthing->z < (tmfloorz + thing->height))
     { return false; }
 
     // If move was valid, set new over/under mobjs
@@ -1231,7 +1251,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
           do {
             if ((above_thing = below_thing->above_thing)
-                && ((above_thing->z - zdiff) == (below_thing->z + below_thing->height)))
+                && (above_thing->z - zdiff) == (below_thing->z + below_thing->height))
             {
               above_thing->z = below_thing->z + below_thing->height;
             }
@@ -1849,7 +1869,7 @@ fixed_t P_AimLineAttack(mobj_t *t1,angle_t angle,fixed_t distance,int mask)
 
   // can't shoot outside view angles
 
-  if (t1->player && (vertical_aiming == VERTAIM_DIRECT) && (mask & CROSSHAIR_AIM)) // [Nugget] Vertical aiming
+  if (t1->player && vertical_aiming == VERTAIM_DIRECT && mask & CROSSHAIR_AIM) // [Nugget] Vertical aiming
   {
     topslope = t1->player->slope + 1;
     bottomslope = t1->player->slope - 1;
@@ -2072,11 +2092,12 @@ boolean P_CheckSight_12(mobj_t *t1, mobj_t *t2)
   return P_SightPathTraverse (t1->x, t1->y, t2->x, t2->y);
 }
 
-// [Nugget] Chasecam stuff /--------------------------------------------------
+// [Nugget] Chasecam /--------------------------------------------------------
 
 static boolean PTR_ChasecamTraverse(intercept_t *in)
 {
-  if (in->isaline) {
+  if (in->isaline)
+  {
     line_t *li = in->d.line;
     fixed_t dist, frac;
     sector_t *sec;
@@ -2086,7 +2107,8 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
       P_LineOpening(li);
       dist = FixedMul(attackrange, in->frac);
 
-      if (li->backsector == NULL) {
+      if (li->backsector == NULL)
+      {
         if (FixedDiv(openbottom+FRACUNIT - shootz, dist) <= aimslope
             && FixedDiv(opentop-FRACUNIT - shootz, dist) >= aimslope)
         {
@@ -2104,23 +2126,25 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
     }
 
     // Hit line
-    chasecam.hit = true;
+    R_SetChasecamHit(true);
     
     // Position a bit closer
     frac = in->frac - FixedDiv(FRACUNIT, attackrange);
-    chasecam.x = trace.x + FixedMul(trace.dx, frac);
-    chasecam.y = trace.y + FixedMul(trace.dy, frac);
-    chasecam.z = shootz + FixedMul(aimslope, FixedMul(frac, attackrange));
+    fixed_t x = trace.x + FixedMul(trace.dx, frac);
+    fixed_t y = trace.y + FixedMul(trace.dy, frac);
+    fixed_t z = shootz + FixedMul(aimslope, FixedMul(frac, attackrange));
     
-    sec = R_PointInSubsector(chasecam.x, chasecam.y)->sector;
+    sec = R_PointInSubsector(x, y)->sector;
 
-    if (chasecam.z < sec->floorheight+FRACUNIT || sec->ceilingheight-FRACUNIT < chasecam.z)
+    if (z < sec->floorheight+FRACUNIT || sec->ceilingheight-FRACUNIT < z)
     {
-      chasecam.z = BETWEEN(sec->floorheight+FRACUNIT, sec->ceilingheight-FRACUNIT, chasecam.z);
-      frac = FixedDiv(chasecam.z - shootz, FixedMul(aimslope, attackrange));
-      chasecam.x = trace.x + FixedMul(trace.dx, frac);
-      chasecam.y = trace.y + FixedMul(trace.dy, frac);
+      z = BETWEEN(sec->floorheight+FRACUNIT, sec->ceilingheight-FRACUNIT, z);
+      frac = FixedDiv(z - shootz, FixedMul(aimslope, attackrange));
+      x = trace.x + FixedMul(trace.dx, frac);
+      y = trace.y + FixedMul(trace.dy, frac);
     }
+
+    R_UpdateChasecam(x, y, z);
   }
 
   // Don't go any further
@@ -2139,7 +2163,7 @@ void P_PositionChasecam(fixed_t z, fixed_t dist, fixed_t slope)
   shootz = z;
   attackrange = dist;
   aimslope = slope;
-  chasecam.hit = false;
+  R_SetChasecamHit(false);
 
   overflow[emu_intercepts].enabled = false;
   P_PathTraverse(viewx, viewy, x2, y2, PT_ADDLINES, PTR_ChasecamTraverse);
@@ -2774,14 +2798,14 @@ static boolean PIT_CheckOverUnderMobjZ(mobj_t *thing)
   {
     // Over
 
-    if ((!p_below_tmthing)
-        || ((p_below_tmthing->z + p_below_tmthing->height) < (thing->z + thing->height)))
+    if (!p_below_tmthing
+        || (p_below_tmthing->z + p_below_tmthing->height) < (thing->z + thing->height))
     {
       p_below_tmthing = thing;
     }
 
-    if ((!p_above_thing_s)
-        || (tmthing->z < p_above_thing_s->z))
+    if (!p_above_thing_s
+        || tmthing->z < p_above_thing_s->z)
     {
       p_above_thing_s = tmthing;
       p_above_thing_g = thing;
@@ -2793,14 +2817,14 @@ static boolean PIT_CheckOverUnderMobjZ(mobj_t *thing)
   {
     // Under
 
-    if ((!p_above_tmthing)
-        || (thing->z < p_above_tmthing->z))
+    if (!p_above_tmthing
+        || thing->z < p_above_tmthing->z)
     {
       p_above_tmthing = thing;
     }
 
-    if ((!p_below_thing_s)
-        || ((p_below_thing_s->z + p_below_thing_s->height) < (tmthing->z + tmthing->height)))
+    if (!p_below_thing_s
+        || (p_below_thing_s->z + p_below_thing_s->height) < (tmthing->z + tmthing->height))
     {
       p_below_thing_s = tmthing;
       p_below_thing_g = thing;
@@ -2814,7 +2838,7 @@ static boolean PIT_CheckOverUnderMobjZ(mobj_t *thing)
 }
 
 // Checks if the new Z position is legal
-overunder_t P_CheckOverUnderMobj(mobj_t *thing, boolean fakemove)
+overunder_t P_CheckOverUnderMobj(mobj_t *thing)
 {
   int xl, xh, yl, yh, bx, by;
   subsector_t *newsubsec;
@@ -2859,8 +2883,7 @@ overunder_t P_CheckOverUnderMobj(mobj_t *thing, boolean fakemove)
   p_above_tmthing = p_above_thing_s = p_above_thing_g = NULL;
 
   zdir = OU_NONE;
-
-  if (fakemove) { P_FakeZMovement(tmthing); }
+  P_FakeZMovement(tmthing);
 
   for (bx = xl; bx <= xh; bx++)
     for (by = yl; by <= yh; by++)

@@ -88,6 +88,8 @@ extern struct line_s *blockline;   // killough 8/11/98
 
 // [Nugget] ------------------------------------------------------------------
 
+fixed_t P_PitchToSlope(const fixed_t pitch);
+
 void P_PositionChasecam(fixed_t z, fixed_t dist, fixed_t slope);
 
 typedef enum {
@@ -96,7 +98,9 @@ typedef enum {
   OU_OVER,
 } overunder_t;
 
-overunder_t P_CheckOverUnderMobj(struct mobj_s *thing, boolean fakemove); // [DSDA]
+// Over/Under
+overunder_t P_CheckOverUnderMobj(struct mobj_s *thing); // [DSDA]
+boolean     P_SkullSlam(struct mobj_s *skull, struct mobj_s *hitthing);
 
 extern boolean boomshot; // Explosive hitscan cheat
 

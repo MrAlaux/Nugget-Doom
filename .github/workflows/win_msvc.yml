@@ -38,8 +38,6 @@ jobs:
       - name: Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          # The version of the toolset is specified due to faulty version discovery.
-          toolset: 14.39
           arch: ${{ matrix.config.arch }}
 
       - name: Setup vcpkg and NuGet

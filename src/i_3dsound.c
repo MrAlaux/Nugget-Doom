@@ -32,6 +32,10 @@
 #include "sounds.h"
 #include "tables.h"
 
+// [Nugget]
+#include "r_main.h"
+#include "r_state.h"
+
 #define FIXED_TO_ALFLOAT(x) ((ALfloat)(FIXED2DOUBLE(x)))
 
 typedef struct oal_listener_params_s
@@ -277,7 +281,12 @@ static boolean I_3D_AdjustSoundParams(const mobj_t *listener,
         return false;
     }
 
-    if (!source || source == players[displayplayer].mo || !listener
+    // [Nugget] Freecam
+    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+                             ? viewplayer->mo
+                             : players[displayplayer].mo;
+
+    if (!source || source == playermo || !listener
         || !listener->player)
     {
         src.use_3d = false;

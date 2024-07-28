@@ -49,9 +49,24 @@
 #include "u_mapinfo.h"
 #include "w_wad.h"
 
+// [Nugget]
+#include "r_main.h"
+
 #define plyr (players+consoleplayer)     /* the console player */
 
-//#define NUGMAGIC // [Nugget]
+// [Nugget] Testing cheat /------------
+
+//#define NUGMAGIC
+
+#ifdef NUGMAGIC
+// For testing purposes
+static void cheat_magic()
+{
+  
+}
+#endif
+
+// [Nugget] --------------------------/
 
 //-----------------------------------------------------------------------------
 //
@@ -153,10 +168,6 @@ static void cheat_cheese();     // cheese :)
 
 boolean idgaf;
 static void cheat_idgaf();
-
-#ifdef NUGMAGIC
-static void cheat_magic();
-#endif
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -395,30 +406,30 @@ struct cheat_s cheat[] = {
   {"nextsecret", NULL, not_net | not_demo, {cheat_secretexit}     },
   {"turbo",      NULL, not_net | not_demo, {cheat_turbo},      -3 },
 
-  {"summon",     NULL, not_net | not_demo, {cheat_summon}         }, // Summon "Menu"
-  {"summone",    NULL, not_net | not_demo, {cheat_summone0}       }, // Summon Enemy "Menu"
-  {"summone",    NULL, not_net | not_demo, {cheat_summone},    -3 }, // Summon a hostile mobj
-  {"summonf",    NULL, not_net | not_demo, {cheat_summonf0}       }, // Summon Friend "Menu"
-  {"summonf",    NULL, not_net | not_demo, {cheat_summonf},    -3 }, // Summon a friendly mobj
-  {"summonr",    NULL, not_net | not_demo, {cheat_summonr}        }, // Repeat last summon
+  {"summon",  NULL, not_net | not_demo, {cheat_summon}      }, // Summon "Menu"
+  {"summone", NULL, not_net | not_demo, {cheat_summone0}    }, // Summon Enemy "Menu"
+  {"summone", NULL, not_net | not_demo, {cheat_summone}, -3 }, // Summon a hostile mobj
+  {"summonf", NULL, not_net | not_demo, {cheat_summonf0}    }, // Summon Friend "Menu"
+  {"summonf", NULL, not_net | not_demo, {cheat_summonf}, -3 }, // Summon a friendly mobj
+  {"summonr", NULL, not_net | not_demo, {cheat_summonr}     }, // Repeat last summon
 
-  {"iddf",       NULL, not_net | not_demo, {cheat_reveal_key}      },
-  {"iddfb",      NULL, not_net | not_demo, {cheat_reveal_keyx}     },
-  {"iddfy",      NULL, not_net | not_demo, {cheat_reveal_keyx}     },
-  {"iddfr",      NULL, not_net | not_demo, {cheat_reveal_keyx}     },
-  {"iddfbc",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 0 },
-  {"iddfyc",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 2 },
-  {"iddfrc",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 1 },
-  {"iddfbs",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 5 },
-  {"iddfys",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 3 },
-  {"iddfrs",     NULL, not_net | not_demo, {cheat_reveal_keyxx}, 4 },
+  {"iddf",   NULL, not_net | not_demo, {cheat_reveal_key}      },
+  {"iddfb",  NULL, not_net | not_demo, {cheat_reveal_keyx}     },
+  {"iddfy",  NULL, not_net | not_demo, {cheat_reveal_keyx}     },
+  {"iddfr",  NULL, not_net | not_demo, {cheat_reveal_keyx}     },
+  {"iddfbc", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 0 },
+  {"iddfyc", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 2 },
+  {"iddfrc", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 1 },
+  {"iddfbs", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 5 },
+  {"iddfys", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 3 },
+  {"iddfrs", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 4 },
 
-  {"linetarget", NULL, not_net | not_demo, {cheat_linetarget}     }, // Give info on the current linetarget
-  {"mdk",        NULL, not_net | not_demo, {cheat_mdk}            },
-  {"saitama",    NULL, not_net | not_demo, {cheat_saitama}        }, // MDK Fist
-  {"boomcan",    NULL, not_net | not_demo, {cheat_boomcan}        }, // Explosive hitscan
-  {"cheese",     NULL, not_net | not_demo, {cheat_cheese}         }, // cheese :)
-  {"idgaf",      NULL, not_net | not_demo, {cheat_idgaf}          },
+  {"linetarget", NULL, not_net | not_demo, {cheat_linetarget} }, // Give info on the current linetarget
+  {"mdk",        NULL, not_net | not_demo, {cheat_mdk}        },
+  {"saitama",    NULL, not_net | not_demo, {cheat_saitama}    }, // MDK Fist
+  {"boomcan",    NULL, not_net | not_demo, {cheat_boomcan}    }, // Explosive hitscan
+  {"cheese",     NULL, not_net | not_demo, {cheat_cheese}     }, // cheese :)
+  {"idgaf",      NULL, not_net | not_demo, {cheat_idgaf}      },
 
   #ifdef NUGMAGIC
   {"ggg", NULL, 0, {cheat_magic}},
@@ -433,15 +444,7 @@ struct cheat_s cheat[] = {
 
 extern int init_thinkers_count; // [Nugget]
 
-// [Nugget] /-----------------------------------------------------------------
-
-#ifdef NUGMAGIC
-static void cheat_magic()
-{
-  // For debugging
-  displaymsg("DM %s", (deathmatch = !deathmatch) ? "ON" : "OFF");
-}
-#endif
+// [Nugget] /=================================================================
 
 static void cheat_nomomentum()
 {
@@ -452,10 +455,10 @@ static void cheat_nomomentum()
 // Emulates demo and/or net play state, for debugging
 static void cheat_fauxdemo()
 {
-  extern void D_NuggetUpdateCasual(void);
+  extern void D_UpdateCasualPlay(void);
 
   fauxdemo = !fauxdemo;
-  D_NuggetUpdateCasual();
+  D_UpdateCasualPlay();
 
   S_StartSound(plyr->mo, sfx_tink);
   displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
@@ -510,9 +513,40 @@ static void cheat_gibbers()
   displaymsg("%s", GIBBERS ? "Ludicrous Gibs!" : "Ludicrous Gibs no more.");
 }
 
-// Used for resurrection,
-// both right here in cheat_resurrect() and later in cheat_god()
-extern void P_SpawnPlayer (mapthing_t* mthing);
+// Resurrection --------------------------------------------------------------
+
+// Factored out from `cheat_god()`
+static void DoResurrect(void)
+{
+  extern void P_SpawnPlayer (mapthing_t* mthing);
+
+  signed int an;
+  mapthing_t mt = {0};
+
+  P_MapStart();
+  mt.x = plyr->mo->x >> FRACBITS;
+  mt.y = plyr->mo->y >> FRACBITS;
+  mt.angle = (plyr->mo->angle + ANG45/2)*(uint64_t)45/ANG45;
+  mt.type = consoleplayer + 1;
+  P_SpawnPlayer(&mt);
+
+  // [crispy] spawn a teleport fog
+  an = plyr->mo->angle >> ANGLETOFINESHIFT;
+  P_SpawnMobj(plyr->mo->x+20*finecosine[an], plyr->mo->y+20*finesine[an], plyr->mo->z, MT_TFOG);
+  S_StartSound(plyr->mo, sfx_slop);
+  P_MapEnd();
+
+  // Fix reviving as "zombie" if god mode was already enabled
+  if (plyr->mo)
+    plyr->mo->health = god_health;  // Ty 03/09/98 - deh
+  plyr->health = god_health;
+
+  // [Nugget] Rewind;
+  // This is called before the countdown decrement in `G_Ticker()`,
+  // so add 1 to keep it aligned
+  if (leveltime)
+  { G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE))); }
+}
 
 // Resurrection cheat adapted from Crispy's IDDQD
 static void cheat_resurrect()
@@ -520,31 +554,15 @@ static void cheat_resurrect()
   // [crispy] dead players are first respawned at the current position
   if (plyr->playerstate == PST_DEAD)
   {
-    signed int an;
-    mapthing_t mt = {0};
-
-    P_MapStart();
-    mt.x = plyr->mo->x >> FRACBITS;
-    mt.y = plyr->mo->y >> FRACBITS;
-    mt.angle = (plyr->mo->angle + ANG45/2)*(uint64_t)45/ANG45;
-    mt.type = consoleplayer + 1;
-    P_SpawnPlayer(&mt);
-
-    // [Nugget] Set player health
-    if (plyr->mo) { plyr->mo->health = god_health; }
-    plyr->health = god_health;
-
-    // [crispy] spawn a teleport fog
-    an = plyr->mo->angle >> ANGLETOFINESHIFT;
-    P_SpawnMobj(plyr->mo->x+20*finecosine[an], plyr->mo->y+20*finesine[an], plyr->mo->z, MT_TFOG);
-    S_StartSound(plyr->mo, sfx_slop);
-    P_MapEnd();
+    DoResurrect();
 
     // [Nugget] Announce
     displaymsg("Resurrected!");
   }
   else { displaymsg("Still alive."); }
 }
+
+// ---------------------------------------------------------------------------
 
 static void cheat_fly()
 {
@@ -589,6 +607,8 @@ static void cheat_turbo(char *buf)
      sidemove[1] = 0x28 * scale / 100;
 }
 
+// Summoning -----------------------------------------------------------------
+
 static void cheat_summon()
 {
   if (spawneetype == -1)
@@ -596,8 +616,6 @@ static void cheat_summon()
   else
   { displaymsg("Summon: Enemy, Friend or Repeat last (%i)?", spawneetype); }
 }
-
-// Auxiliary functions for the summon cheats
 
 static boolean GetMobjType(char *buf)
 {
@@ -611,19 +629,27 @@ static boolean GetMobjType(char *buf)
 
   type = (buf[0]-'0')*100 + (buf[1]-'0')*10 + buf[2]-'0';
 
+  const spritenum_t spritenum = states[mobjinfo[type].spawnstate].sprite;
+  const long            frame = states[mobjinfo[type].spawnstate].frame;
+
   // Sanity checks
-  if (   (type < 0)                                // In case it somehow happens
-      || (type == MT_MUSICSOURCE)                  // May cause issues once spawned
-      || ((MT_SCEPTRE == type || type == MT_BIBLE) // May be missing assets
-          && (W_CheckNumForName)(sprnames[states[mobjinfo[type].spawnstate].sprite], ns_sprites) == -1)
-      || num_mobj_types <= type)                   // May be uninitialized
-  {
+  if (
+    // In case it somehow happens
+    type < 0
+    // May cause issues once spawned
+    || type == MT_MUSICSOURCE
+    // May be missing assets
+    || ((unsigned) spritenum >= num_sprites)
+    || ((frame & FF_FRAMEMASK) >= sprites[spritenum].numframes)
+    // May be uninitialized
+    || num_mobj_types <= type
+  ) {
     displaymsg("Summon: Cannot summon mobj %i", type);
     return false;
   }
 
   spawneetype = type;
-  
+
   return true;
 }
 
@@ -674,7 +700,6 @@ static void SummonMobj(boolean friendly)
              spawneefriend ? "Friend" : "Enemy", spawneetype);
 }
 
-
 static void cheat_summone0()
 {
   displaymsg("Summon Enemy: Enter mobj index");
@@ -702,6 +727,8 @@ static void cheat_summonr()
 {
   SummonMobj(spawneefriend);
 }
+
+// Key finder ----------------------------------------------------------------
 
 static void cheat_reveal_key()
 {
@@ -733,10 +760,8 @@ static void cheat_reveal_keyxx(int key)
 
   thinker_t *th, *start_th;
 
-  if (last_mobj)
-  { th = &(last_mobj->thinker); }
-  else
-  { th = &thinkercap; }
+  if (last_mobj) { th = &(last_mobj->thinker); }
+  else           { th = &thinkercap; }
 
   start_th = th;
 
@@ -763,6 +788,8 @@ static void cheat_reveal_keyxx(int key)
   if (!found) { displaymsg("Key Finder: key not found"); }
 }
 
+// ---------------------------------------------------------------------------
+
 // Give info on the current `linetarget`
 static void cheat_linetarget()
 {
@@ -778,9 +805,12 @@ static void cheat_mdk()
   P_MapStart();
 
   if (vertical_aiming == VERTAIM_DIRECT)
-  { slope = plyr->slope; }
+  {
+    slope = plyr->slope;
+  }
   else {
     slope = P_AimLineAttack(plyr->mo, plyr->mo->angle, 16*64*FRACUNIT * (comp_longautoaim+1), 0);
+
     if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
     { slope = plyr->slope; }
   }
@@ -819,7 +849,7 @@ static void cheat_idgaf()
   displaymsg("I %s.", idgaf ? "don't" : "do");
 }
 
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 // [FG] FPS counter widget
 static void cheat_showfps()
@@ -916,26 +946,7 @@ static void cheat_god()
   // [crispy] dead players are first respawned at the current position
   if (plyr->playerstate == PST_DEAD)
   {
-    signed int an;
-    mapthing_t mt = {0};
-
-    P_MapStart();
-    mt.x = plyr->mo->x >> FRACBITS;
-    mt.y = plyr->mo->y >> FRACBITS;
-    mt.angle = (plyr->mo->angle + ANG45/2)*(uint64_t)45/ANG45;
-    mt.type = consoleplayer + 1;
-    P_SpawnPlayer(&mt);
-
-    // [crispy] spawn a teleport fog
-    an = plyr->mo->angle >> ANGLETOFINESHIFT;
-    P_SpawnMobj(plyr->mo->x+20*finecosine[an], plyr->mo->y+20*finesine[an], plyr->mo->z, MT_TFOG);
-    S_StartSound(plyr->mo, sfx_slop);
-    P_MapEnd();
-
-    // Fix reviving as "zombie" if god mode was already enabled
-    if (plyr->mo)
-      plyr->mo->health = god_health;  // Ty 03/09/98 - deh
-    plyr->health = god_health;
+    DoResurrect(); // [Nugget] Factored out
   }
 
   plyr->cheats ^= CF_GODMODE;
@@ -1095,6 +1106,13 @@ static void cheat_noclip()
 // 'behold?' power-up cheats (modified for infinite duration -- killough)
 static void cheat_pw(int pw)
 {
+  // [Nugget] Freecam
+  if (pw == pw_infrared && R_GetFreecamOn())
+  {
+    viewplayer->fixedcolormap = !viewplayer->fixedcolormap;
+    return;
+  }
+
   if (pw == NUMPOWERS)
   {
     memset(plyr->powers, 0, sizeof(plyr->powers));
@@ -1259,15 +1277,12 @@ static void cheat_skill(char *buf)
 {
   int skill = buf[0] - '0';
 
-  if (skill >= 1 && skill <= 5)
+  if (skill >= 1 && skill <= 5 + casual_play) // [Nugget] Custom Skill
   {
     gameskill = skill - 1;
     displaymsg("Next Level Skill: %s", default_skill_strings[gameskill + 1]);
 
-    G_SetFastParms(fastparm || gameskill == sk_nightmare);
-    respawnmonsters = gameskill == sk_nightmare || respawnparm;
-
-    G_SetBabyModeParms(gameskill); // [Nugget]
+    G_SetSkillParms(gameskill); // [Nugget]
   }
 }
 
@@ -1603,6 +1618,14 @@ static void cheat_hom()
 // killough 3/6/98: -fast parameter toggle
 static void cheat_fast()
 {
+  // [Nugget] Custom Skill
+  if (gameskill == sk_custom)
+  {
+    displaymsg((fastmonsters = !fastmonsters) ? "Fast Monsters On" : "Fast Monsters Off");
+    G_SetFastParms(fastmonsters);
+    return;
+  }
+
   displaymsg((fastparm = !fastparm) ? "Fast Monsters On" : 
     "Fast Monsters Off");  // Ty 03/27/98 - *not* externalized
   G_SetFastParms(fastparm); // killough 4/10/98: set -fast parameter correctly

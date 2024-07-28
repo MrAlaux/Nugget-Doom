@@ -122,8 +122,11 @@ extern void G_Rewind(void);
 extern void G_ClearExcessKeyFrames(void);
 extern boolean G_KeyFrameRW(void);
 
-// Misc
+// Skill
 void G_SetBabyModeParms(const skill_t skill);
+void G_SetSkillParms(const skill_t skill);
+void G_SetUserCustomSkill(void);
+void G_RestartWithLoadout(const boolean current);
 
 #endif
 

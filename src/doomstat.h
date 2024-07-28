@@ -43,6 +43,7 @@ extern  boolean fastparm; // checkparm of -fast
 extern  boolean devparm;  // DEBUG: launched with -devparm
 
 // [Nugget]
+extern  boolean coopspawnsparm;
 extern  boolean doubleammoparm;
 extern  boolean halfdamageparm;
 
@@ -216,9 +217,19 @@ extern  int             timelimit;
 // Nightmare mode flag, single player.
 extern  boolean         respawnmonsters;
 
-// [Nugget]
+// [Nugget] /-----------------------------------------------------------------
+
+enum { THINGSPAWNS_EASY, THINGSPAWNS_NORMAL, THINGSPAWNS_HARD };
+extern  int             thingspawns;
+
+extern  boolean         realnomonsters;
 extern  boolean         doubleammo;
 extern  boolean         halfdamage;
+extern  boolean         slowbrain;
+extern  boolean         fastmonsters;
+extern  boolean         aggressive;
+
+// [Nugget] -----------------------------------------------------------------/
 
 // Netgame? Only true if >1 player.
 extern  boolean netgame;
@@ -476,7 +487,8 @@ extern int center_weapon;
 extern int view_bobbing_pct;
 extern int weapon_bobbing_pct;
 
-// [Nugget] /-----------------------------------------------------------------
+
+// [Nugget] /=================================================================
 
 extern boolean fauxdemo;
 extern boolean casual_play;
@@ -484,7 +496,7 @@ extern boolean casual_play;
 #define    CASUALPLAY(x) (casual_play ? (x) : 0)
 #define NOTCASUALPLAY(x) (casual_play ? (x) : 1)
 
-// General ----------------------------
+// General -------------------------------------------------------------------
 
 extern int over_under;
 extern int jump_crouch;
@@ -498,6 +510,7 @@ enum {
 }; extern int flinching;
 
 extern int explosion_shake;
+extern int explosion_shake_intensity_pct; // CFG-only
 extern int breathing;
 extern int teleporter_zoom;
 extern int death_camera;
@@ -509,21 +522,23 @@ enum {
 }; extern int chasecam_mode;
 extern int chasecam_distance;
 extern int chasecam_height;
-extern int chasecam_crosshair; // CFG-Only
+extern int chasecam_crosshair; // CFG-only
 
 extern int menu_background_all;
 extern int no_menu_tint;
+extern int hud_menu_shadows;
 extern int no_berserk_tint;
 extern int no_radsuit_tint;
 extern int nightvision_visor;
 extern int damagecount_cap;
 extern int bonuscount_cap;
 extern int fake_contrast;
-extern int diminished_lighting; // CFG-Only
+extern int diminished_lighting; // CFG-only
 extern int wipe_speed_percentage;
 extern int alt_interpic;
 extern int s_clipping_dist_x2;
 extern int one_key_saveload;
+extern int autosave_interval; // CFG-only
 extern int rewind_interval;
 extern int rewind_depth;
 extern int rewind_timeout;
@@ -535,11 +550,12 @@ extern int a11y_weapon_flash;
 extern int a11y_weapon_pspr;
 extern int a11y_invul_colormap;
 
-// Weapons ----------------------------
+// Weapons -------------------------------------------------------------------
 
 extern int no_hor_autoaim;
 extern int switch_on_pickup;
-extern int always_bob; // CFG-Only
+extern int skip_ammoless_weapons;
+extern int always_bob; // CFG-only
 
 enum {
   BOBSTYLE_VANILLA,
@@ -552,28 +568,33 @@ enum {
 }; extern int bobbing_style;
 
 extern int weapon_inertia;
-extern int weapon_inertia_scale_pct; // CFG-Only
+extern int weapon_inertia_scale_pct; // CFG-only
 extern int weaponsquat;
 extern int translucent_pspr;
+extern int translucent_pspr_pct; // CFG-only
 extern int show_berserk;
-extern int sx_fix; // CFG-Only
+extern int sx_fix; // CFG-only
 
-// Status Bar/HUD ---------------------
+// Status Bar/HUD ------------------------------------------------------------
 
 extern int announce_milestones;
-extern int show_save_messages; // CFG-Only
-extern int show_ssg; // CFG-Only
+extern int show_save_messages; // CFG-only
+extern int show_ssg; // CFG-only
 
 enum {
   STATSFORMAT_RATIO = 1,
   STATSFORMAT_BOOLEAN,
   STATSFORMAT_PERCENTAGE,
   STATSFORMAT_REMAINING,
+  STATSFORMAT_COUNT,
+
+  NUMSTATSFORMATS
 };
 extern int hud_stats_format;
 extern int hud_stats_format_map;
 extern int hud_stats_icons;
 
+extern int hud_highlight_weapon;
 extern int alt_arms;
 
 typedef enum {
@@ -596,9 +617,9 @@ extern int hudcolor_secrets;
 extern int hudcolor_ms_incomp;
 extern int hudcolor_ms_comp;
 
-// Enemies ----------------------------
+// Enemies -------------------------------------------------------------------
 
-extern int extra_gibbing_on; // CFG-Only
+extern int extra_gibbing_on; // CFG-only
 typedef enum {
   EXGIB_FIST,
   EXGIB_CSAW,
@@ -611,12 +632,12 @@ extern int extra_gibbing[];
 extern int bloodier_gibbing;
 extern int zdoom_item_drops;
 
-// Key Bindings -----------------------
+// Key Bindings --------------------------------------------------------------
 
 extern int zoom_fov;
 extern int fancy_teleport;
 
-// Miscellaneous (CFG-Only) -----------
+// Miscellaneous (CFG-only) --------------------------------------------------
 
 enum {
   SHOTPAL_NONE,
@@ -625,6 +646,7 @@ enum {
   SHOTPAL_BOTH,
 }; extern int screenshot_palette;
 
+extern int hud_menu_shadows_filter_pct;
 extern int menu_backdrop_darkening;
 extern int automap_overlay_darkening;
 extern int no_killough_face;
@@ -632,7 +654,7 @@ extern int sp_chat;
 
 extern int fail_safe;
 
-// Doom Compatibility (CFG-Only) ------
+// Doom Compatibility (CFG-only) ---------------------------------------------
 
 extern int comp_bruistarget;
 extern int comp_nomeleesnap;
@@ -651,12 +673,27 @@ extern int comp_switchsource;
 extern int comp_cgundblsnd;
 extern int comp_cgunnersfx;
 extern int comp_flamst;
+extern int comp_keynoway;
 extern int comp_godface;
+extern int comp_powerrunout;
 extern int comp_deadoof;
 extern int comp_unusedpals;
 extern int comp_keypal;
 
-// [Nugget] -----------------------------------------------------------------/
+// Custom Skill --------------------------------------------------------------
+
+extern int custom_skill_things;
+extern int custom_skill_coopspawns;
+extern int custom_skill_nomonsters;
+extern int custom_skill_doubleammo;
+extern int custom_skill_halfdamage;
+extern int custom_skill_slowbrain;
+extern int custom_skill_fast;
+extern int custom_skill_respawn;
+extern int custom_skill_aggressive;
+
+// [Nugget] =================================================================/
+
 
 // Doom-style printf
 

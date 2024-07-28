@@ -46,17 +46,8 @@
 
 static fixed_t PlayerSlope(player_t *player)
 {
-  const fixed_t pitch = player->pitch;
-
-  if (pitch)
-  {
-    const fixed_t slope = -finetangent[(ANG90 - pitch) >> ANGLETOFINESHIFT];
-    return (fixed_t)((int64_t)slope * SCREENHEIGHT / ACTUALHEIGHT);
-  }
-  else
-  {
-    return 0;
-  }
+  // [Nugget] Factored out to `p_map.c/h`
+  return P_PitchToSlope(player->pitch);
 }
 
 // [Nugget] Flinching
@@ -260,145 +251,177 @@ void P_MovePlayer (player_t* player)
 {
   ticcmd_t *cmd = &player->cmd;
   mobj_t *mo = player->mo;
-  static boolean crouchKeyDown = false; // [Nugget]
 
   mo->angle += cmd->angleturn << 16;
   onground = mo->z <= mo->floorz;
 
-  // [Nugget] Allow movement if...
+  // [Nugget] /---------------------------------------------------------------
+
+  fixed_t floorz   = mo->floorz,
+          ceilingz = mo->ceilingz;
+
+  if (casual_play && over_under)
+  {
+    if (mo->below_thing)
+    { floorz = MAX(floorz, mo->below_thing->z + mo->below_thing->height); }
+
+    if (mo->above_thing)
+    { ceilingz = MIN(ceilingz, mo->above_thing->z); }
+  }
+
+  // Allow movement if...
   if (casual_play) {
     onground |= 
          // ... using noclip or flight cheat
          (player->cheats & (CF_NOCLIP|CF_FLY))
          // ... on top of a mobj
-      || (mo->below_thing && (mo->z == (mo->below_thing->z + mo->below_thing->height)));
+      || (mo->below_thing && mo->z == mo->below_thing->z + mo->below_thing->height);
   }
 
-  // [Nugget]
+  boolean jump, crouch;
+
+  if (casual_play && R_GetFreecamMode() != FREECAM_CAM)
+  {
+    jump = M_InputGameActive(input_jump);
+    crouch = M_InputGameActive(input_crouch);
+  }
+  else { jump = crouch = false; }
+
+  if (jump && crouch) { jump = crouch = false; } // Cancel each other out
+
   if (player->cheats & CF_FLY)
   {
-    player->mo->flags |= MF_NOGRAVITY;
+    mo->flags |= MF_NOGRAVITY;
 
-    if (!(M_InputGameActive(input_jump) ^ M_InputGameActive(input_crouch)))
-    { // Stop moving...
+    if (!(jump ^ crouch))
+    {
+      // Stop moving...
       if (player->cheats & CF_NOMOMENTUM)
-      { player->mo->momz = 0; } // ... instantly
-      else { // ... slowly
-        if (player->mo->momz > 0) {
-          player->mo->momz -= 1*FRACUNIT;
-          if (player->mo->momz < 0)
-          { player->mo->momz = 0; }
+      {
+        mo->momz = 0; // ... instantly
+      }
+      else {
+        // ... slowly
+
+        if (mo->momz > 0)
+        {
+          mo->momz = MAX(0, mo->momz - FRACUNIT);
         }
-        else if (player->mo->momz < 0) {
-          player->mo->momz += 1*FRACUNIT;
-          if (player->mo->momz > 0)
-          { player->mo->momz = 0; }
+        else if (mo->momz < 0)
+        {
+          mo->momz = MIN(0, mo->momz + FRACUNIT);
         }
       }
     }
   }
 
-  // [Nugget] Jumping delay
+  const boolean running = autorun ^ M_InputGameActive(input_speed);
+
+  // Jumping delay
   if (player->jumptics) { player->jumptics--; }
 
-  // [Nugget] Jump/Fly Up
-  if (casual_play && M_InputGameActive(input_jump))
+  // Jump/Fly Up
+  if (jump)
   {
-    if (player->cheats & CF_FLY) {
-      player->mo->momz += (1 + (autorun ^ M_InputGameActive(input_speed))) * FRACUNIT;
-      if (player->mo->momz > 8*FRACUNIT) { player->mo->momz = 8*FRACUNIT; }
+    if (player->cheats & CF_FLY)
+    {
+      mo->momz = MIN(8*FRACUNIT, mo->momz + (fixed_t) ((1 + running) * FRACUNIT));
     }
-    else if (jump_crouch) {
-      if (player->mo->intflags & MIF_CROUCHING)
+    else if (jump_crouch)
+    {
+      if (mo->intflags & MIF_CROUCHING)
       {
-        player->mo->intflags &= ~MIF_CROUCHING; // Stand up first
+        mo->intflags &= ~MIF_CROUCHING; // Stand up first
       }
-      else if (onground && !(player->jumptics)
-               && (player->mo->height == player->mo->info->height)
-               && ((player->mo->ceilingz - player->mo->floorz) > player->mo->height))
+      else if (onground && !player->jumptics
+               && mo->height == mo->info->height
+               && ceilingz - floorz > mo->height)
       { // Jump
-        player->mo->momz = 8*FRACUNIT;
+        mo->momz = 8*FRACUNIT;
         player->jumptics = 20;
 
         // [NS] Jump sound.
-        S_StartSoundOptional(player->mo, sfx_pljump, -1);
+        S_StartSoundOptional(mo, sfx_pljump, -1);
 
         // [crispy] squat down weapon sprite a bit
         if (STRICTMODE(weaponsquat))
-        { player->psprites[ps_weapon].dy = player->mo->momz>>1; }
+        { player->psprites[ps_weapon].dy = mo->momz>>1; }
       }
     }
   }
 
-  // [Nugget] Crouch/Fly Down
-  if (!M_InputGameActive(input_crouch))
+  static boolean crouchKeyDown = false;
+
+  // Crouch/Fly Down
+  if (!crouch)
   {
     crouchKeyDown = false;
   }
   else if (casual_play)
   {
-    if (player->cheats & CF_FLY) {
-      player->mo->momz -= (1 + (autorun ^ M_InputGameActive(input_speed))) * FRACUNIT;
-      if (player->mo->momz < -8*FRACUNIT) { player->mo->momz = -8*FRACUNIT; }
+    if (player->cheats & CF_FLY)
+    {
+      mo->momz = MAX(-8*FRACUNIT, mo->momz - (fixed_t) ((1 + running) * FRACUNIT));
     }
     else if (jump_crouch && crouchKeyDown == false)
     {
       crouchKeyDown = true;
-      player->mo->intflags ^= MIF_CROUCHING;
+      mo->intflags ^= MIF_CROUCHING;
     }
   }
 
-  // [Nugget] Forcefully stand up under certain conditions
-  if ((player->mo->intflags & MIF_CROUCHING)
+  // Forcefully stand up under certain conditions
+  if ((mo->intflags & MIF_CROUCHING)
       && (!jump_crouch || player->cheats & CF_FLY || chasecam_mode))
   {
-    player->mo->intflags &= ~MIF_CROUCHING;
+    mo->intflags &= ~MIF_CROUCHING;
   }
 
-  // [Nugget] Smooth crouching
-  if (   ((player->mo->intflags & MIF_CROUCHING)
-          && (player->mo->height > player->mo->info->height/2))
-      || (!(player->mo->intflags & MIF_CROUCHING)
-          && (player->mo->height < (player->mo->ceilingz - player->mo->floorz))
-          && (player->mo->height < player->mo->info->height)))
+  // Smooth crouching
+  if (   ((mo->intflags & MIF_CROUCHING)
+          && mo->height > mo->info->height/2)
+      || (!(mo->intflags & MIF_CROUCHING)
+          && mo->height < ceilingz - floorz
+          && mo->height < mo->info->height))
   {
-    const int sign = ((player->mo->intflags & MIF_CROUCHING)
-                      && (player->mo->height > player->mo->info->height/2)) ? -1 : 1;
-    const fixed_t step = (onground ? CROUCHUNITS : CROUCHUNITS*2) * sign;
-    const fixed_t heighttarget = player->mo->info->height / ((sign > 0) ? 1 : 2),
+    const int sign = ((mo->intflags & MIF_CROUCHING)
+                      && mo->height > mo->info->height/2) ? -1 : 1;
+
+    const fixed_t step = (CROUCHUNITS * (onground ? 1 : 2)) * sign;
+
+    const fixed_t heighttarget = mo->info->height / ((sign > 0) ? 1 : 2),
                   offsettarget = (sign > 0) ? 0 : viewheight_value * FRACUNIT / 2;
 
-    player->mo->height += step;
+    mo->height += step;
 
     // Make `crouchoffset` take as many steps as `height` to reach its target
     player->crouchoffset -= (viewheight_value * FRACUNIT / 2)
-                            / ((float) (player->mo->info->height / 2) / step);
+                          / ((float) (mo->info->height/2) / step);
 
-    if (!onground) { // Crouch jumping!
-      player->mo->z -= step;
-      if (player->mo->z < player->mo->floorz)
-      { player->mo->z = player->mo->floorz; }
-    }
+    if (!onground) { mo->z = MAX(floorz, mo->z - step); } // Crouch jumping!
 
-    if (player->mo->height > (player->mo->ceilingz - player->mo->floorz))
+    if (mo->height > ceilingz - floorz)
     {
-      player->crouchoffset += player->mo->height
-                              - (player->mo->ceilingz - player->mo->floorz);
-      player->mo->height = player->mo->ceilingz - player->mo->floorz;
+      player->crouchoffset += mo->height - (ceilingz - floorz);
+      mo->height = ceilingz - floorz;
     }
 
-    if ((player->mo->height * sign) >= (heighttarget * sign))
+    if (mo->height * sign >= heighttarget * sign)
     {
       // Done crouching
-      if (!onground && (sign < 0)) // Take away excess Z shifting
-      { player->mo->z -= heighttarget - player->mo->height; }
-      player->mo->height = heighttarget;
+
+      // Take away excess Z shifting
+      if (!onground && sign < 0) { mo->z -= heighttarget - mo->height; }
+
+      mo->height = heighttarget;
       player->crouchoffset = offsettarget;
     }
 
-    if ((player->crouchoffset * (-sign)) > (offsettarget * (-sign)))
+    if (player->crouchoffset * -sign > offsettarget * -sign)
     { player->crouchoffset = offsettarget; }
   }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   if (player == &players[consoleplayer])
   {
@@ -432,21 +455,25 @@ void P_MovePlayer (player_t* player)
           char forwardmove = cmd->forwardmove,
                sidemove    = cmd->sidemove;
                   
-          if (player->mo->intflags & MIF_CROUCHING)
+          if (mo->intflags & MIF_CROUCHING)
           { forwardmove /= 2;  sidemove /= 2; }
 
           // [Nugget] -------------------------------------------------------/
 
+          // [Nugget] Freecam
+          const angle_t angle = (casual_play && R_GetFreecamOn() && player == &players[consoleplayer])
+                                ? R_GetFreecamAngle() : mo->angle;
+
           if (cmd->forwardmove)
             {
-              P_Bob(player,mo->angle,forwardmove*bobfactor);
-              P_Thrust(player,mo->angle,forwardmove*movefactor);
+              P_Bob(player,angle,forwardmove*bobfactor);
+              P_Thrust(player,angle,forwardmove*movefactor);
             }
 
           if (cmd->sidemove)
             {
-              P_Bob(player,mo->angle-ANG90,sidemove*bobfactor);
-              P_Thrust(player,mo->angle-ANG90,sidemove*movefactor);
+              P_Bob(player,angle-ANG90,sidemove*bobfactor);
+              P_Thrust(player,angle-ANG90,sidemove*movefactor);
             }
         }
       // [Nugget] Allow minimal mid-air movement if Jumping is enabled
@@ -605,7 +632,6 @@ void P_PlayerThink (player_t* player)
 {
   ticcmd_t*    cmd;
   weapontype_t newweapon;
-  static boolean zoomKeyDown = false; // [Nugget]
 
   // [AM] Assume we can interpolate at the beginning
   //      of the tic.
@@ -700,21 +726,15 @@ void P_PlayerThink (player_t* player)
   if (player->playerstate == PST_DEAD)
     {
       // [Nugget] Disable zoom upon death
-      if (R_GetZoom() == ZOOM_ON) { R_SetZoom(ZOOM_OFF); }
+      if (player == &players[displayplayer] && R_GetZoom() == ZOOM_ON
+          && !R_GetFreecamOn())
+      {
+        R_SetZoom(ZOOM_OFF);
+      }
 
       P_DeathThink (player);
       return;
     }
-
-  if (!M_InputGameActive(input_zoom))
-  {
-    zoomKeyDown = false;
-  }
-  else if (STRICTMODE(zoomKeyDown == false))
-  {
-    zoomKeyDown = true;
-    R_SetZoom(!R_GetZoom());
-  }
 
   // Move around.
   // Reactiontime is used to prevent movement
@@ -901,17 +921,15 @@ void P_PlayerThink (player_t* player)
   player->fixedcolormap = 
 
     beta_emulation ?    /* Beta Emulation */
-    player->powers[pw_infrared] > 4*32 ||
-    player->powers[pw_infrared] & 8 ? 32 :
-    player->powers[pw_invisibility] > 4*32 ||
-    player->powers[pw_invisibility] & 8 ||
+    POWER_RUNOUT(player->powers[pw_infrared]) ? 32 :
+    POWER_RUNOUT(player->powers[pw_invisibility]) ||
     (player->powers[pw_invulnerability] < 4*32 &&
      player->powers[pw_invulnerability] > 0 &&
      player->powers[pw_invulnerability] & 8) ? 33 : 0 :
 
-    player->powers[pw_invulnerability] > 4*32 ||    /* Regular Doom */
-    player->powers[pw_invulnerability] & 8 ? INVERSECOLORMAP :
-    player->powers[pw_infrared] > 4*32 || player->powers[pw_infrared] & 8
+    /* Regular Doom */
+    POWER_RUNOUT(player->powers[pw_invulnerability]) ? INVERSECOLORMAP :
+    POWER_RUNOUT(player->powers[pw_infrared])
     // [Nugget] Night-vision visor
     ? (STRICTMODE(nightvision_visor) ? 33 : 1) : 0;
 }

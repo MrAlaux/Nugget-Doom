@@ -819,7 +819,7 @@ void P_MobjThinker (mobj_t* mobj)
       {
         overunder_t zdir;
 
-        if (!(zdir = P_CheckOverUnderMobj(mobj, true)))
+        if (!(zdir = P_CheckOverUnderMobj(mobj)))
         {
           P_ZMovement(mobj);
         }
@@ -827,10 +827,19 @@ void P_MobjThinker (mobj_t* mobj)
         {
           mobj->momz = 0;
 
-          if (mobj->below_thing && zdir == OU_UNDER)
-          { mobj->z = mobj->below_thing->z + mobj->below_thing->height; }
-          else if (mobj->above_thing) // zdir == OU_OVER
-          { mobj->z = mobj->above_thing->z - mobj->height; }
+          mobj_t *oumobj;
+
+          if ((oumobj = mobj->below_thing) && zdir == OU_UNDER)
+          {
+            mobj->z = oumobj->z + oumobj->height;
+          }
+          else if ((oumobj = mobj->above_thing)) // zdir == OU_OVER
+          {
+            mobj->z = oumobj->z - mobj->height;
+          }
+
+          if (oumobj && mobj->flags & MF_SKULLFLY)
+          { P_SkullSlam(mobj, oumobj); }
         }
       }
       else
@@ -955,7 +964,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   mobj->health = info->spawnhealth;
 
-  if (gameskill != sk_nightmare)
+  if (!aggressive) // [Nugget] Custom Skill: use `aggressive`
     mobj->reactiontime = info->reactiontime;
 
   mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
@@ -1352,10 +1361,11 @@ void P_SpawnMapThing (mapthing_t* mthing)
     return;
 
   // killough 11/98: simplify
+  // [Nugget] Custom Skill: use `thingspawns`
   if ((gameskill == sk_none && demo_compatibility) ||
-      (gameskill == sk_baby || gameskill == sk_easy ?
+      (thingspawns == THINGSPAWNS_EASY ?
       !(mthing->options & MTF_EASY) :
-      gameskill == sk_hard || gameskill == sk_nightmare ?
+      thingspawns == THINGSPAWNS_HARD ?
       !(mthing->options & MTF_HARD) : !(mthing->options & MTF_NORMAL)))
     return;
 
@@ -1388,8 +1398,9 @@ void P_SpawnMapThing (mapthing_t* mthing)
     return;
 
   // don't spawn any monsters if -nomonsters
+  // [Nugget] Custom Skill
 
-  if (nomonsters && (i == MT_SKULL || (mobjinfo[i].flags & MF_COUNTKILL)))
+  if (realnomonsters && (i == MT_SKULL || (mobjinfo[i].flags & MF_COUNTKILL)))
     return;
 
   // spawn it
