@@ -39,6 +39,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "wi_stuff.h"
+
 static boolean voxels_found;
 boolean voxels_rendering, default_voxels_rendering;
 
@@ -1099,6 +1102,77 @@ void VX_DrawVoxel (vissprite_t * spr)
 	vx_eye_y = v->y_pivot + FixedMul (delta_x, s) - FixedMul (delta_y, c);
 
 	VX_RecursiveDraw (spr, 0, 0, v->x_size, v->y_size);
+}
+
+// [Nugget]
+boolean VX_DrawWeaponVoxel (pspdef_t *psp, boolean translucent)
+{
+  if (STRICTMODE(hide_weapon)
+      || R_GetChasecamOn() // Chasecam
+      || R_GetFreecamOn() // Freecam
+      || (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))) // Alt. intermission background
+  {
+    return false;
+  }
+
+  mobj_t thing = {0};
+
+  fixed_t x = psp->sx2,
+          y = psp->sy2 - 32*FRACUNIT;
+
+  if (STRICTMODE(weapon_inertia))
+  {
+    x += psp->wix / 2;
+    y -= psp->wiy / 2;
+  }
+
+  x /= 4;
+  y /= 4;
+
+  if (uncapped)
+  {
+    static int oldtic = -1;
+    static fixed_t oldx, savedx,
+                   oldy, savedy;
+
+    if (oldtic < gametic)
+    {
+      oldtic = gametic;
+      oldx = savedx;
+      oldy = savedy;
+    }
+
+    savedx = x;
+    savedy = y;
+
+    x = LerpFixed(oldx, x);
+    y = LerpFixed(oldy, y);
+  }
+
+  thing.x = thing.oldx = viewx + FixedMul(x,   finesine[viewangle >> ANGLETOFINESHIFT]);
+  thing.y = thing.oldy = viewy - FixedMul(x, finecosine[viewangle >> ANGLETOFINESHIFT]);
+  thing.z = thing.oldz = viewz - 16*FRACUNIT - y;
+
+  thing.angle = thing.oldangle = viewangle - ANG90;
+
+  thing.sprite = psp->state->sprite;
+  thing.frame  = psp->state->frame;
+
+  if (translucent)
+  { thing.flags |= MF_TRANSLUCENT; }
+
+  if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
+  { thing.flags |= MF_SHADOW; }
+
+  sector_t sector = {0};
+  subsector_t sub = { .sector = &sector };
+  thing.subsector = &sub;
+
+  if (!VX_ProjectVoxel(&thing))
+  { return false; }
+
+  VX_DrawVoxel(R_GetLastVisSprite());
+  return true;
 }
 
 //------------------------------------------------------------------------

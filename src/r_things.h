@@ -56,6 +56,8 @@ void R_ClipVisSprite(vissprite_t *vis, int xl, int xh);
 
 void R_InitSpritesRes(void);
 
+vissprite_t *R_GetLastVisSprite(void); // [Nugget]
+
 #endif
 
 //----------------------------------------------------------------------------

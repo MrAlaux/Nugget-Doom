@@ -29,6 +29,8 @@ boolean VX_ProjectVoxel (struct mobj_s * thing);
 struct vissprite_s;
 void VX_DrawVoxel (struct vissprite_s * vis);
 
+boolean VX_DrawWeaponVoxel (struct pspdef_s *psp, boolean translucent); // [Nugget]
+
 extern const char ** vxfiles;
 
 extern boolean voxels_rendering, default_voxels_rendering;
