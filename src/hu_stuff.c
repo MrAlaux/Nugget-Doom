@@ -145,6 +145,8 @@ static hu_multiline_t w_rate;
 // [Nugget] 
 static hu_multiline_t w_powers; // Powerup timers
 
+boolean icon_available[HU_FONTEXTRAS] = { false }; // [Nugget] HUD icons
+
 #define MAX_HUDS 3
 #define MAX_WIDGETS (16 + 1) // [Nugget] Accommodate more widgets
 
@@ -436,15 +438,22 @@ void HU_Init(void)
     big_font.patches[i] = (patch_t *) W_CacheLumpName(buffer, PU_STATIC);
   }
 
-  // [Nugget] Load Stats icons
-  for (i = HU_FONTSIZE + 6, j = 0;  j < 3;  i++, j++)
+  // [Nugget] Load HUD icons
+  for (i = HU_FONTSIZE + 6, j = 0;  j < HU_FONTEXTRAS;  i++, j++)
   {
-    static const char *names[] = { "HUDKILLS", "HUDITEMS", "HUDSCRTS" };
-    static const char fallback[] = { 'K', 'I', 'S' };
+    static const char *names[] = {
+      "HUDKILLS", "HUDITEMS", "HUDSCRTS",           // Stats icons
+      "HUDINVIS", "HUDINVUL", "HUDLIGHT", "HUDSUIT" // Powerup icons
+    };
+
+    static const char fallback[] = { 'K', 'I', 'S', 'I', 'V', 'L', 'R' };
+
     const char *icon = names[j];
 
     if (W_CheckNumForName(icon) != -1)
     {
+      icon_available[j] = true;
+
       sml_font.patches[i] =
       big_font.patches[i] = (patch_t *) W_CacheLumpName(icon, PU_STATIC);
     }
@@ -1349,7 +1358,9 @@ static void HU_widget_build_monsec(void)
   itemcolor   = (fullitemcount >= totalitems)           ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
   secretcolor = (fullsecretcount >= totalsecret)        ? '0'+hudcolor_ms_comp : '0'+hudcolor_ms_incomp;
 
-  // [Nugget] Stats formats from Crispy /-------------------------------------
+  // [Nugget] /===============================================================
+
+  // Stats formats -----------------------------------------------------------
 
   char kill_str[32], item_str[32], secret_str[32];
 
@@ -1386,13 +1397,11 @@ static void HU_widget_build_monsec(void)
       break;
   }
 
-  // [Nugget] ---------------------------------------------------------------/
-
-  // [Nugget] Stats icons /---------------------------------------------------
+  // HUD icons ---------------------------------------------------------------
 
   char killlabel, itemlabel, secretlabel;
 
-  if (hud_stats_icons && sml_font.patches[HU_FONTSIZE + 6 + 0])
+  if (hud_allow_icons && icon_available[0])
   {
     killlabel = (char) (HU_FONTEND + 7 + 0);
     killlabelcolor = '0'+CR_NONE;
@@ -1402,7 +1411,7 @@ static void HU_widget_build_monsec(void)
     killlabelcolor = '0'+hudcolor_kills;
   }
 
-  if (hud_stats_icons && sml_font.patches[HU_FONTSIZE + 6 + 1])
+  if (hud_allow_icons && icon_available[1])
   {
     itemlabel = (char) (HU_FONTEND + 7 + 1);
     itemlabelcolor = '0'+CR_NONE;
@@ -1412,7 +1421,7 @@ static void HU_widget_build_monsec(void)
     itemlabelcolor = '0'+hudcolor_items;
   }
 
-  if (hud_stats_icons && sml_font.patches[HU_FONTSIZE + 6 + 2])
+  if (hud_allow_icons && icon_available[2])
   {
     secretlabel = (char) (HU_FONTEND + 7 + 2);
     secretlabelcolor = '0'+CR_NONE;
@@ -1422,11 +1431,11 @@ static void HU_widget_build_monsec(void)
     secretlabelcolor = '0'+hudcolor_secrets;
   }
 
-  // [Nugget] ---------------------------------------------------------------/
+  // [Nugget] ===============================================================/
 
   if (MULTILINE(nughud.sts_ml)) // [Nugget] NUGHUD
   {
-    // [Nugget] Stats icons
+    // [Nugget] HUD icons
     // [Nugget] Stats formats from Crispy
 
     M_snprintf(hud_monsecstr, sizeof(hud_monsecstr),
@@ -1443,7 +1452,7 @@ static void HU_widget_build_monsec(void)
   }
   else
   {
-    // [Nugget] Stats icons
+    // [Nugget] HUD icons
     // [Nugget] Stats formats from Crispy
     M_snprintf(hud_monsecstr, sizeof(hud_monsecstr),
       "\x1b%c%c \x1b%c%s \x1b%c%c \x1b%c%s \x1b%c%c \x1b%c%s",
@@ -1515,31 +1524,39 @@ static void HU_widget_build_powers(void)
 
   // TO-DO: Multi-lined?
 
-  if (plr->powers[pw_invisibility] > 0) {
-    offset += M_snprintf(hud_powerstr, sizeof(hud_powerstr), "\x1b%cINVIS %i\" ",
-                         '0' + (POWER_RUNOUT(plr->powers[pw_invisibility]) ? CR_RED : CR_BLACK),
-                         MIN(INVISTICS/TICRATE, 1 + (plr->powers[pw_invisibility] / TICRATE)));
-  }
+  #define POWERUP_TIMER(_power_, _powerdur_, _numicon_, _string_, _color_, _last_) \
+    if (plr->powers[_power_] > 0)                                                  \
+    {                                                                              \
+      const boolean runout = POWER_RUNOUT(plr->powers[_power_]);                   \
+                                                                                   \
+      if (hud_allow_icons && icon_available[_numicon_])                            \
+      {                                                                            \
+        offset += M_snprintf(                                                      \
+          hud_powerstr + offset, sizeof(hud_powerstr) - offset, "\x1b%c%c\x1b%c",  \
+          '0' + (runout ? CR_NONE : CR_BLACK),                                     \
+          (char) (HU_FONTEND + 7 + _numicon_),                                     \
+          '0' + (runout ? _color_ : CR_BLACK)                                      \
+        );                                                                         \
+      }                                                                            \
+      else {                                                                       \
+        offset += M_snprintf(                                                      \
+          hud_powerstr + offset, sizeof(hud_powerstr) - offset, "\x1b%c" _string_, \
+          '0' + (runout ? _color_ : CR_BLACK)                                      \
+        );                                                                         \
+      }                                                                            \
+                                                                                   \
+      offset += M_snprintf(                                                        \
+        hud_powerstr + offset, sizeof(hud_powerstr) - offset, " %i\"%s",           \
+        MIN(_powerdur_/TICRATE, 1 + (plr->powers[_power_] / TICRATE)),             \
+        !_last_ ? " " : ""                                                         \
+      );                                                                           \
+    }
 
-  if (plr->powers[pw_invulnerability] > 0) {
-    offset += M_snprintf(hud_powerstr + offset, sizeof(hud_powerstr), "\x1b%cINVUL %i\" ",
-                         '0' + (POWER_RUNOUT(plr->powers[pw_invulnerability]) ? CR_GREEN : CR_BLACK),
-                         MIN(INVULNTICS/TICRATE, 1 + (plr->powers[pw_invulnerability] / TICRATE)));
-  }
+  POWERUP_TIMER(pw_invisibility,    INVISTICS,  3, "INVIS", CR_RED,   false);
+  POWERUP_TIMER(pw_invulnerability, INVULNTICS, 4, "INVUL", CR_GREEN, false);
+  POWERUP_TIMER(pw_infrared,        INFRATICS,  5, "LIGHT", CR_BRICK, false);
+  POWERUP_TIMER(pw_ironfeet,        IRONTICS,   6, "SUIT",  CR_GRAY,  true);
 
-  if (plr->powers[pw_infrared] > 0) {
-    offset += M_snprintf(hud_powerstr + offset, sizeof(hud_powerstr), "\x1b%cLIGHT %i\" ",
-                         '0' + (POWER_RUNOUT(plr->powers[pw_infrared]) ? CR_BRICK : CR_BLACK),
-                         MIN(INFRATICS/TICRATE, 1 + (plr->powers[pw_infrared] / TICRATE)));
-  }
-
-  if (plr->powers[pw_ironfeet] > 0) {
-    offset += M_snprintf(hud_powerstr + offset, sizeof(hud_powerstr), "\x1b%cSUIT %i\"",
-                         '0' + (POWER_RUNOUT(plr->powers[pw_ironfeet]) ? CR_GRAY : CR_BLACK),
-                         MIN(IRONTICS/TICRATE, 1 + (plr->powers[pw_ironfeet] / TICRATE)));
-  }
-
-  
   if (offset) { HUlib_add_string_to_cur_line(&w_powers, hud_powerstr); }
   else        { HUlib_clear_cur_line(&w_powers); }
 }

@@ -106,8 +106,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Restored various message-related menu items**
 - **_Show Powerup Timers_** setting
 - **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-only: `show_ssg`) [p.f. Crispy Doom]
-- **Support for Stats icons**, to be used in place of the "K/I/S" letter-labels: `HUDKILLS`, `HUDITEMS` and `HUDSCRTS` graphic lumps
-- **_Level Stats Format_** settings [i.b. Crispy Doom]
+- **_Level-Stats Format_** settings [i.b. Crispy Doom]
 - **_Highlight Current/Pending Weapon_** setting [i.b. PSX Doom]
 - **_Alternative Arms Display_** setting, to show the Chainsaw or SSG's availability on the Arms widget in place of the trivial Pistol
 - **Event Timers:**
@@ -116,6 +115,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Extended HUD color customization**
 - **Armor count is colored gray when in God Mode**
 - **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
+- **Support for HUD icons**:
+  - Level-stats widget: `HUDKILLS`, `HUDITEMS`, `HUDSCRTS`
+  - Powerup-timers widget: `HUDINVIS`, `HUDINVUL`, `HUDLIGHT`, `HUDSUIT`
 
 ### Automap
 

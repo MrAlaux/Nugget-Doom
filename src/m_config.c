@@ -3744,10 +3744,10 @@ default_t defaults[] = {
   // [Nugget] ---------------------------------------------------------------/
 
   { // [Nugget]
-    "hud_stats_icons",
-    (config_t *) &hud_stats_icons, NULL,
+    "hud_allow_icons",
+    (config_t *) &hud_allow_icons, NULL,
     {1}, {0,1}, number, ss_stat, wad_yes,
-    "Allow usage of icons for the Level Stats widget's labels"
+    "Allow usage of icons for some labels in HUD widgets"
   },
 
   // [FG] level time widget

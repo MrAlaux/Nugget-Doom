@@ -185,7 +185,7 @@ static void add_string_to_line (hu_line_t *const l, const hu_font_t *const f, co
     }
     else if (c == '\t')
       w = (w + f->tab_width) & f->tab_mask;
-    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + 3) // [Nugget] Stats icons
+    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + HU_FONTEXTRAS) // [Nugget] HUD icons
       w += SHORT(p[c - HU_FONTSTART]->width);
     else
       w += f->space_width;
@@ -367,7 +367,7 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
           cr = m->cr;
       }
     }
-    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + 3) // [Nugget] Stats icons
+    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + HU_FONTEXTRAS) // [Nugget] HUD icons
     {
       int w = SHORT(p[c-HU_FONTSTART]->width);
 

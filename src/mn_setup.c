@@ -1781,9 +1781,9 @@ static setup_menu_t stat_settings5[] =
   {"Nugget - Extended HUD", S_SKIP|S_TITLE, M_X, M_SPC},
 
     {"Show Powerup Timers",              S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_power_timers"}, m_null, input_null, str_show_widgets},
-    {"HUD Level Stats Format",           S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format"}, m_null, input_null, str_stats_format},
-    {"Automap Level Stats Format",       S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format_map"}, m_null, input_null, str_stats_format},
-    {"Allow Level Stats Icons",          S_ONOFF,             M_X, M_SPC, {"hud_stats_icons"}},
+    {"HUD Level-Stats Format",           S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format"}, m_null, input_null, str_stats_format},
+    {"Automap Level-Stats Format",       S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_stats_format_map"}, m_null, input_null, str_stats_format},
+    {"Allow HUD Icons",                  S_ONOFF,             M_X, M_SPC, {"hud_allow_icons"}},
     {"Highlight Current/Pending Weapon", S_ONOFF,             M_X, M_SPC, {"hud_highlight_weapon"}},
     {"Alternative Arms Display",         S_ONOFF,             M_X, M_SPC, {"alt_arms"}, m_null, input_null, str_empty, ST_createWidgets},
 
