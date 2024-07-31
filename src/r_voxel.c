@@ -1151,7 +1151,7 @@ boolean VX_DrawWeaponVoxel (pspdef_t *psp, boolean translucent)
 
   thing.x = thing.oldx = viewx + FixedMul(x,   finesine[viewangle >> ANGLETOFINESHIFT]);
   thing.y = thing.oldy = viewy - FixedMul(x, finecosine[viewangle >> ANGLETOFINESHIFT]);
-  thing.z = thing.oldz = viewz - 16*FRACUNIT - y;
+  thing.z = thing.oldz = viewz - y;
 
   thing.angle = thing.oldangle = viewangle - ANG90;
 
@@ -1164,6 +1164,7 @@ boolean VX_DrawWeaponVoxel (pspdef_t *psp, boolean translucent)
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
   { thing.flags |= MF_SHADOW; }
 
+  // Albeit unused, `R_ProjectVoxel()` accesses `heightsec`
   sector_t sector = {0};
   subsector_t sub = { .sector = &sector };
   thing.subsector = &sub;
