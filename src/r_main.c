@@ -565,7 +565,8 @@ angle_t R_PointToAngleCrispy(fixed_t x, fixed_t y)
 
 // [crispy] in widescreen mode, make sure the same number of horizontal
 // pixels shows the same part of the game scene as in regular rendering mode
-static int scaledviewwidth_nonwide, viewwidth_nonwide;
+static int scaledviewwidth_nonwide;
+int viewwidth_nonwide; // [Nugget] Non-static
 static fixed_t centerxfrac_nonwide;
 
 //

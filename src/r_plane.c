@@ -53,6 +53,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "i_video.h"
+
 #define MAXVISPLANES 128    /* must be a power of 2 */
 
 static visplane_t *visplanes[MAXVISPLANES];   // killough
@@ -406,7 +409,7 @@ static void do_draw_plane(visplane_t *pl)
 	angle_t an, flip;
 	boolean vertically_scrolling = false;
 	boolean stretch;
-	int skyheight_target; // [Nugget] Stretch sky just as much as necessary
+	int skyheight_target = 0; // [Nugget] Stretch sky just as much as necessary
 
 	// killough 10/98: allow skies to come from sidedefs.
 	// Allows scrolling and/or animated skies, as well as
@@ -466,12 +469,19 @@ static void do_draw_plane(visplane_t *pl)
         dc_texheight = textureheight[texture]>>FRACBITS; // killough
         dc_iscale = skyiscale;
 
+        if ((float) custom_fov / FOV_DEFAULT > 1.0)
+        {
+          extern int viewwidth_nonwide;
+          skyheight_target = (100 - (dc_texturemid >> FRACBITS)) * skyiscale / FixedDiv(SCREENWIDTH, viewwidth_nonwide);
+        }
+
         // [FG] stretch short skies
         
         // [Nugget] Stretch sky just as much as necessary
-        skyheight_target = 200 - (dc_texturemid >> FRACBITS);
+        if (stretchsky)
+        { skyheight_target = MAX(skyheight_target, 200 - (dc_texturemid >> FRACBITS)); }
         
-        stretch = (stretchsky && dc_texheight < skyheight_target);
+        stretch = (dc_texheight < skyheight_target);
         if (stretch || !vertically_scrolling)
         {
           fixed_t diff;
