@@ -469,18 +469,21 @@ static void do_draw_plane(visplane_t *pl)
         dc_texheight = textureheight[texture]>>FRACBITS; // killough
         dc_iscale = skyiscale;
 
-        if ((float) custom_fov / FOV_DEFAULT > 1.0)
+        // [FG] stretch short skies
+
+        // [Nugget] /---------------------------------------------------------
+
+        // Stretch sky just as much as necessary
+        skyheight_target = (stretchsky ? 200 : 100) - (dc_texturemid >> FRACBITS);
+
+        // FOV-based sky stretching
+        if (fov_stretchsky && skyiscalediff > FRACUNIT)
         {
-          extern int viewwidth_nonwide;
-          skyheight_target = (100 - (dc_texturemid >> FRACBITS)) * skyiscale / FixedDiv(SCREENWIDTH, viewwidth_nonwide);
+          skyheight_target = skyheight_target * skyiscalediff / FRACUNIT;
         }
 
-        // [FG] stretch short skies
-        
-        // [Nugget] Stretch sky just as much as necessary
-        if (stretchsky)
-        { skyheight_target = MAX(skyheight_target, 200 - (dc_texturemid >> FRACBITS)); }
-        
+        // [Nugget] ---------------------------------------------------------/
+
         stretch = (dc_texheight < skyheight_target);
         if (stretch || !vertically_scrolling)
         {

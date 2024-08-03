@@ -68,7 +68,8 @@ lighttable_t *fixedcolormap;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
 fixed_t  projection;
-fixed_t  skyiscale;
+fixed_t  skyiscale,
+         skyiscalediff; // [Nugget] FOV-based sky stretching
 fixed_t  viewx, viewy, viewz;
 angle_t  viewangle;
 localview_t localview;
@@ -565,8 +566,7 @@ angle_t R_PointToAngleCrispy(fixed_t x, fixed_t y)
 
 // [crispy] in widescreen mode, make sure the same number of horizontal
 // pixels shows the same part of the game scene as in regular rendering mode
-static int scaledviewwidth_nonwide;
-int viewwidth_nonwide; // [Nugget] Non-static
+static int scaledviewwidth_nonwide, viewwidth_nonwide;
 static fixed_t centerxfrac_nonwide;
 
 //
@@ -930,6 +930,16 @@ void R_ExecuteSetViewSize (void)
   else
   {
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
+  }
+
+  // [Nugget] FOV-based sky stretching;
+  // we intentionally use `custom_fov` to disregard any FOV effects
+  if (custom_fov == FOV_DEFAULT)
+  {
+    skyiscalediff = FRACUNIT;
+  }
+  else {
+    skyiscalediff = tan(custom_fov * M_PI / 360.0) * FRACUNIT;
   }
 
   for (i=0 ; i<viewwidth ; i++)

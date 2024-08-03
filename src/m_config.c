@@ -345,7 +345,14 @@ default_t defaults[] = {
     "stretchsky",
     (config_t *) &stretchsky, NULL,
     {0}, {0,1}, number, ss_gen, wad_no,
-    "1 to stretch short skies"
+    "1 to stretch short skies for mouselook" // [Nugget] Extended description
+  },
+
+  { // [Nugget] FOV-based sky stretching
+    "fov_stretchsky",
+    (config_t *) &fov_stretchsky, NULL,
+    {1}, {0,1}, number, ss_gen, wad_no,
+    "1 to stretch skies based on FOV"
   },
 
   {

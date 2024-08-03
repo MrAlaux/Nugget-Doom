@@ -646,6 +646,7 @@ enum {
   SHOTPAL_BOTH,
 }; extern int screenshot_palette;
 
+extern int fov_stretchsky;
 extern int hud_menu_shadows_filter_pct;
 extern int menu_backdrop_darkening;
 extern int automap_overlay_darkening;

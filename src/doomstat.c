@@ -238,6 +238,7 @@ int fancy_teleport;
 // Miscellaneous (CFG-only) --------------------------------------------------
 
 int screenshot_palette;
+int fov_stretchsky;
 int hud_menu_shadows_filter_pct;
 int menu_backdrop_darkening;
 int automap_overlay_darkening;
