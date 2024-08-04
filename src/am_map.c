@@ -1901,8 +1901,39 @@ typedef struct
 
 static am_line_t *lines_1S = NULL;
 
-// [Nugget] Tag Finder from PrBoomX: Prototype this function
+// [Nugget] Tag Finder from PrBoomX /-----------------------------------------
+
+// Prototype this function
 static void AM_drawLineCharacter(mline_t*, int, fixed_t, angle_t, int, fixed_t, fixed_t);
+
+static boolean AM_isTagFinderLine(const line_t *const line)
+{
+  int ret = 0;
+
+  if (magic_sector || magic_tag > 0)
+  {
+    if (line->frontsector && (   (magic_sector  && line->frontsector->tag == magic_sector->tag)
+                              || (magic_tag > 0 && line->frontsector->tag == magic_tag)))
+    {
+      ret |= 0x1;
+    }
+
+    if (line->backsector && (   (magic_sector  && line->backsector->tag == magic_sector->tag)
+                             || (magic_tag > 0 && line->backsector->tag == magic_tag)))
+    {
+      ret |= 0x1;
+    }
+
+    if (line->tag > 0 && (line->tag == magic_tag || (magic_sector && (line->tag == magic_sector->tag))))
+    {
+      ret |= 0x2;
+    }
+  }
+
+  return ret;
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 static void AM_drawWalls(void)
 {
@@ -1938,7 +1969,8 @@ static void AM_drawWalls(void)
     if (ddt_cheating || (lines[i].flags & ML_MAPPED))
     {
       if ((lines[i].flags & ML_DONTDRAW) && !ddt_cheating
-          && lines[i].tag != magic_tag) // [Nugget] Tag Finder from PrBoomX
+          // [Nugget] Tag Finder from PrBoomX
+          && !AM_isTagFinderLine(&lines[i]))
         continue;
       {
         /* cph - show keyed doors and lines */
@@ -2132,34 +2164,30 @@ static void AM_drawWalls(void)
       }
     }
 
-    // [Nugget] Tag Finder from PrBoomX: Highlight sectors and lines
-    if (magic_sector || magic_tag > 0)
+    // [Nugget] Tag Finder from PrBoomX: Highlight sectors and lines ---------
+
+    const int is_tf_line = AM_isTagFinderLine(&lines[i]);
+
+    if (is_tf_line & 0x1)
     {
-      if (   (lines[i].frontsector && (   (magic_sector  && lines[i].frontsector->tag == magic_sector->tag)
-                                       || (magic_tag > 0 && lines[i].frontsector->tag == magic_tag)))
-          || (lines[i].backsector  && (   (magic_sector  && lines[i].backsector->tag  == magic_sector->tag)
-                                       || (magic_tag > 0 && lines[i].backsector->tag  == magic_tag))))
-      {
-        if (!lines[i].backsector)
-        { array_push(lines_1S, ((am_line_t) {l, magic_sector_color_pos})); }
-        else
-        { AM_drawMline(&l, magic_sector_color_pos); }
+      if (!lines[i].backsector)
+      { array_push(lines_1S, ((am_line_t) {l, magic_sector_color_pos})); }
+      else
+      { AM_drawMline(&l, magic_sector_color_pos); }
 
-        if (magic_sector_color_pos <= MAGIC_SECTOR_COLOR_MIN+1)
-        { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 229 })); }
-      }
-      
-      if (   (lines[i].tag > 0)
-          && (lines[i].tag == magic_tag || (magic_sector && (lines[i].tag == magic_sector->tag))))
-      {
-        if (!lines[i].backsector)
-        { array_push(lines_1S, ((am_line_t) {l, magic_line_color_pos})); }
-        else
-        { AM_drawMline(&l, magic_line_color_pos); }
+      if (magic_sector_color_pos <= MAGIC_SECTOR_COLOR_MIN+1)
+      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 229 })); }
+    }
+    
+    if (is_tf_line & 0x2)
+    {
+      if (!lines[i].backsector)
+      { array_push(lines_1S, ((am_line_t) {l, magic_line_color_pos})); }
+      else
+      { AM_drawMline(&l, magic_line_color_pos); }
 
-        if (magic_line_color_pos <= MAGIC_LINE_COLOR_MIN+1)
-        { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 251 })); }
-      }
+      if (magic_line_color_pos <= MAGIC_LINE_COLOR_MIN+1)
+      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 251 })); }
     }
   }
 
