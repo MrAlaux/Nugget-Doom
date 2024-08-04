@@ -1906,7 +1906,7 @@ static am_line_t *lines_1S = NULL;
 // Prototype this function
 static void AM_drawLineCharacter(mline_t*, int, fixed_t, angle_t, int, fixed_t, fixed_t);
 
-static boolean AM_isTagFinderLine(const line_t *const line)
+static int AM_isTagFinderLine(const line_t *const line)
 {
   int ret = 0;
 
