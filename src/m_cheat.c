@@ -56,14 +56,13 @@
 
 // [Nugget] Testing cheat /------------
 
-#define NUGMAGIC
+//#define NUGMAGIC
 
 #ifdef NUGMAGIC
 // For testing purposes
 static void cheat_magic()
 {
-  displaymsg("FOV stretching %s", (fov_stretchsky = !fov_stretchsky)
-                                  ? "ON" : "OFF");
+  
 }
 #endif
 

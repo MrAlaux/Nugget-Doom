@@ -2,6 +2,7 @@
 
 - **Support for powerup-timer icons**
   - Replaced `hud_stats_icons` with `hud_allow_icons` [1]
+- **FOV-based sky stretching** setting
 
 ## Changes
 
