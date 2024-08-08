@@ -1454,6 +1454,8 @@ spawnit:
      -dist, -dist, -dist
     };
 
+    mobj->flags |= MF_TELEPORT; // Don't interact with specials
+
     for (int j = 0;  j < 8;  j++)
     {
       const int side = (j + offset) % 8;
@@ -1467,6 +1469,9 @@ spawnit:
         break;
       }
     }
+
+    if (!(mobj->info->flags & MF_TELEPORT))
+    { mobj->flags &= ~MF_TELEPORT; }
 
     if (stuck)
     {
