@@ -702,6 +702,13 @@ default_t defaults[] = {
     "Custom Skill: aggressive monsters (instant reaction time, continuous attacks)"
   },
 
+  {
+    "custom_skill_x2monsters",
+    (config_t *) &custom_skill_x2monsters, NULL,
+    {0}, {0,1}, number, ss_skill, wad_yes,
+    "Custom Skill: duplicate monster spawns"
+  },
+
   // [Nugget] ---------------------------------------------------------------/
 
   { // killough 3/6/98: preserve autorun across games

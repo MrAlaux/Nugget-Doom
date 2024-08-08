@@ -2982,16 +2982,20 @@ static void CSCurrentLoadout(void)
   StartCustomSkill(3);
 }
 
+#define MI_GAP2 \
+    {"", S_SKIP, 0, M_SPC / 2}
+
 static setup_menu_t customskill_settings1[] = {
 
     {"Thing Spawns",       S_CHOICE|S_LEVWARN, M_X, M_SPC, {"custom_skill_things"}, m_null, input_null, str_thing_spawns},
     {"Multiplayer Things", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_coopspawns"}},
+    {"Duplicate Monsters", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_x2monsters"}},
     {"No Monsters",        S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_nomonsters"}},
-    MI_GAP,
+    MI_GAP2,
     {"Double Ammo From Pickups", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_doubleammo"}},
     {"Halved Damage To Player",  S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_halfdamage"}},
     {"Slow Spawn-Cube Spitter",  S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_slowbrain"}},
-    MI_GAP,
+    MI_GAP2,
     {"Fast Monsters",                   S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_fast"}},
     {"Respawning Monsters",             S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_respawn"}},
     {"Aggressive (Nightmare) Monsters", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_aggressive"}},
@@ -3003,6 +3007,8 @@ static setup_menu_t customskill_settings1[] = {
 
     MI_END
 };
+
+#undef MI_GAP2
 
 static setup_menu_t *customskill_settings[] = {customskill_settings1, NULL};
 

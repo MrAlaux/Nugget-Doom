@@ -148,6 +148,7 @@ static struct {
   boolean fast;
   boolean respawn;
   boolean aggressive;
+  boolean x2monsters;
 } customskill;
 
 int     thingspawns;
@@ -157,6 +158,7 @@ boolean halfdamage;
 boolean slowbrain;
 boolean fastmonsters;
 boolean aggressive;
+boolean x2monsters;
 
 static struct {
   int          mohealth;
@@ -199,6 +201,7 @@ void G_SetSkillParms(const skill_t skill)
     fastmonsters    = customskill.fast;
     respawnmonsters = customskill.respawn;
     aggressive      = customskill.aggressive;
+    x2monsters      = customskill.x2monsters;
   }
   else {
     thingspawns = (skill == sk_baby || skill == sk_easy)      ? THINGSPAWNS_EASY :
@@ -210,6 +213,8 @@ void G_SetSkillParms(const skill_t skill)
     fastmonsters    = fastparm || skill == sk_nightmare;
     respawnmonsters = skill == sk_nightmare || respawnparm;
     aggressive      = skill == sk_nightmare;
+
+    x2monsters = false;
   }
 
   G_SetBabyModeParms(skill);
@@ -227,6 +232,7 @@ void G_SetUserCustomSkill(void)
   customskill.fast       = custom_skill_fast;
   customskill.respawn    = custom_skill_respawn;
   customskill.aggressive = custom_skill_aggressive;
+  customskill.x2monsters = custom_skill_x2monsters;
 }
 
 static void G_UpdateInitialLoadout(void)
@@ -2447,7 +2453,7 @@ static void G_DoPlayDemo(void)
 // killough 2/22/98: version id string format for savegames
 #define VERSIONID "MBF %d"
 
-#define CURRENT_SAVE_VERSION "Nugget 3.2.0" // [Nugget]
+#define CURRENT_SAVE_VERSION "Nugget 3.3.0" // [Nugget]
 
 static char *savename = NULL;
 
@@ -2702,6 +2708,7 @@ static void G_DoSaveGame(void)
   saveg_write32(customskill.fast);
   saveg_write32(customskill.respawn);
   saveg_write32(customskill.aggressive);
+  saveg_write32(customskill.x2monsters);
 
   CheckSaveGame(sizeof(initial_loadout));
 
@@ -2804,6 +2811,7 @@ static void G_DoLoadGame(void)
   CheckSaveVersion("Nugget 2.0.0", saveg_nugget200);
   CheckSaveVersion("Nugget 2.1.0", saveg_nugget210);
   CheckSaveVersion("Nugget 2.4.0", saveg_nugget300);
+  CheckSaveVersion("Nugget 3.2.0", saveg_nugget320);
   CheckSaveVersion(CURRENT_SAVE_VERSION, saveg_current);
 
   // killough 2/22/98: Friendly savegame version difference message
@@ -2959,36 +2967,58 @@ static void G_DoLoadGame(void)
   { complete_milestones = saveg_read_enum(); }
 
   // Restore custom-skill settings
-  if (saveg_compat > saveg_nugget300 && (save_p - savebuffer) <= (length - sizeof(customskill)))
+  if (saveg_compat > saveg_nugget300)
   {
-    customskill.things     = saveg_read32();
-    customskill.coopspawns = saveg_read32();
-    customskill.nomonsters = saveg_read32();
-    customskill.doubleammo = saveg_read32();
-    customskill.halfdamage = saveg_read32();
-    customskill.slowbrain  = saveg_read32();
-    customskill.fast       = saveg_read32();
-    customskill.respawn    = saveg_read32();
-    customskill.aggressive = saveg_read32();
+    #define READ(x)                                      \
+      if ((save_p - savebuffer) <= (length - sizeof(x))) \
+        x = saveg_read32()
+
+    READ(customskill.things);
+    READ(customskill.coopspawns);
+    READ(customskill.nomonsters);
+    READ(customskill.doubleammo);
+    READ(customskill.halfdamage);
+    READ(customskill.slowbrain);
+    READ(customskill.fast);
+    READ(customskill.respawn);
+    READ(customskill.aggressive);
+
+    if (saveg_compat > saveg_nugget320)
+    { READ(customskill.x2monsters); }
 
     if (gameskill == sk_custom) { G_SetSkillParms(sk_custom); }
 
-    initial_loadout.mohealth    = saveg_read32();
-    initial_loadout.health      = saveg_read32();
-    initial_loadout.armorpoints = saveg_read32();
-    initial_loadout.armortype   = saveg_read32();
-    initial_loadout.backpack    = saveg_read32();
-    initial_loadout.readyweapon = saveg_read_enum();
-    initial_loadout.lastweapon  = saveg_read_enum();
+    READ(initial_loadout.mohealth);
+    READ(initial_loadout.health);
+    READ(initial_loadout.armorpoints);
+    READ(initial_loadout.armortype);
+    READ(initial_loadout.backpack);
 
-    for (int i = 0;  i < NUMWEAPONS;  i++)
-    { initial_loadout.weaponowned[i] = saveg_read32(); }
+    if ((save_p - savebuffer) <= (length - sizeof(initial_loadout.readyweapon)))
+    { initial_loadout.readyweapon = saveg_read_enum(); }
 
-    for (int i = 0;  i < NUMAMMO;  i++)
-    { initial_loadout.ammo[i] = saveg_read32(); }
+    if ((save_p - savebuffer) <= (length - sizeof(initial_loadout.lastweapon)))
+    { initial_loadout.lastweapon  = saveg_read_enum(); }
 
-    for (int i = 0;  i < NUMAMMO;  i++)
-    { initial_loadout.maxammo[i] = saveg_read32(); }
+    if ((save_p - savebuffer) <= (length - sizeof(initial_loadout.weaponowned)))
+    {
+      for (int i = 0;  i < NUMWEAPONS;  i++)
+      { initial_loadout.weaponowned[i] = saveg_read32(); }
+    }
+
+    if ((save_p - savebuffer) <= (length - sizeof(initial_loadout.ammo)))
+    {
+      for (int i = 0;  i < NUMAMMO;  i++)
+      { initial_loadout.ammo[i] = saveg_read32(); }
+    }
+
+    if ((save_p - savebuffer) <= (length - sizeof(initial_loadout.maxammo)))
+    {
+      for (int i = 0;  i < NUMAMMO;  i++)
+      { initial_loadout.maxammo[i] = saveg_read32(); }
+    }
+
+    #undef READ
   }
 
   // [Nugget] ---------------------------------------------------------------/
@@ -3130,6 +3160,7 @@ static void G_SaveKeyFrame(void)
   saveg_write32(customskill.fast);
   saveg_write32(customskill.respawn);
   saveg_write32(customskill.aggressive);
+  saveg_write32(customskill.x2monsters);
 
   CheckSaveGame(sizeof(initial_loadout));
 
@@ -3342,25 +3373,29 @@ static void G_DoRewind(void)
     customskill.fast       = saveg_read32();
     customskill.respawn    = saveg_read32();
     customskill.aggressive = saveg_read32();
+    customskill.x2monsters = saveg_read32();
 
     if (gameskill == sk_custom) { G_SetSkillParms(sk_custom); }
 
-    initial_loadout.mohealth    = saveg_read32();
-    initial_loadout.health      = saveg_read32();
-    initial_loadout.armorpoints = saveg_read32();
-    initial_loadout.armortype   = saveg_read32();
-    initial_loadout.backpack    = saveg_read32();
-    initial_loadout.readyweapon = saveg_read_enum();
-    initial_loadout.lastweapon  = saveg_read_enum();
+    if ((save_p - savebuffer) <= (length - sizeof(initial_loadout)))
+    {
+      initial_loadout.mohealth    = saveg_read32();
+      initial_loadout.health      = saveg_read32();
+      initial_loadout.armorpoints = saveg_read32();
+      initial_loadout.armortype   = saveg_read32();
+      initial_loadout.backpack    = saveg_read32();
+      initial_loadout.readyweapon = saveg_read_enum();
+      initial_loadout.lastweapon  = saveg_read_enum();
 
-    for (int i = 0;  i < NUMWEAPONS;  i++)
-    { initial_loadout.weaponowned[i] = saveg_read32(); }
+      for (int i = 0;  i < NUMWEAPONS;  i++)
+      { initial_loadout.weaponowned[i] = saveg_read32(); }
 
-    for (int i = 0;  i < NUMAMMO;  i++)
-    { initial_loadout.ammo[i] = saveg_read32(); }
+      for (int i = 0;  i < NUMAMMO;  i++)
+      { initial_loadout.ammo[i] = saveg_read32(); }
 
-    for (int i = 0;  i < NUMAMMO;  i++)
-    { initial_loadout.maxammo[i] = saveg_read32(); }
+      for (int i = 0;  i < NUMAMMO;  i++)
+      { initial_loadout.maxammo[i] = saveg_read32(); }
+    }
   }
 
   keyframe_rw = false;
