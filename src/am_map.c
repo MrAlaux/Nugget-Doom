@@ -1292,7 +1292,7 @@ void AM_Ticker (void)
 
       for (int i = 0;  i < subsec->sector->linecount;  i++)
       {
-        line_t* l = subsec->sector->lines[i];
+        const line_t *const l = subsec->sector->lines[i];
 
         if (l && l->tag > 0)
         {
@@ -1917,7 +1917,7 @@ static int AM_isTagFinderLine(const line_t *const line)
     {
       ret |= 0x1;
     }
-
+    else 
     if (line->backsector && (   (magic_sector  && line->backsector->tag == magic_sector->tag)
                              || (magic_tag > 0 && line->backsector->tag == magic_tag)))
     {
@@ -1965,12 +1965,41 @@ static void AM_drawWalls(void)
         AM_rotatePoint(&l.a);
         AM_rotatePoint(&l.b);
     }
+
+    // [Nugget] Tag Finder from PrBoomX: Highlight sectors and lines /--------
+
+    const int is_tf_line = AM_isTagFinderLine(&lines[i]);
+
+    if (is_tf_line & 0x1)
+    {
+      if (!lines[i].backsector)
+      { array_push(lines_1S, ((am_line_t) {l, magic_sector_color_pos})); }
+      else
+      { AM_drawMline(&l, magic_sector_color_pos); }
+
+      if (magic_sector_color_pos <= MAGIC_SECTOR_COLOR_MIN+1)
+      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 229 })); }
+    }
+    
+    if (is_tf_line & 0x2)
+    {
+      if (!lines[i].backsector)
+      { array_push(lines_1S, ((am_line_t) {l, magic_line_color_pos})); }
+      else
+      { AM_drawMline(&l, magic_line_color_pos); }
+
+      if (magic_line_color_pos <= MAGIC_LINE_COLOR_MIN+1)
+      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 251 })); }
+    }
+
+    if (is_tf_line) { continue; }
+
+    // [Nugget] -------------------------------------------------------------/
+
     // if line has been seen or IDDT has been used
     if (ddt_cheating || (lines[i].flags & ML_MAPPED))
     {
-      if ((lines[i].flags & ML_DONTDRAW) && !ddt_cheating
-          // [Nugget] Tag Finder from PrBoomX
-          && !AM_isTagFinderLine(&lines[i]))
+      if ((lines[i].flags & ML_DONTDRAW) && !ddt_cheating)
         continue;
       {
         /* cph - show keyed doors and lines */
@@ -2162,32 +2191,6 @@ static void AM_drawWalls(void)
         )
           AM_drawMline(&l, mapcolor_unsn);
       }
-    }
-
-    // [Nugget] Tag Finder from PrBoomX: Highlight sectors and lines ---------
-
-    const int is_tf_line = AM_isTagFinderLine(&lines[i]);
-
-    if (is_tf_line & 0x1)
-    {
-      if (!lines[i].backsector)
-      { array_push(lines_1S, ((am_line_t) {l, magic_sector_color_pos})); }
-      else
-      { AM_drawMline(&l, magic_sector_color_pos); }
-
-      if (magic_sector_color_pos <= MAGIC_SECTOR_COLOR_MIN+1)
-      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 229 })); }
-    }
-    
-    if (is_tf_line & 0x2)
-    {
-      if (!lines[i].backsector)
-      { array_push(lines_1S, ((am_line_t) {l, magic_line_color_pos})); }
-      else
-      { AM_drawMline(&l, magic_line_color_pos); }
-
-      if (magic_line_color_pos <= MAGIC_LINE_COLOR_MIN+1)
-      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 251 })); }
     }
   }
 
