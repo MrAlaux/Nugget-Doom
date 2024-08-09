@@ -228,6 +228,7 @@ extern  boolean         halfdamage;
 extern  boolean         slowbrain;
 extern  boolean         fastmonsters;
 extern  boolean         aggressive;
+extern  boolean         x2monsters;
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -692,6 +693,7 @@ extern int custom_skill_slowbrain;
 extern int custom_skill_fast;
 extern int custom_skill_respawn;
 extern int custom_skill_aggressive;
+extern int custom_skill_x2monsters;
 
 // [Nugget] =================================================================/
 

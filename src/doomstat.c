@@ -284,6 +284,7 @@ int custom_skill_slowbrain;
 int custom_skill_fast;
 int custom_skill_respawn;
 int custom_skill_aggressive;
+int custom_skill_x2monsters;
 
 // [Nugget] =================================================================/
 
