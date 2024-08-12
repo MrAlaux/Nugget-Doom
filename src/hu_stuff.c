@@ -56,6 +56,7 @@
 
 // [Nugget]
 #include "am_map.h"
+#include "m_config.h"
 #include "m_nughud.h"
 
 // global heads up display controls
@@ -2291,6 +2292,74 @@ char HU_dequeueChatChar(void)
   return c;
 }
 
+boolean HU_parseChatCommand(const char *message)
+{
+  if (message[0] != '/') { return false; }
+
+  char words[3][65] = { {'\0'}, {'\0'}, {'\0'} };
+  const char *nextspace;
+
+  for (int i = 0;
+       i < 3 && ((nextspace = strchr(message, ' ')) || (nextspace = strchr(message, '\0')));
+       i++)
+  {
+    strncpy(words[i], message, MIN(64, nextspace - message));
+    words[i][nextspace - message] = '\0';
+    
+    message = nextspace + 1;
+  }
+
+  if (!strncmp(words[0], "/SET", 64))
+  {
+    if (words[1][0])
+    {
+      const default_t *const dp = M_LookupDefault(words[1]);
+
+      if (dp)
+      {
+        if (words[2][0])
+        {
+          if (dp->type == number)
+          {
+            const size_t len = strlen(words[2]);
+            for (int i = 0;  i < len;  i++)
+            {
+              if (!isdigit(words[2][i]))
+              {
+                displaymsg("Invalid integer value");
+                return true;
+              }
+            }
+
+            const int value = atoi(words[2]);
+
+            if (dp->limit.min <= value && value <= dp->limit.max)
+            {
+              dp->location->i = value;
+              displaymsg("%s set to %i", words[1], dp->location->i);
+            }
+            else { displaymsg("Value out of [%i, %i] range", dp->limit.min, dp->limit.max); }
+          }
+          else if (dp->type == string)
+          {
+            displaymsg("Can't set strings");
+          }
+          else // input
+          {
+            displaymsg("Can't set inputs");
+          }
+        }
+        else { displaymsg("Current value of %s: %i", words[1], dp->location->i); }
+      }
+      else { displaymsg("Invalid CVAR \"%s\"", words[1]); }
+    }
+    else { displaymsg("Usage: /set [CVAR] [value]"); }
+  }
+  else { displaymsg("Invalid command"); }
+
+  return true;
+}
+
 //
 // HU_Responder()
 //
@@ -2435,7 +2504,9 @@ boolean HU_Responder(event_t *ev)
                 if (w_chat.lines[0]->len)
                   {
                     strcpy(lastmessage, w_chat.lines[0]->line);
-                    displaymsg("%s", lastmessage);
+
+                    if (!HU_parseChatCommand(lastmessage))
+                      displaymsg("%s", lastmessage);
                   }
               }
             else
