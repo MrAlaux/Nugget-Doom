@@ -545,6 +545,7 @@ extern int rewind_depth;
 extern int rewind_timeout;
 extern int no_page_ticking;
 extern int quick_quitgame;
+extern int quit_sound;
 
 //extern int a11y_sector_lighting;
 extern int a11y_weapon_flash;
@@ -580,6 +581,7 @@ extern int sx_fix; // CFG-only
 
 extern int announce_milestones;
 extern int show_save_messages; // CFG-only
+extern int message_flash;
 extern int show_ssg; // CFG-only
 
 enum {
@@ -631,7 +633,7 @@ typedef enum {
 extern int extra_gibbing[];
 
 extern int bloodier_gibbing;
-extern int zdoom_item_drops;
+extern int tossdrop;
 
 // Key Bindings --------------------------------------------------------------
 

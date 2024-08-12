@@ -70,6 +70,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Rewinding** [i.b. DSDA-Doom]
 - **_Play Internal Demos_** setting
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
+- **Quit Sound** setting, independent of ENDOOM and enabled by default (CFG-only: `quit_sound`)
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
@@ -102,8 +103,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Dedicated toggle key.
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
 - **Show Save Messages** setting (CFG-only: `show_save_messages`)
-- **_Milestone Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
-- Restored **_Upward Message Scrolling_** setting, and enabled it by default
+- **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
+- **_Message Flash_** setting
+- Restored **_Upward Message Scrolling_** setting, and enabled it by default (CFG-only: `hud_msg_scrollup`)
 - **Restored various message-related menu items**
 - **_Show Powerup Timers_** setting
 - **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-only: `show_ssg`) [p.f. Crispy Doom]
@@ -133,7 +135,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 - **_Extra Gibbing_** setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
 - **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
-- **_ZDoom-like item drops_** setting [of course, i.b. ZDoom]
+- **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
 - **_Selective Fuzz Darkening_** setting [by @ceski-1]
 
 ### Doom Compatibility settings

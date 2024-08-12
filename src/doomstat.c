@@ -179,6 +179,7 @@ int rewind_depth;
 int rewind_timeout;
 int no_page_ticking;
 int quick_quitgame;
+int quit_sound;
 
 //int a11y_sector_lighting;
 int a11y_weapon_flash;
@@ -204,6 +205,7 @@ int sx_fix; // CFG-only
 
 int announce_milestones;
 int show_save_messages; // CFG-only
+int message_flash;
 int show_ssg; // CFG-only
 int hud_stats_format;
 int hud_stats_format_map;
@@ -228,7 +230,7 @@ int hudcolor_ms_comp;
 int extra_gibbing_on;
 int extra_gibbing[NUMEXGIBS]; // CFG-only
 int bloodier_gibbing;
-int zdoom_item_drops;
+int tossdrop;
 
 // Key Bindings --------------------------------------------------------------
 

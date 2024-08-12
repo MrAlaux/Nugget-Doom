@@ -109,6 +109,8 @@ typedef struct hu_multiline_s
   boolean exclusive;
   boolean bottomup;
 
+  boolean flash; // [Nugget] Message flash
+
 } hu_multiline_t;
 
 // [FG] configured alignment and coordinates for multilines

@@ -175,6 +175,8 @@ boolean           message_colorized;
 extern int        showMessages;
 static boolean    headsupactive = false;
 
+static int        flash_counter; // [Nugget] Message flash
+
 //jff 2/16/98 hud supported automap colors added
 int hudcolor_titl;  // color range of automap level title
 int hudcolor_xyco;  // color range of new coords on automap
@@ -676,6 +678,8 @@ void HU_Start(void)
   message_counter = 0;
   message_count = (message_timer  * TICRATE) / 1000 + 1;
   chat_count    = (chat_msg_timer * TICRATE) / 1000 + 1;
+
+  flash_counter = 0; // [Nugget] Message flash
 
   // create the message widget
   HUlib_init_multiline(&w_message, message_list ? hud_msg_lines : 1,
@@ -1884,7 +1888,17 @@ void HU_Drawer(void)
   {
     if ((w->multiline->on && *w->multiline->on) || w->multiline->built)
     {
+      // [Nugget] Message flash
+      if (message_flash
+          && w->multiline == &w_message
+          && (flash_counter - message_counter) <= 4) // Flash for ~0.11s
+      {
+        w->multiline->flash = true;
+      }
+
       HUlib_draw_widget(w);
+
+      w->multiline->flash = false;
     }
     w++;
   }
@@ -1972,6 +1986,21 @@ void HU_Ticker(void)
   {
     HUlib_add_key_to_cur_line(&w_chat, KEY_BACKSPACE);
     bscounter = 8;
+  }
+
+  { // [Nugget] Message flash
+    static int old_message_counter = -1;
+
+    if (!message_flash)
+    {
+      flash_counter = 0;
+    }
+    else if (old_message_counter < message_counter)
+    {
+      flash_counter = message_counter;
+    }
+
+    old_message_counter = message_counter;
   }
 
   // tick down message counter if message is up
@@ -2119,7 +2148,7 @@ void HU_Ticker(void)
   // [Nugget] NUGHUD
   if (st_crispyhud)
   {
-    /* Loose-chat hack */ {
+    { // Loose-chat hack
       hu_widget_t *w = widgets[NUGHUDSLOT];
 
       while (w->multiline)

@@ -375,7 +375,8 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
         break;
 
       // killough 1/18/98 -- support multiple lines:
-      V_DrawPatchTranslatedSH(x, y, p[c-HU_FONTSTART], cr); // [Nugget] HUD/menu shadows
+      // [Nugget] HUD/menu shadows | Message flash
+      V_DrawPatchTRTRSH(x, y, p[c-HU_FONTSTART], cr, m->flash ? cr_bright : NULL);
       x += w;
     }
     else if ((x += f->space_width) >= right_margin + HU_GAPX && !st_crispyhud) // [Nugget] NUGHUD
@@ -543,6 +544,8 @@ void HUlib_init_multiline(hu_multiline_t *m,
 
   m->exclusive = (on != NULL);
   m->bottomup = (on != NULL);
+
+  m->flash = false; // [Nugget] Message flash
 }
 
 void HUlib_erase_widget (const hu_widget_t *const w)
