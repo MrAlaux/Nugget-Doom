@@ -81,6 +81,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Restored **_Weapon Recoil_** menu item
 - **_No Horizontal Autoaim_** setting
 - **_Switch [Weapon] on Pickup_** setting
+- **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
 - Key to **equip last used weapon** [i.b. Cherry Doom]
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]

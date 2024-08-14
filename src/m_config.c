@@ -1199,6 +1199,13 @@ default_t defaults[] = {
   },
 
   {
+    "weapswitch_interruption",
+    (config_t *) &weapswitch_interruption, NULL,
+    {0}, {0,1}, number, ss_weap, wad_no,
+    "1 to allow interruption of weapon switches"
+  },
+
+  {
     "skip_ammoless_weapons",
     (config_t *) &skip_ammoless_weapons, NULL,
     {0}, {0,1}, number, ss_weap, wad_no,

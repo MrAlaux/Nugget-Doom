@@ -580,7 +580,8 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
   if (player->pendingweapon != wp_nochange || !player->health)
     {
       // [Nugget] Weapon-switch interruption
-      if (true && player->pendingweapon == player->readyweapon && player->health)
+      if (CASUALPLAY(weapswitch_interruption)
+          && player->pendingweapon == player->readyweapon && player->health)
       {
         player->pendingweapon = wp_nochange;
       }
@@ -629,7 +630,8 @@ void A_ReFire(player_t *player, pspdef_t *psp)
   if ( (player->cmd.buttons & BT_ATTACK)
        && (player->pendingweapon == wp_nochange
            // [Nugget] Weapon-switch interruption
-           || (true && player->pendingweapon == player->readyweapon))
+           || (CASUALPLAY(weapswitch_interruption)
+               && player->pendingweapon == player->readyweapon))
        && player->health)
     {
       player->refire++;
@@ -667,7 +669,8 @@ void A_CheckReload(player_t *player, pspdef_t *psp)
 void A_Lower(player_t *player, pspdef_t *psp)
 {
   // [Nugget] Weapon-switch interruption
-  if (true && player->pendingweapon == player->readyweapon && player->health)
+  if (CASUALPLAY(weapswitch_interruption)
+      && player->pendingweapon == player->readyweapon && player->health)
   {
     switch_interrupted = true;
     P_BringUpWeapon(player);
@@ -713,7 +716,7 @@ void A_Lower(player_t *player, pspdef_t *psp)
 void A_Raise(player_t *player, pspdef_t *psp)
 {
   // [Nugget] Weapon-switch interruption
-  if (true && player->pendingweapon != wp_nochange)
+  if (CASUALPLAY(weapswitch_interruption) && player->pendingweapon != wp_nochange)
   {
     switch_interrupted = true;
     P_SetPsprite(player, ps_weapon, weaponinfo[player->readyweapon].downstate);

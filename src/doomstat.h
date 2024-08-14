@@ -556,6 +556,7 @@ extern int a11y_invul_colormap;
 
 extern int no_hor_autoaim;
 extern int switch_on_pickup;
+extern int weapswitch_interruption;
 extern int skip_ammoless_weapons;
 extern int always_bob; // CFG-only
 

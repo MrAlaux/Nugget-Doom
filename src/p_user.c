@@ -813,7 +813,7 @@ void P_PlayerThink (player_t* player)
 
       if (player->weaponowned[newweapon]
           && (newweapon != player->readyweapon
-              || true)) // [Nugget] Weapon-switch interruption
+              || CASUALPLAY(weapswitch_interruption))) // [Nugget] Weapon-switch interruption
 
         // Do not go to plasma or BFG in shareware,
         //  even if cheated.

@@ -190,6 +190,7 @@ int a11y_invul_colormap;
 
 int no_hor_autoaim;
 int switch_on_pickup;
+int weapswitch_interruption;
 int skip_ammoless_weapons;
 int always_bob; // CFG-only
 int bobbing_style;

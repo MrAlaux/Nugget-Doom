@@ -2,6 +2,7 @@
 
 - **Custom Skill: duplicate monster spawns** setting
 - **FOV-based sky stretching** setting
+- **_Allow [Weapon] Switch Interruption_** setting
 - **_Message Flash_** setting
 - **Support for powerup-timer icons**
   - Replaced `hud_stats_icons` with `hud_allow_icons` [1]

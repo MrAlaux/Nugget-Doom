@@ -946,24 +946,61 @@ void G_BuildTiccmd(ticcmd_t* cmd)
       // [FG] prev/next weapon keys and buttons
       if (gamestate == GS_LEVEL && next_weapon != 0)
         newweapon = G_NextWeapon(next_weapon);
-      else
-      newweapon =
-        M_InputGameActive(input_weapon1) ? wp_fist :    // killough 5/2/98: reformatted
-        M_InputGameActive(input_weapon2) ? wp_pistol :
-        M_InputGameActive(input_weapon3) ? wp_shotgun :
-        M_InputGameActive(input_weapon4) ? wp_chaingun :
-        M_InputGameActive(input_weapon5) ? wp_missile :
-        M_InputGameActive(input_weapon6) && gamemode != shareware ? wp_plasma :
-        M_InputGameActive(input_weapon7) && gamemode != shareware ? wp_bfg :
-        M_InputGameActive(input_weapon8) ? wp_chainsaw :
-        M_InputGameActive(input_weapon9) && have_ssg ? wp_supershotgun :
+      else {
+        // [Nugget] Tweaked switching
 
-        // [Nugget] Last weapon key
-        M_InputGameActive(input_lastweapon) && casual_play &&
-        WeaponSelectable(players[consoleplayer].lastweapon)
-        ? players[consoleplayer].lastweapon :
+        boolean iw_active[9] = {false}, ilw_active = false;
 
-        wp_nochange;
+        if (CASUALPLAY(weapswitch_interruption))
+        {
+          static boolean iw_down[9] = {false}, ilw_down = false;
+
+          for (int i = 0;  i < 9;  i++)
+          {
+            if (!M_InputGameActive(input_weapon1 + i))
+            {
+              iw_down[i] = false;
+            }
+            else if (!iw_down[i])
+            {
+              iw_active[i] = iw_down[i] = true;
+            }
+          }
+
+          if (!M_InputGameActive(input_lastweapon))
+          {
+            ilw_down = false;
+          }
+          else if (!ilw_down)
+          {
+            ilw_active = ilw_down = true;
+          }
+        }
+        else {
+          for (int i = 0;  i < 9;  i++)
+          { iw_active[i] = M_InputGameActive(input_weapon1 + i); }
+
+          ilw_active = M_InputGameActive(input_lastweapon);
+        }
+
+        newweapon =
+          iw_active[0] ? wp_fist :    // killough 5/2/98: reformatted
+          iw_active[1] ? wp_pistol :
+          iw_active[2] ? wp_shotgun :
+          iw_active[3] ? wp_chaingun :
+          iw_active[4] ? wp_missile :
+          iw_active[5] && gamemode != shareware ? wp_plasma :
+          iw_active[6] && gamemode != shareware ? wp_bfg :
+          iw_active[7] ? wp_chainsaw :
+          iw_active[8] && have_ssg ? wp_supershotgun :
+
+          // [Nugget] Last weapon key
+          ilw_active && casual_play &&
+          WeaponSelectable(players[consoleplayer].lastweapon)
+          ? players[consoleplayer].lastweapon :
+
+          wp_nochange;
+      }
 
       // killough 3/22/98: For network and demo consistency with the
       // new weapons preferences, we must do the weapons switches here
