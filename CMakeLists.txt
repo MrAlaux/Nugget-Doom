@@ -12,8 +12,8 @@ set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
 cmake_minimum_required(VERSION 3.9)
 
 project("Nugget Doom"
-    VERSION 3.1.0
-    DESCRIPTION "Nugget Doom 3.1.0"
+    VERSION 3.2.0
+    DESCRIPTION "Nugget Doom 3.2.0"
     HOMEPAGE_URL "https://github.com/MrAlaux/Nugget-Doom"
     LANGUAGES C)
 

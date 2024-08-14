@@ -692,7 +692,7 @@ void (*R_DrawFuzzColumn) (void) = R_DrawFuzzColumn_orig;
 void R_SetFuzzColumnMode (void)
 {
   // [Nugget - ceski] Selective fuzz darkening
-  if (fuzzdark_mode)
+  if (STRICTMODE(fuzzdark_mode))
   {
     if (fuzzcolumn_mode && current_video_height > SCREENHEIGHT)
     {

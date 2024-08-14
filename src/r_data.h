@@ -55,6 +55,8 @@ extern byte *main_tranmap, *tranmap;
 
 extern int tran_filter_pct;
 
+void R_InitTranMapEx(byte **const tmap, const int filter_pct); // [Nugget]
+
 #endif
 
 //----------------------------------------------------------------------------

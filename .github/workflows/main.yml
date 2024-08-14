@@ -22,7 +22,7 @@ jobs:
       matrix:
         config:
           - name: Linux GCC
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             compiler: gcc
             extra-options: -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=OFF
             shell: bash

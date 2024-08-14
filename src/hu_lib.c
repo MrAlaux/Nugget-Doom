@@ -185,7 +185,7 @@ static void add_string_to_line (hu_line_t *const l, const hu_font_t *const f, co
     }
     else if (c == '\t')
       w = (w + f->tab_width) & f->tab_mask;
-    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + 3) // [Nugget] Stats icons
+    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + HU_FONTEXTRAS) // [Nugget] HUD icons
       w += SHORT(p[c - HU_FONTSTART]->width);
     else
       w += f->space_width;
@@ -367,7 +367,7 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
           cr = m->cr;
       }
     }
-    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + 3) // [Nugget] Stats icons
+    else if (c >= HU_FONTSTART && c <= HU_FONTEND + 6 + HU_FONTEXTRAS) // [Nugget] HUD icons
     {
       int w = SHORT(p[c-HU_FONTSTART]->width);
 
@@ -375,7 +375,8 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
         break;
 
       // killough 1/18/98 -- support multiple lines:
-      V_DrawPatchTranslated(x, y, p[c-HU_FONTSTART], cr);
+      // [Nugget] HUD/menu shadows | Message flash
+      V_DrawPatchTRTRSH(x, y, p[c-HU_FONTSTART], cr, m->flash ? cr_bright : NULL);
       x += w;
     }
     else if ((x += f->space_width) >= right_margin + HU_GAPX && !st_crispyhud) // [Nugget] NUGHUD
@@ -389,7 +390,7 @@ static void draw_line_aligned (const hu_multiline_t *m, const hu_line_t *l, cons
       leveltime & 16)
   {
     cr = m->cr; //jff 2/17/98 restore original color
-    V_DrawPatchTranslated(x, y, p['_' - HU_FONTSTART], cr);
+    V_DrawPatchTranslatedSH(x, y, p['_' - HU_FONTSTART], cr); // [Nugget] HUD/menu shadows
   }
 }
 
@@ -480,6 +481,9 @@ void HUlib_draw_widget (const hu_widget_t *const w)
   const hu_multiline_t *const m = w->multiline;
   const hu_font_t *const f = *m->font;
 
+  // [Nugget] HUD/menu shadows
+  V_ToggleShadows(!HU_IsSmallFont(f->patches['A' - HU_FONTSTART]));
+
   currentline = 0; // [Nugget] NUGHUD: List hack
 
   if (m->numlines == 1)
@@ -493,6 +497,9 @@ void HUlib_draw_widget (const hu_widget_t *const w)
     draw_widget_bottomup(w, f);
   else
     draw_widget_topdown(w, f);
+
+  // [Nugget] HUD/menu shadows
+  V_ToggleShadows(true);
 }
 
 void HUlib_init_multiline(hu_multiline_t *m,
@@ -537,6 +544,8 @@ void HUlib_init_multiline(hu_multiline_t *m,
 
   m->exclusive = (on != NULL);
   m->bottomup = (on != NULL);
+
+  m->flash = false; // [Nugget] Message flash
 }
 
 void HUlib_erase_widget (const hu_widget_t *const w)

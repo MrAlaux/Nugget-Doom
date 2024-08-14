@@ -32,9 +32,11 @@ struct patch_s;
 // Calculate # of glyphs in font.
 #define HU_FONTSIZE     (HU_FONTEND - HU_FONTSTART + 1)
 
+#define HU_FONTEXTRAS 7 // [Nugget] HUD icons
+
 typedef struct
 {
-  struct patch_s *patches[HU_FONTSIZE+6+3]; // [Nugget] Stats icons
+  struct patch_s *patches[HU_FONTSIZE+6 + HU_FONTEXTRAS]; // [Nugget] HUD icons
 
   int line_height;
 
@@ -106,6 +108,8 @@ typedef struct hu_multiline_s
 
   boolean exclusive;
   boolean bottomup;
+
+  boolean flash; // [Nugget] Message flash
 
 } hu_multiline_t;
 

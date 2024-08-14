@@ -454,6 +454,11 @@ void    P_ExplodeMissile(mobj_t*);    // killough
 
 boolean P_SeekerMissile(mobj_t *actor, mobj_t **seekTarget, angle_t thresh, angle_t turnMax, boolean seekcenter);
 int     P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta);
+
+// [Nugget]
+int P_FindDoomedNum(unsigned type); // Externalized
+void P_ToggleDuplicateSpawns(const boolean state);
+
 #endif
 
 //----------------------------------------------------------------------------

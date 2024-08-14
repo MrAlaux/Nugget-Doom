@@ -204,8 +204,11 @@ static patch_t *nhwpnum[9][2];      // NHW0NUM# and NHW1NUM#, from 1 to 9
 static patch_t *nhkeys[NUMCARDS+3]; // NHKEYS
 static patch_t *nhbersrk;           // NHBERSRK
 static patch_t *nhammo[4];          // NHAMMO#, from 0 to 3
+static patch_t *nhambar[2];         // NHAMBAR#, from 0 to 1
 static patch_t *nhealth[2];         // NHEALTH#, from 0 to 1
+static patch_t *nhhlbar[2];         // NHHLBAR#, from 0 to 1
 static patch_t *nharmor[3];         // NHARMOR#, from 0 to 2
+static patch_t *nharbar[2];         // NHARBAR#, from 0 to 1
 static patch_t *nhinfnty;           // NHINFNTY
 
 // [Nugget] -----------------------------------------------------------------/
@@ -841,9 +844,8 @@ void ST_Ticker(void)
   ST_updateWidgets();
   st_oldhealth = plyr->health;
 
-  st_invul = (plyr->powers[pw_invulnerability] > 4*32 ||
-              plyr->powers[pw_invulnerability] & 8) ||
-              plyr->cheats & CF_GODMODE;
+  st_invul = POWER_RUNOUT(plyr->powers[pw_invulnerability]) ||
+             plyr->cheats & CF_GODMODE;
 
   if (!nodrawers)
     ST_doPaletteStuff();  // Do red-/gold-shifts from damage/items
@@ -908,7 +910,7 @@ static void ST_doPaletteStuff(void)
       if (beta_emulation)
         palette = 0;
       else
-      if ((plyr->powers[pw_ironfeet] > 4*32 || plyr->powers[pw_ironfeet] & 8)
+      if (POWER_RUNOUT(plyr->powers[pw_ironfeet])
           && !STRICTMODE(no_radsuit_tint)) // [Nugget]
         palette = RADIATIONPAL;
       else
@@ -964,6 +966,33 @@ static void NughudDrawSBChunk(nughud_sbchunk_t *chunk)
   V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
 }
 
+static void NughudDrawBar(nughud_bar_t *widget, patch_t **patches, int units, int maxunits)
+{
+  if (widget->x > -1 && patches[0])
+  {
+    const boolean twobars = patches[1] && (maxunits < units);
+
+    for (int i = 0;  i < (1 + twobars);  i++)
+    {
+      const int slices = MIN(100 * (2 - twobars), (units * 100 / maxunits) - (100 * i)) * 100 / widget->ups;
+      const int slicewidth = SHORT(patches[i]->width) + widget->gap;
+      const int x = widget->x
+                    + NUGHUDWIDESHIFT(widget->wide)
+                    - ((widget->align == 1) ? slices * slicewidth     :
+                       (widget->align == 0) ? slices * slicewidth / 2 : 0);
+
+      for (int j = 0;  j < slices;  j++)
+      {
+        V_DrawPatch(
+          x + (slicewidth * j),
+          widget->y,
+          patches[i]
+        );
+      }
+    }
+  }
+}
+
 // [Nugget] -----------------------------------------------------------------/
 
 void ST_drawWidgets(void)
@@ -994,7 +1023,30 @@ void ST_drawWidgets(void)
 
     // Patches ---------------------------------------------------------------
 
-    for (i = 0;  i < NUMNUGHUDPATCHES;  i++)
+    // First 4 patches are drawn before bars
+    for (i = 0;  i < NUMNUGHUDPATCHES/2;  i++)
+    {
+      if (nughud_patchlump[i] >= 0)
+      {
+        NughudDrawPatch(
+          &nughud.patches[i],
+          W_CacheLumpNum(nughud_patchlump[i], PU_STATIC),
+          !nughud.patch_offsets
+        );
+      }
+    }
+
+    {
+      extern int maxhealth, max_armor;
+
+      if (weaponinfo[w_ready.data].ammo != am_noammo)
+      { NughudDrawBar(&nughud.ammobar, nhambar, *w_ready.num, maxammo / (1 + plyr->backpack)); }
+
+      NughudDrawBar(&nughud.healthbar, nhhlbar, st_health, maxhealth);
+      NughudDrawBar(&nughud.armorbar, nharbar, st_armor, max_armor/2);
+    }
+
+    for (i = NUMNUGHUDPATCHES/2;  i < NUMNUGHUDPATCHES;  i++)
     {
       if (nughud_patchlump[i] >= 0)
       {
@@ -1652,6 +1704,20 @@ void ST_loadGraphics(void)
       }
     }
 
+    // Ammo bar -----------------------
+
+    // Load NHAMBAR0 to NHAMBAR1 if available
+    for (i = 0;  i < 2;  i++)
+    {
+      M_snprintf(namebuf, sizeof(namebuf), "NHAMBAR%d", i);
+
+      if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+      {
+        nhambar[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      }
+      else if (!i) { break; }
+    }
+
     // Health icons -------------------
 
     // Load NHEALTH0 to NHEALTH1 if available
@@ -1669,6 +1735,20 @@ void ST_loadGraphics(void)
       }
     }
 
+    // Health bar ---------------------
+
+    // Load NHHLBAR0 to NHHLBAR1 if available
+    for (i = 0;  i < 2;  i++)
+    {
+      M_snprintf(namebuf, sizeof(namebuf), "NHHLBAR%d", i);
+
+      if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+      {
+        nhhlbar[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      }
+      else if (!i) { break; }
+    }
+
     // Armor icons --------------------
 
     // Load NHARMOR0 to NHARMOR2 if available
@@ -1684,6 +1764,20 @@ void ST_loadGraphics(void)
         nharmor[0] = NULL;
         break;
       }
+    }
+
+    // Armor bar ----------------------
+
+    // Load NHARBAR0 to NHARBAR1 if available
+    for (i = 0;  i < 2;  i++)
+    {
+      M_snprintf(namebuf, sizeof(namebuf), "NHARBAR%d", i);
+
+      if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+      {
+        nharbar[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      }
+      else if (!i) { break; }
     }
 
     // Infinity -----------------------
@@ -2008,7 +2102,7 @@ void ST_InitChunkBar(void)
   if (st_bar) { Z_Free(st_bar); }
 
   // More than necessary, but so be it
-  st_bar = Z_Malloc((video.pitch * V_ScaleY(ST_HEIGHT)) * sizeof(*st_bar), PU_STATIC, 0);
+  st_bar = Z_Malloc((video.pitch * V_ScaleY(StatusBarBufferHeight())) * sizeof(*st_bar), PU_STATIC, 0);
 
   V_UseBuffer(st_bar);
 

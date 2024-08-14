@@ -143,8 +143,12 @@ int v_lightest_color, v_darkest_color;
 byte invul_gray[256];
 
 // [Nugget]
+byte cr_allblack[256];
 byte cr_gray_vc[256];  // `V_Colorize()` only
 byte nightvision[256]; // Night-vision visor
+byte *shadow_tranmap;  // HUD/menu shadows
+byte *pspr_tranmap;    // Translucent flashes
+byte *xhair_tranmap;   // Translucent crosshair
 
 // killough 5/2/98: tiny engine driven by table above
 void V_InitColorTranslation(void)
@@ -221,6 +225,8 @@ void V_InitColorTranslation(void)
 
     // [Nugget] ==============================================================
 
+    memset(cr_allblack, I_GetPaletteIndex(playpal, 0, 0, 0), 256);
+
     for (int i = 0;  i < 256;  i++)
     {
         cr_gray_vc[i] = V_Colorize(playpal, CR_GRAY, (byte) i);
@@ -263,6 +269,25 @@ void WriteGeneratedLumpWad(const char *filename)
 
     free(lumps);
 }
+
+// [Nugget] HUD/menu shadows /------------------------------------------------
+
+static boolean drawshadows   = true,
+               drawingshadow = false;
+
+static int shadowcrop = 0;
+
+void V_ToggleShadows(const boolean on)
+{
+  drawshadows = on;
+}
+
+void V_SetShadowCrop(const int value)
+{
+  shadowcrop = MAX(0, value);
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 video_t video;
 
@@ -455,6 +480,68 @@ static void V_DrawPatchColumnTRTR(const patch_column_t *patchcol)
     }
 }
 
+// [Nugget]
+static void V_DrawPatchColumnTranslucent(const patch_column_t *patchcol)
+{
+    int count;
+    byte *dest;
+    fixed_t frac;
+    fixed_t fracstep;
+
+    count = patchcol->y2 - patchcol->y1 + 1;
+
+    if (count <= 0) // Zero length, column does not exceed a pixel.
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned int)patchcol->x >= (unsigned int)video.width
+        || (unsigned int)patchcol->y1 >= (unsigned int)video.height)
+    {
+        I_Error("V_DrawPatchColumn: %i to %i at %i", patchcol->y1, patchcol->y2,
+                patchcol->x);
+    }
+#endif
+
+    dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);
+
+    // Determine scaling, which is the only mapping to be done.
+    fracstep = patchcol->step;
+    frac = patchcol->frac + ((patchcol->y1 * fracstep) & 0xFFFF);
+
+    // Inner loop that does the actual texture mapping,
+    //  e.g. a DDA-lile scaling.
+    // This is as fast as it gets.       (Yeah, right!!! -- killough)
+    //
+    // killough 2/1/98: more performance tuning
+    // haleyjd 06/21/06: rewrote and specialized for screen patches
+    {
+        const byte *source = patchcol->source;
+
+        #define TRANSLATE (                                                     \
+          translation2 ? translation2[translation1[source[frac >> FRACBITS]]] : \
+          translation1 ?              translation1[source[frac >> FRACBITS]]  : \
+                                                   source[frac >> FRACBITS]     \
+        )
+
+        while ((count -= 2) >= 0)
+        {
+            *dest = tranmap[(*dest << 8) + TRANSLATE];
+            dest += linesize;
+            frac += fracstep;
+            *dest = tranmap[(*dest << 8) + TRANSLATE];
+            dest += linesize;
+            frac += fracstep;
+        }
+
+        if (count & 1)
+        {
+            *dest = tranmap[(*dest << 8) + TRANSLATE];
+        }
+    }
+}
+
 static void V_DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
                                column_t *column)
 {
@@ -518,6 +605,8 @@ static void V_DrawPatchInt(int x, int y, patch_t *patch, boolean flipped)
     patch_column_t patchcol = {0};
 
     w = SHORT(patch->width);
+
+    if (drawingshadow) { w -= shadowcrop; } // [Nugget] HUD/menu shadows
 
     // calculate edges of the shape
     if (flipped)
@@ -677,6 +766,62 @@ void V_DrawPatchTRTR(int x, int y, patch_t *patch, byte *outr1, byte *outr2)
     V_DrawPatchInt(x, y, patch, false);
 }
 
+// [Nugget] /-----------------------------------------------------------------
+
+void V_DrawPatchTranslucent(int x, int y, struct patch_s *patch, boolean flipped,
+                            byte *outr1, byte *outr2, byte *tmap)
+{
+    x += video.deltaw;
+
+    if (outr1)
+    {
+        translation1 = outr1;
+
+        if (outr2)
+        { translation2 = outr2; }
+    }
+    else { translation1 = translation2 = NULL; }
+
+    drawcolfunc = V_DrawPatchColumnTranslucent;
+    tranmap = tmap;
+
+    V_DrawPatchInt(x, y, patch, flipped);
+}
+
+void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
+                         byte *outr1, byte *outr2)
+{
+    if (hud_menu_shadows && drawshadows)
+    {
+      drawingshadow = true;
+      V_DrawPatchTranslucent(x + 1, y + 1, patch, flipped, cr_allblack, NULL, shadow_tranmap);
+      drawingshadow = false;
+    }
+
+    if (outr1 && outr2)
+    {
+      V_DrawPatchTRTR(x, y, patch, outr1, outr2);
+    }
+    else if (outr2)
+    {
+      V_DrawPatchTranslated(x, y, patch, outr2);
+    }
+    else if (outr1)
+    {
+      V_DrawPatchTranslated(x, y, patch, outr1);
+    }
+    else if (flipped)
+    {
+      V_DrawPatchFlipped(x, y, patch);
+    }
+    else
+    {
+      V_DrawPatch(x, y, patch);
+    }
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 void V_DrawPatchFullScreen(patch_t *patch)
 {
     const int x = (video.unscaledw - SHORT(patch->width)) / 2;
@@ -772,6 +917,41 @@ void V_FillRect(int x, int y, int width, int height, byte color)
     while (dstrect.sh--)
     {
         memset(dest, color, dstrect.sw);
+        dest += linesize;
+    }
+}
+
+// [Nugget]
+void V_ShadowRect(int x, int y, int width, int height)
+{
+    vrect_t dstrect;
+
+    dstrect.x = x;
+    dstrect.y = y;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    V_ClipRect(&dstrect);
+
+    // clipped away completely?
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    V_ScaleClippedRect(&dstrect);
+
+    byte *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+
+    while (dstrect.sh--)
+    {
+        for (int x = 0;  x < dstrect.sw;  x++)
+        {
+          byte *const d = &dest[x];
+
+          *d = shadow_tranmap[*d << 8];
+        }
+
         dest += linesize;
     }
 }

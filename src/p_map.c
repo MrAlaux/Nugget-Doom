@@ -545,13 +545,13 @@ static void P_SetOverUnderMobjs(mobj_t *thing)
     thing->above_thing = p_above_tmthing;
 
     if (p_below_thing_g
-        && ((!pbtg) || ((pbtg->z + pbtg->height) < (pbts->z + pbts->height))))
+        && (!pbtg || (pbtg->z + pbtg->height) < (pbts->z + pbts->height)))
     {
       p_below_thing_g->below_thing = p_below_thing_s;
     }
 
     if (p_above_thing_g
-        && ((!patg) || (pats->z < patg->z)))
+        && (!patg || pats->z < patg->z))
     {
       p_above_thing_g->above_thing = p_above_thing_s;
     }
@@ -638,7 +638,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   // [Nugget]: [DSDA] check if a mobj passed over/under another object
   if (casual_play && over_under
       && (tmthing->flags & MF_SOLID) && !(thing->flags & MF_SPECIAL)
-      && ((over_under == 2) || tmthing->player || thing->player)) 
+      && (over_under == 2 || tmthing->player || thing->player))
   {
     if (thing->z + thing->height <= tmthing->z)
     {
@@ -969,7 +969,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean dropoff)
   if (casual_play && over_under)
   {
     // `tmfloorz` may have changed, so make sure the thing fits
-    if (p_above_tmthing && (p_above_tmthing->z < (tmfloorz + thing->height)))
+    if (p_above_tmthing && p_above_tmthing->z < (tmfloorz + thing->height))
     { return false; }
 
     // If move was valid, set new over/under mobjs
@@ -1251,7 +1251,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 
           do {
             if ((above_thing = below_thing->above_thing)
-                && ((above_thing->z - zdiff) == (below_thing->z + below_thing->height)))
+                && (above_thing->z - zdiff) == (below_thing->z + below_thing->height))
             {
               above_thing->z = below_thing->z + below_thing->height;
             }
@@ -1869,7 +1869,7 @@ fixed_t P_AimLineAttack(mobj_t *t1,angle_t angle,fixed_t distance,int mask)
 
   // can't shoot outside view angles
 
-  if (t1->player && (vertical_aiming == VERTAIM_DIRECT) && (mask & CROSSHAIR_AIM)) // [Nugget] Vertical aiming
+  if (t1->player && vertical_aiming == VERTAIM_DIRECT && mask & CROSSHAIR_AIM) // [Nugget] Vertical aiming
   {
     topslope = t1->player->slope + 1;
     bottomslope = t1->player->slope - 1;
@@ -2092,11 +2092,12 @@ boolean P_CheckSight_12(mobj_t *t1, mobj_t *t2)
   return P_SightPathTraverse (t1->x, t1->y, t2->x, t2->y);
 }
 
-// [Nugget] Chasecam stuff /--------------------------------------------------
+// [Nugget] Chasecam /--------------------------------------------------------
 
 static boolean PTR_ChasecamTraverse(intercept_t *in)
 {
-  if (in->isaline) {
+  if (in->isaline)
+  {
     line_t *li = in->d.line;
     fixed_t dist, frac;
     sector_t *sec;
@@ -2106,7 +2107,8 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
       P_LineOpening(li);
       dist = FixedMul(attackrange, in->frac);
 
-      if (li->backsector == NULL) {
+      if (li->backsector == NULL)
+      {
         if (FixedDiv(openbottom+FRACUNIT - shootz, dist) <= aimslope
             && FixedDiv(opentop-FRACUNIT - shootz, dist) >= aimslope)
         {
@@ -2796,14 +2798,14 @@ static boolean PIT_CheckOverUnderMobjZ(mobj_t *thing)
   {
     // Over
 
-    if ((!p_below_tmthing)
-        || ((p_below_tmthing->z + p_below_tmthing->height) < (thing->z + thing->height)))
+    if (!p_below_tmthing
+        || (p_below_tmthing->z + p_below_tmthing->height) < (thing->z + thing->height))
     {
       p_below_tmthing = thing;
     }
 
-    if ((!p_above_thing_s)
-        || (tmthing->z < p_above_thing_s->z))
+    if (!p_above_thing_s
+        || tmthing->z < p_above_thing_s->z)
     {
       p_above_thing_s = tmthing;
       p_above_thing_g = thing;
@@ -2815,14 +2817,14 @@ static boolean PIT_CheckOverUnderMobjZ(mobj_t *thing)
   {
     // Under
 
-    if ((!p_above_tmthing)
-        || (thing->z < p_above_tmthing->z))
+    if (!p_above_tmthing
+        || thing->z < p_above_tmthing->z)
     {
       p_above_tmthing = thing;
     }
 
-    if ((!p_below_thing_s)
-        || ((p_below_thing_s->z + p_below_thing_s->height) < (tmthing->z + tmthing->height)))
+    if (!p_below_thing_s
+        || (p_below_thing_s->z + p_below_thing_s->height) < (tmthing->z + tmthing->height))
     {
       p_below_thing_s = tmthing;
       p_below_thing_g = thing;

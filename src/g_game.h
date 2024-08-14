@@ -123,9 +123,10 @@ extern void G_ClearExcessKeyFrames(void);
 extern boolean G_KeyFrameRW(void);
 
 // Skill
-void G_RestartKeepLoadout(void);
 void G_SetBabyModeParms(const skill_t skill);
 void G_SetSkillParms(const skill_t skill);
+void G_SetUserCustomSkill(void);
+void G_RestartWithLoadout(const boolean current);
 
 #endif
 

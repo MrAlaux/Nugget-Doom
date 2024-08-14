@@ -59,8 +59,12 @@ extern byte *cr_bright;
 extern byte invul_gray[];
 
 // [Nugget]
-extern byte cr_gray_vc[];  // `V_Colorize()` only
-extern byte nightvision[]; // Night-vision visor
+extern byte cr_allblack[];
+extern byte cr_gray_vc[];    // `V_Colorize()` only
+extern byte nightvision[];   // Night-vision visor
+extern byte *shadow_tranmap; // HUD/menu shadows
+extern byte *pspr_tranmap;   // Translucent flashes
+extern byte *xhair_tranmap;  // Translucent crosshair
 
 // array of pointers to color translation tables
 extern byte *colrngs[];
@@ -157,6 +161,57 @@ void V_DrawPatchTranslated(int x, int y, struct patch_s *patch, byte *outr);
 
 void V_DrawPatchTRTR(int x, int y, struct patch_s *patch, byte *outr1,
                      byte *outr2);
+
+// [Nugget] /-----------------------------------------------------------------
+
+// HUD/menu shadows
+void V_ToggleShadows(const boolean on);
+void V_SetShadowCrop(const int value);
+
+void V_DrawPatchTranslucent(int x, int y, struct patch_s *patch, boolean flipped,
+                            byte *outr1, byte *outr2, byte *tmap);
+
+#define V_DrawPatchTL(x, y, p, tp) \
+  V_DrawPatchTranslucent(x, y, p, false, NULL, NULL, tp)
+
+#define V_DrawPatchFlippedTL(x, y, p, tp) \
+  V_DrawPatchTranslucent(x, y, p, true, NULL, NULL, tp)
+
+#define V_DrawPatchTranslatedTL(x, y, p, cr, tp) \
+  V_DrawPatchTranslucent(x, y, p, false, cr, NULL, tp)
+
+#define V_DrawPatchTRTRTL(x, y, p, cr1, cr2, tp) \
+  V_DrawPatchTranslucent(x, y, p, false, cr1, cr2, tp)
+
+void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
+                         byte *outr1, byte *outr2);
+
+#define V_DrawPatchSH(x, y, p) \
+  V_DrawPatchShadowed(x, y, p, false, NULL, NULL)
+
+#define V_DrawPatchFlippedSH(x, y, p) \
+  V_DrawPatchShadowed(x, y, p, true, NULL, NULL)
+
+#define V_DrawPatchTranslatedSH(x, y, p, cr) \
+  V_DrawPatchShadowed(x, y, p, false, cr, NULL)
+
+#define V_DrawPatchTRTRSH(x, y, p, cr1, cr2) \
+  V_DrawPatchShadowed(x, y, p, false, cr1, cr2)
+
+void V_ShadowRect(int x, int y, int width, int height);
+
+#define SHADOW_REDRAW(_code_)                     \
+  if (hud_menu_shadows)                           \
+  {                                               \
+    const boolean old_shadows = hud_menu_shadows; \
+    hud_menu_shadows = false;                     \
+                                                  \
+    _code_;                                       \
+                                                  \
+    hud_menu_shadows = old_shadows;               \
+  }
+
+// [Nugget] -----------------------------------------------------------------/
 
 void V_DrawPatchFullScreen(struct patch_s *patch);
 

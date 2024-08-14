@@ -487,8 +487,9 @@ static void WI_drawLF(void)
   {
     patch_t* lpic = W_CacheLumpName(wbs->lastmapinfo->levelpic, PU_CACHE);
 
-    V_DrawPatch((SCREENWIDTH - SHORT(lpic->width))/2,
-               y, lpic);
+     // [Nugget] HUD/menu shadows
+    V_DrawPatchSH((SCREENWIDTH - SHORT(lpic->width))/2,
+                  y, lpic);
 
     y += (5 * SHORT(lpic->height)) / 4;
   }
@@ -497,15 +498,17 @@ static void WI_drawLF(void)
   if (wbs->last >= 0 && wbs->last < num_lnames && lnames[wbs->last] != NULL )
   {
   // draw <LevelName> 
-  V_DrawPatch((SCREENWIDTH - SHORT(lnames[wbs->last]->width))/2,
-              y, lnames[wbs->last]);
+  // [Nugget] HUD/menu shadows
+  V_DrawPatchSH((SCREENWIDTH - SHORT(lnames[wbs->last]->width))/2,
+                y, lnames[wbs->last]);
 
   // draw "Finished!"
   y += (5*SHORT(lnames[wbs->last]->height))/4;
   }
  
-  V_DrawPatch((SCREENWIDTH - SHORT(finished->width))/2,
-              y, finished);
+  // [Nugget] HUD/menu shadows
+  V_DrawPatchSH((SCREENWIDTH - SHORT(finished->width))/2,
+                y, finished);
 }
 
 
@@ -520,8 +523,9 @@ static void WI_drawEL(void)
   int y = WI_TITLEY;
 
   // draw "Entering"
-  V_DrawPatch((SCREENWIDTH - SHORT(entering->width))/2,
-              y, entering);
+  // [Nugget] HUD/menu shadows
+  V_DrawPatchSH((SCREENWIDTH - SHORT(entering->width))/2,
+                y, entering);
 
   // The level defines a new name but no texture for the name
   if (wbs->nextmapinfo && wbs->nextmapinfo->levelname && wbs->nextmapinfo->levelpic[0] == 0)
@@ -543,8 +547,9 @@ static void WI_drawEL(void)
 
     y += (5 * SHORT(lpic->height)) / 4;
 
-    V_DrawPatch((SCREENWIDTH - SHORT(lpic->width))/2,
-               y, lpic);
+    // [Nugget] HUD/menu shadows
+    V_DrawPatchSH((SCREENWIDTH - SHORT(lpic->width))/2,
+                  y, lpic);
   }
   // [FG] prevent crashes for levels without name graphics
   else if (wbs->next >= 0 && wbs->next < num_lnames && lnames[wbs->next] != NULL)
@@ -554,8 +559,9 @@ static void WI_drawEL(void)
   if (SHORT(lnames[wbs->next]->height) < SCREENHEIGHT)
     y += (5 * SHORT(entering->height)) / 4;
 
-  V_DrawPatch((SCREENWIDTH - SHORT(lnames[wbs->next]->width))/2,
-              y, lnames[wbs->next]);
+  // [Nugget] HUD/menu shadows
+  V_DrawPatchSH((SCREENWIDTH - SHORT(lnames[wbs->next]->width))/2,
+                y, lnames[wbs->next]);
   }
 }
 
@@ -807,13 +813,13 @@ WI_drawNum
   while (digits--)
     {
       x -= fontwidth;
-      V_DrawPatch(x, y, num[ n % 10 ]);
+      V_DrawPatchSH(x, y, num[ n % 10 ]); // [Nugget] HUD/menu shadows
       n /= 10;
     }
 
   // draw a minus sign if necessary
   if (neg && wiminus)
-    V_DrawPatch(x-=8, y, wiminus);
+    V_DrawPatchSH(x-=8, y, wiminus); // [Nugget] HUD/menu shadows
 
   return x;
 }
@@ -836,8 +842,10 @@ WI_drawPercent
   if (p < 0)
     return;
 
-  V_DrawPatch(x, y, percent);
+  V_DrawPatchSH(x, y, percent); // [Nugget] HUD/menu shadows
   WI_drawNum(x, y, p, -1);
+
+  SHADOW_REDRAW(WI_drawPercent(x, y, p)) // [Nugget] HUD/menu shadows
 }
 
 
@@ -866,6 +874,8 @@ WI_drawTime
   // [FG] total time for all levels never "sucks"
   if (t <= 61*59 || !suck)  // otherwise known as 60*60 -1 == 3599
     {
+      const int oldx = x; // [Nugget]
+
       div = 1;
 
       do
@@ -876,7 +886,7 @@ WI_drawTime
 
           // draw
           if (div==60 || t / div)
-            V_DrawPatch(x, y, colon);
+            V_DrawPatchSH(x, y, colon);
       
         } 
       while (t / div && div < 3600);
@@ -886,11 +896,13 @@ WI_drawTime
       {
         x = WI_drawNum(x, y, n, -1);
       }
+
+      SHADOW_REDRAW(WI_drawTime(oldx, y, t, suck)) // [Nugget] HUD/menu shadows
     }
   else
     {
       // "sucks"
-      V_DrawPatch(x - SHORT(sucks->width), y, sucks); 
+      V_DrawPatchSH(x - SHORT(sucks->width), y, sucks); 
     }
 }
 
@@ -1335,13 +1347,15 @@ static void WI_drawDeathmatchStats(void)
   WI_drawAnimatedBack();
   WI_drawLF();
 
-  // draw stat titles (top line)
-  V_DrawPatch(DM_TOTALSX-SHORT(total->width)/2,
-              DM_MATRIXY-WI_SPACINGY+10,
-              total);
+  // [Nugget] HUD/menu shadows
 
-  V_DrawPatch(DM_KILLERSX, DM_KILLERSY, killers);
-  V_DrawPatch(DM_VICTIMSX, DM_VICTIMSY, victims);
+  // draw stat titles (top line)
+  V_DrawPatchSH(DM_TOTALSX-SHORT(total->width)/2,
+                DM_MATRIXY-WI_SPACINGY+10,
+                total);
+
+  V_DrawPatchSH(DM_KILLERSX, DM_KILLERSY, killers);
+  V_DrawPatchSH(DM_VICTIMSX, DM_VICTIMSY, victims);
 
   // draw P?
   x = DM_MATRIXX + DM_SPACINGX;
@@ -1351,13 +1365,13 @@ static void WI_drawDeathmatchStats(void)
     {
       if (playeringame[i])
         {
-          V_DrawPatch(x-SHORT(p[i]->width)/2,
-                      DM_MATRIXY - WI_SPACINGY,
-                      p[i]);
+          V_DrawPatchSH(x-SHORT(p[i]->width)/2,
+                        DM_MATRIXY - WI_SPACINGY,
+                        p[i]);
 
-          V_DrawPatch(DM_MATRIXX-SHORT(p[i]->width)/2,
-                      y,
-                      p[i]);
+          V_DrawPatchSH(DM_MATRIXX-SHORT(p[i]->width)/2,
+                        y,
+                        p[i]);
 
           if (i == me)
             {
@@ -1393,12 +1407,15 @@ static void WI_drawDeathmatchStats(void)
         {
           for (j=0 ; j<MAXPLAYERS ; j++)
             {
-              if (playeringame[j])
+              if (playeringame[j]) {
                 WI_drawNum(x+w, y, dm_frags[i][j], 2);
+                SHADOW_REDRAW(WI_drawNum(x+w, y, dm_frags[i][j], 2)) // [Nugget] HUD/menu shadows
+              }
 
               x += DM_SPACINGX;
             }
           WI_drawNum(DM_TOTALSX+w, y, dm_totals[i], 2);
+          SHADOW_REDRAW(WI_drawNum(DM_TOTALSX+w, y, dm_totals[i], 2)) // [Nugget] HUD/menu shadows
         }
       y += WI_SPACINGY;
     }
@@ -1638,19 +1655,21 @@ static void WI_drawNetgameStats(void)
 
   WI_drawLF();
 
+  // [Nugget] HUD/menu shadows
+
   // draw stat titles (top line)
-  V_DrawPatch(NG_STATSX+NG_SPACINGX-SHORT(kills->width),
-              NG_STATSY, kills);
+  V_DrawPatchSH(NG_STATSX+NG_SPACINGX-SHORT(kills->width),
+                NG_STATSY, kills);
 
-  V_DrawPatch(NG_STATSX+2*NG_SPACINGX-SHORT(items->width),
-              NG_STATSY, items);
+  V_DrawPatchSH(NG_STATSX+2*NG_SPACINGX-SHORT(items->width),
+                NG_STATSY, items);
 
-  V_DrawPatch(NG_STATSX+3*NG_SPACINGX-SHORT(secret->width),
-              NG_STATSY, secret);
+  V_DrawPatchSH(NG_STATSX+3*NG_SPACINGX-SHORT(secret->width),
+                NG_STATSY, secret);
   
   if (dofrags)
-    V_DrawPatch(NG_STATSX+4*NG_SPACINGX-SHORT(frags->width),
-                NG_STATSY, frags);
+    V_DrawPatchSH(NG_STATSX+4*NG_SPACINGX-SHORT(frags->width),
+                  NG_STATSY, frags);
 
   // draw stats
   y = NG_STATSY + SHORT(kills->height);
@@ -1661,18 +1680,20 @@ static void WI_drawNetgameStats(void)
         continue;
 
       x = NG_STATSX;
-      V_DrawPatch(x-SHORT(p[i]->width), y, p[i]);
+      V_DrawPatchSH(x-SHORT(p[i]->width), y, p[i]);
 
       if (i == me)
-        V_DrawPatch(x-SHORT(p[i]->width), y, star);
+        V_DrawPatchSH(x-SHORT(p[i]->width), y, star);
 
       x += NG_SPACINGX;
       WI_drawPercent(x-pwidth, y+10, cnt_kills[i]); x += NG_SPACINGX;
       WI_drawPercent(x-pwidth, y+10, cnt_items[i]); x += NG_SPACINGX;
       WI_drawPercent(x-pwidth, y+10, cnt_secret[i]);  x += NG_SPACINGX;
 
-      if (dofrags)
+      if (dofrags) {
         WI_drawNum(x, y+10, cnt_frags[i], -1);
+        SHADOW_REDRAW(WI_drawNum(x, y+10, cnt_frags[i], -1)) // [Nugget] HUD/menu shadows
+      }
 
       y += WI_SPACINGY;
     }
@@ -1856,16 +1877,16 @@ static void WI_drawStats(void)
 
   WI_drawLF();
 
-  V_DrawPatch(SP_STATSX, SP_STATSY, kills);
+  V_DrawPatchSH(SP_STATSX, SP_STATSY, kills);
   WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
 
-  V_DrawPatch(SP_STATSX, SP_STATSY+lh, items);
+  V_DrawPatchSH(SP_STATSX, SP_STATSY+lh, items);
   WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
 
-  V_DrawPatch(SP_STATSX, SP_STATSY+2*lh, sp_secret);
+  V_DrawPatchSH(SP_STATSX, SP_STATSY+2*lh, sp_secret);
   WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
 
-  V_DrawPatch(SP_TIMEX, SP_TIMEY, witime);
+  V_DrawPatchSH(SP_TIMEX, SP_TIMEY, witime);
   WI_drawTime(SCREENWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time, true);
 
   // Ty 04/11/98: redid logic: should skip only if with pwad but
@@ -1876,7 +1897,7 @@ static void WI_drawStats(void)
   if (W_IsIWADLump(maplump) || deh_pars || um_pars)
     if (wbs->epsd < 3 || um_pars)
       {
-	V_DrawPatch(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
+	V_DrawPatchSH(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
 	WI_drawTime(SCREENWIDTH - SP_TIMEX, SP_TIMEY, cnt_par, true);
       }
 
@@ -1884,7 +1905,7 @@ static void WI_drawStats(void)
   {
     const boolean wide = (wbs->totaltimes / TICRATE > 61*59) || (SP_TIMEX + SHORT(total->width) >= SCREENWIDTH/4);
 
-    V_DrawPatch(SP_TIMEX, SP_TIMEY + 16, total);
+    V_DrawPatchSH(SP_TIMEX, SP_TIMEY + 16, total);
     // [FG] choose x-position depending on width of time string
     WI_drawTime((wide ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX, SP_TIMEY + 16, cnt_total_time, false);
   }

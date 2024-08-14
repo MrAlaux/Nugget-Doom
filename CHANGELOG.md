@@ -1,34 +1,23 @@
 ## New Features
 
-- **_Freecam_**
-- **Custom skill level**
-- **_Prev/Next [Weapon Buttons] Skip Ammoless Weapons_** setting
-- **_Highlight Current/Pending Weapon_** setting
-- **_Show Thing Hitboxes [in Automap]_** setting
-- **_'BABYMODE'_ cheat**, to toggle ITYTD benefits
-- **_"Count"_ Level Stats Format**
-- **Explosion shake intensity percent** setting
-- **Setting to play `DSNOWAY` instead of `DSOOF` when failing to use key-locked triggers**
+- **Custom Skill: duplicate monster spawns** setting
+- **FOV-based sky stretching** setting
+- **_Message Flash_** setting
+- **Support for powerup-timer icons**
+  - Replaced `hud_stats_icons` with `hud_allow_icons` [1]
+- **Quit Sound** setting, enabled by default
 
 ## Changes
 
-- **Improved drawing of NUGHUD Face background**:
-  - In singleplayer, the background from the status bar itself is now used
-    instead of a multiplayer Face background
-  - The vertical position of the background is now dependent on the height
-    of the multiplayer Face backgrounds
-- **Made jump and crouch buttons cancel each other out**
-- **Changed _"Fancy Teleport [to Pointer]"_ to _"Fancy Warping"_**
+- **Improved loading speed when rewinding**
+- **Renamed _ZDoom-like Item Drops_ (`zdoom_item_drops`) to _Toss Items Upon Death_ (`tossdrop`)** [1]
+- **Removed _Upward Message Scrolling_ menu item**
 
 ## Bug Fixes
 
-- **_Selective Fuzz Darkening_ overflow** (caused visual glitches and crashes) [thanks @ceski-1]
-- **Status bar popping when the _Alternative Intermission Background_ were enabled**
-- **1S lines obscuring _Tag Finder_ highlights in automap**
-- **Lost souls improperly colliding with the over/underside of other things**
-- **Player getting stuck when standing up while over/under other things**
-- **Automap position and scale being reset when changing modes**
-- **Crosshair not being drawn if the chasecam mode were set** even if the chasecam itself were disabled
-- **Zoom being forcefully disabled if any player were dead**
-- **Explosion shake and FOV effects not being reset when restarting levels on death**
-- **Changed save version to `Nugget 3.0.0`** (was `Nugget 2.4.0` by mistake)
+- **Crash when loading status bars taller than 32px**
+- **_'FAST'_ cheat not fully toggling fast monsters outside of custom skill**
+- **Tag Finder not highlighting hidden lines**
+- **_[Crosshair] Translucency_ menu item not being disabled when the crosshair were disabled**
+
+**[1].** This will affect existing config files.

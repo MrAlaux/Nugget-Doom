@@ -62,6 +62,7 @@
 
 // [Nugget]
 #include "am_map.h"
+#include "m_nughud.h"
 #include "st_stuff.h"
 
 // [crispy] remove DOS reference from the game quit confirmation dialogs
@@ -656,23 +657,31 @@ static void M_CustomSkill(int choice)
 
 void M_StartCustomSkill(const int mode)
 {
-  if (mode == 0)
+  if (casual_play) { gameskill = sk_custom; }
+
+  G_SetUserCustomSkill();
+
+  if (mode == 0 || gamestate == GS_DEMOSCREEN)
   {
     if (!EpiCustom)
     {
-      G_DeferedInitNew(sk_custom, epiChoice + 1, 1);
+      G_DeferedInitNew(gameskill, epiChoice + 1, 1);
     }
     else {
-      G_DeferedInitNew(sk_custom, EpiMenuEpi[epiChoice], EpiMenuMap[epiChoice]);
+      G_DeferedInitNew(gameskill, EpiMenuEpi[epiChoice], EpiMenuMap[epiChoice]);
     }
   }
-  else if (mode == 1 || (mode == 2 && !usergame))
+  else if (mode == 1 || !usergame)
   {
-    G_DeferedInitNew(sk_custom, gameepisode, gamemap);
+    G_DeferedInitNew(gameskill, gameepisode, gamemap);
   }
   else if (mode == 2)
   {
-    G_RestartKeepLoadout();
+    G_RestartWithLoadout(false);
+  }
+  else if (mode == 3)
+  {
+    G_RestartWithLoadout(true);
   }
 
   MN_ClearMenus();
@@ -960,15 +969,15 @@ static void M_DrawSaveLoadBorder(int x, int y, byte *cr)
 {
     int i;
 
-    V_DrawPatchTranslated(x - 8, y + 7, W_CacheLumpName("M_LSLEFT", PU_CACHE), cr);
+    V_DrawPatchTranslatedSH(x - 8, y + 7, W_CacheLumpName("M_LSLEFT", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 
     for (i = 0; i < 24; i++)
     {
-        V_DrawPatchTranslated(x, y + 7, W_CacheLumpName("M_LSCNTR", PU_CACHE), cr);
+        V_DrawPatchTranslatedSH(x, y + 7, W_CacheLumpName("M_LSCNTR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
         x += 8;
     }
 
-    V_DrawPatchTranslated(x, y + 7, W_CacheLumpName("M_LSRGHT", PU_CACHE), cr);
+    V_DrawPatchTranslatedSH(x, y + 7, W_CacheLumpName("M_LSRGHT", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 }
 
 //
@@ -1307,7 +1316,7 @@ static void M_QuitResponse(int ch)
     {
         return;
     }
-    if (D_CheckEndDoom() &&           // play quit sound only if showing ENDOOM
+    if (quit_sound &&                 // [Nugget]
         (!netgame || demoplayback) && // killough 12/98
         !nosfxparm)                   // avoid delay if no sound card
     {
@@ -2345,9 +2354,18 @@ static boolean ShortcutResponder(const event_t *ev)
         }
         else
         {
+            const boolean old_active = !!hud_active; // [Nugget]
+
             hud_displayed = 1;                 // jff 3/3/98 turn hud on
             hud_active = (hud_active + 1) % 3; // cycle hud_active
             HU_disable_all_widgets();
+
+            // [Nugget] NUGHUD
+            if (hud_type == HUD_TYPE_CRISPY && old_active != !!hud_active
+                && nughud.viewoffset)
+            {
+              R_SetViewSize(screenblocks);
+            }
         }
         return true;
     }
@@ -3345,7 +3363,7 @@ void M_Drawer(void)
         {
             patch_t *patch = W_CacheLumpName(name, PU_CACHE);
             rect->y -= SHORT(patch->topoffset);
-            V_DrawPatchTranslated(x, y, patch, cr);
+            V_DrawPatchTranslatedSH(x, y, patch, cr); // [Nugget] HUD/menu shadows
         }
 
         y += LINEHEIGHT;
@@ -3355,8 +3373,9 @@ void M_Drawer(void)
 
     y = setup_active ? SCREENHEIGHT - 19 : currentMenu->y;
 
-    V_DrawPatch(x + SKULLXOFF, y - 5 + itemOn * LINEHEIGHT,
-                W_CacheLumpName(skullName[whichSkull], PU_CACHE));
+    // [Nugget] HUD/menu shadows
+    V_DrawPatchTranslatedSH(x + SKULLXOFF, y - 5 + itemOn * LINEHEIGHT,
+                            W_CacheLumpName(skullName[whichSkull], PU_CACHE), NULL);
 
     if (delete_verify)
     {
@@ -3396,14 +3415,23 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
     char num[4];
 
     xx = x;
-    V_DrawPatchTranslated(xx, y, W_CacheLumpName("M_THERML", PU_CACHE), cr);
+    V_DrawPatchTranslatedSH(xx, y, W_CacheLumpName("M_THERML", PU_CACHE), cr); // [Nugget] HUD/menu shadows
     xx += 8;
+
+    { // [Nugget] HUD/menu shadows
+      const patch_t *const patch = W_CacheLumpName("M_THERMM", PU_CACHE);
+      V_SetShadowCrop(SHORT(patch->width) - M_THRM_STEP);
+    }
+
     for (i = 0; i < thermWidth; i++)
     {
-        V_DrawPatchTranslated(xx, y, W_CacheLumpName("M_THERMM", PU_CACHE), cr);
+        V_DrawPatchTranslatedSH(xx, y, W_CacheLumpName("M_THERMM", PU_CACHE), cr); // [Nugget] HUD/menu shadows
         xx += 8;
     }
-    V_DrawPatchTranslated(xx, y, W_CacheLumpName("M_THERMR", PU_CACHE), cr);
+
+    V_SetShadowCrop(0); // [Nugget] HUD/menu shadows
+
+    V_DrawPatchTranslatedSH(xx, y, W_CacheLumpName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 
     // [FG] write numerical values next to thermometer
     M_snprintf(num, 4, "%3d", thermDot);
@@ -3461,7 +3489,7 @@ static void WriteText(int x, int y, const char *string)
         {
             break;
         }
-        V_DrawPatch(cx, cy, hu_font[c]);
+        V_DrawPatchSH(cx, cy, hu_font[c]); // [Nugget] HUD/menu shadows
         cx += w;
     }
 }

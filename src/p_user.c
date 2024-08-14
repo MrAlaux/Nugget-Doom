@@ -923,17 +923,15 @@ void P_PlayerThink (player_t* player)
   player->fixedcolormap = 
 
     beta_emulation ?    /* Beta Emulation */
-    player->powers[pw_infrared] > 4*32 ||
-    player->powers[pw_infrared] & 8 ? 32 :
-    player->powers[pw_invisibility] > 4*32 ||
-    player->powers[pw_invisibility] & 8 ||
+    POWER_RUNOUT(player->powers[pw_infrared]) ? 32 :
+    POWER_RUNOUT(player->powers[pw_invisibility]) ||
     (player->powers[pw_invulnerability] < 4*32 &&
      player->powers[pw_invulnerability] > 0 &&
      player->powers[pw_invulnerability] & 8) ? 33 : 0 :
 
-    player->powers[pw_invulnerability] > 4*32 ||    /* Regular Doom */
-    player->powers[pw_invulnerability] & 8 ? INVERSECOLORMAP :
-    player->powers[pw_infrared] > 4*32 || player->powers[pw_infrared] & 8
+    /* Regular Doom */
+    POWER_RUNOUT(player->powers[pw_invulnerability]) ? INVERSECOLORMAP :
+    POWER_RUNOUT(player->powers[pw_infrared])
     // [Nugget] Night-vision visor
     ? (STRICTMODE(nightvision_visor) ? 33 : 1) : 0;
 }

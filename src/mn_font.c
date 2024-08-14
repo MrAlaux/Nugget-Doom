@@ -189,7 +189,7 @@ boolean MN_DrawFon2String(int x, int y, byte *cr, const char *str)
 
         if (chars[c].width)
         {
-            V_DrawPatchTranslated(cx, y, chars[c].patch, cr);
+            V_DrawPatchTranslatedSH(cx, y, chars[c].patch, cr); // [Nugget] HUD/menu shadows
             cx += chars[c].width + kerning;
         }
         else

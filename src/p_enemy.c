@@ -1222,7 +1222,7 @@ void A_Chase(mobj_t *actor)
   if (actor->flags & MF_JUSTATTACKED)
     {
       actor->flags &= ~MF_JUSTATTACKED;
-      if (!aggressive && !fastparm) // [Nugget] Custom Skill: use `aggressive`
+      if (!aggressive && !fastmonsters) // [Nugget] Custom Skill
         P_NewChaseDir(actor);
       return;
     }
@@ -1240,7 +1240,7 @@ void A_Chase(mobj_t *actor)
 
   // check for missile attack
   if (actor->info->missilestate)
-    if (!actor->movecount || aggressive || fastparm) // [Nugget] Custom Skill: use `aggressive`
+    if (!actor->movecount || aggressive || fastmonsters) // [Nugget] Custom Skill
       if (P_CheckMissileRange(actor))
         {
           P_SetMobjState(actor, actor->info->missilestate);

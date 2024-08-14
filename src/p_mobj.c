@@ -1259,6 +1259,16 @@ void P_SpawnPlayer (mapthing_t* mthing)
     }
 }
 
+// [Nugget] Custom Skill: duplicate monster spawns /--------------------------
+
+static boolean duplicatespawns = false;
+
+void P_ToggleDuplicateSpawns(const boolean state)
+{
+  duplicatespawns = state;
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // P_SpawnMapThing
@@ -1398,8 +1408,9 @@ void P_SpawnMapThing (mapthing_t* mthing)
     return;
 
   // don't spawn any monsters if -nomonsters
+  // [Nugget] Custom Skill
 
-  if (nomonsters && (i == MT_SKULL || (mobjinfo[i].flags & MF_COUNTKILL)))
+  if (realnomonsters && (i == MT_SKULL || (mobjinfo[i].flags & MF_COUNTKILL)))
     return;
 
   // spawn it
@@ -1423,6 +1434,54 @@ spawnit:
       mobj->flags |= MF_FRIEND;            // killough 10/98:
       P_UpdateThinker(&mobj->thinker);     // transfer friendliness flag
     }
+
+  // [Nugget] Custom Skill: duplicate monster spawns
+  if (duplicatespawns)
+  {
+    const int offset = abs(mobj->x - mobj->y) % 8;
+    const fixed_t dist = (mobj->radius * 2) + (mobj->info->speed << FRACBITS);
+    boolean stuck = true;
+
+    const fixed_t xoffsets[8] = {
+      -dist,     0, dist,
+      -dist,        dist,
+      -dist,     0, dist
+    };
+
+    const fixed_t yoffsets[8] = {
+      dist,  dist,  dist,
+         0,            0,
+     -dist, -dist, -dist
+    };
+
+    mobj->flags |= MF_TELEPORT; // Don't interact with specials
+
+    for (int j = 0;  j < 8;  j++)
+    {
+      const int side = (j + offset) % 8;
+      const fixed_t xofs = xoffsets[side],
+                    yofs = yoffsets[side];
+
+      if (!Check_Sides(mobj, mobj->x + xofs, mobj->y + yofs)
+          && P_TryMove(mobj, mobj->x + xofs, mobj->y + yofs, false))
+      {
+        stuck = false;
+        break;
+      }
+    }
+
+    if (!(mobj->info->flags & MF_TELEPORT))
+    { mobj->flags &= ~MF_TELEPORT; }
+
+    if (stuck)
+    {
+      if (!((mobj->flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)))
+      { max_kill_requirement--; }
+
+      P_RemoveMobj(mobj);
+      return;
+    }
+  }
 
   // killough 7/20/98: exclude friends
   if (!((mobj->flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)))

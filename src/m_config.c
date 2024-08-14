@@ -345,7 +345,14 @@ default_t defaults[] = {
     "stretchsky",
     (config_t *) &stretchsky, NULL,
     {0}, {0,1}, number, ss_gen, wad_no,
-    "1 to stretch short skies"
+    "1 to stretch short skies for mouselook" // [Nugget] Extended description
+  },
+
+  { // [Nugget] FOV-based sky stretching
+    "fov_stretchsky",
+    (config_t *) &fov_stretchsky, NULL,
+    {1}, {0,1}, number, ss_gen, wad_no,
+    "1 to stretch skies based on FOV"
   },
 
   {
@@ -695,6 +702,13 @@ default_t defaults[] = {
     "Custom Skill: aggressive monsters (instant reaction time, continuous attacks)"
   },
 
+  {
+    "custom_skill_x2monsters",
+    (config_t *) &custom_skill_x2monsters, NULL,
+    {0}, {0,1}, number, ss_skill, wad_yes,
+    "Custom Skill: duplicate monster spawns"
+  },
+
   // [Nugget] ---------------------------------------------------------------/
 
   { // killough 3/6/98: preserve autorun across games
@@ -928,6 +942,20 @@ default_t defaults[] = {
   },
 
   {
+    "hud_menu_shadows",
+    (config_t *) &hud_menu_shadows, NULL,
+    {0}, {0,1}, number, ss_gen, wad_yes,
+    "1 to enable shadows for HUD/menu graphics"
+  },
+
+  {
+    "hud_menu_shadows_filter_pct",
+    (config_t *) &hud_menu_shadows_filter_pct, NULL,
+    {66}, {0,100}, number, ss_none, wad_yes,
+    "HUD/menu-shadows translucency percentage"
+  },
+
+  {
     "no_berserk_tint",
     (config_t *) &no_berserk_tint, NULL,
     {0}, {0,1}, number, ss_gen, wad_no,
@@ -1005,6 +1033,13 @@ default_t defaults[] = {
   },
 
   {
+    "autosave_interval",
+    (config_t *) &autosave_interval, NULL,
+    {0}, {30,600}, number, ss_none, wad_no,
+    "Interval between autosaves, in seconds"
+  },
+
+  {
     "rewind_interval",
     (config_t *) &rewind_interval, NULL,
     {1}, {1,600}, number, ss_gen, wad_no,
@@ -1037,6 +1072,13 @@ default_t defaults[] = {
     (config_t *) &quick_quitgame, NULL,
     {0}, {0,1}, number, ss_gen, wad_no,
     "1 to skip prompt on Quit Game"
+  },
+
+  {
+    "quit_sound",
+    (config_t *) &quit_sound, NULL,
+    {1}, {0,1}, number, ss_gen, wad_no,
+    "1 to play a sound when confirming the \"Quit Game\" prompt"
   },
 
 #if 0
@@ -1203,6 +1245,13 @@ default_t defaults[] = {
     (config_t *) &translucent_pspr, NULL,
     {0}, {0,1}, number, ss_weap, wad_yes,
     "1 to enable translucency for weapon flash sprites"
+  },
+
+  {
+    "translucent_pspr_pct",
+    (config_t *) &translucent_pspr_pct, NULL,
+    {75}, {0,100}, number, ss_none, wad_yes,
+    "Weapon-flash translucency percentage"
   },
 
   {
@@ -1396,10 +1445,10 @@ default_t defaults[] = {
   },
 
   {
-    "zdoom_item_drops",
-    (config_t *) &zdoom_item_drops, NULL,
+    "tossdrop",
+    (config_t *) &tossdrop, NULL,
     {0}, {0,1}, number, ss_enem, wad_yes,
-    "1 to enable ZDoom-like item drops for dying enemies"
+    "1 to make enemies toss their items dropped upon death"
   },
 
   // [Nugget] ---------------------------------------------------------------/
@@ -1741,7 +1790,7 @@ default_t defaults[] = {
     "comp_manualdoor",
     (config_t *) &comp_manualdoor, NULL,
     {1}, {0,1}, number, ss_none, wad_yes,
-    "Manually-toggled moving doors are silent"
+    "Manually toggled moving doors are silent"
   },
 
   {
@@ -1791,6 +1840,13 @@ default_t defaults[] = {
     (config_t *) &comp_deadoof, NULL,
     {1}, {0,1}, number, ss_none, wad_yes,
     "Dead players can still play oof sound"
+  },
+
+  {
+    "comp_powerrunout",
+    (config_t *) &comp_powerrunout, NULL,
+    {0}, {0,1}, number, ss_none, wad_yes,
+    "Use improved powerup run-out effect"
   },
 
   {
@@ -3487,7 +3543,7 @@ default_t defaults[] = {
   { // [Nugget] Restore message scroll direction toggle
     "hud_msg_scrollup",
     (config_t *) &hud_msg_scrollup, NULL,
-    {1}, {0,1}, number, ss_stat, wad_yes,
+    {1}, {0,1}, number, ss_none, wad_yes,
     "1 enables message review list scrolling upward"
   },
 
@@ -3496,6 +3552,13 @@ default_t defaults[] = {
     (config_t *) &message_colorized, NULL,
     {0}, {0,1}, number, ss_stat, wad_no,
     "1 to colorize player messages"
+  },
+
+  { // [Nugget] Message flash
+    "message_flash",
+    (config_t *) &message_flash, NULL,
+    {0}, {0,1}, number, ss_stat, wad_no,
+    "1 to make messages flash when they first appear"
   },
 
   { // killough 11/98
@@ -3709,10 +3772,10 @@ default_t defaults[] = {
   // [Nugget] ---------------------------------------------------------------/
 
   { // [Nugget]
-    "hud_stats_icons",
-    (config_t *) &hud_stats_icons, NULL,
+    "hud_allow_icons",
+    (config_t *) &hud_allow_icons, NULL,
     {1}, {0,1}, number, ss_stat, wad_yes,
-    "Allow usage of icons for the Level Stats widget's labels"
+    "Allow usage of icons for some labels in HUD widgets"
   },
 
   // [FG] level time widget
@@ -3875,6 +3938,13 @@ default_t defaults[] = {
     (config_t *) &hud_crosshair, NULL,
     {1}, {1,HU_CROSSHAIRS-1}, number, ss_stat, wad_no,
     "crosshair type"
+  },
+
+  { // [Nugget] Translucent crosshair
+    "hud_crosshair_tran_pct",
+    (config_t *) &hud_crosshair_tran_pct, NULL,
+    {100}, {0,100}, number, ss_none, wad_no,
+    "crosshair translucency percent"
   },
 
   {

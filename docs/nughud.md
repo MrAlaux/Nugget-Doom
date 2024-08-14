@@ -53,13 +53,16 @@ The following Status-Bar widgets are available:
 | :-----------------: | :-------: | :---------- |
 | `nughud_ammo`       | Yes       | Ammo count for the currently equipped weapon |
 | `nughud_ammoicon`   | Yes       | Ammo icon, which changes depending on the ammo type of the current weapon |
+| `nughud_ammobar`    | Yes       | Ammo bar |
 | `nughud_health`     | Yes       | Health count |
 | `nughud_healthicon` | Yes       | Health icon, which changes depending on whether the player has Berserk |
+| `nughud_healthbar`  | Yes       | Health bar |
 | `nughud_arms#`      | No        | Arms (weapon) number, where `#` is an integer in the [1, 9] range |
 | `nughud_frags`      | Yes       | Frag count, only shown during Deathmatch games |
 | `nughud_face`       | No        | Face (mugshot) |
 | `nughud_armor`      | Yes       | Armor count |
 | `nughud_armoricon`  | Yes       | Armor icon, which changes depending on the current armor type |
+| `nughud_armorbar`   | Yes       | Armor bar |
 | `nughud_key#`       | No        | Key display, where `#` is an integer in the [0, 2] range (in order: Blue Key; Yellow Key; Red Key) |
 | `nughud_ammo#`      | Yes       | Ammo count for each type, where `#` is an integer in the [0, 3] range (in order: Bullets; Shells; Cells; Rockets) |
 | `nughud_maxammo#`   | Yes       | Same as the above, but for Max. Ammo |
@@ -68,6 +71,15 @@ The following Status-Bar widgets are available:
 
 **The _Ammo_, _Health_ and _Armor_ icons are vertically alignable.**
 Additionally, **the offsets of the graphics used by these icons will be ignored, unless a custom font is being used** (see details below).
+
+**The _Ammo_, _Health_ and _Armor bars_ support additional properties:**
+
+- `_ups`: Percentage of units per slice (e.g. a value of `200` would make a slice be drawn every 2 units), which can be any number between `100` and `10000`;
+- `_gap`: Additional space between slices (kerning), which can be any number between `-4` and `4`.
+
+**Bars also require slice graphics.** Respectively: `NHAMBAR#`, `NHHLBAR#` and `NHARBAR#`, where `#` stands for either `0` or `1`.
+If both slice graphics for a widget are provided, a second bar will be drawn on top of the first when the player has extra units (e.g. health over 100%).
+Otherwise, if only the first slice graphic is provided, the bars will continue to grow normally.
 
 **Arms number 1 is lit up when the player has Berserk.**
 
@@ -230,6 +242,7 @@ Infinity, drawn in place of the Ammo count when using weapons with no ammo type 
 
 **Patches are static graphics that can be drawn anywhere on the screen**, behind the rest of widgets.  
 Up to 8 patches can be drawn; `patch1` is drawn behind `patch2`, which is drawn behind `patch3`, and so on.
+Most widgets are drawn over patches, with the exception of bars: the first 4 patches are drawn behind bars, while the rest are drawn over them.
 
 Aside from the shared properties, **patches make use of an additional property, `_name`, that determines the name of the graphic lump to be used**,
 which can be either a sprite (i.e. a lump between `S_START` and `S_END` markers, like `MEDIA0`) or a graphic (like `STBAR`).  

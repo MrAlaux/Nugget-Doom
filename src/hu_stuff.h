@@ -40,6 +40,10 @@ void HU_Start(void);
 void HU_disable_all_widgets (void);
 void HU_widget_rebuild_sttime(void);
 
+// [Nugget]
+struct patch_s;
+boolean HU_IsSmallFont(const struct patch_s *const patch);
+
 void HU_NughudAlignTime(void); // [Nugget] NUGHUD
 
 boolean HU_Responder(struct event_s *ev);
@@ -102,6 +106,7 @@ extern boolean draw_crispy_hud;
 
 extern boolean hud_crosshair_on; // [Nugget] Keep the CVAR below just for the type
 extern int hud_crosshair;
+extern int hud_crosshair_tran_pct; // [Nugget] Translucent crosshair
 extern boolean hud_crosshair_health;
 
 enum
