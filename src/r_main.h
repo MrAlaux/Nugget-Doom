@@ -46,7 +46,8 @@ extern int      centery;
 extern fixed_t  centerxfrac;
 extern fixed_t  centeryfrac;
 extern fixed_t  projection;
-extern fixed_t  skyiscale;
+extern fixed_t  skyiscale,
+                skyiscalediff; // [Nugget] FOV-based sky stretching
 extern int      validcount;
 extern int      linecount;
 extern int      loopcount;

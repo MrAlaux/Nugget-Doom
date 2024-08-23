@@ -345,7 +345,14 @@ default_t defaults[] = {
     "stretchsky",
     (config_t *) &stretchsky, NULL,
     {0}, {0,1}, number, ss_gen, wad_no,
-    "1 to stretch short skies"
+    "1 to stretch short skies for mouselook" // [Nugget] Extended description
+  },
+
+  { // [Nugget] FOV-based sky stretching
+    "fov_stretchsky",
+    (config_t *) &fov_stretchsky, NULL,
+    {1}, {0,1}, number, ss_gen, wad_no,
+    "1 to stretch skies based on FOV"
   },
 
   {
@@ -693,6 +700,13 @@ default_t defaults[] = {
     (config_t *) &custom_skill_aggressive, NULL,
     {0}, {0,1}, number, ss_skill, wad_yes,
     "Custom Skill: aggressive monsters (instant reaction time, continuous attacks)"
+  },
+
+  {
+    "custom_skill_x2monsters",
+    (config_t *) &custom_skill_x2monsters, NULL,
+    {0}, {0,1}, number, ss_skill, wad_yes,
+    "Custom Skill: duplicate monster spawns"
   },
 
   // [Nugget] ---------------------------------------------------------------/
@@ -1060,6 +1074,13 @@ default_t defaults[] = {
     "1 to skip prompt on Quit Game"
   },
 
+  {
+    "quit_sound",
+    (config_t *) &quit_sound, NULL,
+    {1}, {0,1}, number, ss_gen, wad_no,
+    "1 to play a sound when confirming the \"Quit Game\" prompt"
+  },
+
 #if 0
   {
     "a11y_sector_lighting",
@@ -1175,6 +1196,13 @@ default_t defaults[] = {
     (config_t *) &switch_on_pickup, NULL,
     {1}, {0,1}, number, ss_weap, wad_no,
     "1 to switch weapons when acquiring new ones or ammo for them"
+  },
+
+  {
+    "weapswitch_interruption",
+    (config_t *) &weapswitch_interruption, NULL,
+    {0}, {0,1}, number, ss_weap, wad_no,
+    "1 to allow interruption of weapon switches"
   },
 
   {
@@ -1424,10 +1452,10 @@ default_t defaults[] = {
   },
 
   {
-    "zdoom_item_drops",
-    (config_t *) &zdoom_item_drops, NULL,
+    "tossdrop",
+    (config_t *) &tossdrop, NULL,
     {0}, {0,1}, number, ss_enem, wad_yes,
-    "1 to enable ZDoom-like item drops for dying enemies"
+    "1 to make enemies toss their items dropped upon death"
   },
 
   // [Nugget] ---------------------------------------------------------------/
@@ -3522,7 +3550,7 @@ default_t defaults[] = {
   { // [Nugget] Restore message scroll direction toggle
     "hud_msg_scrollup",
     (config_t *) &hud_msg_scrollup, NULL,
-    {1}, {0,1}, number, ss_stat, wad_yes,
+    {1}, {0,1}, number, ss_none, wad_yes,
     "1 enables message review list scrolling upward"
   },
 
@@ -3531,6 +3559,13 @@ default_t defaults[] = {
     (config_t *) &message_colorized, NULL,
     {0}, {0,1}, number, ss_stat, wad_no,
     "1 to colorize player messages"
+  },
+
+  { // [Nugget] Message flash
+    "message_flash",
+    (config_t *) &message_flash, NULL,
+    {0}, {0,1}, number, ss_stat, wad_no,
+    "1 to make messages flash when they first appear"
   },
 
   { // killough 11/98

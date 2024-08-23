@@ -798,16 +798,17 @@ void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
       drawingshadow = false;
     }
 
-    if (outr1)
+    if (outr1 && outr2)
     {
-      if (outr2)
-      {
-        V_DrawPatchTRTR(x, y, patch, outr1, outr2);
-      }
-      else
-      {
-        V_DrawPatchTranslated(x, y, patch, outr1);
-      }
+      V_DrawPatchTRTR(x, y, patch, outr1, outr2);
+    }
+    else if (outr2)
+    {
+      V_DrawPatchTranslated(x, y, patch, outr2);
+    }
+    else if (outr1)
+    {
+      V_DrawPatchTranslated(x, y, patch, outr1);
     }
     else if (flipped)
     {

@@ -28,6 +28,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
+- **FOV-based sky stretching** setting (CFG-only: `fov_stretchsky`)
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
@@ -69,6 +70,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Rewinding** [i.b. DSDA-Doom]
 - **_Play Internal Demos_** setting
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
+- **Quit Sound** setting, independent of ENDOOM and enabled by default (CFG-only: `quit_sound`)
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
@@ -79,6 +81,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Restored **_Weapon Recoil_** menu item
 - **_No Horizontal Autoaim_** setting
 - **_Switch [Weapon] on Pickup_** setting
+- **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
 - Key to **equip last used weapon** [i.b. Cherry Doom]
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
@@ -101,8 +104,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Dedicated toggle key.
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
 - **Show Save Messages** setting (CFG-only: `show_save_messages`)
-- **_Milestone Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
-- Restored **_Upward Message Scrolling_** setting, and enabled it by default
+- **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
+- **_Message Flash_** setting
+- Restored **_Upward Message Scrolling_** setting, and enabled it by default (CFG-only: `hud_msg_scrollup`)
 - **Restored various message-related menu items**
 - **_Show Powerup Timers_** setting
 - **Show SSG availability in the Shotgun slot of the Arms widget** setting (CFG-only: `show_ssg`) [p.f. Crispy Doom]
@@ -132,7 +136,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 - **_Extra Gibbing_** setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
 - **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
-- **_ZDoom-like item drops_** setting [of course, i.b. ZDoom]
+- **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
 - **_Selective Fuzz Darkening_** setting [by @ceski-1]
 
 ### Doom Compatibility settings
@@ -190,7 +194,7 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 
 ### Miscellaneous
 
-- **Custom skill level**
+- **Customizable skill level**, supporting all vanilla settings and a new one for duplicate monster spawns
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - Key to **toggle zoom**
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)

@@ -68,7 +68,8 @@ lighttable_t *fixedcolormap;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
 fixed_t  projection;
-fixed_t  skyiscale;
+fixed_t  skyiscale,
+         skyiscalediff; // [Nugget] FOV-based sky stretching
 fixed_t  viewx, viewy, viewz;
 angle_t  viewangle;
 localview_t localview;
@@ -929,6 +930,16 @@ void R_ExecuteSetViewSize (void)
   else
   {
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
+  }
+
+  // [Nugget] FOV-based sky stretching;
+  // we intentionally use `custom_fov` to disregard any FOV effects
+  if (custom_fov == FOV_DEFAULT)
+  {
+    skyiscalediff = FRACUNIT;
+  }
+  else {
+    skyiscalediff = tan(custom_fov * M_PI / 360.0) * FRACUNIT;
   }
 
   for (i=0 ; i<viewwidth ; i++)

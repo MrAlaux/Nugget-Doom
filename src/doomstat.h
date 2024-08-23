@@ -228,6 +228,7 @@ extern  boolean         halfdamage;
 extern  boolean         slowbrain;
 extern  boolean         fastmonsters;
 extern  boolean         aggressive;
+extern  boolean         x2monsters;
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -544,6 +545,7 @@ extern int rewind_depth;
 extern int rewind_timeout;
 extern int no_page_ticking;
 extern int quick_quitgame;
+extern int quit_sound;
 
 //extern int a11y_sector_lighting;
 extern int a11y_weapon_flash;
@@ -554,6 +556,7 @@ extern int a11y_invul_colormap;
 
 extern int no_hor_autoaim;
 extern int switch_on_pickup;
+extern int weapswitch_interruption;
 extern int skip_ammoless_weapons;
 extern int always_bob; // CFG-only
 
@@ -579,6 +582,7 @@ extern int sx_fix; // CFG-only
 
 extern int announce_milestones;
 extern int show_save_messages; // CFG-only
+extern int message_flash;
 extern int show_ssg; // CFG-only
 
 enum {
@@ -630,7 +634,7 @@ typedef enum {
 extern int extra_gibbing[];
 
 extern int bloodier_gibbing;
-extern int zdoom_item_drops;
+extern int tossdrop;
 
 // Key Bindings --------------------------------------------------------------
 
@@ -646,6 +650,7 @@ enum {
   SHOTPAL_BOTH,
 }; extern int screenshot_palette;
 
+extern int fov_stretchsky;
 extern int hud_menu_shadows_filter_pct;
 extern int menu_backdrop_darkening;
 extern int automap_overlay_darkening;
@@ -691,6 +696,7 @@ extern int custom_skill_slowbrain;
 extern int custom_skill_fast;
 extern int custom_skill_respawn;
 extern int custom_skill_aggressive;
+extern int custom_skill_x2monsters;
 
 // [Nugget] =================================================================/
 

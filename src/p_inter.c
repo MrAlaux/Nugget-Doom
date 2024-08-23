@@ -954,8 +954,8 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod)
   mo = P_SpawnMobj (target->x,target->y,ONFLOORZ, item);
   mo->flags |= MF_DROPPED;    // special versions of items
 
-  // [Nugget] ZDoom-like item drops
-  if (casual_play && zdoom_item_drops)
+  // [Nugget] Toss items upon death
+  if (casual_play && tossdrop)
   {
     mo->z += target->height*5/4;
     mo->momx = (Woof_Random() - Woof_Random()) << 7;

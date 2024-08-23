@@ -1445,6 +1445,7 @@ static setup_menu_t weap_settings3[] =
     {"Physical Recoil",                 S_ONOFF,                     M_X, M_SPC, {"weapon_recoil"}}, // Restored Weapon Recoil menu item
     {"No Horizontal Autoaim",           S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"no_hor_autoaim"}},
     {"Switch on Pickup",                S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"switch_on_pickup"}},
+    {"Allow Switch Interruption",       S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"weapswitch_interruption"}},
     {"Prev/Next Skip Ammoless Weapons", S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"skip_ammoless_weapons"}},
 
   MI_GAP,
@@ -1726,7 +1727,7 @@ static setup_menu_t stat_settings4[] = {
      {"hud_secret_message"}, m_null, input_null, str_secret_message},
 
     // [Nugget]
-    {"Milestone Completion Announcements", S_ONOFF, M_X, M_SPC,
+    {"Milestone-Completion Announcements", S_ONOFF, M_X, M_SPC,
      {"announce_milestones"}},
 
     {"Show Toggle Messages", S_ONOFF, M_X, M_SPC, {"show_toggle_messages"}},
@@ -1739,7 +1740,10 @@ static setup_menu_t stat_settings4[] = {
     {"Colorize Messages",    S_ONOFF, M_X, M_SPC, {"message_colorized"},
      m_null, input_null, str_empty, HU_ResetMessageColors},
 
-    // [Nugget] Restored menu items /-------------------------------------------
+    // [Nugget] Message flash
+    {"Message Flash",        S_ONOFF, M_X, M_SPC, {"message_flash"}},
+
+    // [Nugget] Restored menu items /-----------------------------------------
 
     {"Message Color", S_CRITEM|S_COSMETIC, M_X, M_SPC,
      {"hudcolor_mesg"}, m_null, input_null, str_hudcolor},
@@ -1762,10 +1766,7 @@ static setup_menu_t stat_settings4[] = {
     {"Number of Lines", S_NUM, M_X, M_SPC,
      {"hud_msg_lines"}},
 
-    {"Upward Message Scrolling", S_ONOFF, M_X, M_SPC,
-     {"hud_msg_scrollup"}},
-
-    // [Nugget] ---------------------------------------------------------------/
+    // [Nugget] -------------------------------------------------------------/
 
     MI_END
 };
@@ -1844,6 +1845,7 @@ void UpdateCrosshairItems(void) // [Nugget] Global
     // [Nugget] --------------------------------------------------------------
 
     DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair");
+    DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair_tran_pct");
 
     DisableItem(
         !(hud_crosshair_on
@@ -1860,8 +1862,6 @@ void UpdateCrosshairItems(void) // [Nugget] Global
 static void UpdateMultiLineMsgItem(void)
 {
   DisableItem(!message_list, stat_settings4, "hud_msg_lines");
-  // Restore message scroll direction toggle
-  DisableItem(!message_list, stat_settings4, "hud_msg_scrollup");
 }
 
 // Setting up for the Status Bar / HUD screen. Turn on flags, set pointers,
@@ -2032,20 +2032,20 @@ static setup_menu_t enem_settings1[] = {
     {"Blocky Spectre Drawing", S_ONOFF, M_X, M_SPC, {"fuzzcolumn_mode"},
      m_null, input_null, str_overlay, R_SetFuzzColumnMode},
 
-    // [Nugget] /---------------------------------------------------------------
+    // [Nugget] /-------------------------------------------------------------
 
     MI_GAP,
     {"Nugget", S_SKIP|S_TITLE, M_X, M_SPC},
 
       {"Extra Gibbing",            S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"extra_gibbing"}},
       {"Bloodier Gibbing",         S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"bloodier_gibbing"}},
-      {"ZDoom-like Item Drops",    S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"zdoom_item_drops"}},
+      {"Toss Items Upon Death",    S_ONOFF|S_STRICT|S_CRITICAL, M_X, M_SPC, {"tossdrop"}},
 
       // [Nugget - ceski] Selective fuzz darkening
       {"Selective Fuzz Darkening", S_ONOFF|S_STRICT, M_X, M_SPC,
        {"fuzzdark_mode"}, m_null, input_null, str_empty, R_SetFuzzColumnMode},
 
-    // [Nugget] ---------------------------------------------------------------/
+    // [Nugget] -------------------------------------------------------------/
 
     MI_RESET,
 
@@ -2981,16 +2981,20 @@ static void CSCurrentLoadout(void)
   StartCustomSkill(3);
 }
 
+#define MI_GAP2 \
+    {"", S_SKIP, 0, M_SPC / 2}
+
 static setup_menu_t customskill_settings1[] = {
 
     {"Thing Spawns",       S_CHOICE|S_LEVWARN, M_X, M_SPC, {"custom_skill_things"}, m_null, input_null, str_thing_spawns},
     {"Multiplayer Things", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_coopspawns"}},
+    {"Duplicate Monsters", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_x2monsters"}},
     {"No Monsters",        S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_nomonsters"}},
-    MI_GAP,
+    MI_GAP2,
     {"Double Ammo From Pickups", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_doubleammo"}},
     {"Halved Damage To Player",  S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_halfdamage"}},
     {"Slow Spawn-Cube Spitter",  S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_slowbrain"}},
-    MI_GAP,
+    MI_GAP2,
     {"Fast Monsters",                   S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_fast"}},
     {"Respawning Monsters",             S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_respawn"}},
     {"Aggressive (Nightmare) Monsters", S_ONOFF |S_LEVWARN, M_X, M_SPC, {"custom_skill_aggressive"}},
@@ -3002,6 +3006,8 @@ static setup_menu_t customskill_settings1[] = {
 
     MI_END
 };
+
+#undef MI_GAP2
 
 static setup_menu_t *customskill_settings[] = {customskill_settings1, NULL};
 
