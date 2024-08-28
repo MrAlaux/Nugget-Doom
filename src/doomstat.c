@@ -162,6 +162,7 @@ int chasecam_crosshair; // CFG-only
 int menu_background_all;
 int no_menu_tint;
 int hud_menu_shadows;
+int flip_levels;
 int no_berserk_tint;
 int no_radsuit_tint;
 int nightvision_visor;

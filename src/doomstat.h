@@ -528,6 +528,7 @@ extern int chasecam_crosshair; // CFG-only
 extern int menu_background_all;
 extern int no_menu_tint;
 extern int hud_menu_shadows;
+extern int flip_levels;
 extern int no_berserk_tint;
 extern int no_radsuit_tint;
 extern int nightvision_visor;

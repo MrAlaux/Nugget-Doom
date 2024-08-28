@@ -708,19 +708,27 @@ void G_PrepTiccmd(void)
   const boolean strafe = M_InputGameActive(input_strafe);
   ticcmd_t *cmd = &basecmd;
 
-  // [Nugget] Decrease the intensity of some movements if zoomed in /---------
+  // [Nugget] /===============================================================
 
-  float zoomdiv = 1.0f;
+  float hmodifier = 1.0f;
+
+  // Decrease the intensity of some movements if zoomed in -------------------
 
   if (!strictmode)
   {
     const int zoom = R_GetFOVFX(FOVFX_ZOOM);
 
     if (zoom)
-    { zoomdiv = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
+    { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
   }
 
-  // [Nugget] ---------------------------------------------------------------/
+  float vmodifier = hmodifier;
+
+  // Flip levels ------------------------------------------------------------
+
+  if (flip_levels) { hmodifier = -hmodifier; }
+
+  // [Nugget] ===============================================================/
 
   // Gamepad
 
@@ -730,7 +738,7 @@ void G_PrepTiccmd(void)
 
     if (axes[AXIS_TURN] && !strafe)
     {
-      localview.rawangle -= CalcControllerAngle() * deltatics / zoomdiv;
+      localview.rawangle -= CalcControllerAngle() * deltatics / hmodifier;
       cmd->angleturn = CarryAngle(localview.rawangle);
       localview.angle = cmd->angleturn << 16;
       axes[AXIS_TURN] = 0.0f;
@@ -738,7 +746,7 @@ void G_PrepTiccmd(void)
 
     if (axes[AXIS_LOOK] && padlook)
     {
-      localview.rawpitch -= CalcControllerPitch() * deltatics / zoomdiv;
+      localview.rawpitch -= CalcControllerPitch() * deltatics / vmodifier;
       cmd->pitch = CarryPitch(localview.rawpitch);
       localview.pitch = cmd->pitch;
       axes[AXIS_LOOK] = 0.0f;
@@ -749,7 +757,7 @@ void G_PrepTiccmd(void)
 
   if (mousex && !strafe)
   {
-    localview.rawangle -= CalcMouseAngle(mousex) / zoomdiv;
+    localview.rawangle -= CalcMouseAngle(mousex) / hmodifier;
     cmd->angleturn = CarryAngle(localview.rawangle);
     localview.angle = cmd->angleturn << 16;
     mousex = 0;
@@ -757,7 +765,7 @@ void G_PrepTiccmd(void)
 
   if (mousey && mouselook)
   {
-    localview.rawpitch += CalcMousePitch(mousey) / zoomdiv;
+    localview.rawpitch += CalcMousePitch(mousey) / vmodifier;
     cmd->pitch = CarryPitch(localview.rawpitch);
     localview.pitch = cmd->pitch;
     mousey = 0;
@@ -882,6 +890,12 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   }
 
   // Update/reset
+
+  // [Nugget] Flip levels
+  if (flip_levels) {
+    angle = -angle;
+    side  = -side;
+  }
 
   if (angle)
   {
@@ -3784,7 +3798,7 @@ void G_Ticker(void)
     fixed_t pitch = 0;
     boolean center = false,
             lock = false;
-    
+
     if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL && !menuactive)
     {
       const ticcmd_t *const cmd = &netcmds[consoleplayer];
@@ -3826,6 +3840,8 @@ void G_Ticker(void)
 
           fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward)),
                   sidemove    = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));
+
+          if (flip_levels) { sidemove = -sidemove; } // Flip levels
 
           angle_t fangle = R_GetFreecamAngle() + angle;
 

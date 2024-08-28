@@ -956,6 +956,13 @@ default_t defaults[] = {
   },
 
   {
+    "flip_levels",
+    (config_t *) &flip_levels, NULL,
+    {0}, {0,1}, number, ss_gen, wad_no,
+    "Flip levels horizontally (visual filter)"
+  },
+
+  {
     "no_berserk_tint",
     (config_t *) &no_berserk_tint, NULL,
     {0}, {0,1}, number, ss_gen, wad_no,

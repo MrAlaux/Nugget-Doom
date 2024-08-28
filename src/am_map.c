@@ -1500,6 +1500,17 @@ static boolean AM_clipMline
 }
 #undef DOOUTCODE
 
+// [Nugget] Factored out
+static void PUTDOT(int xx, int yy, int cc)
+{
+  if (flip_levels) { xx = f_x*2 + f_w - 1 - xx; } // [Nugget] Flip levels
+
+  // [Nugget] Minimap: take `f_x` and `f_y` into account
+  if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h))
+    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+}
+
+
 //
 // AM_drawFline()
 //
@@ -1536,10 +1547,7 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   }
 #endif
 
-// [Nugget] Minimap: take `f_x` and `f_y` into account
-#define PUTDOT(xx,yy,cc)                                          \
-  if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h)) \
-    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc)
+// [Nugget] Factored PUTDOT() out
 
   dx = fl->b.x - fl->a.x;
   ax = 2 * (dx<0 ? -dx : dx);
@@ -1593,6 +1601,8 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 //
 static void AM_putWuDot(int x, int y, int color, int weight)
 {
+  if (flip_levels) { x = f_x*2 + f_w - 1 - x; } // [Nugget] Flip levels
+
    byte *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
@@ -2615,6 +2625,8 @@ static void AM_drawMarks(void)
 	}
 	fx = CXMTOF(pt.x);
 	fy = CYMTOF(pt.y);
+
+	if (flip_levels) { fx = f_x*2 + f_w - 1 - fx; }
 
 	do
 	  {
