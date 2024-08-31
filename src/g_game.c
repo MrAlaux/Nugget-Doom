@@ -726,7 +726,7 @@ void G_PrepTiccmd(void)
 
   // Flip levels ------------------------------------------------------------
 
-  if (flip_levels) { hmodifier = -hmodifier; }
+  if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
 
   // [Nugget] ===============================================================/
 
@@ -892,7 +892,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   // Update/reset
 
   // [Nugget] Flip levels
-  if (flip_levels) {
+  if (STRICTMODE(flip_levels)) {
     angle = -angle;
     side  = -side;
   }

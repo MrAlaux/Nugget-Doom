@@ -583,7 +583,7 @@ void R_ProjectSprite (mobj_t* thing)
       angle_t ang = R_PointToAngle(interpx, interpy);
       unsigned rot = (ang-interpangle+(unsigned)(ANG45/2)*9)>>29;
 
-      if (flip_levels) { rot = (8 - rot) & 7; } // [Nugget] Flip levels
+      if (STRICTMODE(flip_levels)) { rot = (8 - rot) & 7; } // [Nugget] Flip levels
 
       lump = sprframe->lump[rot];
       flip = (boolean) sprframe->flip[rot];
@@ -604,7 +604,7 @@ void R_ProjectSprite (mobj_t* thing)
       flip = !flip;
     }
 
-  if (flip_levels) { flip = !flip; } // [Nugget] Flip levels
+  if (STRICTMODE(flip_levels)) { flip = !flip; } // [Nugget] Flip levels
 
   txc = tx; // [FG] sprite center coordinate
 
@@ -709,6 +709,8 @@ void R_ProjectSprite (mobj_t* thing)
       // [Nugget]
       && (!(crosshair_target->flags & MF_SHADOW) || hud_crosshair_fuzzy))
   {
+    if (STRICTMODE(flip_levels)) { txc = -txc; } // [Nugget] Flip levels
+
     HU_UpdateCrosshairLock
     (
       BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(txc, xscale)) >> FRACBITS),
@@ -951,7 +953,7 @@ void R_DrawPlayerSprites(void)
   mceilingclip = negonearray;
 
   // [Nugget] Flip levels
-  if (flip_levels)
+  if (STRICTMODE(flip_levels))
   {
     for (int y = 0;  y < viewheight;  y++)
     {

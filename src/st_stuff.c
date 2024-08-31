@@ -556,7 +556,7 @@ void ST_updateFaceWidget(void)
                   // head-on
                   st_faceindex += ST_RAMPAGEOFFSET;
                 }
-              else if (i)
+              else if (i ^ STRICTMODE(flip_levels))
                 {
                   // turn face right
                   st_faceindex += ST_TURNOFFSET;

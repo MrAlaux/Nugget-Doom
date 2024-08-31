@@ -137,7 +137,7 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
 void I_MBF_UpdateSoundParams(int channel, int volume, int separation)
 {
     // SoM 7/1/02: forceFlipPan accounted for here
-    if (forceFlipPan ^ flip_levels) // [Nugget] Flip levels
+    if (forceFlipPan ^ STRICTMODE(flip_levels)) // [Nugget] Flip levels
     {
         separation = 254 - separation;
     }
