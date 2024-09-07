@@ -703,7 +703,7 @@ void A_Lower(player_t *player, pspdef_t *psp)
       return;
     }
 
-  player->lastweapon  = player->readyweapon; // [Nugget] Last weapon key
+  player->lastweapon  = player->readyweapon; // [Nugget] Last-weapon button
   player->readyweapon = player->pendingweapon;
 
   P_BringUpWeapon(player);

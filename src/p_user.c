@@ -773,12 +773,11 @@ void P_PlayerThink (player_t* player)
   if (cmd->buttons & BT_SPECIAL)
     cmd->buttons = 0;
 
-  if (cmd->buttons & BT_CHANGE
-      || (casual_play && M_InputGameActive(input_lastweapon))) // [Nugget] Last weapon key
+  if (cmd->buttons & BT_CHANGE)
     {
-      // [Nugget] Last weapon key
-      const weapontype_t lastweapon = ((casual_play && M_InputGameActive(input_lastweapon))
-                                       ? player->lastweapon : wp_nochange);
+      // [Nugget] Last-weapon button
+      const weapontype_t lastweapon = CASUALPLAY(M_InputGameActive(input_lastweapon))
+                                      ? player->lastweapon : wp_nochange;
 
       // The actual changing of the weapon is done
       //  when the weapon psprite can do it

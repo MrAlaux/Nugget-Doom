@@ -792,7 +792,8 @@ void P_NuggetGib(mobj_t *mo, const boolean crushed)
     // so this is done to get rather-decent behavior in vanilla
     if (demo_version < DV_BOOM200) { splat->flags |= MF_NOCLIP; }
 
-    splat->tics = MAX(1, splat->tics + (Woof_Random() & 3) - (Woof_Random() & 3));
+    splat->tics += (Woof_Random() & 3) - (Woof_Random() & 3);
+    splat->tics = MAX(1, splat->tics);
   }
 }
 
