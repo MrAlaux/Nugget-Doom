@@ -81,7 +81,6 @@ static void CalcListenerParams(const mobj_t *listener,
                                oal_listener_params_t *lis)
 {
     const player_t *player = listener->player;
-    const int yaw = listener->angle >> ANGLETOFINESHIFT;
     const int pitch = CalcFinePitch(player);
 
     // Doom to OpenAL space: {x, y, z} to {x, z, -y}
@@ -102,6 +101,21 @@ static void CalcListenerParams(const mobj_t *listener,
         lis->velocity[1] = 0.0f;
         lis->velocity[2] = 0.0f;
     }
+
+    // [Nugget - ceski] /-----------------------------------------------------
+
+    angle_t angle = listener->angle;
+
+    if (forceFlipPan ^ STRICTMODE(flip_levels)) // Flip levels
+    {
+        lis->position[0] *= -1.0f;
+        lis->velocity[0] *= -1.0f;
+        angle = ANG180 - angle;
+    }
+
+    const int yaw = angle >> ANGLETOFINESHIFT;
+
+    // [Nugget] -------------------------------------------------------------/
 
     if (pitch == 0)
     {
@@ -153,6 +167,13 @@ static void CalcSourceParams(const mobj_t *source, oal_source_params_t *src)
         src->velocity[0] = 0.0f;
         src->velocity[1] = 0.0f;
         src->velocity[2] = 0.0f;
+    }
+
+    // [Nugget - ceski]
+    if (forceFlipPan ^ STRICTMODE(flip_levels)) // Flip levels
+    {
+        src->position[0] *= -1.0f;
+        src->velocity[0] *= -1.0f;
     }
 }
 

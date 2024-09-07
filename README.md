@@ -53,6 +53,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Background for all menus_** setting
 - **_No palette tint in menus_** setting [i.b. Crispy Doom]
 - **_HUD/Menu Shadows_** setting (translucency determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR) [i.b. CRL]
+- **_Flip Levels_** setting
 - **_No Berserk Tint_** setting
 - **_No Radiation Suit Tint_** setting
 - **_Night-Vision Visor Effect_** setting [i.b. International Doom]
@@ -137,7 +138,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Extra Gibbing_** setting, to force Berserk Fist/Chainsaw/SSG gibbing (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
 - **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
 - **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
-- **_Selective Fuzz Darkening_** setting [by @ceski-1]
+- **_Selective Fuzz Darkening_** setting [by _ceski_]
 
 ### Doom Compatibility settings
 
@@ -214,6 +215,7 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-only: `sp_chat`)
+- Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
 - Restored `-cdrom` command-line parameter
 - Decreased minimum window size to 200p (240p with aspect-ratio correction)
 

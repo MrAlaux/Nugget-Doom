@@ -2,6 +2,7 @@
 
 - **Custom Skill: duplicate monster spawns** setting
 - **FOV-based sky stretching** setting
+- **_Flip Levels_** setting [thanks @ceski-1]
 - **_Allow [Weapon] Switch Interruption_** setting
 - **_Message Flash_** setting
 - **Support for powerup-timer icons**
@@ -16,6 +17,7 @@
     enabled the former by default, and gave menu items to both
   - Autosaves are now prefixed as per the executable's name
 - **_Bloodier Gibbing_ setting now adds crushing effects**
+- **Made `force_flip_pan` affect the _OpenAL 3D_ sound module** [by @ceski-1]
 - **Renamed _ZDoom-like Item Drops_ (`zdoom_item_drops`) to _Toss Items Upon Death_ (`tossdrop`)** [1]
 - **Removed _Upward Message Scrolling_ menu item**
 
