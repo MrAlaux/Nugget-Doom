@@ -1125,6 +1125,13 @@ default_t defaults[] = {
     "0 to disable the Invulnerability colormap"
   },
 
+  {
+    "colorblind_filter",
+    (config_t *) &colorblind_filter, NULL,
+    {0}, {0,8}, number, ss_gen, wad_no,
+    "Color-blindness filter"
+  },
+
   // [Nugget] ---------------------------------------------------------------/
 
   //

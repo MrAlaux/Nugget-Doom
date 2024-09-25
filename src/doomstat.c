@@ -187,6 +187,7 @@ int quit_sound;
 int a11y_weapon_flash;
 int a11y_weapon_pspr;
 int a11y_invul_colormap;
+int colorblind_filter;
 
 // Weapons -------------------------------------------------------------------
 

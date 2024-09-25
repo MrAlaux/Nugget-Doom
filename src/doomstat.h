@@ -551,6 +551,7 @@ extern int quit_sound;
 extern int a11y_weapon_flash;
 extern int a11y_weapon_pspr;
 extern int a11y_invul_colormap;
+extern int colorblind_filter;
 
 // Weapons -------------------------------------------------------------------
 
