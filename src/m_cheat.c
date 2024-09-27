@@ -158,8 +158,8 @@ static void cheat_reveal_keyxx(int key);
 static void cheat_linetarget(); // Give info on the current linetarget
 static void cheat_mdk();        // Inspired by ZDoom's console command
 static void cheat_saitama();    // MDK Fist
-
 static void cheat_boomcan();    // Explosive hitscan
+static void cheat_riotmode();   // Infighting cheat
 
 boolean cheese;
 static void cheat_cheese();     // cheese :)
@@ -425,6 +425,7 @@ struct cheat_s cheat[] = {
   {"mdk",        NULL, not_net | not_demo, {cheat_mdk}        },
   {"saitama",    NULL, not_net | not_demo, {cheat_saitama}    }, // MDK Fist
   {"boomcan",    NULL, not_net | not_demo, {cheat_boomcan}    }, // Explosive hitscan
+  {"riotmode",   NULL, not_net | not_demo, {cheat_riotmode}   }, // Infighting cheat
   {"cheese",     NULL, not_net | not_demo, {cheat_cheese}     }, // cheese :)
   {"idgaf",      NULL, not_net | not_demo, {cheat_idgaf}      },
 
@@ -820,6 +821,27 @@ static void cheat_boomcan()
 {
   plyr->cheats ^= CF_BOOMCAN;
   displaymsg("Explosive Hitscan %s", (plyr->cheats & CF_BOOMCAN) ? "ON" : "OFF");
+}
+
+// Infighting cheat
+static void cheat_riotmode()
+{
+  thinker_t *currentthinker = &thinkercap;
+
+  P_MapStart();
+
+  while ((currentthinker = currentthinker->next) != &thinkercap)
+  {
+    if (currentthinker->function.p1 == (actionf_p1) P_MobjThinker)
+    {
+      extern void P_ForceInfighting(mobj_t *mobj);
+      P_ForceInfighting((mobj_t *) currentthinker);
+    }
+  }
+
+  P_MapEnd();
+
+  displaymsg("Riot!");
 }
 
 // cheese :)

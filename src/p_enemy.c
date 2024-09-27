@@ -814,9 +814,20 @@ static boolean P_IsVisible(mobj_t *actor, mobj_t *mo, boolean allaround)
 
 static int current_allaround;
 
+static boolean riotmode = false; // [Nugget] Infighting cheat
+
 static boolean PIT_FindTarget(mobj_t *mo)
 {
   mobj_t *actor = current_actor;
+
+  // [Nugget] Infighting cheat
+  if (riotmode && actor != mo
+      && mo->health > 0 && (mo->flags & MF_COUNTKILL || mo->type == MT_SKULL))
+  {
+    P_SetTarget(&actor->lastenemy, actor->target);
+    P_SetTarget(&actor->target, mo);
+    return false;
+  }
 
   if (!((mo->flags ^ actor->flags) & MF_FRIEND &&        // Invalid target
 	mo->health > 0 && (mo->flags & MF_COUNTKILL || mo->type == MT_SKULL)))
@@ -964,7 +975,7 @@ static boolean P_LookForMonsters(mobj_t *actor, boolean allaround)
 {
   thinker_t *cap, *th;
 
-  if (demo_compatibility)
+  if (demo_compatibility && !riotmode) // [Nugget] Infighting cheat
     return false;
 
   if (actor->lastenemy && actor->lastenemy->health > 0 && monsters_remember &&
@@ -975,12 +986,17 @@ static boolean P_LookForMonsters(mobj_t *actor, boolean allaround)
       return true;
     }
 
-  if (demo_version < DV_MBF)  // Old demos do not support monster-seeking bots
+  if (demo_version < DV_MBF // Old demos do not support monster-seeking bots
+      && !riotmode) // [Nugget] Infighting cheat
     return false;
 
   // Search the threaded list corresponding to this object's potential targets
   cap = &thinkerclasscap[actor->flags & MF_FRIEND ? th_enemies : th_friends];
 
+  // [Nugget] Infighting cheat
+  if (riotmode)
+    cap = &thinkerclasscap[th_enemies];
+  
   // Search for new enemy
 
   if (cap->cnext != cap)        // Empty list? bail out early
@@ -1099,6 +1115,9 @@ static boolean P_HelpFriend(mobj_t *actor)
 
 void A_Look(mobj_t *actor)
 {
+  // [Nugget] Infighting cheat
+  if (riotmode && P_LookForMonsters(actor, true)) { goto chase; }
+
   mobj_t *targ;
 
   targ = actor->subsector->sector->soundtarget;
@@ -1120,6 +1139,8 @@ void A_Look(mobj_t *actor)
 	 !(actor->flags & MF_AMBUSH) || P_CheckSight(actor, targ))) &&
       (actor->flags & MF_FRIEND || !P_LookForTargets(actor, false)))
     return;
+
+chase: // [Nugget]
 
   // go into chase state
 
@@ -1155,6 +1176,14 @@ void A_Look(mobj_t *actor)
     }
 
   P_SetMobjState(actor, actor->info->seestate);
+}
+
+// [Nugget] Infighting cheat
+void P_ForceInfighting(mobj_t *mobj)
+{
+  riotmode = true;
+  A_Look(mobj);
+  riotmode = false;
 }
 
 //
