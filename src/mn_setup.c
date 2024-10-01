@@ -335,6 +335,7 @@ enum
     str_fake_contrast,
     str_s_clipping_dist,
     str_page_ticking,
+    str_colorblind_filter,
     str_thing_spawns,
 };
 
@@ -2842,6 +2843,10 @@ static const char *s_clipping_dist_strings[] = {
 static const char *page_ticking_strings[] = {
   "Always", "Not In Menus", "Never", NULL
 };
+static const char *colorblind_filter_strings[] = {
+  "None", "Protanopia", "Protanomaly", "Deuteranopia", "Deuteranomaly",
+  "Tritanopia", "Tritanomaly", "Achromatopsia", "Achromatomaly", NULL
+};
 
 setup_menu_t gen_settings9[] = { // [Nugget]
 
@@ -2865,6 +2870,8 @@ setup_menu_t gen_settings9[] = { // [Nugget]
     {"Weapon Flash Lighting",      S_ONOFF|S_STRICT, M_X, M_SPC, {"a11y_weapon_flash"}},
     {"Weapon Flash Sprite",        S_ONOFF|S_STRICT, M_X, M_SPC, {"a11y_weapon_pspr"}},
     {"Invulnerability Colormap",   S_ONOFF|S_STRICT, M_X, M_SPC, {"a11y_invul_colormap"}},
+
+    {"Color-Blindness Filter",     S_CHOICE|S_STRICT, M_X - 30, M_SPC, {"colorblind_filter"}, m_null, input_null, str_colorblind_filter, MN_ResetGamma},
 
   MI_END
 };
@@ -4492,6 +4499,7 @@ static const char **selectstrings[] = {
     fake_contrast_strings,
     s_clipping_dist_strings,
     page_ticking_strings,
+    colorblind_filter_strings,
     thing_spawns_strings,
 };
 

@@ -916,6 +916,22 @@ static void I_RestoreDiskBackground(void)
 
 int gamma2;
 
+// [Nugget]:
+// [JN] Color matrices to emulate colorblind modes.
+// Original source: http://web.archive.org/web/20081014161121/http://www.colorjack.com/labs/colormatrix/
+// Converted from 100.000 ... 0 range to 1.00000 ... 0 to support Doom palette format.
+static const double colorblind_matrix[][3][3] = {
+    { {1.00000, 0.00000, 0.00000}, {0.00000, 1.00000, 0.00000}, {0.00000, 0.00000, 1.00000} }, // No colorblind (not used)
+    { {0.56667, 0.43333, 0.00000}, {0.55833, 0.44167, 0.00000}, {0.00000, 0.24167, 0.75833} }, // Protanopia
+    { {0.81667, 0.18333, 0.00000}, {0.33333, 0.66667, 0.00000}, {0.00000, 0.12500, 0.87500} }, // Protanomaly
+    { {0.62500, 0.37500, 0.00000}, {0.70000, 0.30000, 0.00000}, {0.00000, 0.30000, 0.70000} }, // Deuteranopia
+    { {0.80000, 0.20000, 0.00000}, {0.25833, 0.74167, 0.00000}, {0.00000, 0.14167, 0.85833} }, // Deuteranomaly
+    { {0.95000, 0.05000, 0.00000}, {0.00000, 0.43333, 0.56667}, {0.00000, 0.47500, 0.52500} }, // Tritanopia
+    { {0.96667, 0.03333, 0.00000}, {0.00000, 0.73333, 0.26667}, {0.00000, 0.18333, 0.81667} }, // Tritanomaly
+    { {0.29900, 0.58700, 0.11400}, {0.29900, 0.58700, 0.11400}, {0.29900, 0.58700, 0.11400} }, // Achromatopsia
+    { {0.61800, 0.32000, 0.06200}, {0.16300, 0.77500, 0.06200}, {0.16300, 0.32000, 0.51600} }, // Achromatomaly
+};
+
 void I_SetPalette(byte *palette)
 {
     // haleyjd
@@ -928,11 +944,41 @@ void I_SetPalette(byte *palette)
         return;
     }
 
-    for (i = 0; i < 256; ++i)
+    // [Nugget]
+    if (colorblind_filter)
     {
-        colors[i].r = gamma[*palette++];
-        colors[i].g = gamma[*palette++];
-        colors[i].b = gamma[*palette++];
+        for (i = 0; i < 256; ++i)
+        {
+              // [JN] Extended palette handling routine to emulate colorblind,
+              // based on implementation from DOOM Retro, thanks Brad Harding!
+              const byte    r = gamma[*palette++];
+              const byte    g = gamma[*palette++];
+              const byte    b = gamma[*palette++];
+
+              const double  p_r = sqrt(r * r * colorblind_matrix[colorblind_filter][0][0] +
+                                       g * g * colorblind_matrix[colorblind_filter][0][1] +
+                                       b * b * colorblind_matrix[colorblind_filter][0][2]);
+
+              const double  p_g = sqrt(r * r * colorblind_matrix[colorblind_filter][1][0] +
+                                       g * g * colorblind_matrix[colorblind_filter][1][1] +
+                                       b * b * colorblind_matrix[colorblind_filter][1][2]);
+
+              const double  p_b = sqrt(r * r * colorblind_matrix[colorblind_filter][2][0] +
+                                       g * g * colorblind_matrix[colorblind_filter][2][1] +
+                                       b * b * colorblind_matrix[colorblind_filter][2][2]);
+
+              colors[i].r = (byte) ((p_r + (r - p_r) / p_r));
+              colors[i].g = (byte) ((p_g + (g - p_g) / p_g));
+              colors[i].b = (byte) ((p_b + (b - p_b) / p_b));
+        }
+    }
+    else {
+        for (i = 0; i < 256; ++i)
+        {
+            colors[i].r = gamma[*palette++];
+            colors[i].g = gamma[*palette++];
+            colors[i].b = gamma[*palette++];
+        }
     }
 
     SDL_SetPaletteColors(screenbuffer->format->palette, colors, 0, 256);
