@@ -12,9 +12,12 @@ static const char *params[] = {
 "-coop_spawns",
 "-dog",
 "-fast",
+"-nm",
+"-nomo",
 "-nomonsters",
 "-pistolstart",
 "-respawn",
+"-uv",
 "-1",
 "-2",
 "-3",
@@ -79,8 +82,6 @@ static const char *params_with_args[] = {
 "-bexout",
 "-deh",
 "-dehout",
-"-dumplumps",
-"-dumptables",
 "-fastdemo",
 "-maxdemo",
 "-playdemo",
@@ -89,6 +90,7 @@ static const char *params_with_args[] = {
 "-recordfromto",
 "-skipsec",
 "-timedemo",
+"-cl",
 "-complevel",
 "-gameversion",
 "-setmem",
@@ -103,11 +105,15 @@ General options: \n\
   -iwad <file>   Specify an IWAD file to use.\n\
 \n\
 Game start options: \n\
+  -nm                 Alias to -skill 5.\n\
+  -nomo               Alias to -nomonsters.\n\
+  -nomonsters         Disable monsters.\n\
   -pistolstart        Enables automatic pistol starts on each level.\n\
   -skill <skill>      Set the game skill,\n\
                       1-6 (1: easiest, 5: hardest, 6: custom).\n\
                       A skill of 0 disables all monsters only in -complevel\n\
                       vanilla.\n\
+  -uv                 Alias to -skill 4.\n\
   -warp <x> <y>|<xy>  Start a game immediately, warping to ExMy (Doom 1) or\n\
                       MAPxy (Doom 2).\n\
 \n\
@@ -133,6 +139,7 @@ Demo options: \n\
                     rules.\n\
 \n\
 Compatibility: \n\
+  -cl <version>         Alias to -complevel.\n\
   -complevel <version>  Emulate a specific version of Doom/Boom/MBF. Valid\n\
                         values are \"vanilla\", \"boom\", \"mbf\", \"mbf21\".\n\
 \n\

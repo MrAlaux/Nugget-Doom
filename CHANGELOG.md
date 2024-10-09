@@ -10,10 +10,16 @@
   - Replaced `hud_stats_icons` with `hud_allow_icons` [1]
 - **Support for crouching-player sprites**
   - Allowed crouching when using the chasecam if said sprites are provided
-- **Quit Sound** setting, enabled by default
 
 ## Changes
 
+- **Merged changes from [Woof! post-14.5.0]**, note:
+  - Integrated periodic auto saves into the save/load menus
+  - Moved `show_berserk` menu item to _Status Bar/HUD_ setup menu
+  - Removed `hudcolor_chat` and `chat_msg_timer` menu items
+  - Renamed `#_bobbing_percentage` to `#_bobbing_pct` [1]
+  - Gave an `sts_` prefix to `show_berserk`, `show_ssg`, and `alt_arms` [1]
+  - Revised the descriptions of many of Nugget's new CVARs
 - **Improved loading speed when rewinding**
 - **Autosave improvements:**
   - Separated level-end autosaves and periodic autosaves into two settings,
@@ -28,6 +34,7 @@
 - **Freecam speed is now mostly independent of game speed**
 - **Improved interpolation of chasecam speed effect**
 - **Made `force_flip_pan` affect the _OpenAL 3D_ sound module** [by @ceski-1]
+- **Made _Screen Wipe Speed Percentage_ setting affect the _Fizzle_ fade**
 - **Renamed _ZDoom-like Item Drops_ (`zdoom_item_drops`) to _Toss Items Upon Death_ (`tossdrop`)** [1]
 - **Removed _'BABYMODE'_ cheat**
 - **Removed _Upward Message Scrolling_ menu item**

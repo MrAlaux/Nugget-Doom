@@ -1,8 +1,10 @@
 [Desktop Entry]
 Name=Nugget Doom
-Exec=nugget-doom
+Exec=nugget-doom %F
 Icon=nugget-doom
+TryExec=nugget-doom
 Type=Application
 Comment=Nugget Doom is a fork of Woof! with additional features.
 Categories=Game;ActionGame;
+MimeType=application/x-doom-wad;
 Keywords=first;person;shooter;vanilla;doom;boom;mbf;woof;

@@ -25,6 +25,7 @@
 #include "i_sound.h"
 #include "i_timer.h"
 #include "m_array.h"
+#include "m_config.h"
 #include "memio.h"
 #include "midiout.h"
 #include "midifallback.h"
@@ -47,6 +48,7 @@ enum
     COMP_VANILLA,
     COMP_STANDARD,
     COMP_FULL,
+    COMP_NUM,
 };
 
 enum
@@ -55,12 +57,14 @@ enum
     RESET_TYPE_GM,
     RESET_TYPE_GS,
     RESET_TYPE_XG,
+    RESET_NUM,
 };
 
-int midi_complevel = COMP_STANDARD;
-int midi_reset_type = RESET_TYPE_GM;
-int midi_reset_delay = -1;
-boolean midi_ctf = true;
+static int midi_complevel = COMP_STANDARD;
+static int midi_reset_type = RESET_TYPE_GM;
+static int midi_reset_delay = -1;
+static boolean midi_ctf = true;
+static int midi_gain = 100;
 
 static const byte gm_system_on[] =
 {
@@ -106,7 +110,7 @@ static midi_state_t midi_state;
 
 static midi_state_t old_state;
 
-#define EMIDI_DEVICE (1U << EMIDI_DEVICE_GENERAL_MIDI)
+#define EMIDI_DEVICE EMIDI_DEVICE_GENERAL_MIDI
 
 typedef struct
 {
@@ -115,8 +119,7 @@ typedef struct
     unsigned int saved_elapsed_time;
     boolean end_of_track;
     boolean saved_end_of_track;
-    unsigned int emidi_device_flags;
-    boolean emidi_designated;
+    boolean emidi_include_track;
     boolean emidi_program;
     boolean emidi_volume;
     int emidi_loop_count;
@@ -553,27 +556,11 @@ static void CheckFFLoop(const midi_event_t *event)
 static void SendEMIDI(const midi_event_t *event, midi_track_t *track)
 {
     unsigned int i;
-    unsigned int flag;
     int count;
 
     switch (event->data.channel.param1)
     {
         case EMIDI_CONTROLLER_TRACK_DESIGNATION:
-            if (track->elapsed_time < ticks_per_beat)
-            {
-                flag = event->data.channel.param2;
-
-                if (flag == EMIDI_DEVICE_ALL)
-                {
-                    track->emidi_device_flags = UINT_MAX;
-                    track->emidi_designated = true;
-                }
-                else if (flag <= EMIDI_DEVICE_ULTRASOUND)
-                {
-                    track->emidi_device_flags |= 1U << flag;
-                    track->emidi_designated = true;
-                }
-            }
             break;
 
         case EMIDI_CONTROLLER_TRACK_EXCLUSION:
@@ -581,36 +568,19 @@ static void SendEMIDI(const midi_event_t *event, midi_track_t *track)
             {
                 SetLoopPoint();
             }
-            else if (track->elapsed_time < ticks_per_beat)
-            {
-                flag = event->data.channel.param2;
-
-                if (!track->emidi_designated)
-                {
-                    track->emidi_device_flags = UINT_MAX;
-                    track->emidi_designated = true;
-                }
-
-                if (flag <= EMIDI_DEVICE_ULTRASOUND)
-                {
-                    track->emidi_device_flags &= ~(1U << flag);
-                }
-            }
             break;
 
         case EMIDI_CONTROLLER_PROGRAM_CHANGE:
-            if (track->emidi_program || track->elapsed_time < ticks_per_beat)
+            if (track->emidi_program)
             {
-                track->emidi_program = true;
                 SendProgramChange(event->data.channel.channel,
                                   event->data.channel.param2);
             }
             break;
 
         case EMIDI_CONTROLLER_VOLUME:
-            if (track->emidi_volume || track->elapsed_time < ticks_per_beat)
+            if (track->emidi_volume)
             {
-                track->emidi_volume = true;
                 SendVolumeMsg(event);
             }
             break;
@@ -795,7 +765,7 @@ static void ProcessEvent_Standard(const midi_event_t *event,
             return;
     }
 
-    if (track->emidi_designated && (EMIDI_DEVICE & ~track->emidi_device_flags))
+    if (!track->emidi_include_track)
     {
         return;
     }
@@ -1006,10 +976,6 @@ static void RestartTracks(void)
         MIDI_RestartIterator(song.tracks[i].iter);
         song.tracks[i].elapsed_time = 0;
         song.tracks[i].end_of_track = false;
-        song.tracks[i].emidi_device_flags = 0;
-        song.tracks[i].emidi_designated = false;
-        song.tracks[i].emidi_program = false;
-        song.tracks[i].emidi_volume = false;
         song.tracks[i].emidi_loop_count = 0;
     }
     song.elapsed_time = 0;
@@ -1091,6 +1057,76 @@ static midi_state_t NextEvent(midi_position_t *position)
     return STATE_WAITING;
 }
 
+static void InitEMIDI(void)
+{
+    unsigned int i;
+
+    for (i = 0; i < song.num_tracks; i++)
+    {
+        midi_track_t *track = &song.tracks[i];
+        unsigned int elapsed_time = 0;
+        boolean designated = false;
+
+        while (1)
+        {
+            midi_event_t *event;
+
+            elapsed_time += MIDI_GetDeltaTime(track->iter);
+
+            if (elapsed_time >= ticks_per_beat)
+            {
+                break;
+            }
+
+            if (!MIDI_GetNextEvent(track->iter, &event))
+            {
+                break;
+            }
+
+            if (event->event_type == MIDI_EVENT_CONTROLLER)
+            {
+                const unsigned int dev = event->data.channel.param2;
+
+                switch (event->data.channel.param1)
+                {
+                    case EMIDI_CONTROLLER_TRACK_DESIGNATION:
+                        if (dev == EMIDI_DEVICE_ALL || dev == EMIDI_DEVICE)
+                        {
+                            designated = true;
+                            track->emidi_include_track = true;
+                        }
+                        else if (!designated)
+                        {
+                            designated = true;
+                            track->emidi_include_track = false;
+                        }
+                        break;
+
+                    case EMIDI_CONTROLLER_TRACK_EXCLUSION:
+                        if (dev == EMIDI_DEVICE_ALL || dev == EMIDI_DEVICE)
+                        {
+                            track->emidi_include_track = false;
+                        }
+                        break;
+
+                    case EMIDI_CONTROLLER_PROGRAM_CHANGE:
+                        track->emidi_program = true;
+                        break;
+
+                    case EMIDI_CONTROLLER_VOLUME:
+                        track->emidi_volume = true;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+
+        MIDI_RestartIterator(song.tracks[i].iter);
+    }
+}
+
 static boolean RegisterSong(void)
 {
     if (IsMid(song.lump_data, song.lump_length))
@@ -1136,9 +1172,16 @@ static boolean RegisterSong(void)
     for (uint16_t i = 0; i < song.num_tracks; i++)
     {
         song.tracks[i].iter = MIDI_IterateTrack(song.file, i);
+        song.tracks[i].emidi_include_track = true;
     }
 
     song.rpg_loop = MIDI_RPGLoop(song.file);
+
+    if (!song.rpg_loop)
+    {
+        InitEMIDI();
+    }
+
     return true;
 }
 
@@ -1146,7 +1189,7 @@ static int PlayerThread(void *unused)
 {
     SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
 
-    midi_position_t position;
+    midi_position_t position = {0};
     boolean sleep = false;
 
     while (SDL_AtomicGet(&player_thread_running))
@@ -1195,10 +1238,6 @@ static int PlayerThread(void *unused)
                         sleep = true;
                         break;
                     }
-                    if (remaining_time > 0)
-                    {
-                        I_SleepUS(remaining_time);
-                    }
                     ProcessEvent(position.event, position.track);
                     midi_state = STATE_PLAYING;
                 }
@@ -1216,7 +1255,7 @@ static int PlayerThread(void *unused)
     return 0;
 }
 
-const char **midi_devices = NULL;
+static const char **midi_devices = NULL;
 
 static void GetDevices(void)
 {
@@ -1282,25 +1321,35 @@ static boolean I_MID_InitMusic(int device)
     return true;
 }
 
+// MIDI CC#7 volume formula (GM Level 1 Developer Guidelines, page 9).
+#define MIDI_DB_TO_GAIN(db) powf(10.0f, (db) / 40.0f)
+
+static void UpdateVolumeFactor(int volume)
+{
+    volume_factor = volume / 15.0f * MIDI_DB_TO_GAIN(midi_gain);
+}
+
 static void I_MID_SetMusicVolume(int volume)
 {
     static int last_volume = -1;
+    static int last_midi_gain = -1;
 
-    if (last_volume == volume)
+    if (last_volume == volume && midi_gain == last_midi_gain)
     {
         // Ignore holding key down in volume menu.
         return;
     }
     last_volume = volume;
+    last_midi_gain = midi_gain;
 
     if (!SDL_AtomicGet(&player_thread_running))
     {
-        volume_factor = sqrtf((float)volume / 15.0f);
+        UpdateVolumeFactor(volume);
         return;
     }
 
     SDL_LockMutex(music_lock);
-    volume_factor = sqrtf((float)volume / 15.0f);
+    UpdateVolumeFactor(volume);
     UpdateVolume();
     SDL_UnlockMutex(music_lock);
 }
@@ -1439,6 +1488,24 @@ static const char **I_MID_DeviceList(void)
     return midi_devices;
 }
 
+static midiplayertype_t I_MID_MidiPlayerType(void)
+{
+    return midiplayer_native;
+}
+
+static void I_MID_BindVariables(void)
+{
+    BIND_NUM_MIDI(midi_complevel, COMP_STANDARD, 0, COMP_NUM - 1,
+        "Native MIDI compatibility level (0 = Vanilla; 1 = Standard; 2 = Full)");
+    BIND_NUM_MIDI(midi_reset_type, RESET_TYPE_GM, 0, RESET_NUM - 1,
+        "Reset type for native MIDI (0 = No SysEx; 1 = GM; 2 = GS; 3 = XG)");
+    BIND_NUM(midi_reset_delay, -1, -1, 2000,
+        "Delay after reset for native MIDI (-1 = Auto; 0 = None; 1-2000 = Milliseconds)");
+    BIND_BOOL_MIDI(midi_ctf, true,
+        "Fix invalid instruments by emulating SC-55 capital tone fallback");
+    BIND_NUM_MIDI(midi_gain, 0, -20, 0, "Native MIDI gain [dB]");
+}
+
 music_module_t music_mid_module =
 {
     I_MID_InitMusic,
@@ -1451,4 +1518,6 @@ music_module_t music_mid_module =
     I_MID_StopSong,
     I_MID_UnRegisterSong,
     I_MID_DeviceList,
+    I_MID_BindVariables,
+    I_MID_MidiPlayerType,
 };
