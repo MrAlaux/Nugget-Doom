@@ -24,6 +24,9 @@
 
 struct event_s;
 
+// [Nugget] CVARs
+extern boolean comp_choppers;
+
 typedef void (*cheatf_v)();
 typedef void (*cheatf_i)(int i);
 typedef void (*cheatf_s)(char *s);
@@ -57,6 +60,8 @@ extern struct cheat_s {
   uint64_t code, mask;
   boolean deh_modified;                // killough 9/12/98
 } cheat[];
+
+void cheat_mypos_print();
 
 boolean M_CheatResponder(struct event_s *ev);
 

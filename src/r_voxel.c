@@ -15,15 +15,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "doomdata.h"
 #include "doomstat.h"
 #include "doomtype.h"
-#include "i_glob.h"
+#include "hu_crosshair.h"
 #include "i_printf.h"
 #include "i_video.h"
 #include "info.h"
 #include "m_array.h"
-#include "m_bbox.h"
 #include "m_fixed.h"
 #include "mn_menu.h"
 #include "m_misc.h"
@@ -41,8 +39,6 @@
 
 static boolean voxels_found;
 boolean voxels_rendering, default_voxels_rendering;
-
-const char ** vxfiles = NULL;
 
 struct Voxel
 {
@@ -247,23 +243,19 @@ static boolean VX_Load (int spr, int frame)
 	if (frame_ch == '\\')
 		frame_ch = '^';
 
-	char filename[256];
+	char lumpname[9] = {0};
 
-	M_snprintf (filename, sizeof(filename), "%s%c.kvx", sprnames[spr], frame_ch);
+	M_snprintf (lumpname, sizeof(lumpname), "%s%c", sprnames[spr], frame_ch);
 
-	int i;
+	int lumpnum = (W_CheckNumForName)(lumpname, ns_voxels);
 
-	for (i = array_size (vxfiles) - 1 ; i >= 0 ; --i)
+	if (lumpnum < 0)
 	{
-		if (!strcasecmp (M_BaseName (vxfiles[i]), filename))
-			break;
+		return false;
 	}
 
-	if (i < 0)
-		return false;
-
-	byte * buf;
-	int len = M_ReadFile (vxfiles[i], &buf);
+	byte *buf = W_CacheLumpNum(lumpnum, PU_STATIC);
+	int len   = W_LumpLength(lumpnum);
 
 	// Note: this may return NULL
 	struct Voxel * v = VX_Decode (buf, len);
@@ -281,33 +273,6 @@ static boolean VX_Load (int spr, int frame)
 
 void VX_Init (void)
 {
-	glob_t * glob;
-
-	glob = I_StartMultiGlob ("voxels", GLOB_FLAG_NOCASE|GLOB_FLAG_SORTED,
-                                 "*.kvx", NULL);
-	for (;;)
-	{
-		const char * filename = I_NextGlob (glob);
-		if (filename == NULL)
-		{
-			break;
-		}
-
-		array_push (vxfiles, filename);
-	}
-
-	I_EndGlob (glob);
-
-	voxels_rendering = default_voxels_rendering;
-
-	if (!array_size (vxfiles))
-	{
-		I_Printf(VB_INFO, "Voxels not found.");
-		voxels_rendering = false;
-		MN_DisableVoxelsRenderingItem();
-		return;
-	}
-
 	int spr, frame;
 
 	all_voxels = Z_Malloc(num_sprites * sizeof(*all_voxels), PU_STATIC, NULL);
@@ -332,12 +297,17 @@ void VX_Init (void)
 		}
 	}
 
-	I_Printf(VB_INFO, "done.");
+	voxels_rendering = default_voxels_rendering;
 
 	if (!voxels_found)
 	{
 		voxels_rendering = false;
 		MN_DisableVoxelsRenderingItem();
+		I_Printf(VB_INFO, "not found.");
+	}
+	else
+	{
+		I_Printf (VB_INFO, "done.");
 	}
 }
 
@@ -346,7 +316,6 @@ void VX_Init (void)
 #define VX_MINZ         (   4 * FRACUNIT)
 #define VX_MAX_DIST     (2048 * FRACUNIT)
 #define VX_MIN_DIST     ( 512 * FRACUNIT)
-#define VX_NEAR_RADIUS  ( 512 * FRACUNIT)
 
 static int vx_max_dist = VX_MAX_DIST;
 
@@ -597,7 +566,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	else
 	{
 		// too far off the side?  if so, ignore it
-		if (ty > (64 * FRACUNIT) && abs(tx) / 4 > ty)
+		if (ty > (64 * FRACUNIT) && abs(tx) / max_project_slope > ty)
 			return true;
 
 		xscale = FixedDiv (projection, ty);
@@ -741,6 +710,19 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	vis->brightmap = R_BrightmapForSprite(thing->sprite);
 	vis->color = thing->bloodcolor;
 
+	// [Alaux] Lock crosshair on target
+	if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target)
+	{
+		HU_UpdateCrosshairLock
+		(
+			BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS),
+      // [Nugget] Removed `actualheight`
+			BETWEEN(0, viewheight - 1, (centeryfrac + FixedMul(viewz - gz - crosshair_target->height/2, xscale)) >> FRACBITS)
+		);
+
+		crosshair_target = NULL; // Don't update it again until next tic
+	}
+
 	return true;
 }
 
@@ -853,7 +835,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// iterate over screen columns
-	fixed_t ux = ((Ax - 1) | (FRACUNIT - 1)) + 1;
+	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
 
 	for (; ux < ((Cx > Bx) ? Cx : Bx) ; ux += FRACUNIT)
 	{
@@ -935,7 +917,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 			{
 				fixed_t uy = centeryfrac - FixedMul (top_z, wscale);
 
-				uy = ((uy - 1) | (FRACUNIT - 1)) + 1;
+				uy = ((uy - 1) | FRACMASK) + 1;
 
 				if (uy < clip_y1)
 					uy = clip_y1;
@@ -966,7 +948,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 
 			if (has_side)
 			{
-				fixed_t uy = ((uy1 - 1) | (FRACUNIT - 1)) + 1;
+				fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
 
 				for (; uy <= uy2 ; uy += FRACUNIT)
 				{
@@ -1099,58 +1081,4 @@ void VX_DrawVoxel (vissprite_t * spr)
 	vx_eye_y = v->y_pivot + FixedMul (delta_x, s) - FixedMul (delta_y, c);
 
 	VX_RecursiveDraw (spr, 0, 0, v->x_size, v->y_size);
-}
-
-//------------------------------------------------------------------------
-
-static boolean VX_CheckBBox (fixed_t * bspcoord)
-{
-	if (bspcoord[BOXRIGHT]  <= viewx - VX_NEAR_RADIUS) return false;
-	if (bspcoord[BOXLEFT]   >= viewx + VX_NEAR_RADIUS) return false;
-	if (bspcoord[BOXTOP]    <= viewy - VX_NEAR_RADIUS) return false;
-	if (bspcoord[BOXBOTTOM] >= viewy + VX_NEAR_RADIUS) return false;
-
-	return true;
-}
-
-
-static void VX_SpritesInNode (int bspnum)
-{
-	for (;;)
-	{
-		if (bspnum & NF_SUBSECTOR)
-		{
-			subsector_t * sub = &subsectors[bspnum & ~NF_SUBSECTOR];
-			R_AddSprites (sub->sector, sub->sector->lightlevel);
-			return;
-		}
-
-		node_t * bsp = &nodes[bspnum];
-
-		// divide the front space
-		if (VX_CheckBBox (bsp->bbox[0]))
-			VX_SpritesInNode (bsp->children[0]);
-
-		// divide the back space
-		if (VX_CheckBBox (bsp->bbox[1]))
-			bspnum = bsp->children[1];
-		else
-			break;
-	}
-}
-
-
-//
-// add sprites from nearby sectors which were missed during the
-// normal BSP traversal.  this ensures that voxel models do not
-// suddenly disappear when they are in a small sector which has
-// gone out of view.
-//
-void VX_NearbySprites (void)
-{
-	if (!STRICTMODE(voxels_rendering))
-		return;
-
-	if (numnodes > 0)
-		VX_SpritesInNode (numnodes - 1);
 }

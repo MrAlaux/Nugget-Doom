@@ -24,7 +24,7 @@
 #include "m_io.h"
 #include "m_config.h"
 #include "m_nughud.h"
-#include "mn_setup.h"
+#include "mn_internal.h"
 #include "st_stuff.h"
 #include "w_wad.h"
 
@@ -156,6 +156,10 @@ default_t nughud_defaults[] = {
   TEXTLINE( "nughud_fps", nughud.fps, -1, -1, -1, -1, 2, 2 ),
 
   TEXTLINE( "nughud_rate", nughud.rate, 2, 192, -1, -1, 1, 0 ),
+
+  TEXTLINE( "nughud_cmd", nughud.cmd, -1, -1, -1, -1, 4, 0 ),
+
+  TEXTLINE( "nughud_speed", nughud.speed, 160, 160, 0, 0, 1, 0 ),
 
   { "nughud_message_x",     (config_t *) &nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
   { "nughud_message_y",     (config_t *) &nughud.message.y,     NULL, { -1 }, { -1, 200 }, number },
@@ -314,9 +318,9 @@ static boolean M_NughudParseOption(const char *p, boolean wad)
 
 void M_NughudLoadOptions(void)
 {
-  int lump;
+  const int lump = W_CheckNumForName("NUGHUD");
 
-  if ((lump = W_CheckNumForName("NUGHUD")) != -1)
+  if (lump != -1)
   {
     int size = W_LumpLength(lump), buflen = 0;
     char *buf = NULL, *p, *options = p = W_CacheLumpNum(lump, PU_STATIC);
@@ -329,7 +333,8 @@ void M_NughudLoadOptions(void)
 
       if (len >= buflen) { buf = I_Realloc(buf, buflen = len+1); }
       
-      strncpy(buf, p, len)[len] = 0;
+      strncpy(buf, p, len);
+      buf[len] = 0;
       p += len;
       size -= len;
 

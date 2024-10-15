@@ -22,10 +22,12 @@
 #include <stdlib.h>
 
 #include "doomtype.h"
+#include "i_oalcommon.h"
 #include "i_oalstream.h"
 #include "i_printf.h"
 #include "i_sound.h"
 #include "m_array.h"
+#include "m_config.h"
 
 // Define the number of buffers and buffer size (in milliseconds) to use. 4
 // buffers with 4096 samples each gives a nice per-chunk size, and lets the
@@ -293,8 +295,8 @@ static boolean I_OAL_InitMusic(int device)
     return false;
 }
 
-int mus_gain = 100;
-int opl_gain = 200;
+static int mus_gain = 100;
+static int opl_gain = 200;
 
 static void I_OAL_SetMusicVolume(int volume)
 {
@@ -307,12 +309,12 @@ static void I_OAL_SetMusicVolume(int volume)
 
     if (active_module == &stream_opl_module)
     {
-        gain *= (ALfloat)opl_gain / 100.0f;
+        gain *= (ALfloat)DB_TO_GAIN(opl_gain);
     }
 #if defined(HAVE_FLUIDSYNTH)
     else if (active_module == &stream_fl_module)
     {
-        gain *= (ALfloat)mus_gain / 100.0f;
+        gain *= (ALfloat)DB_TO_GAIN(mus_gain);
     }
 #endif
 
@@ -457,6 +459,33 @@ static const char **I_OAL_DeviceList(void)
     return devices;
 }
 
+static midiplayertype_t I_OAL_MidiPlayerType(void)
+{
+#ifdef HAVE_FLUIDSYNTH
+    if (active_module == &stream_fl_module)
+    {
+        return midiplayer_fluidsynth;
+    }
+#endif
+    if (active_module == &stream_opl_module)
+    {
+        return midiplayer_opl;
+    }
+    return midiplayer_none;
+}
+
+static void I_OAL_BindVariables(void)
+{
+    BIND_NUM_MIDI(opl_gain, 0, -20, 20, "OPL emulation gain [dB]");
+#if defined (HAVE_FLUIDSYNTH)
+    BIND_NUM_MIDI(mus_gain, 0, -20, 20, "FluidSynth gain [dB]");
+#endif
+    for (int i = 0; i < arrlen(midi_modules); ++i)
+    {
+        midi_modules[i]->BindVariables();
+    }
+}
+
 music_module_t music_oal_module =
 {
     I_OAL_InitMusic,
@@ -469,4 +498,6 @@ music_module_t music_oal_module =
     I_OAL_StopSong,
     I_OAL_UnRegisterSong,
     I_OAL_DeviceList,
+    I_OAL_BindVariables,
+    I_OAL_MidiPlayerType,
 };
