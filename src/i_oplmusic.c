@@ -19,13 +19,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../opl/opl.h"
+#include "opl.h"
 
 #include "doomtype.h"
 #include "i_oalstream.h"
 #include "i_printf.h"
 #include "i_sound.h"
 #include "m_array.h"
+#include "m_config.h"
 #include "m_io.h"
 #include "m_swap.h"
 #include "memio.h"
@@ -327,9 +328,9 @@ static char (*percussion_names)[32];
 
 // Voices:
 
-static opl_voice_t voices[OPL_NUM_VOICES * 2];
-static opl_voice_t *voice_free_list[OPL_NUM_VOICES * 2];
-static opl_voice_t *voice_alloced_list[OPL_NUM_VOICES * 2];
+static opl_voice_t voices[OPL_NUM_VOICES * 2 * OPL_MAX_CHIPS];
+static opl_voice_t *voice_free_list[OPL_NUM_VOICES * 2 * OPL_MAX_CHIPS];
+static opl_voice_t *voice_alloced_list[OPL_NUM_VOICES * 2 * OPL_MAX_CHIPS];
 static int voice_free_num;
 static int voice_alloced_num;
 static int opl_opl3mode;
@@ -359,8 +360,9 @@ static unsigned int last_perc_count;
 // Configuration file variable, containing the port number for the
 // adlib chip.
 
-char *snd_dmxoption = "-opl3"; // [crispy] default to OPL3 emulation
-int opl_io_port = 0x388;
+static char *snd_dmxoption = "-opl3"; // [crispy] default to OPL3 emulation
+static int opl_io_port = 0x388;
+int num_opl_chips = 1;
 
 // If true, OPL sound channels are reversed to their correct arrangement
 // (as intended by the MIDI standard) rather than the backwards one
@@ -401,22 +403,37 @@ static opl_voice_t *GetFreeVoice(void)
         return NULL;
     }
 
-    // Remove from free list
+    // Determine how many chips are needed based on current voice allocation
+    int used_chips = ((voice_alloced_num / (OPL_NUM_VOICES * (opl_opl3mode + 1)))) + 1;
 
-    result = voice_free_list[0];
-
-    voice_free_num--;
-
-    for (i = 0; i < voice_free_num; i++)
+    // Find the oldest available voice on one of the chips that are already being used.
+    // By preferring lower chips over higher ones, we allow higher chips to enter an
+    // idle state if they're not needed and save CPU time.
+    // If only 1 chip is emulated, this allocation pattern is identical to vanilla
+    for (int v = 0; v < voice_free_num; ++v)
     {
-        voice_free_list[i] = voice_free_list[i + 1];
+        if ((voice_free_list[v]->array >> 9) < used_chips)
+        {
+            // Remove from free list
+
+            result = voice_free_list[v];
+
+            voice_free_num--;
+
+            for (i = v; i < voice_free_num; i++)
+            {
+                voice_free_list[i] = voice_free_list[i + 1];
+            }
+
+            // Add to allocated list
+
+            voice_alloced_list[voice_alloced_num++] = result;
+
+            return result;
+        }
     }
 
-    // Add to allocated list
-
-    voice_alloced_list[voice_alloced_num++] = result;
-
-    return result;
+    return NULL;
 }
 
 // Release a voice back to the freelist.
@@ -468,7 +485,7 @@ static void ReleaseVoice(int index)
 
 // Load data to the specified operator
 
-static void LoadOperatorData(int operator, genmidi_op_t * data,
+static void LoadOperatorData(int chip, int operator, genmidi_op_t * data,
                              boolean max_level, unsigned int *volume)
 {
     int level;
@@ -489,11 +506,11 @@ static void LoadOperatorData(int operator, genmidi_op_t * data,
 
     *volume = level;
 
-    OPL_WriteRegister(OPL_REGS_LEVEL + operator, level);
-    OPL_WriteRegister(OPL_REGS_TREMOLO + operator, data->tremolo);
-    OPL_WriteRegister(OPL_REGS_ATTACK + operator, data->attack);
-    OPL_WriteRegister(OPL_REGS_SUSTAIN + operator, data->sustain);
-    OPL_WriteRegister(OPL_REGS_WAVEFORM + operator, data->waveform);
+    OPL_WriteRegister(chip, OPL_REGS_LEVEL + operator, level);
+    OPL_WriteRegister(chip, OPL_REGS_TREMOLO + operator, data->tremolo);
+    OPL_WriteRegister(chip, OPL_REGS_ATTACK + operator, data->attack);
+    OPL_WriteRegister(chip, OPL_REGS_SUSTAIN + operator, data->sustain);
+    OPL_WriteRegister(chip, OPL_REGS_WAVEFORM + operator, data->waveform);
 }
 
 // Set the instrument for a particular voice.
@@ -526,16 +543,16 @@ static void SetVoiceInstrument(opl_voice_t *voice, genmidi_instr_t *instr,
     // is set in SetVoiceVolume (below).  If we are not using
     // modulating mode, we must set both to minimum volume.
 
-    LoadOperatorData(voice->op2 | voice->array, &data->carrier, true,
+    LoadOperatorData(voice->array >> 9, voice->op2 | (voice->array & 0x100), &data->carrier, true,
                      &voice->car_volume);
-    LoadOperatorData(voice->op1 | voice->array, &data->modulator, !modulating,
+    LoadOperatorData(voice->array >> 9, voice->op1 | (voice->array & 0x100), &data->modulator, !modulating,
                      &voice->mod_volume);
 
     // Set feedback register that control the connection between the
     // two operators.  Turn on bits in the upper nybble; I think this
     // is for OPL3, where it turns on channel A/B.
 
-    OPL_WriteRegister((OPL_REGS_FEEDBACK + voice->index) | voice->array,
+    OPL_WriteRegister(voice->array >> 9, (OPL_REGS_FEEDBACK + voice->index) | (voice->array & 0x100),
                       data->feedback | voice->reg_pan);
 
     // Calculate voice priority.
@@ -571,7 +588,7 @@ static void SetVoiceVolume(opl_voice_t *voice, unsigned int volume)
     {
         voice->car_volume = car_volume | (voice->car_volume & 0xc0);
 
-        OPL_WriteRegister((OPL_REGS_LEVEL + voice->op2) | voice->array,
+        OPL_WriteRegister(voice->array >> 9, (OPL_REGS_LEVEL + voice->op2) | (voice->array & 0x100),
                           voice->car_volume);
 
         // If we are using non-modulated feedback mode, we must set the
@@ -591,7 +608,7 @@ static void SetVoiceVolume(opl_voice_t *voice, unsigned int volume)
             if (mod_volume != voice->mod_volume)
             {
                 voice->mod_volume = mod_volume;
-                OPL_WriteRegister((OPL_REGS_LEVEL + voice->op1) | voice->array,
+                OPL_WriteRegister(voice->array >> 9, (OPL_REGS_LEVEL + voice->op1) | (voice->array & 0x100),
                                   mod_volume | (opl_voice->modulator.scale & 0xc0));
             }
         }
@@ -605,7 +622,7 @@ static void SetVoicePan(opl_voice_t *voice, unsigned int pan)
     voice->reg_pan = pan;
     opl_voice = &voice->current_instr->voices[voice->current_instr_voice];
 
-    OPL_WriteRegister((OPL_REGS_FEEDBACK + voice->index) | voice->array,
+    OPL_WriteRegister(voice->array >> 9, (OPL_REGS_FEEDBACK + voice->index) | (voice->array & 0x100),
                       opl_voice->feedback | pan);
 }
 
@@ -627,7 +644,7 @@ static void InitVoices(void)
         voices[i].index = i % OPL_NUM_VOICES;
         voices[i].op1 = voice_operators[0][i % OPL_NUM_VOICES];
         voices[i].op2 = voice_operators[1][i % OPL_NUM_VOICES];
-        voices[i].array = (i / OPL_NUM_VOICES) << 8;
+        voices[i].array = (i / OPL_NUM_VOICES) << (opl_opl3mode ? 8 : 9);
         voices[i].current_instr = NULL;
 
         // Add this voice to the freelist.
@@ -666,7 +683,7 @@ static void I_OPL_SetMusicVolume(int volume)
 
 static void VoiceKeyOff(opl_voice_t *voice)
 {
-    OPL_WriteRegister((OPL_REGS_FREQ_2 + voice->index) | voice->array,
+    OPL_WriteRegister(voice->array >> 9, (OPL_REGS_FREQ_2 + voice->index) | (voice->array & 0x100),
                       voice->freq >> 8);
 }
 
@@ -883,9 +900,9 @@ static void UpdateVoiceFrequency(opl_voice_t *voice)
 
     if (voice->freq != freq)
     {
-        OPL_WriteRegister((OPL_REGS_FREQ_1 + voice->index) | voice->array,
+        OPL_WriteRegister(voice->array >> 9, (OPL_REGS_FREQ_1 + voice->index) | (voice->array & 0x100),
                           freq & 0xff);
-        OPL_WriteRegister((OPL_REGS_FREQ_2 + voice->index) | voice->array,
+        OPL_WriteRegister(voice->array >> 9, (OPL_REGS_FREQ_2 + voice->index) | (voice->array & 0x100),
                           (freq >> 8) | 0x20);
 
         voice->freq = freq;
@@ -1196,9 +1213,9 @@ static void PitchBendEvent(opl_track_data_t *track, midi_event_t *event)
 {
     opl_channel_data_t *channel;
     int i;
-    opl_voice_t *voice_updated_list[OPL_NUM_VOICES * 2] = {0};
+    opl_voice_t *voice_updated_list[OPL_NUM_VOICES * 2 * OPL_MAX_CHIPS] = {0};
     unsigned int voice_updated_num = 0;
-    opl_voice_t *voice_not_updated_list[OPL_NUM_VOICES * 2] = {0};
+    opl_voice_t *voice_not_updated_list[OPL_NUM_VOICES * 2 * OPL_MAX_CHIPS] = {0};
     unsigned int voice_not_updated_num = 0;
 
     // Update the channel bend value.  Only the MSB of the pitch bend
@@ -1445,9 +1462,7 @@ static boolean I_OPL_InitStream(int device)
     char *dmxoption;
     opl_init_result_t chip_type;
 
-    OPL_SetSampleRate(SND_SAMPLERATE);
-
-    chip_type = OPL_Init(opl_io_port);
+    chip_type = OPL_Init(opl_io_port, num_opl_chips);
     if (chip_type == OPL_INIT_NONE)
     {
         I_Printf(VB_ERROR, "Dude.  The Adlib isn't responding.");
@@ -1457,6 +1472,12 @@ static boolean I_OPL_InitStream(int device)
     // The DMXOPTION variable must be set to enable OPL3 support.
     // As an extension, we also allow it to be set from the config file.
     dmxoption = M_getenv("DMXOPTION");
+
+    // Secret, undocumented DMXOPTION that reverses the stereo channels
+    // into their correct orientation.
+    if (dmxoption != NULL && strstr(dmxoption, "-reverse") != NULL)
+        opl_stereo_correct = true;
+
     if (dmxoption == NULL)
     {
         dmxoption = snd_dmxoption != NULL ? snd_dmxoption : "";
@@ -1465,17 +1486,13 @@ static boolean I_OPL_InitStream(int device)
     if (chip_type == OPL_INIT_OPL3 && strstr(dmxoption, "-opl3") != NULL)
     {
         opl_opl3mode = 1;
-        num_opl_voices = OPL_NUM_VOICES * 2;
+        num_opl_voices = OPL_NUM_VOICES * 2 * num_opl_chips;
     }
     else
     {
         opl_opl3mode = 0;
-        num_opl_voices = OPL_NUM_VOICES;
+        num_opl_voices = OPL_NUM_VOICES * num_opl_chips;
     }
-
-    // Secret, undocumented DMXOPTION that reverses the stereo channels
-    // into their correct orientation.
-    opl_stereo_correct = strstr(dmxoption, "-reverse") != NULL;
 
     // Initialize all registers.
 
@@ -1550,7 +1567,7 @@ static boolean I_OPL_OpenStream(void *data, ALsizei size, ALenum *format,
     }
 
     *format = AL_FORMAT_STEREO16;
-    *freq = SND_SAMPLERATE;
+    *freq = OPL_SAMPLE_RATE;
     *frame_size = 2 * sizeof(short);
 
     return true;
@@ -1660,12 +1677,20 @@ static void I_OPL_ShutdownStream(void)
 static const char **I_OPL_DeviceList(void)
 {
     static const char **devices = NULL;
-    if (devices)
+    if (array_size(devices))
     {
         return devices;
     }
     array_push(devices, "OPL3 Emulation");
     return devices;
+}
+
+static void I_OPL_BindVariables(void)
+{
+    BIND_NUM_MIDI(num_opl_chips, 1, 1, OPL_MAX_CHIPS,
+        "[OPL3 Emulation] Number of chips to emulate (1-6)");
+    BIND_BOOL_MIDI(opl_stereo_correct, false,
+        "[OPL3 Emulation] Use MIDI-correct stereo channel polarity");
 }
 
 stream_module_t stream_opl_module =
@@ -1677,4 +1702,5 @@ stream_module_t stream_opl_module =
     I_OPL_CloseStream,
     I_OPL_ShutdownStream,
     I_OPL_DeviceList,
+    I_OPL_BindVariables,
 };

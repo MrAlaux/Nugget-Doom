@@ -33,6 +33,7 @@
 #include "i_video.h"
 #include "info.h"
 #include "m_cheat.h"
+#include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "m_swap.h"
@@ -47,12 +48,16 @@
 #include "st_lib.h"
 #include "st_stuff.h"
 #include "tables.h"
+#include "v_fmt.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
 // [Nugget]
 #include "m_nughud.h"
+
+// [Nugget] CVARs
+static boolean sts_alt_arms;
 
 //
 // STATUS BAR DATA
@@ -138,8 +143,9 @@ static int lu_palette;
 // whether left-side main status bar is active
 static boolean st_statusbaron;
 
-// [crispy] distinguish classic status bar with background and player face from Crispy HUD
-boolean st_crispyhud;
+// [crispy] distinguish classic status bar with background and player face
+// from Crispy HUD
+boolean st_crispyhud; // [Nugget] Global
 static boolean st_classicstatusbar;
 static boolean st_statusbarface; // [Nugget] Face may still be drawn in NUGHUD
 
@@ -217,7 +223,7 @@ static patch_t *nhinfnty;           // NHINFNTY
 static st_number_t w_ready;
 
 // [Alaux]
-int hud_animated_counts;
+static boolean hud_animated_counts;
 int st_health = 100;
 int st_armor = 0;
 
@@ -231,8 +237,8 @@ int armor_red;     // armor amount less than which status is red
 int armor_yellow;  // armor amount less than which status is yellow
 int armor_green;   // armor amount above is blue, below is green
 
-int hud_backpack_thresholds; // backpack changes thresholds
-int hud_armor_type; // color of armor depends on type
+boolean hud_backpack_thresholds; // backpack changes thresholds
+boolean hud_armor_type; // color of armor depends on type
 
  // in deathmatch only, summary of frags stats
 static st_number_t w_frags;
@@ -283,15 +289,13 @@ int             st_keyorskull[3];
 // a random number per tick
 static int      st_randomnumber;
 
-extern char     *mapnames[];
-
 //
 // STATUS BAR CODE
 //
 
 void ST_Stop(void);
 
-int st_solidbackground;
+static boolean st_solidbackground;
 
 static void ST_DrawSolidBackground(int st_x)
 {
@@ -337,7 +341,7 @@ static void ST_DrawSolidBackground(int st_x)
     b /= 2 * depth * (v1 - v0);
 
     // [FG] tune down to half saturation (for empiric reasons)
-    col = I_GetPaletteIndex(pal, r/2, g/2, b/2);
+    col = I_GetNearestColor(pal, r/2, g/2, b/2);
 
     V_FillRect(0, v0, video.unscaledw, v1 - v0, col);
   }
@@ -347,6 +351,16 @@ static void ST_DrawSolidBackground(int st_x)
 
 void ST_refreshBackground(void)
 {
+    // [Nugget] NUGHUD: Status-Bar chunks /-----------------------------------
+
+    V_UseBuffer(st_bar);
+
+    V_DrawPatch(ST_X + (SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
+
+    V_RestoreBuffer();
+
+    // [Nugget] -------------------------------------------------------------/
+
     int st_x;
 
     if (!st_classicstatusbar)
@@ -372,7 +386,7 @@ void ST_refreshBackground(void)
             // in widescreen mode
             const char *name = (gamemode == commercial) ? "GRNROCK" : "FLOOR7_2";
 
-            const byte *src = W_CacheLumpNum(firstflat + R_FlatNumForName(name), PU_CACHE);
+            const byte *src = V_CacheFlatNum(firstflat + R_FlatNumForName(name), PU_CACHE);
 
             V_TileBlock64(SCREENHEIGHT - ST_HEIGHT, video.unscaledw, ST_HEIGHT, src);
 
@@ -380,12 +394,12 @@ void ST_refreshBackground(void)
             if (scaledviewwidth == video.unscaledw)
             {
                 int x;
-                patch_t *patch = W_CacheLumpName("brdr_b", PU_CACHE);
+                patch_t *patch = V_CachePatchName("brdr_b", PU_CACHE);
 
                 for (x = 0; x < video.deltaw; x += 8)
                 {
                     V_DrawPatch(x - video.deltaw, 0, patch);
-                    V_DrawPatch(SCREENWIDTH + video.deltaw - x - 8, 0, patch);
+                    V_DrawPatch(video.unscaledw - video.deltaw - x - 8, 0, patch);
                 }
             }
         }
@@ -417,9 +431,9 @@ void ST_refreshBackground(void)
 boolean ST_Responder(event_t *ev)
 {
   // Filter automap on/off.
-  if (ev->type == ev_keyup && (ev->data1 & 0xffff0000) == AM_MSGHEADER)
+  if (ev->type == ev_keyup && (ev->data1.i & 0xffff0000) == AM_MSGHEADER)
     {
-      if (ev->data1 == AM_MSGENTERED)
+      if (ev->data1.i == AM_MSGENTERED)
       {
         st_firsttime = true;
       }
@@ -462,6 +476,8 @@ static int ST_DeadFace(void)
 
   return ST_DEADFACE;
 }
+
+boolean comp_godface;
 
 void ST_updateFaceWidget(void)
 {
@@ -639,8 +655,8 @@ void ST_updateFaceWidget(void)
 
 }
 
-int sts_traditional_keys; // killough 2/28/98: traditional status bar keys
-int hud_blink_keys; // [crispy] blinking key or skull in the status bar
+static boolean sts_traditional_keys; // killough 2/28/98: traditional status bar keys
+static boolean hud_blink_keys; // [crispy] blinking key or skull in the status bar
 
 void ST_SetKeyBlink(player_t* player, int blue, int yellow, int red)
 {
@@ -833,6 +849,12 @@ static int SmoothCount(int shownval, int realval)
 }
 
 boolean st_invul;
+
+// [Nugget]
+boolean no_berserk_tint;
+boolean no_radsuit_tint;
+boolean comp_unusedpals;
+
 static void ST_doPaletteStuff(void);
 
 void ST_Ticker(void)
@@ -998,6 +1020,10 @@ static void NughudDrawBar(nughud_bar_t *widget, patch_t **patches, int units, in
 
 // [Nugget] -----------------------------------------------------------------/
 
+// [Nugget]
+static boolean sts_show_berserk;
+static boolean hud_highlight_weapon;
+
 void ST_drawWidgets(void)
 {
   int i;
@@ -1033,7 +1059,7 @@ void ST_drawWidgets(void)
       {
         NughudDrawPatch(
           &nughud.patches[i],
-          W_CacheLumpNum(nughud_patchlump[i], PU_STATIC),
+          V_CachePatchNum(nughud_patchlump[i], PU_STATIC),
           !nughud.patch_offsets
         );
       }
@@ -1055,7 +1081,7 @@ void ST_drawWidgets(void)
       {
         NughudDrawPatch(
           &nughud.patches[i],
-          W_CacheLumpNum(nughud_patchlump[i], PU_STATIC),
+          V_CachePatchNum(nughud_patchlump[i], PU_STATIC),
           !nughud.patch_offsets
         );
       }
@@ -1089,7 +1115,7 @@ void ST_drawWidgets(void)
 
         if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
         {
-          patch = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+          patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
         }
         else { patch = NULL; }
       }
@@ -1120,7 +1146,7 @@ void ST_drawWidgets(void)
 
         if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
         {
-          patch = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+          patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
         }
         else { patch = NULL; }
       }
@@ -1152,7 +1178,7 @@ void ST_drawWidgets(void)
 
         if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
         {
-          patch = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+          patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
         }
         else { patch = NULL; }
       }
@@ -1199,7 +1225,7 @@ void ST_drawWidgets(void)
               ammoy = !st_crispyhud ? ST_AMMOY : nughud.ammo.y;
 
     // [Nugget]: [crispy] draw berserk pack instead of no ammo if appropriate
-    if (show_berserk && plyr->readyweapon == wp_fist && plyr->powers[pw_strength])
+    if (sts_show_berserk && plyr->readyweapon == wp_fist && plyr->powers[pw_strength])
     {
       // NUGHUD Berserk
       if (st_crispyhud && nhbersrk)
@@ -1214,7 +1240,7 @@ void ST_drawWidgets(void)
       // Berserk or Medkit sprite
       else if (lu_berserk >= 0)
       {
-        patch_t *const patch = W_CacheLumpNum(lu_berserk, PU_STATIC);
+        patch_t *const patch = V_CachePatchNum(lu_berserk, PU_STATIC);
         
         // [crispy] (23,179) is the center of the Ammo widget
         V_DrawPatch(ammox - (21 * (st_crispyhud ? nughud.ammo.align : 1))
@@ -1333,7 +1359,7 @@ void ST_drawWidgets(void)
       else { index = weapon; }
     }
     else {
-      if (alt_arms && (weapon == wp_chainsaw || weapon == wp_supershotgun))
+      if (sts_alt_arms && (weapon == wp_chainsaw || weapon == wp_supershotgun))
       {
         if (weapon == wp_chainsaw && have_ssg)
         {
@@ -1345,7 +1371,7 @@ void ST_drawWidgets(void)
       {
         index = 1;
       }
-      else { index = weapon - 1 - alt_arms; }
+      else { index = weapon - 1 - sts_alt_arms; }
     }
 
     if (0 <= index && index < 9) { w_arms[index].data = 2997; }
@@ -1444,24 +1470,24 @@ void ST_loadGraphics(void)
   for (i=0;i<10;i++)
     {
       M_snprintf(namebuf, sizeof(namebuf), "STTNUM%d", i);
-      tallnum[i] = (patch_t *) W_CacheLumpName(namebuf, PU_STATIC);
+      tallnum[i] = V_CachePatchName(namebuf, PU_STATIC);
       M_snprintf(namebuf, sizeof(namebuf), "STYSNUM%d", i);
-      shortnum[i] = (patch_t *) W_CacheLumpName(namebuf, PU_STATIC);
+      shortnum[i] = V_CachePatchName(namebuf, PU_STATIC);
     }
 
   // Load percent key.
   //Note: why not load STMINUS here, too?
-  tallpercent = (patch_t *) W_CacheLumpName("STTPRCNT", PU_STATIC);
+  tallpercent = V_CachePatchName("STTPRCNT", PU_STATIC);
 
   // key cards
   for (i=0;i<NUMCARDS+3;i++)  //jff 2/23/98 show both keys too
     {
       M_snprintf(namebuf, sizeof(namebuf), "STKEYS%d", i);
-      keys[i] = (patch_t *) W_CacheLumpName(namebuf, PU_STATIC);
+      keys[i] = V_CachePatchName(namebuf, PU_STATIC);
     }
 
   // arms background
-  armsbg = (patch_t *) W_CacheLumpName("STARMS", PU_STATIC);
+  armsbg = V_CachePatchName("STARMS", PU_STATIC);
 
   // arms ownership widgets
   for (i=0;i<6+3;i++) // [Nugget] Load all 9 numbers
@@ -1469,7 +1495,7 @@ void ST_loadGraphics(void)
       M_snprintf(namebuf, sizeof(namebuf), "STGNUM%d", i+1);
 
       // gray #
-      arms[i][0] = (patch_t *) W_CacheLumpName(namebuf, PU_STATIC);
+      arms[i][0] = V_CachePatchName(namebuf, PU_STATIC);
 
       // yellow #
       arms[i][1] = shortnum[i+1];
@@ -1481,19 +1507,19 @@ void ST_loadGraphics(void)
   for (i=0; i<MAXPLAYERS; i++)
     {
       M_snprintf(namebuf, sizeof(namebuf), "STFB%d", i);
-      faceback[i] = (patch_t *) W_CacheLumpName(namebuf, PU_STATIC);
+      faceback[i] = V_CachePatchName(namebuf, PU_STATIC);
     }
 
   // status bar background bits
   if (W_CheckNumForName("STBAR") >= 0)
   {
-    sbar  = (patch_t *) W_CacheLumpName("STBAR", PU_STATIC);
+    sbar  = V_CachePatchName("STBAR", PU_STATIC);
     sbarr = NULL;
   }
   else
   {
-    sbar  = (patch_t *) W_CacheLumpName("STMBARL", PU_STATIC);
-    sbarr = (patch_t *) W_CacheLumpName("STMBARR", PU_STATIC);
+    sbar  = V_CachePatchName("STMBARL", PU_STATIC);
+    sbarr = V_CachePatchName("STMBARR", PU_STATIC);
   }
 
   // face states
@@ -1504,21 +1530,21 @@ void ST_loadGraphics(void)
       for (j=0;j<ST_NUMSTRAIGHTFACES;j++)
         {
           M_snprintf(namebuf, sizeof(namebuf), "STFST%d%d", i, j);
-          faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+          faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
         }
       M_snprintf(namebuf, sizeof(namebuf), "STFTR%d0", i);        // turn right
-      faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+      faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
       M_snprintf(namebuf, sizeof(namebuf), "STFTL%d0", i);        // turn left
-      faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+      faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
       M_snprintf(namebuf, sizeof(namebuf), "STFOUCH%d", i);       // ouch!
-      faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+      faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
       M_snprintf(namebuf, sizeof(namebuf), "STFEVL%d", i);        // evil grin ;)
-      faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+      faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
       M_snprintf(namebuf, sizeof(namebuf), "STFKILL%d", i);       // pissed off
-      faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+      faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
     }
-  faces[facenum++] = W_CacheLumpName("STFGOD0", PU_STATIC);
-  faces[facenum++] = W_CacheLumpName("STFDEAD0", PU_STATIC);
+  faces[facenum++] = V_CachePatchName("STFGOD0", PU_STATIC);
+  faces[facenum++] = V_CachePatchName("STFDEAD0", PU_STATIC);
 
   // [FG] support face gib animations as in the 3DO/Jaguar/PSX ports
   for (i = 0; i < ST_NUMXDTHFACES; i++)
@@ -1526,19 +1552,19 @@ void ST_loadGraphics(void)
     M_snprintf(namebuf, sizeof(namebuf), "STFXDTH%d", i);
 
     if (W_CheckNumForName(namebuf) != -1)
-      faces[facenum++] = W_CacheLumpName(namebuf, PU_STATIC);
+      faces[facenum++] = V_CachePatchName(namebuf, PU_STATIC);
     else
       break;
   }
   have_xdthfaces = i;
 
   { // [Nugget] --------------------------------------------------------------
-    int lump;
+    int lump = 0;
 
     // Find Status Bar Berserk patch
     if ((lump = (W_CheckNumForName)("STBERSRK", ns_global)) >= 0)
     {
-      stbersrk = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      stbersrk = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else {
       stbersrk = NULL;
@@ -1551,7 +1577,7 @@ void ST_loadGraphics(void)
     // Find Status Bar Infinity patch
     if ((lump = (W_CheckNumForName)("STINFNTY", ns_global)) >= 0)
     {
-      stinfnty = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      stinfnty = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else { stinfnty = NULL; }
 
@@ -1578,7 +1604,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhtnum[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhtnum[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhtnum[0] = NULL;
@@ -1589,14 +1615,14 @@ void ST_loadGraphics(void)
     // Load NHTMINUS
     if (nhtnum[0] && (lump = (W_CheckNumForName)("NHTMINUS", ns_global)) >= 0)
     {
-      nhtminus = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      nhtminus = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else { nhtnum[0] = nhtminus = NULL; }
 
     // Load NHTPRCNT
     if (nhtnum[0] && (lump = (W_CheckNumForName)("NHTPRCNT", ns_global)) >= 0)
     {
-      nhtprcnt = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      nhtprcnt = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else { nhtnum[0] = nhtminus = nhtprcnt = NULL; }
 
@@ -1609,7 +1635,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhrnum[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhrnum[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhrnum[0] = NULL;
@@ -1620,7 +1646,7 @@ void ST_loadGraphics(void)
     // Load NHRMINUS
     if (nhrnum[0] && (lump = (W_CheckNumForName)("NHRMINUS", ns_global)) >= 0)
     {
-      nhrminus = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      nhrminus = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else { nhrnum[0] = nhrminus = NULL; }
 
@@ -1633,7 +1659,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhamnum[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhamnum[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhamnum[0] = NULL;
@@ -1650,7 +1676,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhwpnum[i][0] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhwpnum[i][0] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhwpnum[0][0] = NULL;
@@ -1662,7 +1688,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhwpnum[i][1] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhwpnum[i][1] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhwpnum[0][0] = NULL;
@@ -1679,7 +1705,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhkeys[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhkeys[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhkeys[0] = NULL;
@@ -1692,7 +1718,7 @@ void ST_loadGraphics(void)
     // Load NHBERSRK
     if ((lump = (W_CheckNumForName)("NHBERSRK", ns_global)) >= 0)
     {
-      nhbersrk = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      nhbersrk = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else { nhbersrk = NULL; }
 
@@ -1705,7 +1731,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhammo[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhammo[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhammo[0] = NULL;
@@ -1722,7 +1748,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhambar[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhambar[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else if (!i) { break; }
     }
@@ -1736,7 +1762,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhealth[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhealth[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nhealth[0] = NULL;
@@ -1753,7 +1779,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nhhlbar[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nhhlbar[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else if (!i) { break; }
     }
@@ -1767,7 +1793,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nharmor[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nharmor[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else {
         nharmor[0] = NULL;
@@ -1784,7 +1810,7 @@ void ST_loadGraphics(void)
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
       {
-        nharbar[i] = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+        nharbar[i] = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
       }
       else if (!i) { break; }
     }
@@ -1794,7 +1820,7 @@ void ST_loadGraphics(void)
     // Load NHINFNTY
     if ((lump = (W_CheckNumForName)("NHINFNTY", ns_global)) >= 0)
     {
-      nhinfnty = (patch_t *) W_CacheLumpNum(lump, PU_STATIC);
+      nhinfnty = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
     }
     else { nhinfnty = NULL; }
   }
@@ -1829,7 +1855,9 @@ void ST_initData(void)
   STlib_init();
 }
 
-int distributed_delta = 0; // [Nugget] Not static anymore
+int distributed_delta = 0; // [Nugget] Global
+
+static boolean sts_show_ssg; // [Nugget]
 
 void ST_createWidgets(void)
 {
@@ -1888,13 +1916,13 @@ void ST_createWidgets(void)
                          &st_armson);
 
     // [crispy] show SSG availability in the Shotgun slot of the arms widget
-    if (show_ssg && !(nughud.arms[8].x > -1)) { w_arms[2].inum = &st_shotguns; }
+    if (sts_show_ssg && !(nughud.arms[8].x > -1)) { w_arms[2].inum = &st_shotguns; }
   }
   else {
     for(i=0;i<6;i++)
       {
         // [Nugget] Alternative Arms display (Saw/SSG instead of Pistol)
-        const int alt = (alt_arms ? ((i==5 && have_ssg) ? 2 : 1) : 0);
+        const int alt = (sts_alt_arms ? ((i==5 && have_ssg) ? 2 : 1) : 0);
 
         STlib_initMultIcon(&w_arms[i],
                            ST_ARMSX+(i%3)*ST_ARMSXSPACE,
@@ -1904,7 +1932,7 @@ void ST_createWidgets(void)
       }
 
     // [Nugget]: [crispy] show SSG availability in the Shotgun slot of the arms widget
-    if (show_ssg && !alt_arms) { w_arms[1].inum = &st_shotguns; }
+    if (sts_show_ssg && !sts_alt_arms) { w_arms[1].inum = &st_shotguns; }
   }
 
   // frags sum
@@ -2105,38 +2133,23 @@ void ST_Init(void)
   ST_loadData();
 }
 
-// [Nugget] NUGHUD: Status-Bar chunks
-void ST_InitChunkBar(void)
-{
-  if (st_bar) { Z_Free(st_bar); }
-
-  // More than necessary, but so be it
-  st_bar = Z_Malloc((video.pitch * V_ScaleY(StatusBarBufferHeight())) * sizeof(*st_bar), PU_STATIC, 0);
-
-  V_UseBuffer(st_bar);
-
-  V_DrawPatch(ST_X + (SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
-
-  V_RestoreBuffer();
-}
-
 void ST_InitRes(void)
 {
   int height = V_ScaleY(StatusBarBufferHeight());
 
-  if (st_backing_screen)
-  {
-    Z_Free(st_backing_screen);
-  }
-
   // killough 11/98: allocate enough for hires
-  st_backing_screen = Z_Malloc(video.pitch * height * sizeof(*st_backing_screen), PU_STATIC, 0);
+  st_backing_screen = Z_Malloc(video.pitch * height * sizeof(*st_backing_screen), PU_RENDERER, 0);
+
+  // [Nugget] Status-Bar chunks ----------------------------------------------
+
+  // More than necessary (we only use the section visible in 4:3), but so be it
+  st_bar = Z_Malloc((video.pitch * height) * sizeof(*st_bar), PU_RENDERER, 0);
 }
 
 void ST_Warnings(void)
 {
   int i;
-  patch_t *const patch = W_CacheLumpName("brdr_b", PU_CACHE);
+  patch_t *const patch = V_CachePatchName("brdr_b", PU_CACHE);
 
   if (patch && SHORT(patch->height) > ST_HEIGHT)
   {
@@ -2170,6 +2183,60 @@ void ST_ResetPalette(void)
 {
   st_palette = -1;
   I_SetPalette(W_CacheLumpNum(lu_palette, PU_CACHE));
+}
+
+void ST_BindSTSVariables(void)
+{
+  M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
+             false, ss_stat, wad_yes, "Colored numbers on the status bar");
+  M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,
+             false, ss_stat, wad_yes,
+             "Percent signs on the status bar are always gray");
+  M_BindBool("sts_traditional_keys", &sts_traditional_keys, NULL,
+             false, ss_stat, wad_yes,
+             "Show last picked-up key on each key slot on the status bar");
+  M_BindBool("hud_blink_keys", &hud_blink_keys, NULL,
+             false, ss_stat, wad_no,
+             "Make missing keys blink when trying to trigger linedef actions");
+
+  // [Nugget] /---------------------------------------------------------------
+
+  M_BindBool("sts_show_berserk", &sts_show_berserk, NULL, true, ss_stat, wad_yes,
+             "Show Berserk pack on the status bar when using the Fist, if available");
+
+  // (CFG-only)
+  M_BindBool("sts_show_ssg", &sts_show_ssg, NULL, true, ss_none, wad_yes,
+             "Show SSG availability in the Shotgun slot of the arms widget");
+
+  M_BindBool("hud_highlight_weapon", &hud_highlight_weapon, NULL, false, ss_stat, wad_yes,
+             "Highlight current/pending weapon on the status bar");
+
+  M_BindBool("sts_alt_arms", &sts_alt_arms, NULL, false, ss_stat, wad_yes,
+             "Alternative Arms-widget display");
+
+  // [Nugget] ---------------------------------------------------------------/
+
+  M_BindBool("st_solidbackground", &st_solidbackground, NULL,
+             false, ss_stat, wad_no,
+             "Use solid-color borders for the status bar in widescreen mode");
+  M_BindBool("hud_animated_counts", &hud_animated_counts, NULL,
+            false, ss_stat, wad_no, "Animated health/armor counts");
+  M_BindNum("health_red", &health_red, NULL, 25, 0, 200, ss_none, wad_yes,
+            "Amount of health for red-to-yellow transition");
+  M_BindNum("health_yellow", &health_yellow, NULL, 50, 0, 200, ss_none, wad_yes,
+            "Amount of health for yellow-to-green transition");
+  M_BindNum("health_green", &health_green, NULL, 100, 0, 200, ss_none, wad_yes,
+            "Amount of health for green-to-blue transition");
+  M_BindNum("armor_red", &armor_red, NULL, 25, 0, 200, ss_none, wad_yes,
+            "Amount of armor for red-to-yellow transition");
+  M_BindNum("armor_yellow", &armor_yellow, NULL, 50, 0, 200, ss_none, wad_yes,
+            "Amount of armor for yellow-to-green transition");
+  M_BindNum("armor_green", &armor_green, NULL, 100, 0, 200, ss_none, wad_yes,
+            "Amount of armor for green-to-blue transition");
+  M_BindNum("ammo_red", &ammo_red, NULL, 25, 0, 100, ss_none, wad_yes,
+            "Percent of ammo for red-to-yellow transition");
+  M_BindNum("ammo_yellow", &ammo_yellow, NULL, 50, 0, 100, ss_none, wad_yes,
+            "Percent of ammo for yellow-to-green transition");
 }
 
 //----------------------------------------------------------------------------

@@ -22,7 +22,16 @@
 #ifndef __P_ENEMY__
 #define __P_ENEMY__
 
+#include "doomtype.h"
+
 struct mobj_s;
+
+// [Nugget] CVARs
+extern boolean comp_bruistarget;
+extern boolean comp_faceshadow;
+extern boolean comp_iosdeath;
+extern boolean comp_cgunnersfx;
+extern boolean comp_flamst;
 
 void P_NoiseAlert(struct mobj_s *target, struct mobj_s *emmiter);
 void P_SpawnBrainTargets(void); // killough 3/26/98: spawn icon landings
@@ -30,6 +39,8 @@ void P_SpawnBrainTargets(void); // killough 3/26/98: spawn icon landings
 extern struct brain_s {         // killough 3/26/98: global state of boss brain
   int easy, targeton;
 } brain;
+
+extern boolean ghost_monsters;
 
 #endif // __P_ENEMY__
 

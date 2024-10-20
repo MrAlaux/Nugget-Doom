@@ -16,7 +16,6 @@
 // DESCRIPTION:
 //     Load and draw ZDoom FON2 fonts
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,8 +24,10 @@
 #include "m_misc.h"
 #include "m_swap.h"
 #include "r_defs.h"
+#include "v_fmt.h"
 #include "v_video.h"
 #include "w_wad.h"
+#include "z_zone.h"
 
 typedef struct
 {
@@ -110,7 +111,7 @@ boolean MN_LoadFon2(const byte *gfx_data, int size)
         int r = *p++;
         int g = *p++;
         int b = *p++;
-        translate[i] = I_GetPaletteIndex(playpal, r, g, b);
+        translate[i] = I_GetNearestColor(playpal, r, g, b);
     }
 
     // 0 is transparent, last is border color
@@ -156,8 +157,8 @@ boolean MN_LoadFon2(const byte *gfx_data, int size)
             }
         }
 
-        chars[i].patch = V_LinearToTransPatch(data, chars[i].width, height,
-                                              color_key);
+        chars[i].patch = V_LinearToTransPatch(data, chars[i].width, height, NULL,
+                                              color_key, PU_STATIC, NULL);
         free(data);
     }
 

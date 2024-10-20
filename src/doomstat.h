@@ -72,6 +72,7 @@ extern char *MAPNAME(int e, int m);
 extern  boolean modifiedgame;
 
 extern boolean have_ssg;
+#define ALLOW_SSG (gamemode == commercial || CRITICAL(have_ssg))
 
 // compatibility with old engines (monster behavior, metrics, etc.)
 extern int compatibility, default_compatibility;          // killough 1/31/98
@@ -117,21 +118,14 @@ extern demo_version_t demo_version;           // killough 7/19/98: Version of de
 #define mbf21 (demo_version == DV_MBF21)
 
 // killough 7/19/98: whether monsters should fight against each other
-extern int monster_infighting, default_monster_infighting;
+extern boolean monster_infighting, default_monster_infighting;
 
-extern int monkeys, default_monkeys;
+extern boolean monkeys, default_monkeys;
 
 // v1.1-like pitched sounds
-extern int pitched_sounds;
+extern boolean pitched_sounds;
 
-extern int translucency;
-
-enum {
-  TRANSLUCENCY_OFF,
-  TRANSLUCENCY_WALLS,
-  TRANSLUCENCY_THINGS,
-  TRANSLUCENCY_ALL
-};
+extern boolean translucency;
 
 extern int demo_insurance;      // killough 4/5/98
 
@@ -175,15 +169,6 @@ enum {
 };
 
 extern int comp[COMP_TOTAL], default_comp[COMP_TOTAL];
-
-typedef enum
-{
-  INVUL_VANILLA,
-  INVUL_MBF,
-  INVUL_GRAY,
-} invul_mode_t;
-
-extern invul_mode_t invul_mode;
 
 // -------------------------------------------
 // Language.
@@ -275,7 +260,6 @@ typedef enum
 } overlay_t;
 
 extern  overlay_t automapoverlay;
-extern  boolean automaprotate;
 
 // [Nugget] Minimap support (1 == AM_FULL)
 #define automap_on (automapactive == 1 && !automapoverlay)
@@ -331,6 +315,9 @@ extern  boolean lowres_turn;
 
 // Config key for low resolution turning.
 extern  boolean shorttics;
+
+// Fake longtics when using shorttics.
+extern  boolean fake_longtics;
 
 // cph's doom 1.91 longtics hack
 extern  boolean longtics;
@@ -400,7 +387,7 @@ extern wbstartstruct_t wminfo;
 
 // File handling stuff.
 extern  char   *basedefault;
-extern  boolean organize_savefiles;
+extern  int    organize_savefiles;
 
 // if true, load all graphics at level load
 extern  boolean precache;
@@ -408,11 +395,6 @@ extern  boolean precache;
 // wipegamestate can be set to -1
 //  to force a wipe on the next draw
 extern  gamestate_t     wipegamestate;
-
-extern  int             mouseSensitivity_horiz; // killough
-extern  int             mouseSensitivity_vert;
-extern  int             mouseSensitivity_horiz_strafe; // [FG] strafe
-extern  int             mouseSensitivity_vert_look; // [FG] look
 
 // debug flag to cancel adaptiveness
 extern  boolean         singletics;
@@ -439,44 +421,38 @@ extern int default_allow_pushers;
 extern int variable_friction;  // ice & mud            // phares 3/10/98
 extern int default_variable_friction;
 
-extern int monsters_remember;                          // killough 3/1/98
-extern int default_monsters_remember;
+extern boolean monsters_remember;                          // killough 3/1/98
+extern boolean default_monsters_remember;
 
-extern int weapon_recoil;          // weapon recoil    // phares
-extern int default_weapon_recoil;
+extern boolean weapon_recoil;          // weapon recoil    // phares
+extern boolean default_weapon_recoil;
 
-extern int player_bobbing;  // whether player bobs or not   // phares 2/25/98
-extern int default_player_bobbing;  // killough 3/1/98: make local to each game
+extern boolean player_bobbing;  // whether player bobs or not   // phares 2/25/98
+extern boolean default_player_bobbing;  // killough 3/1/98: make local to each game
 
 // killough 7/19/98: Classic Pre-Beta BFG
-extern int classic_bfg, default_classic_bfg;
+extern boolean classic_bfg, default_classic_bfg;
 
 // killough 7/24/98: Emulation of Press Release version of Doom
 extern int beta_emulation;
 
 extern int dogs, default_dogs;     // killough 7/19/98: Marine's best friend :)
-extern int dog_jumping, default_dog_jumping;   // killough 10/98
+extern boolean dog_jumping, default_dog_jumping;   // killough 10/98
 
 // killough 8/8/98: distance friendly monsters tend to stay from player
 extern int distfriend, default_distfriend;
 
 // killough 9/8/98: whether monsters are allowed to strafe or retreat
-extern int monster_backing, default_monster_backing;
+extern boolean monster_backing, default_monster_backing;
 
 // killough 9/9/98: whether monsters intelligently avoid hazards
-extern int monster_avoid_hazards, default_monster_avoid_hazards;
+extern boolean monster_avoid_hazards, default_monster_avoid_hazards;
 
 // killough 10/98: whether monsters are affected by friction
-extern int monster_friction, default_monster_friction;
+extern boolean monster_friction, default_monster_friction;
 
 // killough 9/9/98: whether monsters help friends
-extern int help_friends, default_help_friends;
-
-extern boolean pistolstart, default_pistolstart;
-
-extern int flashing_hom; // killough 10/98
-
-extern int doom_weapon_toggles;   // killough 10/98
+extern boolean help_friends, default_help_friends;
 
 extern boolean hide_weapon;
 
@@ -487,7 +463,7 @@ extern int view_bobbing_pct;
 extern int weapon_bobbing_pct;
 
 
-// [Nugget] /=================================================================
+// [Nugget] /-----------------------------------------------------------------
 
 extern boolean fauxdemo;
 extern boolean casual_play;
@@ -495,220 +471,7 @@ extern boolean casual_play;
 #define    CASUALPLAY(x) (casual_play ? (x) : 0)
 #define NOTCASUALPLAY(x) (casual_play ? (x) : 1)
 
-// General -------------------------------------------------------------------
-
-extern int over_under;
-extern int jump_crouch;
-extern int viewheight_value;
-
-enum {
-  FLINCH_OFF,
-  FLINCH_LANDING,
-  FLINCH_DAMAGE,
-  FLINCH_BOTH,
-}; extern int flinching;
-
-extern int explosion_shake;
-extern int explosion_shake_intensity_pct; // CFG-only
-extern int breathing;
-extern int teleporter_zoom;
-extern int death_camera;
-
-enum {
-  CHASECAMMODE_OFF,
-  CHASECAMMODE_BACK,
-  CHASECAMMODE_FRONT,
-}; extern int chasecam_mode;
-extern int chasecam_distance;
-extern int chasecam_height;
-extern int chasecam_crosshair; // CFG-only
-
-extern int menu_background_all;
-extern int no_menu_tint;
-extern int hud_menu_shadows;
-extern int flip_levels;
-extern int no_berserk_tint;
-extern int no_radsuit_tint;
-extern int nightvision_visor;
-extern int damagecount_cap;
-extern int bonuscount_cap;
-extern int fake_contrast;
-extern int diminished_lighting; // CFG-only
-extern int wipe_speed_percentage;
-extern int alt_interpic;
-extern int s_clipping_dist_x2;
-extern int one_key_saveload;
-extern int autosave;
-extern int autosave_interval;
-extern int rewind_interval;
-extern int rewind_depth;
-extern int rewind_timeout;
-extern int no_page_ticking;
-extern int quick_quitgame;
-extern int quit_sound;
-
-//extern int a11y_sector_lighting;
-extern int a11y_weapon_flash;
-extern int a11y_weapon_pspr;
-extern int a11y_invul_colormap;
-
-// Weapons -------------------------------------------------------------------
-
-extern int no_hor_autoaim;
-extern int switch_on_pickup;
-extern int weapswitch_interruption;
-extern int skip_ammoless_weapons;
-extern int always_bob; // CFG-only
-
-enum {
-  BOBSTYLE_VANILLA,
-  BOBSTYLE_INVVANILLA,
-  BOBSTYLE_ALPHA,
-  BOBSTYLE_INVALPHA,
-  BOBSTYLE_SMOOTH,
-  BOBSTYLE_INVSMOOTH,
-  BOBSTYLE_QUAKE,
-}; extern int bobbing_style;
-
-extern int weapon_inertia;
-extern int weapon_inertia_scale_pct; // CFG-only
-extern int weaponsquat;
-extern int translucent_pspr;
-extern int translucent_pspr_pct; // CFG-only
-extern int show_berserk;
-extern int sx_fix; // CFG-only
-
-// Status Bar/HUD ------------------------------------------------------------
-
-extern int announce_milestones;
-extern int show_save_messages; // CFG-only
-extern int message_flash;
-extern int show_ssg; // CFG-only
-
-enum {
-  STATSFORMAT_RATIO = 1,
-  STATSFORMAT_BOOLEAN,
-  STATSFORMAT_PERCENTAGE,
-  STATSFORMAT_REMAINING,
-  STATSFORMAT_COUNT,
-
-  NUMSTATSFORMATS
-};
-extern int hud_stats_format;
-extern int hud_stats_format_map;
-
-enum {
-  SHOWSTATS_KILLS,
-  SHOWSTATS_ITEMS,
-  SHOWSTATS_SECRETS,
-
-  NUMSHOWSTATS
-};
-extern int hud_stats_show[];
-extern int hud_stats_show_map[];
-
-extern int hud_allow_icons;
-extern int hud_highlight_weapon;
-extern int alt_arms;
-
-typedef enum {
-  TIMER_USE,
-  TIMER_TELEPORT,
-  TIMER_KEYPICKUP,
-  
-  NUMTIMERS
-} eventtimer_t;
-extern int hud_time_teleport;
-extern int hud_time_keypickup;
-
-extern int hudcolor_time_scale;
-extern int hudcolor_total_time;
-extern int hudcolor_time;
-extern int hudcolor_event_timer;
-extern int hudcolor_kills;
-extern int hudcolor_items;
-extern int hudcolor_secrets;
-extern int hudcolor_ms_incomp;
-extern int hudcolor_ms_comp;
-
-// Enemies -------------------------------------------------------------------
-
-extern int extra_gibbing_on; // CFG-only
-typedef enum {
-  EXGIB_FIST,
-  EXGIB_CSAW,
-  EXGIB_SSG,
-  
-  NUMEXGIBS
-} extragibbing_t;
-extern int extra_gibbing[];
-
-extern int bloodier_gibbing;
-extern int tossdrop;
-
-// Key Bindings --------------------------------------------------------------
-
-extern int zoom_fov;
-extern int fancy_teleport;
-
-// Miscellaneous (CFG-only) --------------------------------------------------
-
-enum {
-  SHOTPAL_NONE,
-  SHOTPAL_NORMAL,
-  SHOTPAL_CLEAN,
-  SHOTPAL_BOTH,
-}; extern int screenshot_palette;
-
-extern int fov_stretchsky;
-extern int hud_menu_shadows_filter_pct;
-extern int menu_backdrop_darkening;
-extern int automap_overlay_darkening;
-extern int no_killough_face;
-extern int sp_chat;
-
-extern int fail_safe;
-
-// Doom Compatibility (CFG-only) ---------------------------------------------
-
-extern int comp_bruistarget;
-extern int comp_nomeleesnap;
-extern int comp_longautoaim;
-extern int comp_lscollision;
-extern int comp_lsamnesia;
-extern int comp_fuzzyblood;
-extern int comp_nonbleeders;
-extern int comp_faceshadow;
-extern int comp_iosdeath;
-extern int comp_choppers;
-
-extern int comp_blazing2;
-extern int comp_manualdoor;
-extern int comp_switchsource;
-extern int comp_cgundblsnd;
-extern int comp_cgunnersfx;
-extern int comp_flamst;
-extern int comp_keynoway;
-extern int comp_godface;
-extern int comp_powerrunout;
-extern int comp_deadoof;
-extern int comp_unusedpals;
-extern int comp_keypal;
-
-// Custom Skill --------------------------------------------------------------
-
-extern int custom_skill_things;
-extern int custom_skill_coopspawns;
-extern int custom_skill_nomonsters;
-extern int custom_skill_doubleammo;
-extern int custom_skill_halfdamage;
-extern int custom_skill_slowbrain;
-extern int custom_skill_fast;
-extern int custom_skill_respawn;
-extern int custom_skill_aggressive;
-extern int custom_skill_x2monsters;
-
-// [Nugget] =================================================================/
+// [Nugget] -----------------------------------------------------------------/
 
 
 // Doom-style printf

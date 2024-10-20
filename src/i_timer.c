@@ -34,6 +34,7 @@ HANDLE hTimer = NULL;
 #endif
 
 static uint64_t basecounter = 0;
+static uint64_t basecounter_scaled = 0;
 static uint64_t basefreq = 0;
 
 static int MSToTic(uint32_t time)
@@ -78,12 +79,12 @@ static uint64_t GetPerfCounter_Scaled(void)
 
     counter = SDL_GetPerformanceCounter() * time_scale / 100;
 
-    if (basecounter == 0)
+    if (basecounter_scaled == 0)
     {
-        basecounter = counter;
+        basecounter_scaled = counter;
     }
 
-    return counter - basecounter;
+    return counter - basecounter_scaled;
 }
 
 static uint32_t GetTimeMS_Scaled(void)
@@ -92,12 +93,12 @@ static uint32_t GetTimeMS_Scaled(void)
 
     counter = SDL_GetPerformanceCounter() * time_scale / 100;
 
-    if (basecounter == 0)
+    if (basecounter_scaled == 0)
     {
-        basecounter = counter;
+        basecounter_scaled = counter;
     }
 
-    return ((counter - basecounter) * 1000ull) / basefreq;
+    return ((counter - basecounter_scaled) * 1000ull) / basefreq;
 }
 
 int I_GetTime_RealTime(void)
@@ -147,7 +148,17 @@ void I_InitTimer(void)
 
 #ifdef _WIN32
     // Create an unnamed waitable timer.
-    hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+    hTimer = NULL;
+  #ifdef HAVE_HIGH_RES_TIMER
+    hTimer = CreateWaitableTimerEx(NULL, NULL,
+                                   CREATE_WAITABLE_TIMER_MANUAL_RESET
+                                   | CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+                                   TIMER_ALL_ACCESS);
+  #endif
+    if (hTimer == NULL)
+    {
+        hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+    }
     if (hTimer == NULL)
     {
         I_Error("I_InitTimer: CreateWaitableTimer failed");
@@ -170,7 +181,7 @@ void I_SetTimeScale(int scale)
 
     time_scale = scale;
 
-    basecounter += (GetPerfCounter_Scaled() - counter);
+    basecounter_scaled += (GetPerfCounter_Scaled() - counter);
 }
 
 void I_SetFastdemoTimer(boolean on)
@@ -188,7 +199,7 @@ void I_SetFastdemoTimer(boolean on)
 
         counter = TicToCounter(I_GetTime_FastDemo());
 
-        basecounter += (GetPerfCounter_Scaled() - counter);
+        basecounter_scaled += (GetPerfCounter_Scaled() - counter);
 
         I_GetTime = I_GetTime_Scaled;
         I_GetFracTime = I_GetFracTime_Scaled;
@@ -206,7 +217,7 @@ void I_SleepUS(uint64_t us)
 {
 #if defined(_WIN32)
     LARGE_INTEGER liDueTime;
-    liDueTime.QuadPart = -(LONGLONG)(us * 1000 / 100);
+    liDueTime.QuadPart = -(LONGLONG)(us * 10);
     if (SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0))
     {
         WaitForSingleObject(hTimer, INFINITE);
