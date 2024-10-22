@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "i_oalstream.h"
+#include "m_config.h"
 
 #if (FLUIDSYNTH_VERSION_MAJOR < 2 \
      || (FLUIDSYNTH_VERSION_MAJOR == 2 && FLUIDSYNTH_VERSION_MINOR < 2))
@@ -31,21 +32,23 @@ typedef long fluid_long_long_t;
 typedef fluid_long_long_t fluid_int_t;
 #endif
 
-#include "d_iwad.h" // [FG] D_DoomExeDir()
+#include "d_iwad.h"
+#include "d_main.h"
 #include "doomtype.h"
 #include "i_glob.h"
 #include "i_printf.h"
 #include "i_sound.h"
 #include "m_array.h"
+#include "m_io.h"
 #include "m_misc.h"
 #include "memio.h"
 #include "mus2mid.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
-char *soundfont_dir = "";
-boolean mus_chorus;
-boolean mus_reverb;
+static const char *soundfont_dir = "";
+static boolean mus_chorus;
+static boolean mus_reverb;
 
 static fluid_synth_t *synth = NULL;
 static fluid_settings_t *settings = NULL;
@@ -97,20 +100,56 @@ static fluid_long_long_t FL_sftell(void *handle)
     return mem_ftell((MEMFILE *)handle);
 }
 
-static void ScanDir(const char *dir)
+static void ScanDir(const char *dir, boolean recursion)
 {
-    char *rel = NULL;
     glob_t *glob;
 
-    // [FG] relative to the executable directory
-    if (dir[0] == '.')
+    if (recursion == false)
     {
-        rel = M_StringJoin(D_DoomExeDir(), DIR_SEPARATOR_S, dir, NULL);
-        dir = rel;
+        // [FG] replace global "/usr/share" with user's "~/.local/share"
+        const char usr_share[] = "/usr/share";
+        if (strncmp(dir, usr_share, strlen(usr_share)) == 0)
+        {
+            char *home_dir = M_getenv("XDG_DATA_HOME");
+
+            if (home_dir == NULL)
+            {
+                home_dir = M_getenv("HOME");
+            }
+
+            if (home_dir)
+            {
+                char *local_share = M_StringJoin(home_dir, "/.local/share");
+                char *local_dir = M_StringReplace(dir, usr_share, local_share);
+                free(local_share);
+                ScanDir(local_dir, true);
+                free(local_dir);
+            }
+        }
+        else if (dir[0] == '.')
+        {
+            // [FG] relative to the executable directory
+            char *rel = M_StringJoin(D_DoomExeDir(), DIR_SEPARATOR_S, dir);
+            ScanDir(rel, true);
+            free(rel);
+
+            // [FG] relative to the config directory (if different)
+            if (dir[1] != '.' && strcmp(D_DoomExeDir(), D_DoomPrefDir()) != 0)
+            {
+                rel = M_StringJoin(D_DoomPrefDir(), DIR_SEPARATOR_S, dir);
+                ScanDir(rel, true);
+                free(rel);
+            }
+
+            // [FG] never absolute path
+            return;
+        }
     }
 
+    I_Printf(VB_DEBUG, "Scanning for soundfonts in %s", dir);
+
     glob = I_StartMultiGlob(dir, GLOB_FLAG_NOCASE | GLOB_FLAG_SORTED, "*.sf2",
-                            "*.sf3", NULL);
+                            "*.sf3");
 
     while (1)
     {
@@ -125,11 +164,6 @@ static void ScanDir(const char *dir)
     }
 
     I_EndGlob(glob);
-
-    if (rel)
-    {
-        free(rel);
-    }
 }
 
 static void GetSoundFonts(void)
@@ -155,7 +189,7 @@ static void GetSoundFonts(void)
             // as another soundfont dir
             *p = '\0';
 
-            ScanDir(left);
+            ScanDir(left, false);
 
             left = p + 1;
         }
@@ -165,7 +199,7 @@ static void GetSoundFonts(void)
         }
     }
 
-    ScanDir(left);
+    ScanDir(left, false);
 
     free(dup_path);
 }
@@ -269,7 +303,7 @@ static boolean I_FL_InitStream(int device)
         char *errmsg;
         errmsg = M_StringJoin(
             "Error loading FluidSynth soundfont: ",
-            lumpnum >= 0 ? "SNDFONT lump" : soundfonts[device], NULL);
+            lumpnum >= 0 ? "SNDFONT lump" : soundfonts[device]);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PROJECT_STRING, errmsg,
                                  NULL);
         free(errmsg);
@@ -407,7 +441,7 @@ static const char **I_FL_DeviceList(void)
 
     if (W_CheckNumForName("SNDFONT") >= 0)
     {
-        array_push(devices, "FluidSynth (SNDFONT)");
+        array_push(devices, "FluidSynth: SNDFONT");
         return devices;
     }
 
@@ -420,11 +454,31 @@ static const char **I_FL_DeviceList(void)
         {
             name[NAME_MAX_LENGTH] = '\0';
         }
-        array_push(devices, M_StringJoin("FluidSynth (", name, ")", NULL));
+        array_push(devices, M_StringJoin("FluidSynth: ", name));
         free(name);
     }
 
     return devices;
+}
+
+static void I_FL_BindVariables(void)
+{
+    M_BindStr("soundfont_dir", &soundfont_dir,
+#if defined(_WIN32)
+    "soundfonts",
+#else
+    "./soundfonts:"
+    // RedHat/Fedora/Arch
+    "/usr/share/soundfonts:"
+    // Debian/Ubuntu/OpenSUSE
+    "/usr/share/sounds/sf2:"
+    "/usr/share/sounds/sf3:"
+    // AppImage
+    "../share/" PROJECT_SHORTNAME "/soundfonts",
+#endif
+    wad_no, "FluidSynth soundfont directories");
+    BIND_BOOL_MIDI(mus_chorus, false, "FluidSynth chorus");
+    BIND_BOOL_MIDI(mus_reverb, false, "FluidSynth reverb");
 }
 
 stream_module_t stream_fl_module =
@@ -436,4 +490,5 @@ stream_module_t stream_fl_module =
     I_FL_CloseStream,
     I_FL_ShutdownStream,
     I_FL_DeviceList,
+    I_FL_BindVariables,
 };

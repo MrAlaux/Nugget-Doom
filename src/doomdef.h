@@ -88,6 +88,7 @@ typedef enum
 // at the intermission screen, the game final animation, or a demo.
 
 typedef enum {
+  GS_NONE = -1,
   GS_LEVEL,
   GS_INTERMISSION,
   GS_FINALE,
@@ -198,11 +199,22 @@ typedef enum {
   ss_enem,
   ss_gen,       // killough 10/98
   ss_comp,      // killough 10/98
+  ss_midi,
+  ss_eq,
+  ss_padadv,
+  ss_gyro,
 
-  ss_skill, // [Nugget] Custom Skill menu
+  // [Nugget]
+  ss_color,
+  ss_skill, // Custom Skill menu
 
   ss_max
 } ss_types;
+
+typedef enum {
+  wad_no,
+  wad_yes
+} wad_allowed_t;
 
 // phares 3/20/98:
 //

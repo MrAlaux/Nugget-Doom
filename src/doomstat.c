@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomstat.h"
+#include "doomtype.h"
 #include "m_misc.h"
 
 // Game Mode - identify IWAD as shareware, retail etc.
@@ -50,8 +51,6 @@ int compatibility, default_compatibility;          // killough 1/31/98
 
 int comp[COMP_TOTAL], default_comp[COMP_TOTAL];    // killough 10/98
 
-invul_mode_t invul_mode;
-
 // [FG] overflow emulation
 overflow_t overflow[EMU_TOTAL] = {
   { true, false, "spechits_overflow"},
@@ -64,9 +63,9 @@ overflow_t overflow[EMU_TOTAL] = {
 demo_version_t demo_version;        // killough 7/19/98: Boom version of demo
 
 // v1.1-like pitched sounds
-int pitched_sounds;  // killough 10/98
+boolean pitched_sounds;  // killough 10/98
 
-int translucency;    // killough 10/98
+boolean translucency;    // killough 10/98
 
 int  allow_pushers = 1;      // MT_PUSH Things              // phares 3/10/98
 int  default_allow_pushers;  // killough 3/1/98: make local to each game
@@ -74,47 +73,43 @@ int  default_allow_pushers;  // killough 3/1/98: make local to each game
 int  variable_friction = 1;      // ice & mud               // phares 3/10/98
 int  default_variable_friction;  // killough 3/1/98: make local to each game
 
-int  weapon_recoil;              // weapon recoil                   // phares
-int  default_weapon_recoil;      // killough 3/1/98: make local to each game
+boolean weapon_recoil;          // weapon recoil                   // phares
+boolean default_weapon_recoil;  // killough 3/1/98: make local to each game
 
-int player_bobbing;  // whether player bobs or not          // phares 2/25/98
-int default_player_bobbing;      // killough 3/1/98: make local to each game
+boolean player_bobbing;  // whether player bobs or not          // phares 2/25/98
+boolean default_player_bobbing;      // killough 3/1/98: make local to each game
 
-int monsters_remember=1;        // killough 3/1/98
-int default_monsters_remember=1;
+boolean monsters_remember = true;        // killough 3/1/98
+boolean default_monsters_remember = true;
 
-int monster_infighting=1;       // killough 7/19/98: monster<=>monster attacks
-int default_monster_infighting=1;
+boolean monster_infighting = true;       // killough 7/19/98: monster<=>monster attacks
+boolean default_monster_infighting = true;
 
-int monster_friction=1;       // killough 10/98: monsters affected by friction
-int default_monster_friction=1;
+boolean monster_friction = true;       // killough 10/98: monsters affected by friction 
+boolean default_monster_friction = true;
 
 // killough 7/19/98: classic Doom BFG
-int classic_bfg, default_classic_bfg;
+boolean classic_bfg, default_classic_bfg;
 
 // killough 7/24/98: Emulation of Press Release version of Doom
 int beta_emulation;
 
 int dogs, default_dogs;         // killough 7/19/98: Marine's best friend :)
-int dog_jumping, default_dog_jumping;   // killough 10/98
+boolean dog_jumping, default_dog_jumping;   // killough 10/98
 
 // killough 8/8/98: distance friends tend to move towards players
 int distfriend = 128, default_distfriend = 128;
 
 // killough 9/8/98: whether monsters are allowed to strafe or retreat
-int monster_backing, default_monster_backing;
+boolean monster_backing, default_monster_backing;
 
 // killough 9/9/98: whether monsters are able to avoid hazards (e.g. crushers)
-int monster_avoid_hazards, default_monster_avoid_hazards;
+boolean monster_avoid_hazards, default_monster_avoid_hazards;
 
 // killough 9/9/98: whether monsters help friends
-int help_friends, default_help_friends;
+boolean help_friends, default_help_friends;
 
-int flashing_hom;     // killough 10/98
-
-int doom_weapon_toggles; // killough 10/98
-
-int monkeys, default_monkeys;
+boolean monkeys, default_monkeys;
 
 boolean hide_weapon;
 
@@ -137,163 +132,12 @@ char *MAPNAME(int e, int m)
 }
 
 
-// [Nugget] /=================================================================
+// [Nugget] /-----------------------------------------------------------------
 
 boolean fauxdemo = false;    // Checked for in `casual_play`, for debugging
 boolean casual_play = false; // Like `critical`, with different checks and functionality
 
-// General -------------------------------------------------------------------
-
-int over_under;
-int jump_crouch;
-int viewheight_value;
-int flinching;
-int explosion_shake;
-int explosion_shake_intensity_pct; // CFG-only
-int breathing;
-int teleporter_zoom;
-int death_camera;
-
-int chasecam_mode;
-int chasecam_distance;
-int chasecam_height;
-int chasecam_crosshair; // CFG-only
-
-int menu_background_all;
-int no_menu_tint;
-int hud_menu_shadows;
-int flip_levels;
-int no_berserk_tint;
-int no_radsuit_tint;
-int nightvision_visor;
-int damagecount_cap;
-int bonuscount_cap;
-int fake_contrast;
-int diminished_lighting; // CFG-only
-int wipe_speed_percentage;
-int alt_interpic;
-int s_clipping_dist_x2;
-int one_key_saveload;
-int autosave;
-int autosave_interval;
-int rewind_interval;
-int rewind_depth;
-int rewind_timeout;
-int no_page_ticking;
-int quick_quitgame;
-int quit_sound;
-
-//int a11y_sector_lighting;
-int a11y_weapon_flash;
-int a11y_weapon_pspr;
-int a11y_invul_colormap;
-
-// Weapons -------------------------------------------------------------------
-
-int no_hor_autoaim;
-int switch_on_pickup;
-int weapswitch_interruption;
-int skip_ammoless_weapons;
-int always_bob; // CFG-only
-int bobbing_style;
-int weapon_inertia;
-int weapon_inertia_scale_pct; // CFG-only
-int weaponsquat;
-int translucent_pspr;
-int translucent_pspr_pct; // CFG-only
-int show_berserk;
-int sx_fix; // CFG-only
-
-// Status Bar/HUD ------------------------------------------------------------
-
-int announce_milestones;
-int show_save_messages; // CFG-only
-int message_flash;
-int show_ssg; // CFG-only
-int hud_stats_format;
-int hud_stats_format_map;
-int hud_stats_show[NUMSHOWSTATS];
-int hud_stats_show_map[NUMSHOWSTATS];
-int hud_allow_icons;
-int hud_highlight_weapon;
-int alt_arms;
-int hud_time_teleport;
-int hud_time_keypickup;
-
-int hudcolor_time_scale;
-int hudcolor_total_time;
-int hudcolor_time;
-int hudcolor_event_timer;
-int hudcolor_kills;
-int hudcolor_items;
-int hudcolor_secrets;
-int hudcolor_ms_incomp;
-int hudcolor_ms_comp;
-
-// Enemies -------------------------------------------------------------------
-
-int extra_gibbing_on;
-int extra_gibbing[NUMEXGIBS]; // CFG-only
-int bloodier_gibbing;
-int tossdrop;
-
-// Key Bindings --------------------------------------------------------------
-
-int zoom_fov;
-int fancy_teleport;
-
-// Miscellaneous (CFG-only) --------------------------------------------------
-
-int screenshot_palette;
-int fov_stretchsky;
-int hud_menu_shadows_filter_pct;
-int menu_backdrop_darkening;
-int automap_overlay_darkening;
-int no_killough_face;
-int sp_chat;
-
-int fail_safe;
-
-// Doom Compatibility (CFG-only) ---------------------------------------------
-
-int comp_bruistarget;
-int comp_nomeleesnap;
-int comp_longautoaim;
-int comp_lscollision;
-int comp_lsamnesia;
-int comp_fuzzyblood;
-int comp_nonbleeders;
-int comp_faceshadow;
-int comp_iosdeath;
-int comp_choppers;
-
-int comp_blazing2;
-int comp_manualdoor;
-int comp_switchsource;
-int comp_cgundblsnd;
-int comp_cgunnersfx;
-int comp_flamst;
-int comp_keynoway;
-int comp_godface;
-int comp_deadoof;
-int comp_powerrunout;
-int comp_unusedpals;
-int comp_keypal;
-
-// Custom Skill --------------------------------------------------------------
-
-int custom_skill_things;
-int custom_skill_coopspawns;
-int custom_skill_nomonsters;
-int custom_skill_doubleammo;
-int custom_skill_halfdamage;
-int custom_skill_slowbrain;
-int custom_skill_fast;
-int custom_skill_respawn;
-int custom_skill_aggressive;
-int custom_skill_x2monsters;
-
-// [Nugget] =================================================================/
+// [Nugget] -----------------------------------------------------------------/
 
 
 //----------------------------------------------------------------------------

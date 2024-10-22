@@ -35,6 +35,7 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "hu_obituary.h"
+#include "hu_stuff.h"
 #include "i_system.h"
 #include "info.h"
 #include "m_argv.h"
@@ -56,6 +57,7 @@
 #include "r_plane.h" // killough 10/98
 #include "r_sky.h"   // R_GetSkyColor
 #include "r_state.h"
+#include "r_swirl.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "st_stuff.h"
@@ -65,6 +67,9 @@
 
 // [Nugget]
 #include "hu_stuff.h" // hud_secret_message
+
+// [Nugget] CVARs
+boolean comp_keynoway;
 
 //
 // Animating textures and planes
@@ -238,9 +243,9 @@ void P_HitFloor (mobj_t *mo, int oof)
 
   // [Nugget]: [NS] Landing sound for longer falls. (Hexen's calculation.)
   if ((hitsound[terrain][oof] == sfx_oof) && (mo->momz < -GRAVITY * 12))
-    S_StartSoundOptional(mo, sfx_plland, sfx_oof);
+    S_StartSoundHitFloorOptional(mo, sfx_plland, sfx_oof);
   else
-    S_StartSound(mo, hitsound[terrain][oof]);
+    S_StartSoundHitFloor(mo, hitsound[terrain][oof]);
 }
 
 ///////////////////////////////////////////////////////////////
@@ -1024,6 +1029,22 @@ int P_CheckTag(line_t *line)
   return 0;
 }
 
+boolean P_IsDeathExit(sector_t *sector)
+{
+  if (sector->special < 32)
+  {
+    return (sector->special == 11);
+  }
+  else if (mbf21 && sector->special & DEATH_MASK)
+  {
+    const int i = (sector->special & DAMAGE_MASK) >> DAMAGE_SHIFT;
+
+    return (i == 2 || i == 3);
+  }
+
+  return false;
+}
+
 //
 // P_IsSecret()
 //
@@ -1202,7 +1223,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
 
   if (!thing->player || bossaction)
     {
-      ok = 0;
+      ok = bossaction;
       switch(line->special)
         {
         case 39:      // teleport trigger
@@ -2175,7 +2196,8 @@ static void P_SecretRevealed(player_t *player)
   {
     int secretcount = 0;
 
-    for (int pl = 0;  pl < MAXPLAYERS;  ++pl) {
+    for (int pl = 0;  pl < MAXPLAYERS;  ++pl)
+    {
       if (playeringame[pl])
       { secretcount += players[pl].secretcount; }
     }
@@ -2184,9 +2206,11 @@ static void P_SecretRevealed(player_t *player)
     {
       complete_milestones |= MILESTONE_SECRETS;
 
-      if (announce_milestones) {
+      if (announce_milestones)
+      {
         players[displayplayer].secretmessage = "All secrets revealed!";
         S_StartSound(NULL, sfx_secret);
+
         return; // Skip the normal "Secret revealed" message
       }
     }
@@ -2375,8 +2399,6 @@ int             levelTimeCount;
 boolean         levelFragLimit;      // Ty 03/18/98 Added -frags support
 int             levelFragLimitCount; // Ty 03/18/98 Added -frags support
 
-boolean         r_swirl;
-
 void P_UpdateSpecials (void)
 {
   anim_t*     anim;
@@ -2456,6 +2478,8 @@ void P_UpdateSpecials (void)
 
   // [crispy] draw fuzz effect independent of rendering frame rate
   R_SetFuzzPosTic();
+
+  R_UpdateSky();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -2722,11 +2746,11 @@ void T_Scroll(scroll_t *s)
 
     case sc_floor:                  // killough 3/7/98: Scroll floor texture
         sec = sectors + s->affectee;
-        if (sec->oldscrollgametic != gametic)
+        if (sec->old_floor_offs_gametic != gametic)
         {
           sec->old_floor_xoffs = sec->base_floor_xoffs;
           sec->old_floor_yoffs = sec->base_floor_yoffs;
-          sec->oldscrollgametic = gametic;
+          sec->old_floor_offs_gametic = gametic;
         }
         sec->base_floor_xoffs += dx;
         sec->base_floor_yoffs += dy;
@@ -2736,11 +2760,11 @@ void T_Scroll(scroll_t *s)
 
     case sc_ceiling:               // killough 3/7/98: Scroll ceiling texture
         sec = sectors + s->affectee;
-        if (sec->oldscrollgametic != gametic)
+        if (sec->old_ceil_offs_gametic != gametic)
         {
           sec->old_ceiling_xoffs = sec->base_ceiling_xoffs;
           sec->old_ceiling_yoffs = sec->base_ceiling_yoffs;
-          sec->oldscrollgametic = gametic;
+          sec->old_ceil_offs_gametic = gametic;
         }
         sec->base_ceiling_xoffs += dx;
         sec->base_ceiling_yoffs += dy;

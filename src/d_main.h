@@ -25,7 +25,10 @@
 
 struct event_s;
 
-extern char **wadfiles;       // killough 11/98
+// [Nugget] CVARs
+extern const char *savegame_dir;
+extern const char *screenshot_dir;
+extern boolean fail_safe;
 
 void D_AddFile(const char *file);
 
@@ -34,9 +37,7 @@ extern char *basesavegame;     // killough 2/16/98: savegame path
 extern char *screenshotdir; // [FG] screenshot path
 char *D_DoomPrefDir(void); // [FG] default configuration dir
 
-// [Nugget]
-extern char *savegame_dir;
-extern char *screenshot_dir;
+extern const char *gamedescription;
 
 //jff 1/24/98 make command line copies of play modes available
 extern boolean clnomonsters; // checkparm of -nomonsters
@@ -47,12 +48,12 @@ extern boolean clfastparm; // checkparm of -fast
 void D_SetMaxHealth(void);
 void D_SetBloodColor(void);
 
-boolean D_CheckEndDoom(void);
+boolean D_AllowQuitSound(void);
 
 // Called by IO functions when input is detected.
 void D_PostEvent(struct event_s *ev);
 
-void D_UpdateDeltaTics(void);
+void D_BindMiscVariables(void);
 
 //
 // BASE LEVEL

@@ -103,12 +103,14 @@ The following text lines are available:
 | `nughud_coord`   | Coordinates display, only shown if enabled by the user |
 | `nughud_fps`     | FPS display, only shown when the `FPS` cheat is activated |
 | `nughud_rate`    | Rendering-statistics display, only shown when the `IDRATE` cheat is activated |
+| `nughud_cmd`     | Command-history display, only shown if enabled by the user |
+| `nughud_speed`   | Speedometer, only shown when the `SPEED` cheat is activated |
 | `nughud_message` | Message and Chat display |
 | `nughud_secret`  | "Secret Revealed" and milestone-completion message display |
 
 **All text lines are horizontally alignable.**
 
-There are some additional properties, `nughud_sts_ml` and `nughud_coord_ml`,
+There are some additional properties -- `nughud_sts_ml` and `nughud_coord_ml` --
 that respectively determine whether to draw the Stats and Coordinates display as multiple lines or a single one,
 with the following possible values:
 
