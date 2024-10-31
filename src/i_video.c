@@ -1144,7 +1144,6 @@ boolean I_WritePNGfile(char *filename)
         free(pixels);
         return false;
     }
-
     spng_ctx *ctx = spng_ctx_new(SPNG_CTX_ENCODER);
     spng_set_png_file(ctx, file);
     spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, 1);
@@ -1169,7 +1168,6 @@ boolean I_WritePNGfile(char *filename)
     }
 
     fclose(file);
-
     spng_ctx_free(ctx);
     free(pixels);
 
@@ -1253,8 +1251,6 @@ void I_TranslatePalette(void)
         }
         */
         return;
-    }
-
     int lumpnum = W_CheckNumForName("PLAYPAL");
     byte* palette = (byte *)W_CacheLumpNum(lumpnum, PU_CACHE);
 
