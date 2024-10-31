@@ -142,6 +142,7 @@ extern boolean secretexit;
 extern boolean one_key_saveload;
 extern boolean skip_ammoless_weapons;
 extern boolean show_save_messages;
+extern boolean less_blinding_tints;
 
 enum {
   SHOTPAL_NONE,

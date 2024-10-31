@@ -3859,6 +3859,7 @@ setup_menu_t gen_settings8[] = {
     {"Night-Vision Visor Effect",    S_ONOFF |S_STRICT,       N_X, M_SPC, {"nightvision_visor"}},
     {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
     {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
+    {"Less Blinding Tints",          S_ONOFF,                 N_X, M_SPC, {"less_blinding_tints"}, .action = I_TranslatePalette},
     {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast},
     {"Screen Wipe Speed Percentage", S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
     {"Alt. Intermission Background", S_ONOFF |S_STRICT,       N_X, M_SPC, {"alt_interpic"}},
@@ -4022,6 +4023,7 @@ static void UpdatePaletteItems(void)
   DisableItem(!palette_changes, gen_settings8, "no_radsuit_tint");
   DisableItem(!palette_changes, gen_settings8, "damagecount_cap");
   DisableItem(!palette_changes, gen_settings8, "bonuscount_cap");
+  DisableItem(!palette_changes, gen_settings8, "less_blinding_tints");
   DisableItem(!palette_changes, gen_settings9, "a11y_invul_colormap");
 }
 

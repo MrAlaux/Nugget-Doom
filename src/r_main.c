@@ -1792,6 +1792,7 @@ void R_BindRenderVariables(void)
 
   BIND_NUM_GENERAL(damagecount_cap, 100, 0, 100, "Player damage tint cap");
   BIND_NUM_GENERAL(bonuscount_cap, -1, -1, 100, "Player bonus tint cap");
+  BIND_BOOL_GENERAL(less_blinding_tints, false, "Less Blinding Tints");
   
   // [Nugget] ---------------------------------------------------------------/
 

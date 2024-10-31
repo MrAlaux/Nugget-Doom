@@ -120,6 +120,7 @@ boolean one_key_saveload;
 boolean skip_ammoless_weapons;
 boolean show_save_messages;
 boolean comp_longautoaim;
+boolean less_blinding_tints;
 
 // ---------------------------------------------------------------------------
 
@@ -4372,6 +4373,11 @@ void G_PlayerReborn(int player)
 
   for (i=0 ; i<NUMAMMO ; i++)
     p->maxammo[i] = maxammo[i];
+
+  // [Nugget] Less Blinding tints
+  if STRICTMODE(less_blinding_tints) {
+    I_TranslatePalette();
+  }
 }
 
 //
