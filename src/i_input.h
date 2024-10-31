@@ -21,19 +21,27 @@
 
 #include "doomtype.h"
 
-boolean I_UseController(void);
-void I_InitController(void);
-void I_OpenController(int which);
-void I_CloseController(int which);
+enum evtype_e;
 
-extern double (*I_AccelerateMouse)(int val);
-void I_UpdateAccelerateMouse(void);
+int I_GetAxisState(int axis);
+boolean I_UseGamepad(void);
+boolean I_GyroSupported(void);
+void I_GetFaceButtons(int *buttons);
+void I_FlushGamepadSensorEvents(void);
+void I_FlushGamepadEvents(void);
+void I_SetSensorEventState(boolean condition);
+void I_SetSensorsEnabled(boolean condition);
+void I_InitGamepad(void);
+void I_OpenGamepad(int which);
+void I_CloseGamepad(SDL_JoystickID instance_id);
+
 void I_ReadMouse(void);
-void I_UpdateJoystick(boolean axis_buttons);
-void I_UpdateJoystickMenu(void);
+void I_ReadGyro(void);
+void I_UpdateGamepad(enum evtype_e type, boolean axis_buttons);
 
 void I_DelayEvent(void);
-void I_HandleJoystickEvent(SDL_Event *sdlevent);
+void I_HandleSensorEvent(SDL_Event *sdlevent);
+void I_HandleGamepadEvent(SDL_Event *sdlevent, boolean menu);
 void I_HandleKeyboardEvent(SDL_Event *sdlevent);
 void I_HandleMouseEvent(SDL_Event *sdlevent);
 

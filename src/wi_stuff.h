@@ -20,6 +20,9 @@
 #ifndef __WI_STUFF__
 #define __WI_STUFF__
 
+// [Nugget]
+#include "doomtype.h"
+
 struct wbstartstruct_s;
 
 // States for the intermission
@@ -30,6 +33,8 @@ typedef enum
   StatCount,
   ShowNextLoc
 } stateenum_t;
+
+extern int acceleratestage;
 
 // Called by main loop, animate the intermission.
 void WI_Ticker (void);
@@ -45,7 +50,10 @@ void WI_checkForAccelerate(void);      // killough 11/98
 
 void WI_slamBackground(void);          // killough 11/98
 
-// [Nugget] Alt. intermission background
+// [Nugget] Alt. intermission background -------------------------------------
+
+extern boolean alt_interpic;
+
 extern boolean WI_UsingAltInterpic(void);
 extern void WI_DisableAltInterpic(void);
 

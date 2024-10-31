@@ -435,14 +435,12 @@ extern int itemrespawntime[];
 extern int iquehead;
 extern int iquetail;
 
-// [FG] colored blood and gibs
-extern boolean colored_blood;
-
 enum {
   VERTAIM_AUTO,
   VERTAIM_DIRECT,
   VERTAIM_DIRECTAUTO,
-}; extern int vertical_aiming, default_vertical_aiming; // [Nugget] Replace `direct_vertical_aiming`
+}; extern int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+
 void P_UpdateDirectVerticalAiming(void);
 
 extern boolean checksight12;
@@ -456,7 +454,9 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void    P_MobjThinker(mobj_t *mobj);
 void    P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
 void    P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage, mobj_t *bleeder);
+void    P_SpawnPlayer (mapthing_t* mthing);
 mobj_t  *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
+extern int autoaim;
 mobj_t  *P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type);
 void    P_SpawnMapThing (mapthing_t*  mthing);
 boolean P_CheckMissileSpawn(mobj_t*);  // killough 8/2/98
@@ -469,7 +469,23 @@ int     P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta);
 
 extern boolean cheese, frights;
 
-int P_FindDoomedNum(unsigned type); // Externalized
+enum {
+  FLINCH_OFF,
+  FLINCH_LANDING,
+  FLINCH_DAMAGE,
+  FLINCH_BOTH,
+}; extern int flinching;
+
+extern int viewheight_value;
+extern int damagecount_cap;
+extern int bonuscount_cap;
+extern boolean no_hor_autoaim;
+extern boolean comp_fuzzyblood;
+extern boolean comp_nonbleeders;
+extern boolean comp_deadoof;
+
+int P_FindDoomedNum(unsigned type); // Global
+
 void P_ToggleDuplicateSpawns(const boolean state);
 
 void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum); // Alt. states

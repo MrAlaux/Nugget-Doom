@@ -24,12 +24,14 @@
 // SCREEN WIPE PACKAGE
 //
 
+extern int wipe_speed_percentage; // [Nugget]
+
 enum {
   wipe_None,
   wipe_Melt,        // weird screen melt
   wipe_ColorXForm,
   wipe_Fizzle,
-  wipe_Fade,        // [Nugget] Black fade
+  wipe_BlackFade,   // [Nugget] Black fade
   wipe_NUMWIPES
 };
 

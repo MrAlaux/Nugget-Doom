@@ -241,6 +241,22 @@ nughud_rate_align -1
 nughud_rate_stack 1
 nughud_rate_order 0
 
+; Command-history display
+nughud_cmd_x     -1
+nughud_cmd_y     -1
+nughud_cmd_wide  -1
+nughud_cmd_align -1
+nughud_cmd_stack 4
+nughud_cmd_order 0
+
+; Speedometer
+nughud_speed_x     160
+nughud_speed_y     160
+nughud_speed_wide  0
+nughud_speed_align 0
+nughud_speed_stack 1
+nughud_speed_order 0
+
 ; Message display
 nughud_message_x     -1
 nughud_message_y     -1

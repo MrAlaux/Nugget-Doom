@@ -32,17 +32,22 @@
 #include "doomstat.h"
 #include "i_video.h"
 #include "p_mobj.h"
+#include "p_pspr.h"
 #include "p_setup.h" // P_SegLengths
 #include "r_bsp.h"
 #include "r_data.h"
 #include "r_defs.h"
 #include "r_draw.h"
 #include "r_main.h"
+#include "r_bmaps.h"
 #include "r_plane.h"
+#include "r_segs.h"
 #include "r_sky.h"
 #include "r_state.h"
+#include "r_swirl.h"
 #include "r_things.h"
 #include "r_voxel.h"
+#include "m_config.h"
 #include "st_stuff.h"
 #include "v_flextran.h"
 #include "v_video.h"
@@ -53,6 +58,7 @@
 #include "m_nughud.h"
 #include "m_random.h"
 #include "p_map.h"
+#include "p_user.h"
 #include "s_sound.h"
 #include "wi_stuff.h"
 
@@ -74,12 +80,11 @@ fixed_t  skyiscale,
 fixed_t  viewx, viewy, viewz;
 angle_t  viewangle;
 localview_t localview;
-double deltatics;
 boolean raw_input;
 fixed_t  viewcos, viewsin;
 player_t *viewplayer;
-extern lighttable_t **walllights;
 fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
+int max_project_slope = 4;
 
 static fixed_t focallength, lightfocallength;
 
@@ -133,7 +138,23 @@ int extra_level_brightness;               // level brightness feature
 
 // [Nugget] /=================================================================
 
+// CVARs ---------------------------------------------------------------------
+
+boolean flip_levels;
+boolean nightvision_visor;
+int fake_contrast;
+boolean diminished_lighting;
+static boolean a11y_weapon_flash;
+boolean a11y_weapon_pspr;
+boolean a11y_invul_colormap;
+boolean translucent_pspr;
+int translucent_pspr_pct;
+int zoom_fov;
+boolean comp_powerrunout;
+
 // FOV effects ---------------------------------------------------------------
+
+static boolean teleporter_zoom;
 
 static float r_fov; // Rendered (currently applied) FOV, with effects added to it
 
@@ -200,6 +221,9 @@ void R_SetZoom(const int state)
 
 // Explosion shake effect ----------------------------------------------------
 
+boolean explosion_shake;
+int explosion_shake_intensity_pct;
+
 static fixed_t shake;
 #define MAXSHAKE 50
 
@@ -241,6 +265,12 @@ void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 }
 
 // Chasecam ------------------------------------------------------------------
+
+int chasecam_mode;
+static int chasecam_distance;
+static int chasecam_height;
+boolean chasecam_crosshair;
+static boolean death_camera;
 
 static struct {
   fixed_t x, y, z;
@@ -433,7 +463,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 
 // [Nugget] =================================================================/
 
-void (*colfunc)(void) = R_DrawColumn;     // current column draw function
+void (*colfunc)(void);                    // current column draw function
 
 //
 // R_PointOnSide
@@ -577,6 +607,26 @@ static int scaledviewwidth_nonwide, viewwidth_nonwide;
 static fixed_t centerxfrac_nonwide;
 
 //
+// CalcMaxProjectSlope
+// Calculate the minimum divider needed to provide at least 45 degrees of FOV
+// padding. For fast rejection during sprite/voxel projection.
+//
+
+static void CalcMaxProjectSlope(int fov)
+{
+  max_project_slope = 16;
+
+  for (int i = 1; i < 16; i++)
+  {
+    if (atan(i) * FINEANGLES / M_PI - fov >= FINEANGLES / 8)
+    {
+      max_project_slope = i;
+      break;
+    }
+  }
+}
+
+//
 // R_InitTextureMapping
 //
 // killough 5/2/98: reformatted
@@ -632,7 +682,7 @@ static void R_InitTextureMapping(void)
       else
         {
           t = FixedMul(finetangent[i], focallength);
-          t = (centerxfrac - t + FRACUNIT-1) >> FRACBITS;
+          t = (centerxfrac - t + FRACMASK) >> FRACBITS;
           if (t < -1)
             t = -1;
           else
@@ -668,6 +718,7 @@ static void R_InitTextureMapping(void)
   clipangle = xtoviewangle[0];
 
   vx_clipangle = clipangle - ((fov << ANGLETOFINESHIFT) - ANG90);
+  CalcMaxProjectSlope(fov);
 }
 
 //
@@ -761,7 +812,7 @@ void R_InitLightTables (void)
       for (j=0; j<MAXLIGHTZ; j++)
         {
           int scale = FixedDiv ((SCREENWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
-          int t, level = startmap - (scale >>= LIGHTSCALESHIFT)/DISTMAP;
+          int t, level = startmap - (scale >> LIGHTSCALESHIFT)/DISTMAP;
 
           if (level < 0)
             level = 0;
@@ -806,7 +857,6 @@ static void R_SetupFreelook(void)
   if (viewpitch)
   {
     dy = FixedMul(projection, -finetangent[(ANG90 - viewpitch) >> ANGLETOFINESHIFT]);
-    dy = (fixed_t)((int64_t)dy * SCREENHEIGHT / ACTUALHEIGHT);
   }
   else
   {
@@ -880,7 +930,7 @@ void R_ExecuteSetViewSize (void)
       scaledviewwidth_nonwide = setblocks * 32;
       scaledviewheight = (setblocks * st_screen / 10) & ~7; // killough 11/98
 
-      if (widescreen)
+      if (video.unscaledw > SCREENWIDTH)
         scaledviewwidth = (scaledviewheight * video.unscaledw / st_screen) & ~7;
       else
         scaledviewwidth = scaledviewwidth_nonwide;
@@ -997,6 +1047,8 @@ void R_ExecuteSetViewSize (void)
 
 void R_Init (void)
 {
+  r_fov = custom_fov; // [Nugget]
+
   R_InitData();
   R_SetViewSize(screenblocks);
   R_InitPlanes();
@@ -1007,6 +1059,9 @@ void R_Init (void)
 
   // [FG] spectre drawing mode
   R_SetFuzzColumnMode();
+
+  colfunc = R_DrawColumn;
+  R_InitDrawFunctions();
 }
 
 //
@@ -1031,13 +1086,14 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 
 static inline boolean CheckLocalView(const player_t *player)
 {
+  // [Nugget] Freecam: use localview unless
+  // locked onto a mobj, or not controlling the camera
+  if (freecam_on && !(freecam.mobj || freecam_mode != FREECAM_CAM))
+  { return true; }
+
   return (
-    // Don't use localview when interpolation is preferred.
-    raw_input &&
     // Don't use localview if the player is spying.
-    (player == &players[consoleplayer]
-     // [Nugget] Freecam: or locked onto a mobj, or not controlling the camera
-     || (freecam_on && !(freecam.mobj || freecam_mode != FREECAM_CAM))) &&
+    player == &players[consoleplayer] &&
     // Don't use localview if the player is dead.
     player->playerstate != PST_DEAD &&
     // Don't use localview if the player just teleported.
@@ -1049,20 +1105,42 @@ static inline boolean CheckLocalView(const player_t *player)
   );
 }
 
+static angle_t CalcViewAngle_RawInput(const player_t *player)
+{
+  return (player->mo->angle + localview.angle - player->ticangle +
+          LerpAngle(player->oldticangle, player->ticangle));
+}
+
+static angle_t CalcViewAngle_LerpFakeLongTics(const player_t *player)
+{
+  return LerpAngle(player->mo->oldangle + localview.oldlerpangle,
+                   player->mo->angle + localview.lerpangle);
+}
+
+static angle_t (*CalcViewAngle)(const player_t *player);
+
+void R_UpdateViewAngleFunction(void)
+{
+  if (raw_input)
+  {
+    CalcViewAngle = CalcViewAngle_RawInput;
+  }
+  else if (lowres_turn && fake_longtics)
+  {
+    CalcViewAngle = CalcViewAngle_LerpFakeLongTics;
+  }
+  else
+  {
+    CalcViewAngle = NULL;
+  }
+}
+
 //
 // R_SetupFrame
 //
 
 void R_SetupFrame (player_t *player)
 {
-  int i, cm;
-  fixed_t pitch;
-
-  // [Nugget]
-  fixed_t playerz, basepitch;
-  static angle_t old_interangle, target_interangle;
-  static fixed_t chasecamheight;
-
   // [Nugget] Freecam
   if (freecam_on && gamestate == GS_LEVEL)
   {
@@ -1103,24 +1181,31 @@ void R_SetupFrame (player_t *player)
     player = &dummyplayer;
   }
 
+  int i, cm;
+  fixed_t pitch;
+  const boolean use_localview = CheckLocalView(player);
+  const boolean camera_ready = (
+    // Don't interpolate on the first tic of a level,
+    // otherwise oldviewz might be garbage.
+    leveltime > 1 &&
+    // Don't interpolate if the player did something
+    // that would necessitate turning it off for a tic.
+    player->mo->interp == true &&
+    // Don't interpolate during a paused state
+    (leveltime > oldleveltime
+     || (freecam_on && !freecam.mobj && gamestate == GS_LEVEL)) // [Nugget] Freecam
+  );
+
+  // [Nugget]
+  fixed_t playerz, basepitch;
+  static angle_t old_interangle, target_interangle;
+  static fixed_t chasecamheight;
+
   viewplayer = player;
 
   // [AM] Interpolate the player camera if the feature is enabled.
-  if (uncapped &&
-      // Don't interpolate on the first tic of a level,
-      // otherwise oldviewz might be garbage.
-      leveltime > 1 &&
-      // Don't interpolate if the player did something
-      // that would necessitate turning it off for a tic.
-      player->mo->interp == true &&
-      // Don't interpolate during a paused state
-      (leveltime > oldleveltime
-       || (freecam_on && !freecam.mobj && gamestate == GS_LEVEL))) // [Nugget] Freecam
+  if (uncapped && camera_ready)
   {
-    // Use localview unless the player or game is in an invalid state, in which
-    // case fall back to interpolation.
-    const boolean use_localview = CheckLocalView(player);
-
     // Interpolate player camera from their old position to their current one.
     viewx = LerpFixed(player->mo->oldx, player->mo->x);
     viewy = LerpFixed(player->mo->oldy, player->mo->y);
@@ -1128,17 +1213,17 @@ void R_SetupFrame (player_t *player)
 
     playerz = LerpFixed(player->mo->oldz, player->mo->z); // [Nugget]
 
-    if (use_localview)
+    if (use_localview && CalcViewAngle)
     {
-      viewangle = (player->mo->angle + localview.angle - localview.ticangle +
-                   LerpAngle(localview.oldticangle, localview.ticangle));
+      viewangle = CalcViewAngle(player);
     }
     else
     {
       viewangle = LerpAngle(player->mo->oldangle, player->mo->angle);
     }
 
-    if (use_localview && !player->centering)
+    if ((use_localview || (freecam_on && freecam_mode == FREECAM_CAM)) // [Nugget] Freecam
+        && raw_input && !player->centering)
     {
       basepitch = player->pitch + localview.pitch;
       basepitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, basepitch);
@@ -1169,6 +1254,11 @@ void R_SetupFrame (player_t *player)
     // [Nugget]
     playerz = player->mo->z;
     pitch += player->flinch; // Flinching
+
+    if (camera_ready && use_localview && lowres_turn && fake_longtics)
+    {
+      viewangle += localview.angle;
+    }
   }
 
   // [Nugget] /===============================================================
@@ -1411,7 +1501,10 @@ static void R_ClearStats(void)
   rendered_voxels = 0;
 }
 
+static boolean flashing_hom;
 int autodetect_hom = 0;       // killough 2/7/98: HOM autodetection flag
+
+static boolean no_killough_face; // [Nugget]
 
 //
 // R_RenderView
@@ -1554,7 +1647,6 @@ void R_RenderPlayerView (player_t* player)
   if (autodetect_hom)
     { // killough 2/10/98: add flashing red HOM indicators
       pixel_t c[47*47];
-      extern int lastshottic;
       int i , color = !flashing_hom || (gametic % 20) < 9 ? 0xb0 : 0;
       V_FillRect(scaledviewx, scaledviewy, scaledviewwidth, scaledviewheight, color);
       for (i=0;i<47*47;i++)
@@ -1629,7 +1721,7 @@ void R_RenderPlayerView (player_t* player)
   // The head node is the last node output.
   R_RenderBSPNode (numnodes-1);
 
-  VX_NearbySprites ();
+  R_NearbySprites ();
 
   // [FG] update automap while playing
   if (automap_on)
@@ -1656,6 +1748,119 @@ void R_InitAnyRes(void)
   R_InitSpritesRes();
   R_InitBufferRes();
   R_InitPlanesRes();
+}
+
+void R_BindRenderVariables(void)
+{
+  BIND_NUM_GENERAL(extra_level_brightness, 0, -8, 8, "Level brightness"); // [Nugget] Broader light-level range
+  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
+
+  // [Nugget] FOV-based sky stretching (CFG-only)
+  BIND_BOOL(fov_stretchsky, true, "Stretch skies based on FOV");
+
+  BIND_BOOL_GENERAL(linearsky, false, "Linear horizontal scrolling for skies");
+  BIND_BOOL_GENERAL(r_swirl, false, "Swirling animated flats");
+  BIND_BOOL_GENERAL(smoothlight, false, "Smooth diminishing lighting");
+
+  // [Nugget] /---------------------------------------------------------------
+
+  M_BindNum("fake_contrast", &fake_contrast, NULL, 1, 0, 2, ss_gen, wad_yes,
+            "Fake contrast for walls (0 = Off, 1 = Smooth, 2 = Vanilla)");
+
+  // (CFG-only)
+  M_BindBool("diminished_lighting", &diminished_lighting, NULL,
+             true, ss_none, wad_yes, "Diminished lighting (light emitted by player)");
+
+  // [Nugget] ---------------------------------------------------------------/
+
+  M_BindBool("voxels_rendering", &default_voxels_rendering, &voxels_rendering,
+             true, ss_none, wad_no, "Allow voxel models");
+  BIND_BOOL_GENERAL(brightmaps, false,
+    "Brightmaps for textures and sprites");
+  BIND_NUM_GENERAL(invul_mode, INVUL_MBF, INVUL_VANILLA, INVUL_GRAY,
+    "Invulnerability effect (0 = Vanilla; 1 = MBF; 2 = Gray)");
+
+  // [Nugget] /---------------------------------------------------------------
+
+  BIND_BOOL_GENERAL(flip_levels, false, "Flip levels horizontally (visual filter)");
+
+  BIND_BOOL_GENERAL(no_berserk_tint, false, "Disable Berserk tint");
+  BIND_BOOL_GENERAL(no_radsuit_tint, false, "Disable Radiation Suit tint");
+
+  M_BindBool("nightvision_visor", &nightvision_visor, NULL,
+             false, ss_gen, wad_yes, "Night-vision effect for the light amplification visor");
+
+  BIND_NUM_GENERAL(damagecount_cap, 100, 0, 100, "Player damage tint cap");
+  BIND_NUM_GENERAL(bonuscount_cap, -1, -1, 100, "Player bonus tint cap");
+  
+  // [Nugget] ---------------------------------------------------------------/
+
+  BIND_BOOL(flashing_hom, true, "Enable flashing of the HOM indicator");
+
+  // [Nugget] (CFG-only)
+  BIND_BOOL(no_killough_face, false, "Disable the Killough-face easter egg");
+
+  BIND_NUM(screenblocks, 10, 3, 11, "Size of game-world screen");
+
+  M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
+             "Translucency for some things");
+  M_BindNum("tran_filter_pct", &tran_filter_pct, NULL,
+            66, 0, 100, ss_gen, wad_yes,
+            "Percent of foreground/background translucency mix");
+
+  M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
+             "Randomly mirrored death animations");
+  M_BindBool("fuzzcolumn_mode", &fuzzcolumn_mode, NULL, true, ss_enem, wad_no,
+             "Fuzz rendering (0 = Resolution-dependent; 1 = Blocky)");
+
+  // [Nugget - ceski] Selective fuzz darkening
+  M_BindBool("fuzzdark_mode", &fuzzdark_mode, NULL, false, ss_enem, wad_no,
+             "Selective fuzz darkening");
+
+  BIND_BOOL(draw_nearby_sprites, true,
+    "Draw sprites overlapping into visible sectors");
+
+  // [Nugget] ----------------------------------------------------------------
+
+  M_BindNum("viewheight_value", &viewheight_value, NULL, 41, 32, 56, ss_gen, wad_yes,
+            "Height of player's POV");
+
+  M_BindNum("flinching", &flinching, NULL, 0, 0, 3, ss_gen, wad_yes,
+            "Flinch player view (0 = Off; 1 = Upon landing; 2 = Upon taking damage; 3 = Upon either)");
+
+  M_BindBool("explosion_shake", &explosion_shake, NULL,
+             false, ss_gen, wad_yes, "Explosions shake the view");
+
+  // (CFG-only)
+  M_BindNum("explosion_shake_intensity_pct", &explosion_shake_intensity_pct, NULL,
+            100, 10, 100, ss_none, wad_yes,
+            "Explosion-shake intensity percent");
+
+  M_BindBool("breathing", &breathing, NULL,
+             false, ss_gen, wad_yes, "Imitate player's breathing (subtle idle bobbing)");
+
+  M_BindBool("teleporter_zoom", &teleporter_zoom, NULL,
+             false, ss_gen, wad_yes, "Zoom effect when teleporting");
+
+  M_BindBool("death_camera", &death_camera, NULL,
+             false, ss_gen, wad_yes, "Force third-person perspective upon death");
+
+  M_BindNum("chasecam_mode", &chasecam_mode, NULL, 0, 0, 2, ss_gen, wad_no,
+            "Chasecam mode (0 = Off; 1 = Back; 2 = Front)");
+
+  M_BindNum("chasecam_distance", &chasecam_distance, NULL, 80, 1, 128, ss_gen, wad_no,
+            "Chasecam distance");
+
+  M_BindNum("chasecam_height", &chasecam_height, NULL, 48, 1, 64, ss_gen, wad_no,
+            "Chasecam height");
+
+  // (CFG-only)
+  M_BindBool("chasecam_crosshair", &chasecam_crosshair, NULL,
+             false, ss_none, wad_no, "Allow crosshair when using Chasecam");
+
+  BIND_BOOL_GENERAL(a11y_weapon_flash,    true, "Allow weapon light flashes");
+  BIND_BOOL_GENERAL(a11y_weapon_pspr,     true, "Allow rendering of weapon muzzleflash");
+  BIND_BOOL_GENERAL(a11y_invul_colormap,  true, "Allow Invulnerability colormap");
 }
 
 //----------------------------------------------------------------------------

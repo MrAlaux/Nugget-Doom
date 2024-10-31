@@ -1,6 +1,7 @@
 include(CheckLibraryExists)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(CheckCSourceCompiles)
 
 # Adds the cmake directory to the CMake include path.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -45,10 +46,6 @@ set(NUGGETDOOM_ICON "nugget-doom.ico")
 set(SETUP_ICON "setup.ico")
 set(PROJECT_VERSION_RC "${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0") # ${PROJECT_VERSION_TWEAK}
 
-if(NOT WIN32)
-    set(NUGGETDOOMDATADIR "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_SHORTNAME}" CACHE PATH "Path to install supplemental files")
-endif()
-
 # Toggle-able defines added at compile-time.
 option(NUGGETDOOM_RANGECHECK "Enable bounds-checking of performance-sensitive functions" ON)
 option(NUGGETDOOM_STRICT "Prefer original MBF code paths over demo compatiblity with PrBoom+" OFF)
@@ -58,6 +55,27 @@ check_library_exists(m pow "" HAVE_LIBM)
 check_include_file("dirent.h" HAVE_DIRENT_H)
 check_symbol_exists(strcasecmp "strings.h" HAVE_DECL_STRCASECMP)
 check_symbol_exists(strncasecmp "strings.h" HAVE_DECL_STRNCASECMP)
+check_c_source_compiles("
+    #include <windows.h>
+    int main()
+    {
+        CreateWaitableTimerEx(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+                              TIMER_ALL_ACCESS);
+        return 0;
+    }
+  "
+  HAVE_HIGH_RES_TIMER
+)
+check_c_source_compiles("
+    #include <immintrin.h>
+    int main()
+    {
+        int tmp = _div64(4, 2, NULL);
+        return 0;
+    }
+  "
+  HAVE__DIV64
+)
 
 option(CMAKE_FIND_PACKAGE_PREFER_CONFIG
        "Lookup package config files before using find modules" ON)
@@ -72,6 +90,7 @@ find_package(SndFile 1.0.29 REQUIRED)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(ALSA REQUIRED)
 endif()
+find_package(cJSON REQUIRED)
 
 if(ALSA_FOUND)
     set(HAVE_ALSA TRUE)
@@ -116,14 +135,12 @@ if(WIN32)
     install(FILES COPYING DESTINATION . RENAME COPYING.txt)
     install(FILES README.md DESTINATION .)
     install(DIRECTORY examples/ DESTINATION docs/examples)
-    install(DIRECTORY autoload/ DESTINATION autoload)
     if(FluidSynth_FOUND)
         install(DIRECTORY soundfonts/ DESTINATION soundfonts)
     endif()
 else()
     install(FILES COPYING DESTINATION "share/doc/${PROJECT_SHORTNAME}")
     install(FILES README.md DESTINATION "share/doc/${PROJECT_SHORTNAME}")
-    install(DIRECTORY autoload/ DESTINATION "share/${PROJECT_SHORTNAME}/autoload")
     if(EXISTS "${CMAKE_SOURCE_DIR}/examples")
         install(DIRECTORY examples/ DESTINATION "share/doc/${PROJECT_SHORTNAME}/examples")
     endif()
@@ -184,8 +201,8 @@ include(CPack)
 add_subdirectory(data)
 add_subdirectory(opl)
 add_subdirectory(textscreen)
+add_subdirectory(third-party)
 add_subdirectory(src)
-add_subdirectory(toolsrc)
 add_subdirectory(setup)
 add_subdirectory(docs)
 add_subdirectory(man)

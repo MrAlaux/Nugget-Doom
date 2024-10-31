@@ -41,6 +41,8 @@
 //
 ///////////////////////////////////////////////////////////////
 
+boolean comp_blazing2; // [Nugget]
+
 //
 // T_VerticalDoor
 //
@@ -391,6 +393,8 @@ int EV_DoDoor(line_t *line, vldoor_e type)
   return rtn;
 }
 
+
+boolean comp_manualdoor; // [Nugget]
 
 //
 // EV_VerticalDoor

@@ -162,11 +162,20 @@ void V_DrawPatchTranslated(int x, int y, struct patch_s *patch, byte *outr);
 void V_DrawPatchTRTR(int x, int y, struct patch_s *patch, byte *outr1,
                      byte *outr2);
 
-// [Nugget] /-----------------------------------------------------------------
+// [Nugget] /=================================================================
 
-// HUD/menu shadows
+extern int automap_overlay_darkening;
+extern int menu_backdrop_darkening;
+
+// HUD/menu shadows ----------------------------------------------------------
+
+extern boolean hud_menu_shadows;
+extern int hud_menu_shadows_filter_pct;
+
 void V_ToggleShadows(const boolean on);
 void V_SetShadowCrop(const int value);
+
+// ---------------------------------------------------------------------------
 
 void V_DrawPatchTranslucent(int x, int y, struct patch_s *patch, boolean flipped,
                             byte *outr1, byte *outr2, byte *tmap);
@@ -211,7 +220,7 @@ void V_ShadowRect(int x, int y, int width, int height);
     hud_menu_shadows = old_shadows;               \
   }
 
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 void V_DrawPatchFullScreen(struct patch_s *patch);
 
@@ -229,18 +238,15 @@ void V_PutBlock(int x, int y, int width, int height, pixel_t *src);
 
 void V_FillRect(int x, int y, int width, int height, byte color);
 
-void V_ShadeScreen(const int targshade); // [Nugget] Parameterized
-
 void V_TileBlock64(int line, int width, int height, const byte *src);
 
 void V_DrawBackground(const char *patchname);
 
+void V_ShadeScreen(const int level); // [Nugget]
+
 // [FG] colored blood and gibs
 
 int V_BloodColor(int blood);
-
-struct patch_s *V_LinearToTransPatch(const byte *data, int width, int height,
-                                     int color_key);
 
 void V_ScreenShot(void);
 

@@ -21,6 +21,7 @@
 
 #include "doomstat.h"
 #include "doomtype.h"
+#include "i_oalcommon.h"
 #include "i_oalsound.h"
 #include "i_printf.h"
 #include "i_sound.h"
@@ -34,16 +35,6 @@
 // [Nugget]
 #include "r_main.h"
 #include "r_state.h"
-
-// C doesn't allow casting between function and non-function pointer types, so
-// with C99 we need to use a union to reinterpret the pointer type. Pre-C99
-// still needs to use a normal cast and live with the warning (C++ is fine with
-// a regular reinterpret_cast).
-#if __STDC_VERSION__ >= 199901L
-#  define FUNCTION_CAST(T, ptr) (union{void *p; T f;}){ptr}.f
-#else
-#  define FUNCTION_CAST(T, ptr) (T)(ptr)
-#endif
 
 static LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
 static ALuint callback_buffer;
@@ -292,8 +283,7 @@ static void RegisterCallback(void)
                  "RegisterCallback: AL_SOFT_callback_buffer not found.");
         return;
     }
-    alBufferCallbackSOFT = FUNCTION_CAST(
-        LPALBUFFERCALLBACKSOFT, alGetProcAddress("alBufferCallbackSOFT"));
+    ALFUNC(LPALBUFFERCALLBACKSOFT, alBufferCallbackSOFT);
 
     alGenBuffers(1, &callback_buffer);
     alGenSources(1, &callback_source);
@@ -341,7 +331,7 @@ static void InitPCSound(void)
 
 static boolean I_PCS_ReinitSound(void)
 {
-    if (!I_OAL_ReinitSound())
+    if (!I_OAL_ReinitSound(SND_MODULE_PCS))
     {
         return false;
     }
@@ -353,7 +343,7 @@ static boolean I_PCS_ReinitSound(void)
 
 static boolean I_PCS_InitSound(void)
 {
-    if (!I_OAL_InitSound())
+    if (!I_OAL_InitSound(SND_MODULE_PCS))
     {
         return false;
     }
@@ -448,7 +438,7 @@ static void I_PCS_UpdateSoundParams(int channel, int volume, int separation)
     alSourcef(callback_source, AL_GAIN, (float)snd_SfxVolume / 15);
 }
 
-static boolean I_PCS_StartSound(int channel, sfxinfo_t *sfx, int pitch)
+static boolean I_PCS_StartSound(int channel, sfxinfo_t *sfx, float pitch)
 {
     boolean result;
 
@@ -524,4 +514,5 @@ const sound_module_t sound_pcs_module =
     I_PCS_ShutdownModule,
     I_OAL_DeferUpdates,
     I_OAL_ProcessUpdates,
+    NULL,
 };

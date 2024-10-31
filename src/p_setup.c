@@ -360,7 +360,8 @@ void P_LoadSectors (int lump)
       // [FG] inhibit sector interpolation during the 0th gametic
       ss->oldceilgametic = -1;
       ss->oldfloorgametic = -1;
-      ss->oldscrollgametic = -1;
+      ss->old_ceil_offs_gametic = -1;
+      ss->old_floor_offs_gametic = -1;
     }
 
   Z_Free (data);
@@ -1258,13 +1259,13 @@ boolean P_LoadBlockMap (int lump)
 
       blockmaplump[0] = SHORT(wadblockmaplump[0]);
       blockmaplump[1] = SHORT(wadblockmaplump[1]);
-      blockmaplump[2] = (long)(SHORT(wadblockmaplump[2])) & 0xffff;
-      blockmaplump[3] = (long)(SHORT(wadblockmaplump[3])) & 0xffff;
+      blockmaplump[2] = (long)(SHORT(wadblockmaplump[2])) & FRACMASK;
+      blockmaplump[3] = (long)(SHORT(wadblockmaplump[3])) & FRACMASK;
 
       for (i=4 ; i<count ; i++)
         {
           short t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
-          blockmaplump[i] = t == -1 ? -1l : (long) t & 0xffff;
+          blockmaplump[i] = t == -1 ? -1l : (long) t & FRACMASK;
         }
 
       Z_Free(wadblockmaplump);
@@ -1357,10 +1358,10 @@ int P_GroupLines (void)
       sector->lines -= sector->linecount;
 
       // set the degenmobj_t to the middle of the bounding box
-      sector->soundorg.x = (sector->blockbox[BOXRIGHT] +
-			    sector->blockbox[BOXLEFT])/2;
-      sector->soundorg.y = (sector->blockbox[BOXTOP] +
-			    sector->blockbox[BOXBOTTOM])/2;
+      sector->soundorg.x =
+          sector->blockbox[BOXRIGHT] / 2 + sector->blockbox[BOXLEFT] / 2;
+      sector->soundorg.y =
+          sector->blockbox[BOXTOP] / 2 + sector->blockbox[BOXBOTTOM] / 2;
 
       sector->soundorg.thinker.function.p1 = (actionf_p1)P_DegenMobjThinker;
 

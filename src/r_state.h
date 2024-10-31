@@ -40,8 +40,6 @@ extern fixed_t *spritewidth;
 extern fixed_t *spriteoffset;
 extern fixed_t *spritetopoffset;
 
-extern boolean have_crouch_sprites; // [Nugget]
-
 extern lighttable_t **colormaps;          // killough 3/20/98, 4/4/98
 extern lighttable_t *fullcolormap;        // killough 3/20/98
 
@@ -93,13 +91,13 @@ extern side_t           *sides;
 
 typedef struct localview_s
 {
-    angle_t oldticangle;
-    angle_t ticangle;
-    short ticangleturn;
     double rawangle;
     double rawpitch;
     angle_t angle;
-    int pitch;
+    angle_t oldlerpangle;
+    angle_t lerpangle;
+    fixed_t pitch;
+    short angleoffset;
 } localview_t;
 
 //

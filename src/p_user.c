@@ -30,7 +30,7 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "info.h"
-#include "m_input.h"
+#include "m_cheat.h"
 #include "p_map.h"
 #include "p_mobj.h"
 #include "p_pspr.h"
@@ -38,9 +38,10 @@
 #include "p_user.h"
 #include "r_defs.h"
 #include "r_main.h"
-#include "r_state.h"
+#include "st_stuff.h"
 
 // [Nugget]
+#include "m_input.h"
 #include "s_sound.h"
 #include "sounds.h"
 
@@ -50,11 +51,21 @@ static fixed_t PlayerSlope(player_t *player)
   return P_PitchToSlope(player->pitch);
 }
 
-// [Nugget] Flinching
+// [Nugget] /=================================================================
+
+// Jumping/crouching
+boolean jump_crouch;
+#define CROUCHUNITS (3*FRACUNIT)
+
+boolean breathing;
+
+// Flinching
 void P_SetFlinch(player_t *const player, int pitch)
 {
   player->flinch = BETWEEN(-12*ANG1, 12*ANG1, player->flinch + pitch*ANG1/2);
 }
+
+// [Nugget] =================================================================/
 
 // Index of the special effects (INVUL inverse) map.
 
@@ -69,9 +80,6 @@ void P_SetFlinch(player_t *const player, int pitch)
 #define MAXBOB  0x100000
 
 boolean onground; // whether player is on ground or in air
-
-// [Nugget]
-#define CROUCHUNITS 3*FRACUNIT
 
 //
 // P_Thrust
@@ -429,11 +437,7 @@ void P_MovePlayer (player_t* player)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  if (player == &players[consoleplayer])
-  {
-    localview.ticangle += localview.ticangleturn << 16;
-    localview.ticangleturn = 0;
-  }
+  player->ticangle += cmd->ticangleturn << FRACBITS;
 
   // killough 10/98:
   //
@@ -496,9 +500,9 @@ void P_MovePlayer (player_t* player)
         P_SetMobjState(mo,S_PLAY_RUN1);
     }
 
-  if (!menuactive && !demoplayback)
+  if (!menuactive && !demoplayback && !player->centering)
   {
-    player->pitch += cmd->pitch;
+    player->pitch += cmd->pitch << FRACBITS;
     player->pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, player->pitch);
     player->slope = PlayerSlope(player);
   }
@@ -506,14 +510,8 @@ void P_MovePlayer (player_t* player)
 
 #define ANG5 (ANG90/18)
 
-typedef enum
-{
-  death_use_default,
-  death_use_reload,
-  death_use_nothing
-} death_use_action_t;
-
 death_use_action_t death_use_action;
+int activate_death_use_reload;
 
 //
 // P_DeathThink
@@ -590,28 +588,25 @@ void P_DeathThink (player_t* player)
 
   if (player->cmd.buttons & BT_USE)
   {
-    if (demorecording || demoplayback || netgame)
-      player->playerstate = PST_REBORN;
-    else switch(death_use_action)
+    player->playerstate = PST_REBORN;
+  }
+
+  if (activate_death_use_reload == 2)
+  {
+    activate_death_use_reload = 1;
+
+    if (!G_AutoSaveEnabled() || !G_LoadAutoSaveDeathUse())
     {
-      case death_use_default:
+      if (savegameslot >= 0)
+      {
+        char *file = G_SaveGameName(savegameslot);
+        G_LoadGame(file, savegameslot, false);
+        free(file);
+      }
+      else
+      {
         player->playerstate = PST_REBORN;
-        break;
-      case death_use_reload:
-        if (savegameslot >= 0)
-        {
-          char *file = G_SaveGameName(savegameslot);
-          G_LoadGame(file, savegameslot, false);
-          free(file);
-          // [Woof!] prevent on-death-action reloads from activating specials
-          M_InputGameDeactivate(input_use);
-        }
-        else
-          player->playerstate = PST_REBORN;
-        break;
-      case death_use_nothing:
-      default:
-        break;
+      }
     }
   }
 }
@@ -653,10 +648,7 @@ void P_PlayerThink (player_t* player)
   player->oldrecoilpitch = player->recoilpitch;
   player->oldflinch = player->flinch; // [Nugget] Flinching
 
-  if (player == &players[consoleplayer])
-  {
-    localview.oldticangle = localview.ticangle;
-  }
+  player->oldticangle = player->ticangle;
 
   // killough 2/8/98, 3/21/98:
   // (this code is necessary despite questions raised elsewhere in a comment)
@@ -672,6 +664,7 @@ void P_PlayerThink (player_t* player)
   if (player->mo->flags & MF_JUSTATTACKED)
     {
       cmd->angleturn = 0;
+      cmd->ticangleturn = 0;
       cmd->forwardmove = 0xc800/512;
       cmd->sidemove = 0;
       player->mo->flags &= ~MF_JUSTATTACKED;
@@ -802,38 +795,29 @@ void P_PlayerThink (player_t* player)
 
   if (cmd->buttons & BT_CHANGE)
     {
-      // [Nugget] Last-weapon button
-      const weapontype_t lastweapon = CASUALPLAY(M_InputGameActive(input_lastweapon))
-                                      ? player->lastweapon : wp_nochange;
-
       // The actual changing of the weapon is done
       //  when the weapon psprite can do it
       //  (read: not in the middle of an attack).
 
-      // [Nugget]
-      if (lastweapon != wp_nochange)
-        newweapon = lastweapon;
-      else
-        newweapon = (cmd->buttons & BT_WEAPONMASK)>>BT_WEAPONSHIFT;
+      newweapon = (cmd->buttons & BT_WEAPONMASK)>>BT_WEAPONSHIFT;
 
       // killough 3/22/98: For demo compatibility we must perform the fist
       // and SSG weapons switches here, rather than in G_BuildTiccmd(). For
       // other games which rely on user preferences, we must use the latter.
 
       if (demo_compatibility)
-        { // compatibility mode -- required for old demos -- killough
-          if (newweapon == wp_fist && player->weaponowned[wp_chainsaw] &&
-              ((player->readyweapon != wp_chainsaw
-                && lastweapon != wp_fist) || // [Nugget]
-               !player->powers[pw_strength]))
-            newweapon = wp_chainsaw;
-          if (have_ssg &&
-              newweapon == wp_shotgun &&
-              player->weaponowned[wp_supershotgun] &&
-              player->readyweapon != wp_supershotgun &&
-              lastweapon != wp_shotgun) // [Nugget]
-            newweapon = wp_supershotgun;
-        }
+	{ // compatibility mode -- required for old demos -- killough
+	  newweapon = (cmd->buttons & BT_WEAPONMASK_OLD) >> BT_WEAPONSHIFT;
+	  if (newweapon == wp_fist && player->weaponowned[wp_chainsaw] &&
+	      (player->readyweapon != wp_chainsaw ||
+	       !player->powers[pw_strength]))
+	    newweapon = wp_chainsaw;
+	  if (ALLOW_SSG &&
+	      newweapon == wp_shotgun &&
+	      player->weaponowned[wp_supershotgun] &&
+	      player->readyweapon != wp_supershotgun)
+	    newweapon = wp_supershotgun;
+	}
 
       // killough 2/8/98, 3/22/98 -- end of weapon selection changes
 
@@ -920,7 +904,6 @@ void P_PlayerThink (player_t* player)
 
   if (player->cheats & CF_MAPCOORDS)
   {
-    extern void cheat_mypos_print();
     cheat_mypos_print();
   }
 

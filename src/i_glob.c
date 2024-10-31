@@ -16,22 +16,22 @@
 // to be interrogated.
 //
 
-#include <ctype.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
-#include "doomtype.h"
 #include "i_glob.h"
 #include "m_io.h"
 #include "m_misc.h"
 
-#if defined(_MSC_VER)
-// For Visual C++, we need to include the win_opendir module.
+#if defined(_WIN32)
 #  include "win_opendir.h"
+#  ifndef S_ISDIR
+#    define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#  endif
 #elif defined(HAVE_DIRENT_H)
 #  include <dirent.h>
+#  include <sys/stat.h>
 #elif defined(__WATCOMC__)
 // Watcom has the same API in a different header.
 #  include <direct.h>
@@ -47,19 +47,19 @@
 // not all systems.
 static boolean IsDirectory(char *dir, struct dirent *de)
 {
-#  if defined(_DIRENT_HAVE_D_TYPE)
+#if defined(_DIRENT_HAVE_D_TYPE)
     if (de->d_type != DT_UNKNOWN && de->d_type != DT_LNK)
     {
         return de->d_type == DT_DIR;
     }
     else
-#  endif
+#endif
     {
         char *filename;
         struct stat sb;
         int result;
 
-        filename = M_StringJoin(dir, DIR_SEPARATOR_S, de->d_name, NULL);
+        filename = M_StringJoin(dir, DIR_SEPARATOR_S, de->d_name);
         result = M_stat(filename, &sb);
         free(filename);
 
@@ -96,44 +96,22 @@ static void FreeStringList(char **globs, int num_globs)
     free(globs);
 }
 
-glob_t *I_StartMultiGlob(const char *directory, int flags, const char *glob,
-                         ...)
+glob_t *I_StartMultiGlobInternal(const char *directory, int flags,
+                                 const char *glob[], size_t num_globs)
 {
     char **globs;
-    int num_globs;
     glob_t *result;
-    va_list args;
-    char *directory_native;
 
-    globs = malloc(sizeof(char *));
+    globs = malloc(num_globs * sizeof(*globs));
     if (globs == NULL)
     {
         return NULL;
     }
-    globs[0] = M_StringDuplicate(glob);
-    num_globs = 1;
 
-    va_start(args, glob);
-    for (;;)
+    for (int i = 0; i < num_globs; ++i)
     {
-        const char *arg = va_arg(args, const char *);
-        char **new_globs;
-
-        if (arg == NULL)
-        {
-            break;
-        }
-
-        new_globs = realloc(globs, sizeof(char *) * (num_globs + 1));
-        if (new_globs == NULL)
-        {
-            FreeStringList(globs, num_globs);
-        }
-        globs = new_globs;
-        globs[num_globs] = M_StringDuplicate(arg);
-        ++num_globs;
+        globs[i] = M_StringDuplicate(glob[i]);
     }
-    va_end(args);
 
     result = malloc(sizeof(glob_t));
     if (result == NULL)
@@ -142,18 +120,15 @@ glob_t *I_StartMultiGlob(const char *directory, int flags, const char *glob,
         return NULL;
     }
 
-    directory_native = M_ConvertUtf8ToSysNativeMB(directory);
-
-    result->dir = opendir(directory_native);
+    result->dir = opendir(directory);
     if (result->dir == NULL)
     {
         FreeStringList(globs, num_globs);
         free(result);
-        free(directory_native);
         return NULL;
     }
 
-    result->directory = directory_native;
+    result->directory = M_StringDuplicate(directory);
     result->globs = globs;
     result->num_globs = num_globs;
     result->flags = flags;
@@ -166,7 +141,7 @@ glob_t *I_StartMultiGlob(const char *directory, int flags, const char *glob,
 
 glob_t *I_StartGlob(const char *directory, const char *glob, int flags)
 {
-    return I_StartMultiGlob(directory, flags, glob, NULL);
+    return I_StartMultiGlob(directory, flags, glob);
 }
 
 void I_EndGlob(glob_t *glob)
@@ -247,7 +222,6 @@ static boolean MatchesAnyGlob(const char *name, glob_t *glob)
 static char *NextGlob(glob_t *glob)
 {
     struct dirent *de;
-    char *temp, *ret;
 
     do
     {
@@ -260,13 +234,7 @@ static char *NextGlob(glob_t *glob)
              || !MatchesAnyGlob(de->d_name, glob));
 
     // Return the fully-qualified path, not just the bare filename.
-    temp = M_StringJoin(glob->directory, DIR_SEPARATOR_S, de->d_name, NULL);
-
-    ret = M_ConvertSysNativeMBToUtf8(temp);
-
-    free(temp);
-
-    return ret;
+    return M_StringJoin(glob->directory, DIR_SEPARATOR_S, de->d_name);
 }
 
 static void ReadAllFilenames(glob_t *glob)

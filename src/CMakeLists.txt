@@ -2,8 +2,6 @@ include(NuggetDoomSettings)
 
 set(NUGGETDOOM_SOURCES
     am_map.c               am_map.h
-                           beta.h
-                           cross.h
     d_deh.c                d_deh.h
                            d_englsh.h
                            d_event.h
@@ -17,7 +15,6 @@ set(NUGGETDOOM_SOURCES
     d_quit.c               d_quit.h
                            d_think.h
                            d_ticcmd.h
-                           dogs.h
                            doomdata.h
                            doomdef.h
     doomstat.c             doomstat.h
@@ -26,24 +23,32 @@ set(NUGGETDOOM_SOURCES
     dstrings.c             dstrings.h
     f_finale.c             f_finale.h
     f_wipe.c               f_wipe.h
-                           font.h
     g_game.c               g_game.h
+    g_input.c              g_input.h
+    hu_command.c           hu_command.h
+    hu_coordinates.c       hu_coordinates.h
+    hu_crosshair.c         hu_crosshair.h
     hu_lib.c               hu_lib.h
     hu_obituary.c          hu_obituary.h
     hu_stuff.c             hu_stuff.h
     i_3dsound.c
     i_endoom.c             i_endoom.h
+    i_flickstick.c         i_flickstick.h
     i_gamepad.c            i_gamepad.h
     i_glob.c               i_glob.h
+    i_gyro.c               i_gyro.h
     i_input.c              i_input.h
     i_main.c
     i_mbfsound.c
     i_midimusic.c
+                           i_oalcommon.h
+    i_oalequalizer.c       i_oalequalizer.h
     i_oalmusic.c
     i_oalsound.c           i_oalsound.h
                            i_oalstream.h
     i_oplmusic.c
     i_printf.c             i_printf.h
+    i_rumble.c             i_rumble.h
     i_sndfile.c            i_sndfile.h
     i_sound.c              i_sound.h
     i_system.c             i_system.h
@@ -58,14 +63,16 @@ set(NUGGETDOOM_SOURCES
                            m_fixed.h
     m_input.c              m_input.h
     m_io.c                 m_io.h
+    m_json.c               m_json.h
     mn_font.c              mn_font.h
     mn_menu.c              mn_menu.h
-    mn_setup.c             mn_setup.h
+    mn_setup.c             mn_internal.h
     m_misc.c               m_misc.h
     m_nughud.c             m_nughud.h
     m_random.c             m_random.h
     mn_snapshot.c          mn_snapshot.h
                            m_swap.h
+                           m_vector.h
     memio.c                memio.h
     midifallback.c         midifallback.h
     midifile.c             midifile.h
@@ -115,6 +122,7 @@ set(NUGGETDOOM_SOURCES
     r_plane.c              r_plane.h
     r_segs.c               r_segs.h
     r_sky.c                r_sky.h
+    r_skydefs.c            r_skydefs.h
                            r_state.h
     r_swirl.c              r_swirl.h
     r_things.c             r_things.h
@@ -129,13 +137,18 @@ set(NUGGETDOOM_SOURCES
     u_mapinfo.c            u_mapinfo.h
     u_scanner.c            u_scanner.h
     v_flextran.c           v_flextran.h
+    v_fmt.c                v_fmt.h
     v_trans.c              v_trans.h
     v_video.c              v_video.h
     version.c              version.h
     w_wad.c                w_wad.h
+                           w_internal.h
+    w_file.c
+    w_zip.c
     wi_stuff.c             wi_stuff.h
-    z_zone.c               z_zone.h
-    ../miniz/miniz.c       ../miniz/miniz.h)
+    wi_interlvl.c          wi_interlvl.h
+    ws_stuff.c             ws_stuff.h
+    z_zone.c               z_zone.h)
 
 # Standard target definition
 if(WIN32)
@@ -148,11 +161,13 @@ if(WIN32)
     add_executable(nugget-doom-com WIN32 ../win32/win_launcher.c
         "${CMAKE_CURRENT_BINARY_DIR}/resource.rc")
     target_nuggetdoom_settings(nugget-doom-com)
+    target_include_directories(nugget-doom-com PRIVATE ${SDL2_INCLUDE_DIR})
     target_link_libraries(nugget-doom-com PRIVATE ${SDL2_LIBRARIES} nugget-doom)
 
     add_executable(nugget-doom-exe WIN32 ../win32/win_launcher.c
         "${CMAKE_CURRENT_BINARY_DIR}/resource.rc")
     target_nuggetdoom_settings(nugget-doom-exe)
+    target_include_directories(nugget-doom-exe PRIVATE ${SDL2_INCLUDE_DIR})
     target_link_libraries(nugget-doom-exe PRIVATE ${SDL2_LIBRARIES} nugget-doom)
 
     # MSVC tries to supply a default manifest and complains when it finds ours
@@ -168,8 +183,7 @@ else()
 endif()
 
 target_nuggetdoom_settings(nugget-doom)
-target_include_directories(nugget-doom PRIVATE
-        "${CMAKE_CURRENT_BINARY_DIR}/../" "../miniz")
+target_include_directories(nugget-doom PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../")
 
 target_link_libraries(nugget-doom PRIVATE
     ${SDL2_LIBRARIES}
@@ -177,7 +191,11 @@ target_link_libraries(nugget-doom PRIVATE
     OpenAL::OpenAL
     SndFile::sndfile
     opl
-    textscreen)
+    pffft
+    textscreen
+    miniz
+    spng
+    cjson)
 
 # Some platforms require standard libraries to be linked against.
 if(HAVE_LIBM)
@@ -190,11 +208,8 @@ endif()
 
 if(WIN32)
     target_include_directories(nugget-doom PRIVATE "../win32")
-    target_link_libraries(nugget-doom PRIVATE winmm)
-    if(MSVC)
-        target_sources(nugget-doom PRIVATE
-            ../win32/win_opendir.c ../win32/win_opendir.h)
-    endif()
+    target_link_libraries(nugget-doom PRIVATE winmm shlwapi)
+    target_sources(nugget-doom PRIVATE ../win32/win_opendir.c ../win32/win_opendir.h)
 endif()
 
 if(APPLE)
@@ -229,8 +244,6 @@ endif()
 if(NUGGETDOOM_STRICT)
     target_compile_definitions(nugget-doom PRIVATE MBF_STRICT)
 endif()
-
-target_compile_definitions(nugget-doom PRIVATE MINIZ_NO_TIME)
 
 set(SETUP_SOURCES
     d_iwad.c                d_iwad.h
@@ -270,6 +283,11 @@ if(MSVC)
     target_link_options(nugget-doom-setup PRIVATE "/MANIFEST:NO")
 endif()
 
+add_custom_command(TARGET nugget-doom POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E tar cf
+    "$<TARGET_FILE_DIR:nugget-doom>/nugget-doom.pk3" --format=zip .
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/base")
+
 # Install
 #
 # Rename nugget-doom-com and nugget-doom-exe executables.
@@ -298,14 +316,9 @@ if(WIN32)
     endif()
     install(FILES "$<TARGET_FILE_DIR:nugget-doom-com>/nugget-doom.com" DESTINATION .)
     install(FILES "$<TARGET_FILE_DIR:nugget-doom-exe>/nugget-doom.exe" DESTINATION .)
+    install(FILES "$<TARGET_FILE_DIR:nugget-doom>/nugget-doom.pk3" DESTINATION .)
 else()
     install(TARGETS nugget-doom nugget-doom-setup RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES "$<TARGET_FILE_DIR:nugget-doom>/nugget-doom.pk3"
+            DESTINATION "share/${PROJECT_SHORTNAME}")
 endif()
-
-# Copy autoload directory content to target directory.
-add_custom_command(TARGET nugget-doom POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-    "$<TARGET_FILE_DIR:nugget-doom>/autoload"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/autoload"
-    "$<TARGET_FILE_DIR:nugget-doom>/autoload" VERBATIM)

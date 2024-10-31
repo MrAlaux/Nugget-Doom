@@ -23,6 +23,7 @@
 #include "d_player.h"
 #include "doomdef.h"
 #include "doomstat.h"
+#include "dsdhacked.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_printf.h"
@@ -50,8 +51,14 @@
 // [Nugget]
 #include "p_user.h"
 
-// [FG] colored blood and gibs
-boolean colored_blood;
+// [Nugget] CVARs
+int viewheight_value;
+int flinching;
+int damagecount_cap;
+int bonuscount_cap;
+boolean comp_fuzzyblood;
+boolean comp_nonbleeders;
+
 int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
 
 void P_UpdateDirectVerticalAiming(void)
@@ -71,7 +78,7 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
 
   // killough 4/9/98: remember states seen, to detect cycles:
 
-  extern statenum_t *seenstate_tab;           // fast transition table
+  // fast transition table
   statenum_t *seenstate = seenstate_tab;      // pointer to table
   static int recursion;                       // detects recursion
   statenum_t i = state;                       // initial state
@@ -145,8 +152,16 @@ void P_ExplodeMissile (mobj_t* mo)
   mo->flags &= ~MF_MISSILE;
 
   if (mo->info->deathsound)
-    S_StartSoundPitch(mo, mo->info->deathsound,
-                      brainexplode ? PITCH_NONE : PITCH_FULL);
+  {
+    if (brainexplode)
+    {
+      S_StartSoundPitch(mo, mo->info->deathsound, PITCH_NONE);
+    }
+    else
+    {
+      S_StartSoundOrigin(mo->target, mo, mo->info->deathsound);
+    }
+  }
 }
 
 //
@@ -415,6 +430,8 @@ void P_XYMovement (mobj_t* mo)
      }
     }
 }
+
+boolean comp_deadoof; // [Nugget]
 
 //
 // P_ZMovement
@@ -1451,6 +1468,8 @@ spawnit:
 
   z = mobjinfo[i].flags & MF_SPAWNCEILING ? ONCEILINGZ : ONFLOORZ;
 
+  // Because of DSDHacked, allow `i` values outside enum mobjtype_t range
+  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
   mobj = P_SpawnMobj (x,y,z, i);
   mobj->spawnpoint = *mthing;
 
@@ -1569,8 +1588,6 @@ spawnit:
 //
 // P_SpawnPuff
 //
-
-extern fixed_t attackrange;
 
 void P_SpawnPuff(fixed_t x,fixed_t y,fixed_t z)
 {
@@ -1715,12 +1732,12 @@ int autoaim = 0;  // killough 7/19/98: autoaiming was not in original beta
 // Tries to aim at a nearby monster
 //
 
+boolean no_hor_autoaim; // [Nugget]
+
 mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
 {
   mobj_t *th;
   fixed_t x, y, z, slope = 0;
-
-  extern void A_Recoil(player_t* player);
 
   // see which target is to be aimed at
 
@@ -1768,7 +1785,7 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
   th = P_SpawnMobj (x,y,z, type);
 
   if (th->info->seesound)
-    S_StartSound (th, th->info->seesound);
+    S_StartSoundMissile(source, th, th->info->seesound);
 
   P_SetTarget(&th->target, source);   // killough 11/98
   th->angle = an;

@@ -21,6 +21,7 @@
 #define __R_SKY__
 
 #include "doomtype.h"
+#include "r_skydefs.h"
 
 // SKY, store the number for name.
 #define SKYFLATNAME  "F_SKY1"
@@ -31,16 +32,27 @@
 // [Nugget] Removed unnecessary `SKYSTRETCH_HEIGHT` macro
 extern boolean stretchsky;
 
+extern boolean fov_stretchsky; // [Nugget]
+
 // [FG] linear horizontal sky scrolling
 extern boolean linearsky;
 
 extern int skytexture;
 extern int skytexturemid;
 
+extern sky_t *sky;
+
 // Called whenever the view size changes.
 void R_InitSkyMap(void);
 
 byte R_GetSkyColor(int texturenum);
+
+void R_UpdateSky(void);
+
+#define FIRE_WIDTH     128
+#define FIRE_HEIGHT    450 // [Nugget] Increased
+
+byte *R_GetFireColumn(int col);
 
 #endif
 

@@ -24,6 +24,18 @@
 #include <stdlib.h> // abs()
 #include <stdint.h> // int64_t
 
+#include "config.h"
+
+#if defined(HAVE__DIV64)
+
+  #define div64_32(a, b) _div64((a), (b), NULL)
+
+#else
+
+  #define div64_32(a, b) ((fixed_t)((a) / (b)))
+
+#endif
+
 //
 // Fixed point, 32bit as 16.16.
 //
@@ -31,6 +43,11 @@
 #define FRACBITS 16
 #define FRACUNIT (1<<FRACBITS)
 #define FIXED2DOUBLE(x) ((x)/(double)FRACUNIT)
+#define FRACMASK (FRACUNIT - 1)
+#define FRACFILL(x, o) ((x) | ((o) < 0 ? (FRACMASK << (32 - FRACBITS)) : 0))
+
+#define IntToFixed(x) ((x) << FRACBITS)
+#define FixedToInt(x) FRACFILL((x) >> FRACBITS, (x))
 
 typedef int fixed_t;
 
@@ -40,7 +57,12 @@ typedef int fixed_t;
 
 inline static fixed_t FixedMul(fixed_t a, fixed_t b)
 {
-  return (fixed_t)((int64_t) a*b >> FRACBITS);
+    return (fixed_t)((int64_t) a * b >> FRACBITS);
+}
+
+inline static int64_t FixedMul64(int64_t a, int64_t b)
+{
+    return (a * b >> FRACBITS);
 }
 
 //
@@ -49,9 +71,15 @@ inline static fixed_t FixedMul(fixed_t a, fixed_t b)
 
 inline static fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
-  // [FG] avoid 31-bit shift (from Chocolate Doom)
-  return (abs(a)>>14) >= abs(b) ? ((a^b) < 0 ? INT_MIN : INT_MAX) :
-    (fixed_t)(((int64_t) a << FRACBITS) / b);
+    // [FG] avoid 31-bit shift (from Chocolate Doom)
+    if ((abs(a) >> 14) >= abs(b))
+    {
+        return (a ^ b) < 0 ? INT_MIN : INT_MAX;
+    }
+    else
+    {
+        return div64_32((int64_t) a << FRACBITS, b);
+    }
 }
 
 #endif

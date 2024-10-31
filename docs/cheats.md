@@ -102,6 +102,9 @@ Toggle printing the FPS in the upper right corner.
 `RATE`  
 Toggle the display of rendering stats, including frame rate and the current number of segs, visplanes, and sprites.
 
+`SPEED`
+Toggle the speedometer. Repeating the cheat cycles through different units: map units per second, kilometers per hour, and miles per hour.
+
 ## New Nugget Doom cheats
 
 Most of them were taken from or inspired by other ports -- see `README.md` for credits.
@@ -165,7 +168,7 @@ Exit the level as if using a secret exit.
 Change the player speed in-game.
 
 `NOMOMENTUM`  
-Toggle no-momentum mode (reenabled debugging cheat).
+Toggle no-momentum mode (re-enabled debugging cheat).
 
 ## Beta cheats
 

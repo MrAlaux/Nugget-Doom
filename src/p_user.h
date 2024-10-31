@@ -25,6 +25,9 @@
 #include "m_fixed.h"
 #include "tables.h"
 
+// [Nugget]
+#include "hu_stuff.h"
+
 struct player_s;
 
 void P_PlayerThink(struct player_s *player);
@@ -33,9 +36,25 @@ void P_DeathThink(struct player_s *player);
 void P_MovePlayer(struct player_s *player);
 void P_Thrust(struct player_s *player, angle_t angle, fixed_t move);
 
-// [Nugget] ------------------------------------------------------------------
+typedef enum
+{
+  death_use_default,
+  death_use_reload,
+  death_use_nothing
+} death_use_action_t;
+
+extern death_use_action_t death_use_action;
+extern int activate_death_use_reload;
+
+extern boolean onground; // whether player is on ground or in air
+
+// [Nugget] ==================================================================
+
+extern boolean jump_crouch; // Jumping/crouching
+extern boolean breathing;
 
 void P_SetFlinch(player_t *const player, int pitch); // Flinching
+
 void P_SetPlayerEvent(player_t *player, eventtimer_t type); // Event timers
 
 #endif // __P_USER__

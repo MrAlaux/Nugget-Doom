@@ -27,7 +27,9 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
-struct stream_module_s;
+// [Nugget]
+extern boolean s_clipping_dist_x2;
+extern boolean force_flip_pan;
 
 // when to clip out sounds
 // Does not fit the large outdoor areas.
@@ -58,12 +60,6 @@ extern int S_ATTENUATOR;
 
 #define SND_SAMPLERATE  44100
 
-// [FG] variable pitch bend range
-extern int pitch_bend_range;
-
-// Pitch to stepping lookup.
-extern float steptable[256];
-
 // Init at program start...
 void I_InitSound(void);
 
@@ -73,14 +69,6 @@ void I_ShutdownSound(void);
 //
 //  SFX I/O
 //
-
-extern int forceFlipPan;
-extern int snd_resampler;
-extern boolean snd_limiter;
-extern int snd_module;
-extern boolean snd_hrtf;
-extern int snd_absorption;
-extern int snd_doppler;
 
 struct mobj_s;
 
@@ -97,20 +85,21 @@ typedef struct sound_module_s
                                  int *vol, int *sep, int *pri);
     void (*UpdateSoundParams)(int channel, int vol, int sep);
     void (*UpdateListenerParams)(const struct mobj_s *listener);
-    boolean (*StartSound)(int channel, struct sfxinfo_s *sfx, int pitch);
+    boolean (*StartSound)(int channel, struct sfxinfo_s *sfx, float pitch);
     void (*StopSound)(int channel);
     boolean (*SoundIsPlaying)(int channel);
     void (*ShutdownSound)(void);
     void (*ShutdownModule)(void);
     void (*DeferUpdates)(void);
     void (*ProcessUpdates)(void);
+    void (*BindVariables)(void);
 } sound_module_t;
 
 extern const sound_module_t sound_mbf_module;
 extern const sound_module_t sound_3d_module;
 extern const sound_module_t sound_pcs_module;
 
-typedef enum snd_module_e
+enum
 {
     SND_MODULE_MBF,
     SND_MODULE_3D,
@@ -118,10 +107,10 @@ typedef enum snd_module_e
     SND_MODULE_PCS,
 #endif
     NUM_SND_MODULES
-} snd_module_t;
+};
 
 boolean I_AllowReinitSound(void);
-void I_SetSoundModule(int device);
+void I_SetSoundModule(void);
 
 // Initialize channels?
 void I_SetChannels(void);
@@ -160,6 +149,16 @@ int I_SoundID(int handle);
 //  MUSIC I/O
 //
 
+typedef enum
+{
+    midiplayer_none,
+    midiplayer_native,
+    midiplayer_fluidsynth,
+    midiplayer_opl,
+} midiplayertype_t;
+
+midiplayertype_t I_MidiPlayerType(void);
+
 typedef struct
 {
     boolean (*I_InitMusic)(int device);
@@ -172,16 +171,17 @@ typedef struct
     void (*I_StopSong)(void *handle);
     void (*I_UnRegisterSong)(void *handle);
     const char **(*I_DeviceList)(void);
+    void (*I_BindVariables)(void);
+    midiplayertype_t (*I_MidiPlayerType)(void);
 } music_module_t;
 
-// Music modules
 extern music_module_t music_oal_module;
 extern music_module_t music_mid_module;
 
 boolean I_InitMusic(void);
 void I_ShutdownMusic(void);
 
-void I_SetMidiPlayer(int *menu_index);
+void I_SetMidiPlayer(void);
 
 // Volume.
 void I_SetMusicVolume(int volume);
@@ -212,6 +212,8 @@ boolean IsMid(byte *mem, int len);
 
 // Determine whether memory block is a .mus file
 boolean IsMus(byte *mem, int len);
+
+void I_BindSoundVariables(void);
 
 #endif
 

@@ -30,6 +30,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
 - **FOV-based sky stretching** setting (CFG-only: `fov_stretchsky`)
 - **Tweaked _Stretch Short Skies_ algorithm**
+- **Restored _Menu Backdrop Style_ menu item**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **_"Direct + Auto"_ mode for Vertical Aiming**
@@ -65,16 +66,13 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Toggle for **Diminished Lighting** (CFG-only: `diminished_lighting`)
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
+- **Color settings** [p.f. International Doom]
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
-- **Autosaving**
-  - Autosaves are meant to serve as backups: they're stored in the same folder as manual saves,
-    aren't accessible in-game, and lack preview snapshots, but otherwise function like normal saves.
-    They must be renamed to appear in the save/load menus.
+- **_Auto Save Interval_** setting, for periodic auto saves
 - **Rewinding** [i.b. DSDA-Doom]
 - **_Play Internal Demos_** setting
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
-- **Quit Sound** setting, independent of ENDOOM and enabled by default (CFG-only: `quit_sound`)
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
@@ -87,7 +85,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Switch [Weapon] on Pickup_** setting
 - **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
-- Button to **equip last used weapon** [i.b. Cherry Doom]
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
 - **Always Bob** setting (CFG-only: `always_bob`)
 - **_Bobbing Styles_** selection [p.f. Zandronum]
@@ -257,6 +254,7 @@ The following build system and libraries need to be installed:
  * [SDL2_net](https://github.com/libsdl-org/SDL_net)
  * [openal-soft](https://github.com/kcat/openal-soft) (>= 1.22.0 for PC Speaker emulation)
  * [libsndfile](https://github.com/libsndfile/libsndfile) (>= 1.1.0 for MPEG support)
+ * [cJSON](https://github.com/DaveGamble/cJSON)
  * [fluidsynth](https://github.com/FluidSynth/fluidsynth) (>= 2.2.0, optional)
  * [libxmp](https://github.com/libxmp/libxmp) (optional)
  
@@ -325,7 +323,7 @@ Copyright:
  © 2020 JadingTsunami;  
  © 2020-2024 Fabian Greffrath;  
  © 2020-2024 Roman Fomin;  
- © 2021 Ryan Krafnick;  
+ © 2021-2022 Ryan Krafnick;  
  © 2021-2024 Alaux;  
  © 2022 Julia Nechaevskaya;  
  © 2022-2024 ceski;  
@@ -333,16 +331,12 @@ Copyright:
  © 2023 liPillON.   
 License: [GPL-2.0+](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
-Files: `src/beta.h`  
-Copyright: © 2001-2019 Contributors to the Freedoom project.  
-License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
-
-Files: `src/dogs.h`  
+Files: `src/i_flickstick.*, src/i_gyro.*`  
 Copyright:  
- © 2017 Nash Muhandes;  
- © apolloaiello;  
- © TobiasKosmos.  
-License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/) and [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+ © 2018-2021 Julian "Jibb" Smart;  
+ © 2021-2024 Nicolas Lessard;  
+ © 2024 ceski.  
+License: [MIT](https://opensource.org/licenses/MIT)
 
 Files: `src/nano_bsp.*`  
 Copyright: © 2023 Andrew Apted.  
@@ -366,6 +360,21 @@ Copyright:
  © 2013 James Haley et al.  
 License: [GPL-3.0+](https://www.gnu.org/licenses/gpl-3.0)
 
+Files: `base/all-all/sprites/pls*`  
+Copyright: © 2001-2019 Contributors to the Freedoom project.  
+License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
+
+Files: `base/all-all/sprites/tnt1b0.png`  
+Copyright: © 2023 Korp.  
+License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+Files: `base/all-all/dsdg*, base/all-all/sprites/dog*`  
+Copyright:  
+ © 2017 Nash Muhandes;  
+ © apolloaiello;  
+ © TobiasKosmos.  
+License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/) and [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+
 Files: `cmake/FindSDL2.cmake, cmake/FindSDL2_net.cmake`  
 Copyright: © 2018 Alex Mayfield.  
 License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
@@ -373,12 +382,6 @@ License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
 Files: `data/nugget-doom.ico, data/nugget-doom.png, src/icon.c, data/setup.ico, data/nugget-doom-setup.png, setup/setup_icon.c`  
 Copyright: © 2022 Korp.  
 License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-
-Files: `miniz/*`  
-Copyright:  
- © 2010-2014 Rich Geldreich and Tenacious Software LLC;  
- © 2013-2014 RAD Game Tools and Valve Software.  
-License: [MIT](https://opensource.org/licenses/MIT)
 
 Files: `opl/*`  
 Copyright:  
@@ -399,5 +402,22 @@ Copyright:
  © 2005-2017 Simon Howard.  
 License: [GPL-2.0+](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
+Files: `third-party/miniz/*`  
+Copyright:  
+ © 2010-2014 Rich Geldreich and Tenacious Software LLC;  
+ © 2013-2014 RAD Game Tools and Valve Software.  
+License: [MIT](https://opensource.org/licenses/MIT)
+
+Files: `third-party/pffft/*`  
+Copyright:  
+ © 2004 The University Corporation for Atmospheric Research ("UCAR");  
+ © 2013 Julien Pommier.  
+License: [FFTPACK License](https://bitbucket.org/jpommier/pffft/src/master/pffft.h)
+
+Files: `third-party/spng/*`  
+Copyright: © 2018-2023 Randy.  
+License: [BSD-2-Clause](https://opensource.org/license/bsd-2-clause)
+
 Files: `win32/win_opendir.*`  
-License: public-domain
+Copyright: 2019 win32ports
+License: [MIT](https://opensource.org/licenses/MIT)

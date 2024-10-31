@@ -20,6 +20,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
+#include "g_input.h"
 #include "m_fixed.h"
 
 struct event_s;
@@ -33,7 +34,10 @@ struct event_s;
 
 #define MBF21_GAME_OPTION_SIZE (21 + MBF21_COMP_TOTAL)
 
-void G_PrepTiccmd(void);
+void G_UpdateLocalViewFunction(void);
+void G_PrepMouseTiccmd(void);
+void G_PrepGamepadTiccmd(void);
+void G_PrepGyroTiccmd(void);
 void G_ClearInput(void);
 boolean G_MovementResponder(struct event_s *ev);
 boolean G_Responder(struct event_s *ev);
@@ -42,9 +46,14 @@ void G_DeathMatchSpawnPlayer(int playernum);
 void G_InitNew(skill_t skill, int episode, int map);
 void G_DeferedInitNew(skill_t skill, int episode, int map);
 void G_DeferedPlayDemo(char *demo);
+void G_LoadAutoSave(char *name);
 void G_LoadGame(char *name, int slot, boolean is_command); // killough 5/15/98
+void G_ForcedLoadAutoSave(void);
 void G_ForcedLoadGame(void);           // killough 5/15/98: forced loadgames
+void G_SaveAutoSave(char *description);
 void G_SaveGame(int slot, char *description); // Called by M_Responder.
+boolean G_AutoSaveEnabled(void);
+boolean G_LoadAutoSaveDeathUse(void);
 void G_RecordDemo(char *name);              // Only called by startup code.
 void G_BeginRecording(void);
 void G_PlayDemo(char *name);
@@ -53,9 +62,8 @@ void G_SecretExitLevel(void);
 void G_WorldDone(void);
 void G_Ticker(void);
 void G_ScreenShot(void);
-void G_UpdateSideMove(void);
-void G_UpdateCarryAngle(void);
 void G_ReloadDefaults(boolean keep_demover); // killough 3/1/98: loads game defaults
+char *G_AutoSaveName(void);
 char *G_SaveGameName(int); // killough 3/22/98: sets savegame filename
 char *G_MBFSaveGameName(int); // MBF savegame filename
 void G_SetFastParms(int);        // killough 4/10/98: sets -fast parameters
@@ -76,6 +84,12 @@ const char *G_GetCurrentComplevelName(void);
 
 int G_GotoNextLevel(int *pEpi, int *pMap);
 
+void G_BindGameInputVariables(void);
+void G_BindGameVariables(void);
+void G_BindEnemVariables(void);
+void G_BindCompVariables(void);
+void G_BindWeapVariables(void);
+
 typedef enum
 {
   CL_NONE = -1,
@@ -89,21 +103,26 @@ extern complevel_t force_complevel, default_complevel;
 
 extern int realtic_clock_rate;
 
+extern boolean gamekeydown[];
+extern boolean mousebuttons[];
+extern boolean joybuttons[];
+
 // killough 5/2/98: moved from m_misc.c:
 extern int  key_escape;
 extern int  key_enter;
 extern int  key_help;
-extern int  autorun;           // always running?                   // phares
+extern boolean autorun;           // always running?                   // phares
 extern boolean autostrafe50;
-extern int  novert;
+extern boolean novert;
 extern boolean mouselook;
 extern boolean padlook;
-extern int  dclick_use; // [FG] double click acts as "use"
 
-extern fixed_t *forwardmove;
+extern fixed_t forwardmove[2];
+extern fixed_t default_sidemove[2];
 extern fixed_t *sidemove;
+extern const fixed_t angleturn[3];
 
-extern int  defaultskill;      //jff 3/24/98 default skill
+extern int  default_skill;      //jff 3/24/98 default skill
 extern boolean haswolflevels;  //jff 4/18/98 wolf levels present
 
 extern int  bodyquesize, default_bodyquesize; // killough 2/8/98, 10/98
@@ -112,12 +131,37 @@ extern int  bodyquesize, default_bodyquesize; // killough 2/8/98, 10/98
 // Par times (new item with BOOM) - from g_game.c
 extern int pars[][10];  // hardcoded array size
 extern int cpars[];     // hardcoded array size
+extern boolean um_pars;
+
+extern boolean secretexit;
 
 // [Nugget] ==================================================================
 
-void G_SetAutosaveCountdown(int value); // Autosave
+// CVARs ---------------------------------------------------------------------
+
+extern boolean one_key_saveload;
+extern boolean skip_ammoless_weapons;
+extern boolean show_save_messages;
+
+enum {
+  SHOTPAL_NONE,
+  SHOTPAL_NORMAL,
+  SHOTPAL_CLEAN,
+  SHOTPAL_BOTH,
+}; extern int screenshot_palette;
+
+extern boolean comp_longautoaim;
+
+// Periodic auto save --------------------------------------------------------
+
+extern int autosave_interval;
+
+boolean G_SavingPeriodicAutoSave(void);
+void G_SetAutoSaveCountdown(int value);
 
 // Rewind --------------------------------------------------------------------
+
+extern int rewind_interval;
 
 void G_SetRewindCountdown(int value);
 void G_EnableRewind(void);
@@ -137,6 +181,17 @@ float G_GetSlowMotionFactor(void);
 void G_SetTimeScale(int scale);
 
 // Skill ---------------------------------------------------------------------
+
+extern int custom_skill_things;
+extern boolean custom_skill_coopspawns;
+extern boolean custom_skill_nomonsters;
+extern boolean custom_skill_doubleammo;
+extern boolean custom_skill_halfdamage;
+extern boolean custom_skill_slowbrain;
+extern boolean custom_skill_fast;
+extern boolean custom_skill_respawn;
+extern boolean custom_skill_aggressive;
+extern boolean custom_skill_x2monsters;
 
 void G_SetSkillParms(const skill_t skill);
 void G_SetUserCustomSkill(void);

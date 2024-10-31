@@ -40,6 +40,7 @@
 #include "tables.h"
 
 // [Nugget]
+#include "hu_stuff.h"
 #include "p_maputl.h"
 #include "p_user.h"
 #include "v_video.h"
@@ -81,7 +82,10 @@ int clipammo[NUMAMMO] = { 10,  4,  20,  1};
 // GET STUFF
 //
 
-// [Nugget]
+// [Nugget] /-----------------------------------------------------------------
+
+boolean switch_on_pickup;
+
 static boolean P_AutoswitchWeapon(void)
 {
   if (!casual_play || switch_on_pickup)
@@ -89,6 +93,8 @@ static boolean P_AutoswitchWeapon(void)
   
   return false;
 }
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // P_GiveAmmo
@@ -222,7 +228,7 @@ boolean P_GiveWeapon(player_t *player, weapontype_t weapon, boolean dropped)
       P_GiveAmmo(player, weaponinfo[weapon].ammo, deathmatch ? 5 : 2);
 
       player->pendingweapon = weapon;
-      S_StartSound(player->mo, sfx_wpnup); // killough 4/25/98, 12/98
+      S_StartSoundPreset(player->mo, sfx_wpnup, PITCH_FULL); // killough 4/25/98, 12/98
       return false;
     }
 
@@ -268,6 +274,8 @@ boolean P_GiveArmor(player_t *player, int armortype)
   player->armorpoints = hits;
   return true;
 }
+
+boolean comp_keypal; // [Nugget]
 
 //
 // P_GiveCard
@@ -723,16 +731,17 @@ picked_up: // [Nugget]
     {
       int itemcount = 0;
 
-      for (int pl = 0;  pl < MAXPLAYERS;  ++pl) {
-        if (playeringame[pl])
-        { itemcount += players[pl].itemcount; }
+      for (int pl = 0;  pl < MAXPLAYERS;  ++pl)
+      {
+        if (playeringame[pl]) { itemcount += players[pl].itemcount; }
       }
 
       if (itemcount >= totalitems)
       {
         complete_milestones |= MILESTONE_ITEMS;
 
-        if (announce_milestones) {
+        if (announce_milestones)
+        {
           players[displayplayer].secretmessage = "All items acquired!";
           S_StartSound(NULL, sfx_secret);
         }
@@ -741,15 +750,22 @@ picked_up: // [Nugget]
   }
   P_RemoveMobj (special);
   player->bonuscount += BONUSADD;
+
   // [Nugget] Bonuscount cap
   if (STRICTMODE(bonuscount_cap >= 0 && player->bonuscount > bonuscount_cap))
   { player->bonuscount = bonuscount_cap; }
 
-  S_StartSoundPitchOptional(player->mo, sound, sfx_itemup, // [Nugget]: [NS] Fallback to itemup.
-                            sound == sfx_itemup ? PITCH_NONE : PITCH_FULL);
+  S_StartSoundPresetOptional(player->mo, sound, sfx_itemup, // [Nugget]: [NS] Fallback to itemup.
+                             sound == sfx_itemup ? PITCH_NONE : PITCH_FULL);
 }
 
-// [Nugget] Check for Extra Gibbing
+// [Nugget] /=================================================================
+
+// Extra Gibbing -------------------------------------------------------------
+
+boolean extra_gibbing_on;
+boolean extra_gibbing[NUMEXGIBS];
+
 static boolean P_NuggetExtraGibbing(mobj_t *source, mobj_t *target)
 {
   extern void A_Punch(), A_Saw(), A_FireShotgun2();
@@ -780,7 +796,10 @@ static boolean P_NuggetExtraGibbing(mobj_t *source, mobj_t *target)
   return false;
 }
 
-// [Nugget] Bloodier Gibbing
+// Bloodier Gibbing ----------------------------------------------------------
+
+boolean bloodier_gibbing;
+
 void P_NuggetGib(mobj_t *mo, const boolean crushed)
 {
   int quantity;
@@ -824,6 +843,8 @@ void P_NuggetGib(mobj_t *mo, const boolean crushed)
   }
 }
 
+// [Nugget] =================================================================/
+
 //
 // KillMobj
 //
@@ -838,6 +859,8 @@ static void WatchKill(player_t* player, mobj_t* target)
     player->maxkilldiscount++;
   }
 }
+
+boolean tossdrop; // [Nugget]
 
 static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod)
 {

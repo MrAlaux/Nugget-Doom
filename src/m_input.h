@@ -18,6 +18,7 @@
 #define __M_INPUT__
 
 #include "doomtype.h"
+#include "i_gamepad.h"
 
 struct event_s;
 
@@ -35,13 +36,14 @@ enum
     input_speed,
     input_strafe,
     input_autorun,
-    input_novert,
     input_reverse,
+    input_gyro,
     input_use,
     input_fire,
     input_prevweapon,
     input_nextweapon,
 
+    input_novert,
     input_freelook,
 
     input_weapon1,
@@ -54,6 +56,7 @@ enum
     input_weapon8,
     input_weapon9,
     input_weapontoggle,
+    input_lastweapon,
 
     input_menu_up,
     input_menu_down,
@@ -84,9 +87,9 @@ enum
     input_zoomout,
     input_screenshot,
     input_clean_screenshot,
-    input_setup,
     input_pause,
     input_spy,
+
     input_demo_quit,
     input_demo_fforward,
     input_demo_join,
@@ -128,7 +131,6 @@ enum
     input_idbeholdi,
     input_idbeholdr,
     input_idbeholdl,
-    input_idrate,
     input_iddt,
     input_notarget,
     input_freeze,
@@ -138,8 +140,6 @@ enum
 
     input_jump,
     input_crouch,
-
-    input_lastweapon,
 
     input_crosshair,
     input_zoom,
@@ -200,11 +200,13 @@ boolean M_InputGameActive(int id);
 void M_InputGameDeactivate(int id);
 
 void M_InputReset(int id);
-void M_InputSetDefault(int id, input_t *inputs);
+void M_InputSetDefault(int id);
 
 const char *M_GetNameForKey(int key);
 int M_GetKeyForName(const char *name);
 
+void M_UpdatePlatform(joy_platform_t platform);
+const char *M_GetPlatformName(int joyb);
 const char *M_GetNameForJoyB(int joyb);
 int M_GetJoyBForName(const char *name);
 
@@ -214,5 +216,7 @@ int M_GetMouseBForName(const char *name);
 boolean M_IsMouseWheel(int mouseb);
 
 void M_InputPredefined(void);
+
+void M_BindInputVariables(void);
 
 #endif

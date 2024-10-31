@@ -52,12 +52,15 @@ extern int      validcount;
 extern int      linecount;
 extern int      loopcount;
 extern fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
+extern int      max_project_slope;
 
 //
 // Rendering stats
 //
 
 extern int rendered_visplanes, rendered_segs, rendered_vissprites, rendered_voxels;
+
+void R_BindRenderVariables(void);
 
 //
 // Lighting LUT.
@@ -113,11 +116,25 @@ struct subsector_s *R_PointInSubsector(fixed_t x, fixed_t y);
 // REFRESH - the actual rendering functions.
 //
 
+void R_UpdateViewAngleFunction(void);
 void R_RenderPlayerView(struct player_s *player);   // Called by G_Drawer.
 void R_Init(void);                           // Called by startup code.
 void R_SetViewSize(int blocks);              // Called by M_Responder.
 
 // [Nugget] /=================================================================
+
+extern boolean flip_levels;
+extern boolean nightvision_visor;
+extern int fake_contrast;
+extern boolean diminished_lighting;
+extern boolean a11y_weapon_pspr;
+extern boolean a11y_invul_colormap;
+extern boolean translucent_pspr;
+extern int translucent_pspr_pct;
+extern int zoom_fov;
+extern boolean comp_powerrunout;
+
+extern boolean have_crouch_sprites;
 
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
@@ -146,10 +163,20 @@ extern void R_SetZoom(const int state);
 
 // Explosion shake effect ----------------------------------------------------
 
+extern boolean explosion_shake;
+extern int explosion_shake_intensity_pct;
+
 extern void R_SetShake(int value);
 extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range);
 
 // Chasecam ------------------------------------------------------------------
+
+enum {
+  CHASECAMMODE_OFF,
+  CHASECAMMODE_BACK,
+  CHASECAMMODE_FRONT,
+}; extern int chasecam_mode;
+extern boolean chasecam_crosshair;
 
 extern boolean R_GetChasecamOn(void);
 extern void    R_SetChasecamHit(const boolean value);
@@ -219,8 +246,9 @@ inline static angle_t LerpAngle(angle_t oangle, angle_t nangle)
     }
 }
 
-extern double deltatics;
 extern boolean raw_input;
+
+extern int autodetect_hom;
 
 #endif
 
