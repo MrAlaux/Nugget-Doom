@@ -1251,6 +1251,7 @@ void I_TranslatePalette(void)
         }
         */
         return;
+    }
     int lumpnum = W_CheckNumForName("PLAYPAL");
     byte* palette = (byte *)W_CacheLumpNum(lumpnum, PU_CACHE);
 
