@@ -1258,11 +1258,12 @@ static void UpdatePowers(sbe_widget_t *widget, player_t *player)
     POWERUP_TIMER(pw_infrared,        INFRATICS,  5, "LIGHT", CR_BRICK);
     POWERUP_TIMER(pw_ironfeet,        IRONTICS,   6, "SUIT",  CR_GRAY);
 
-    string[offset - 1] = '\0'; // Trim leading space
-
-    SetLine(widget, string);
-
     #undef POWERUP_TIMER
+
+    if (offset <= 0) { return; }
+
+    string[offset - 1] = '\0'; // Trim leading space
+    SetLine(widget, string);
 }
 
 // [crispy] print a bar indicating demo progress at the bottom of the screen
