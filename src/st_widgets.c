@@ -1260,7 +1260,7 @@ static void UpdatePowers(sbe_widget_t *widget, player_t *player)
 
     string[offset - 1] = '\0'; // Trim leading space
 
-    SetLine(widget, string);
+    ST_AddLine(widget, string);
 
     #undef POWERUP_TIMER
 }
