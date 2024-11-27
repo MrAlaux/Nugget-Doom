@@ -3047,10 +3047,10 @@ static sbardef_t *CreateNughudSbarDef(void)
 
   // Tall Numbers ------------------------------------------------------------
 
-  static numberfont_t tnum = {0};
+  numberfont_t *const tnum = calloc(1, sizeof(*tnum));;
 
-  tnum.name = M_StringDuplicate("Tall");
-  tnum.type = sbf_mono0;
+  tnum->name = M_StringDuplicate("Tall");
+  tnum->type = sbf_mono0;
 
   maxwidth = maxheight = 0;
 
@@ -3060,26 +3060,26 @@ static sbardef_t *CreateNughudSbarDef(void)
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      tnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(tnum.numbers[i]->width));
-      maxheight = MAX(maxheight, SHORT(tnum.numbers[i]->height));
+      tnum->numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(tnum->numbers[i]->width));
+      maxheight = MAX(maxheight, SHORT(tnum->numbers[i]->height));
     }
     else { goto no_nhtnum; }
   }
 
   if ((lumpnum = (W_CheckNumForName)("NHTMINUS", ns_global)) >= 0)
   {
-    tnum.minus = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.minus->width));
-    maxheight = MAX(maxheight, SHORT(tnum.minus->height));
+    tnum->minus = V_CachePatchNum(lumpnum, PU_STATIC);
+    maxwidth  = MAX(maxwidth,  SHORT(tnum->minus->width));
+    maxheight = MAX(maxheight, SHORT(tnum->minus->height));
   }
   else { goto no_nhtnum; }
 
   if ((lumpnum = (W_CheckNumForName)("NHTPRCNT", ns_global)) >= 0)
   {
-    tnum.percent = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.percent->width));
-    maxheight = MAX(maxheight, SHORT(tnum.percent->height));
+    tnum->percent = V_CachePatchNum(lumpnum, PU_STATIC);
+    maxwidth  = MAX(maxwidth,  SHORT(tnum->percent->width));
+    maxheight = MAX(maxheight, SHORT(tnum->percent->height));
   }
   else { goto no_nhtnum; }
 
@@ -3095,37 +3095,37 @@ no_nhtnum:
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      tnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(tnum.numbers[i]->width));
-      maxheight = MAX(maxheight, SHORT(tnum.numbers[i]->height));
+      tnum->numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(tnum->numbers[i]->width));
+      maxheight = MAX(maxheight, SHORT(tnum->numbers[i]->height));
     }
   }
 
   if ((lumpnum = (W_CheckNumForName)("STTMINUS", ns_global)) >= 0)
   {
-    tnum.minus = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.minus->width));
-    maxheight = MAX(maxheight, SHORT(tnum.minus->height));
+    tnum->minus = V_CachePatchNum(lumpnum, PU_STATIC);
+    maxwidth  = MAX(maxwidth,  SHORT(tnum->minus->width));
+    maxheight = MAX(maxheight, SHORT(tnum->minus->height));
   }
 
   if ((lumpnum = (W_CheckNumForName)("STTPRCNT", ns_global)) >= 0)
   {
-    tnum.percent = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.percent->width));
-    maxheight = MAX(maxheight, SHORT(tnum.percent->height));
+    tnum->percent = V_CachePatchNum(lumpnum, PU_STATIC);
+    maxwidth  = MAX(maxwidth,  SHORT(tnum->percent->width));
+    maxheight = MAX(maxheight, SHORT(tnum->percent->height));
   }
 
 end_tnum:
 
-  tnum.monowidth = SHORT(tnum.numbers[0]->width);
-  tnum.maxheight = maxheight;
+  tnum->monowidth = SHORT(tnum->numbers[0]->width);
+  tnum->maxheight = maxheight;
 
   // Ready Ammo Numbers ------------------------------------------------------
 
-  static numberfont_t rnum = {0};
+  numberfont_t *const rnum = calloc(1, sizeof(*rnum));;
 
-  rnum.name = M_StringDuplicate("ReadyAmmo");
-  rnum.type = sbf_mono0;
+  rnum->name = M_StringDuplicate("ReadyAmmo");
+  rnum->type = sbf_mono0;
 
   maxwidth = maxheight = 0;
 
@@ -3135,18 +3135,18 @@ end_tnum:
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      rnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(rnum.numbers[i]->width));
-      maxheight = MAX(maxheight, SHORT(rnum.numbers[i]->height));
+      rnum->numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(rnum->numbers[i]->width));
+      maxheight = MAX(maxheight, SHORT(rnum->numbers[i]->height));
     }
     else { goto no_nhrnum; }
   }
 
   if ((lumpnum = (W_CheckNumForName)("NHRMINUS", ns_global)) >= 0)
   {
-    rnum.minus = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(rnum.minus->width));
-    maxheight = MAX(maxheight, SHORT(rnum.minus->height));
+    rnum->minus = V_CachePatchNum(lumpnum, PU_STATIC);
+    maxwidth  = MAX(maxwidth,  SHORT(rnum->minus->width));
+    maxheight = MAX(maxheight, SHORT(rnum->minus->height));
   }
   else { goto no_nhrnum; }
 
@@ -3154,27 +3154,27 @@ end_tnum:
 
 no_nhrnum:
 
-  maxwidth  = tnum.monowidth;
-  maxheight = tnum.maxheight;
+  maxwidth  = tnum->monowidth;
+  maxheight = tnum->maxheight;
 
   for (int i = 0;  i < 10;  i++)
   {
-    rnum.numbers[i] = tnum.numbers[i];
+    rnum->numbers[i] = tnum->numbers[i];
   }
 
-  rnum.minus = tnum.minus;
+  rnum->minus = tnum->minus;
 
 end_rnum:
 
-  rnum.monowidth = SHORT(rnum.numbers[0]->width);
-  rnum.maxheight = maxheight;
+  rnum->monowidth = SHORT(rnum->numbers[0]->width);
+  rnum->maxheight = maxheight;
 
   // Ammo Numbers ------------------------------------------------------------
 
-  static numberfont_t amnum = {0};
+  numberfont_t *const amnum = calloc(1, sizeof(*amnum));;
 
-  amnum.name = M_StringDuplicate("Ammo");
-  amnum.type = sbf_mono0;
+  amnum->name = M_StringDuplicate("Ammo");
+  amnum->type = sbf_mono0;
 
   maxwidth = maxheight = 0;
 
@@ -3184,9 +3184,9 @@ end_rnum:
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      amnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(amnum.numbers[i]->width));
-      maxheight = MAX(maxheight, SHORT(amnum.numbers[i]->height));
+      amnum->numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(amnum->numbers[i]->width));
+      maxheight = MAX(maxheight, SHORT(amnum->numbers[i]->height));
     }
     else { goto no_nhamnum; }
   }
@@ -3203,23 +3203,23 @@ no_nhamnum:
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      amnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(amnum.numbers[i]->width));
-      maxheight = MAX(maxheight, SHORT(amnum.numbers[i]->height));
+      amnum->numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(amnum->numbers[i]->width));
+      maxheight = MAX(maxheight, SHORT(amnum->numbers[i]->height));
     }
   }
 
 end_amnum:
 
-  amnum.monowidth = SHORT(amnum.numbers[0]->width);
-  amnum.maxheight = maxheight;
+  amnum->monowidth = SHORT(amnum->numbers[0]->width);
+  amnum->maxheight = maxheight;
 
   // Console Font ------------------------------------------------------------
 
-  static hudfont_t cfn = {0};
+  hudfont_t *const cfn = calloc(1, sizeof(*cfn));;
 
-  cfn.name = M_StringDuplicate("Console");
-  cfn.type = sbf_proportional;
+  cfn->name = M_StringDuplicate("Console");
+  cfn->type = sbf_proportional;
 
   maxwidth = maxheight = 0;
 
@@ -3229,21 +3229,21 @@ end_amnum:
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      cfn.characters[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(cfn.characters[i]->width));
-      maxheight = MAX(maxheight, SHORT(cfn.characters[i]->height));
+      cfn->characters[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(cfn->characters[i]->width));
+      maxheight = MAX(maxheight, SHORT(cfn->characters[i]->height));
     }
   }
 
-  cfn.monowidth = maxwidth;
-  cfn.maxheight = maxheight;
+  cfn->monowidth = maxwidth;
+  cfn->maxheight = maxheight;
 
   // Digits Font -------------------------------------------------------------
 
-  static hudfont_t dig = {0};
+  hudfont_t *const dig = calloc(1, sizeof(*dig));;
 
-  dig.name = M_StringDuplicate("Digits");
-  dig.type = sbf_mono0;
+  dig->name = M_StringDuplicate("Digits");
+  dig->type = sbf_mono0;
 
   maxwidth = maxheight = 0;
 
@@ -3253,14 +3253,14 @@ end_amnum:
 
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
-      dig.characters[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(dig.characters[i]->width));
-      maxheight = MAX(maxheight, SHORT(dig.characters[i]->height));
+      dig->characters[i] = V_CachePatchNum(lumpnum, PU_STATIC);
+      maxwidth  = MAX(maxwidth,  SHORT(dig->characters[i]->width));
+      maxheight = MAX(maxheight, SHORT(dig->characters[i]->height));
     }
   }
 
-  dig.monowidth = maxwidth;
-  dig.maxheight = MAX(8, maxheight);
+  dig->monowidth = maxwidth;
+  dig->maxheight = MAX(8, maxheight);
 
   // Widgets =================================================================
 
@@ -3268,7 +3268,7 @@ end_amnum:
 
   if (nughud.ammo.x > -1)
   {
-    sbarelem_t elem = CreateNughudNumber(nughud.ammo, sbn_ammoselected, &rnum, 3, false);
+    sbarelem_t elem = CreateNughudNumber(nughud.ammo, sbn_ammoselected, rnum, 3, false);
 
     sbarcondition_t condition = {0};
 
@@ -3283,7 +3283,7 @@ end_amnum:
 
   if (nughud.health.x > -1)
   {
-    array_push(sb.children, CreateNughudNumber(nughud.health, sbn_health, &tnum, 3, true));
+    array_push(sb.children, CreateNughudNumber(nughud.health, sbn_health, tnum, 3, true));
   }
 
   // Arms Numbers ------------------------------------------------------------
@@ -3352,7 +3352,7 @@ end_amnum:
 
   if (nughud.frags.x > -1)
   {
-    sbarelem_t elem = CreateNughudNumber(nughud.frags, sbn_frags, &tnum, 2, false);
+    sbarelem_t elem = CreateNughudNumber(nughud.frags, sbn_frags, tnum, 2, false);
 
     sbarcondition_t condition = {0};
 
@@ -3454,7 +3454,7 @@ end_amnum:
 
   if (nughud.armor.x > -1)
   {
-    array_push(sb.children, CreateNughudNumber(nughud.armor, sbn_armor, &tnum, 3, true));
+    array_push(sb.children, CreateNughudNumber(nughud.armor, sbn_armor, tnum, 3, true));
   }
 
   // Ammos -------------------------------------------------------------------
@@ -3467,7 +3467,7 @@ end_amnum:
 
       if (na.x > -1)
       {
-        sbarelem_t elem = CreateNughudNumber(na, j ? sbn_maxammo : sbn_ammo, &amnum, 3, false);
+        sbarelem_t elem = CreateNughudNumber(na, j ? sbn_maxammo : sbn_ammo, amnum, 3, false);
 
         elem.subtype.number->param = i;
 
@@ -3479,7 +3479,7 @@ end_amnum:
   // Boom widgets ------------------------------------------------------------
 
   #define CREATE_BOOM_WIDGET(_ntl_, _type_) \
-    array_push(sb.children, CreateNughudWidget(_ntl_, _type_, &dig));
+    array_push(sb.children, CreateNughudWidget(_ntl_, _type_, dig));
 
   CREATE_BOOM_WIDGET(nughud.time,   sbw_time);
   CREATE_BOOM_WIDGET(nughud.sts,    sbw_monsec);
@@ -3495,7 +3495,7 @@ end_amnum:
   // Title -------------------------------------------------------------------
 
   {
-    sbarelem_t elem = CreateNughudWidget(nughud.title, sbw_title, &cfn);
+    sbarelem_t elem = CreateNughudWidget(nughud.title, sbw_title, cfn);
 
     sbarcondition_t condition = {0};
 
@@ -3510,7 +3510,7 @@ end_amnum:
   // Message -----------------------------------------------------------------
 
   {
-    sbarelem_t elem = CreateNughudWidget(nughud.message, sbw_message, &cfn);
+    sbarelem_t elem = CreateNughudWidget(nughud.message, sbw_message, cfn);
 
     elem.subtype.widget->duration = 4*TICRATE;
 
@@ -3520,10 +3520,10 @@ end_amnum:
   // Chat --------------------------------------------------------------------
 
   {
-    sbarelem_t elem = CreateNughudWidget(nughud.message, sbw_chat, &cfn);
+    sbarelem_t elem = CreateNughudWidget(nughud.message, sbw_chat, cfn);
 
     elem.cr = CR_GOLD;
-    elem.y_pos += cfn.maxheight;
+    elem.y_pos += cfn->maxheight;
 
     array_push(sb.children, elem);
   }
@@ -3531,7 +3531,7 @@ end_amnum:
   // Secret message ----------------------------------------------------------
 
   {
-    sbarelem_t elem = CreateNughudWidget(nughud.secret, sbw_secret, &cfn);
+    sbarelem_t elem = CreateNughudWidget(nughud.secret, sbw_secret, cfn);
 
     elem.cr = CR_GOLD;
     elem.subtype.widget->duration = 2.5f*TICRATE;
