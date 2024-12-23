@@ -36,6 +36,7 @@ struct player_s;
 
 // CVARs
 extern boolean no_menu_tint;
+extern boolean hud_menu_allow_lowercase;
 extern boolean no_berserk_tint;
 extern boolean no_radsuit_tint;
 extern boolean comp_godface;
@@ -46,6 +47,8 @@ boolean ST_GetLayout(void);
 int ST_GetMessageFontHeight(void);
 boolean ST_IconAvailable(const int i);
 boolean ST_GetNughudOn(void);
+
+char ST_ToUpper(const char c);
 
 // Key blinking --------------------------------------------------------------
 
