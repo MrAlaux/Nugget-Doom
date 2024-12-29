@@ -2065,6 +2065,8 @@ static void G_WriteLevelStat(void)
             levelString, (secretexit ? "s" : ""),
             levelTimeString, totalTimeString, playerKills, totalkills,
             playerItems, totalitems, playerSecrets, totalsecret);
+
+    fflush(fstream); // [Nugget]
 }
 
 // [Nugget] Custom Skill
