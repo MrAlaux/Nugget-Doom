@@ -5,6 +5,8 @@
 
 ## Changes
 
+- **Merged changes from [Woof! post-15.0.1]**, note:
+  - Removed `fuzzdark_mode` in favor of Woof!'s `fuzzmode` (_Refraction_ is equivalent to _Selective Fuzz Darkening_)
 - Nugget's translucency features now use translucency maps from a shared pool,
   potentially improving program startup time in exchange for stutters
   when enabling said features for the first time since launch

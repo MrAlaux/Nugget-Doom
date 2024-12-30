@@ -3011,6 +3011,8 @@ static void DoSaveGame(char *name)
 
   length = save_p - savebuffer;
 
+  M_MakeDirectory(basesavegame);
+
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
   else if (show_save_messages && !is_periodic_autosave) // [Nugget]
