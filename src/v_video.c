@@ -161,8 +161,9 @@ int automap_overlay_darkening;
 int menu_backdrop_darkening;
 
 byte cr_allblack[256],
-     cr_gray_vc[256],  // `V_Colorize()` only
-     nightvision[256]; // Night-vision visor
+     cr_gray_vc[256],              // `V_Colorize()` only
+     nightvision[256],             // Night-vision visor
+     subtractive_tranmap[256*256]; // Subtractive translucency
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -263,6 +264,31 @@ void V_InitColorTranslation(void)
         double greatest = MAX(MAX(blue, red), green);
         
         nightvision[i] = I_GetNearestColor(playpal, 0.0, greatest, 0.0);
+    }
+
+    // Subtractive translucency ----------------------------------------------
+
+    for (int i = 0;  i < 256;  i++)
+    {
+        const byte *const bg = playpal + (i * 3);
+
+        for (int j = 0;  j < 256;  j++)
+        {
+            const byte *const fg = playpal + (j * 3);
+
+            int rgb[3];
+
+            for (int k = 0;  k < 3;  k++)
+            {
+                // The intensity of the foreground component decreases
+                // alongside the background component's intensity
+                rgb[k] = bg[k] - (fg[k] / (1 + (((256 - bg[k]) / 64) * 3)));
+
+                rgb[k] = BETWEEN(0, 255, rgb[k]);
+            }
+
+            subtractive_tranmap[(i * 256) + j] = I_GetNearestColor(playpal, rgb[0], rgb[1], rgb[2]);
+        }
     }
 }
 

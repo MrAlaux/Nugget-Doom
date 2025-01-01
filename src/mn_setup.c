@@ -3656,7 +3656,8 @@ static const char *exit_sequence_strings[] = {
 };
 
 static const char *fuzzmode_strings[] = {
-    "Vanilla", "Refraction", "Shadow"
+    "Vanilla", "Refraction", "Shadow",
+    "Subtractive" // [Nugget] Subtractive translucency
 };
 
 static setup_menu_t gen_settings5[] = {

@@ -60,8 +60,9 @@ extern byte invul_gray[];
 
 // [Nugget]
 extern byte cr_allblack[],
-            cr_gray_vc[],  // `V_Colorize()` only
-            nightvision[]; // Night-vision visor
+            cr_gray_vc[],          // `V_Colorize()` only
+            nightvision[],         // Night-vision visor
+            subtractive_tranmap[]; // Subtractive translucency
 
 // array of pointers to color translation tables
 extern byte *colrngs[];

@@ -677,6 +677,9 @@ static void DrawFuzzColumnShadow(void)
     }
 }
 
+// [Nugget] Subtractive translucency
+DRAW_COLUMN(PSX, subtractive_tranmap[(*dest * 256) + src]);
+
 fuzzmode_t fuzzmode;
 void (*R_DrawFuzzColumn)(void) = DrawFuzzColumnOriginal;
 
@@ -704,6 +707,11 @@ void R_SetFuzzColumnMode(void)
             break;
         case FUZZ_SHADOW:
             R_DrawFuzzColumn = DrawFuzzColumnShadow;
+            break;
+
+        // [Nugget] Subtractive translucency
+        case FUZZ_PSX:
+            R_DrawFuzzColumn = DrawColumnPSX;
             break;
     }
 }
