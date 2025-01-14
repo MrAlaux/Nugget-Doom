@@ -101,8 +101,8 @@ static boolean disk_icon; // killough 10/98
 
 static const char *sdl_renderdriver = "";
 
-static int red_intensity, green_intensity, blue_intensity;
-static int color_saturation, color_contrast;
+int red_intensity, green_intensity, blue_intensity;
+int color_saturation, color_contrast;
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -897,7 +897,7 @@ void I_FinishUpdate(void)
 // I_ReadScreen
 //
 
-void I_ReadScreen(byte *dst)
+void I_ReadScreen(pixel_t *dst)
 {
     V_GetBlock(0, 0, video.width, video.height, dst);
 }
@@ -997,36 +997,10 @@ static void I_RestoreDiskBackground(void)
 
 int gamma2;
 
-// [Nugget]:
-// [JN] Saturation percent array.
-// 0.66 = 0% saturation, 0.0 = 100% saturation.
-const float I_SaturationPercent[101] =
-{
-    0.660000f, 0.653400f, 0.646800f, 0.640200f, 0.633600f,
-    0.627000f, 0.620400f, 0.613800f, 0.607200f, 0.600600f,
-    0.594000f, 0.587400f, 0.580800f, 0.574200f, 0.567600f,
-    0.561000f, 0.554400f, 0.547800f, 0.541200f, 0.534600f,
-    0.528000f, 0.521400f, 0.514800f, 0.508200f, 0.501600f,
-    0.495000f, 0.488400f, 0.481800f, 0.475200f, 0.468600f,
-    0.462000f, 0.455400f, 0.448800f, 0.442200f, 0.435600f,
-    0.429000f, 0.422400f, 0.415800f, 0.409200f, 0.402600f,
-    0.396000f, 0.389400f, 0.382800f, 0.376200f, 0.369600f,
-    0.363000f, 0.356400f, 0.349800f, 0.343200f, 0.336600f,
-    0.330000f, 0.323400f, 0.316800f, 0.310200f, 0.303600f,
-    0.297000f, 0.290400f, 0.283800f, 0.277200f, 0.270600f,
-    0.264000f, 0.257400f, 0.250800f, 0.244200f, 0.237600f,
-    0.231000f, 0.224400f, 0.217800f, 0.211200f, 0.204600f,
-    0.198000f, 0.191400f, 0.184800f, 0.178200f, 0.171600f,
-    0.165000f, 0.158400f, 0.151800f, 0.145200f, 0.138600f,
-    0.132000f, 0.125400f, 0.118800f, 0.112200f, 0.105600f,
-    0.099000f, 0.092400f, 0.085800f, 0.079200f, 0.072600f,
-    0.066000f, 0.059400f, 0.052800f, 0.046200f, 0.039600f,
-    0.033000f, 0.026400f, 0.019800f, 0.013200f, 0,
-    0
-};
-
 void I_SetPalette(byte *palette)
 {
+    #if 0
+
     // haleyjd
     int i;
     const byte *const gamma = gammatable[gamma2];
@@ -1080,11 +1054,18 @@ void I_SetPalette(byte *palette)
 
     SDL_SetPaletteColors(screenbuffer->format->palette, colors, 0, 256);
 
+    #endif
+
+    V_InitPalsColors();
+
     if (vga_porch_flash)
     {
         // "flash" the pillars/letterboxes with palette changes,
         // emulating VGA "porch" behaviour
-        SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b,
+        SDL_SetRenderDrawColor(renderer,
+                               (palscolors[0][0] & 0xFF0000) >> 16,
+                               (palscolors[0][0] & 0x00FF00) >> 8,
+                               (palscolors[0][0] & 0x0000FF),
                                SDL_ALPHA_OPAQUE);
     }
 }
@@ -1850,7 +1831,7 @@ static void CreateSurfaces(int w, int h)
         SDL_FreeSurface(screenbuffer);
     }
 
-    screenbuffer = SDL_CreateRGBSurface(0, w, h, 8, 0, 0, 0, 0);
+    screenbuffer = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
     SDL_FillRect(screenbuffer, NULL, 0);
 
     I_VideoBuffer = screenbuffer->pixels;

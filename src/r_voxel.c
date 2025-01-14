@@ -832,7 +832,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 	boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
 	int linesize = video.pitch;
-	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// iterate over screen columns
 	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
@@ -927,7 +927,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = V_IndexToRGB(pix);
 				}
 			}
 			else if (has_bottom)
@@ -942,7 +942,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = V_IndexToRGB(pix);
 				}
 			}
 
@@ -960,7 +960,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 					byte src = slab[i];
 					byte pix = spr->colormap[spr->brightmap[src]][src];
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = V_IndexToRGB(pix);
 				}
 			}
 		}

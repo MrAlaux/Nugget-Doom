@@ -1771,7 +1771,7 @@ void R_RenderPlayerView (player_t* player)
     int first_y = ((viewheight % ph) / 2),
         first_x;
 
-    byte *const dest = I_VideoBuffer;
+    pixel_t *const dest = I_VideoBuffer;
 
     for (y = viewwindowy;  y < (viewwindowy + viewheight);)
     {
@@ -1781,7 +1781,7 @@ void R_RenderPlayerView (player_t* player)
       {
         for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
         {
-          memset(
+          V_RGBSet(
             dest + ((y + y2) * video.pitch) + x,
             dest[
               ( (first_y ? viewwindowy + first_y

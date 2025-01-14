@@ -57,7 +57,7 @@ int viewwidth;
 int viewheight;
 int viewwindowx;
 int viewwindowy;
-static byte **ylookup = NULL;
+static pixel_t **ylookup = NULL;
 static int *columnofs = NULL;
 static int linesize; // killough 11/98
 
@@ -115,7 +115,7 @@ byte dc_skycolor;
                     dc_x);                                               \
         }                                                                \
                                                                          \
-        byte *dest = ylookup[dc_yl] + columnofs[dc_x];                   \
+        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                   \
                                                                          \
         const fixed_t fracstep = dc_iscale;                              \
         fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
@@ -136,7 +136,7 @@ byte dc_skycolor;
             do                                                           \
             {                                                            \
                 byte src = dc_source[frac >> FRACBITS];                  \
-                *dest = SRCPIXEL;                                        \
+                *dest = V_IndexToRGB(SRCPIXEL);                          \
                 dest += linesize;                                        \
                 if ((frac += fracstep) >= heightmask)                    \
                     frac -= heightmask;                                  \
@@ -147,18 +147,18 @@ byte dc_skycolor;
             while ((count -= 2) >= 0)                                    \
             {                                                            \
                 byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
+                *dest = V_IndexToRGB(SRCPIXEL);                          \
                 dest += linesize;                                        \
                 frac += fracstep;                                        \
                 src = dc_source[(frac >> FRACBITS) & heightmask];        \
-                *dest = SRCPIXEL;                                        \
+                *dest = V_IndexToRGB(SRCPIXEL);                          \
                 dest += linesize;                                        \
                 frac += fracstep;                                        \
             }                                                            \
             if (count & 1)                                               \
             {                                                            \
                 byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
+                *dest = V_IndexToRGB(SRCPIXEL);                          \
             }                                                            \
         }                                                                \
     }
@@ -179,9 +179,9 @@ DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
 // actual code differences are.
 
 DRAW_COLUMN(TL,
-    tranmap[(*dest << 8) + dc_colormap[0][src]])
+    tranmap[(V_IndexFromRGB(*dest) << 8) + dc_colormap[0][src]])
 DRAW_COLUMN(TLBrightmap,
-    tranmap[(*dest << 8) + dc_colormap[dc_brightmap[src]][src]])
+    tranmap[(V_IndexFromRGB(*dest) << 8) + dc_colormap[dc_brightmap[src]][src]])
 
 //
 // Sky drawing: for showing just a color above the texture
@@ -203,7 +203,7 @@ void R_DrawSkyColumn(void)
     }
 #endif
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
@@ -228,6 +228,7 @@ void R_DrawSkyColumn(void)
         for (i = 0; i < n; ++i)
         {
             *dest = colormap[skycolor];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -252,6 +253,7 @@ void R_DrawSkyColumn(void)
                 [(main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]]
                   << 8)
                  + colormap[skycolor]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -275,6 +277,7 @@ void R_DrawSkyColumn(void)
         {
             *dest =
                 main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -300,6 +303,7 @@ void R_DrawSkyColumn(void)
         do
         {
             *dest = colormap[source[frac >> FRACBITS]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize; // killough 11/98
             if ((frac += fracstep) >= heightmask)
             {
@@ -312,15 +316,18 @@ void R_DrawSkyColumn(void)
         while ((count -= 2) >= 0) // texture height is a power of 2 -- killough
         {
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize; // killough 11/98
             frac += fracstep;
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize; // killough 11/98
             frac += fracstep;
         }
         if (count & 1)
         {
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            *dest = V_IndexToRGB(*dest);
         }
     }
 }
@@ -409,7 +416,7 @@ static void R_DrawFuzzColumn_orig(void)
     //  or blocky mode removed.
 
     // Does not work with blocky mode.
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     // Looks like an attempt at dithering,
     // using the colormap #6 (of 0-31, a bit brighter than average).
@@ -429,7 +436,8 @@ static void R_DrawFuzzColumn_orig(void)
         // why_i_left_doom.html
 
         *dest =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+        *dest = V_IndexToRGB(*dest);
         dest += linesize; // killough 11/98
 
         ++fuzzpos;
@@ -443,7 +451,8 @@ static void R_DrawFuzzColumn_orig(void)
     if (cutoff)
     {
         *dest = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
+            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+        *dest = V_IndexToRGB(*dest);
     }
 }
 
@@ -487,7 +496,7 @@ static void R_DrawFuzzColumn_block(void)
 
     ++count;
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -505,11 +514,11 @@ static void R_DrawFuzzColumn_block(void)
         count &= ~mask;
 
         const byte fuzz =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
 
         do
         {
-            memset(dest, fuzz, fuzzblocksize);
+            V_IndexSet(dest, fuzz, fuzzblocksize);
             dest += linesize;
         } while (--lines);
 
@@ -524,8 +533,8 @@ static void R_DrawFuzzColumn_block(void)
     if (cutoff)
     {
         const byte fuzz = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+        V_IndexSet(dest, fuzz, fuzzblocksize);
     }
 }
 
@@ -541,7 +550,7 @@ boolean fuzzdark_mode;
 static void R_DrawSelectiveFuzzColumn(void)
 {
   int count;
-  byte *dest;
+  pixel_t *dest;
   boolean cutoff = false;
 
   if (fuzzblocksize > 1 && dc_x % fuzzblocksize)
@@ -583,11 +592,11 @@ static void R_DrawSelectiveFuzzColumn(void)
     lines += count & mask;
     count &= ~mask;
 
-    const byte fuzz = fullcolormap[FUZZSELECT + dest[linesize * fuzzoffset[fuzzpos]]];
+    const byte fuzz = fullcolormap[FUZZSELECT + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
 
     do
     {
-      memset(dest, fuzz, fuzzblocksize);
+      V_IndexSet(dest, fuzz, fuzzblocksize);
       dest += linesize;
     } while (--lines);
 
@@ -601,9 +610,9 @@ static void R_DrawSelectiveFuzzColumn(void)
 
   if (cutoff)
   {
-      const byte fuzz = fullcolormap[FUZZSELECT + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
+      const byte fuzz = fullcolormap[FUZZSELECT + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
 
-      memset(dest, fuzz, fuzzblocksize);
+      V_IndexSet(dest, fuzz, fuzzblocksize);
   }
 }
 
@@ -725,7 +734,7 @@ byte *ds_source;
 #define R_DRAW_SPAN(NAME, SRCPIXEL)                    \
     static void DrawSpan##NAME(void)                   \
     {                                                  \
-        byte *dest = ylookup[ds_y] + columnofs[ds_x1]; \
+        pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1]; \
                                                        \
         unsigned count = ds_x2 - ds_x1 + 1;            \
                                                        \
@@ -740,7 +749,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[0] = SRCPIXEL;                        \
+            dest[0] = V_IndexToRGB(SRCPIXEL);          \
                                                        \
             ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
             xtemp = (ds_xfrac >> 16) & 0x003F;         \
@@ -748,7 +757,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[1] = SRCPIXEL;                        \
+            dest[1] = V_IndexToRGB(SRCPIXEL);          \
                                                        \
             ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
             xtemp = (ds_xfrac >> 16) & 0x003F;         \
@@ -756,7 +765,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[2] = SRCPIXEL;                        \
+            dest[2] = V_IndexToRGB(SRCPIXEL);          \
                                                        \
             ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
             xtemp = (ds_xfrac >> 16) & 0x003F;         \
@@ -764,7 +773,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[3] = SRCPIXEL;                        \
+            dest[3] = V_IndexToRGB(SRCPIXEL);          \
                                                        \
             dest += 4;                                 \
             count -= 4;                                \
@@ -779,7 +788,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            *dest++ = SRCPIXEL;                        \
+            *dest++ = V_IndexToRGB(SRCPIXEL);          \
             count--;                                   \
         }                                              \
     }

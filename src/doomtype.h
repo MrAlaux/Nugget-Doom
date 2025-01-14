@@ -34,7 +34,7 @@ typedef enum {false, true} boolean;
 
 typedef uint8_t byte;
 
-typedef byte pixel_t;
+typedef uint32_t pixel_t;
 
 // This could be wider for >8 bit display. Indeed, true color support is
 // posibble precalculating 24bpp lightmap/colormap LUT. from darkening PLAYPAL

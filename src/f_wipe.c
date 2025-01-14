@@ -48,9 +48,9 @@ static int wipe_columns;
 // SCREEN WIPE PACKAGE
 //
 
-static byte *wipe_scr_start;
-static byte *wipe_scr_end;
-static byte *wipe_scr;
+static pixel_t *wipe_scr_start;
+static pixel_t *wipe_scr_end;
+static pixel_t *wipe_scr;
 
 // [FG] cross-fading screen wipe implementation
 
@@ -76,12 +76,13 @@ static int wipe_doColorXForm(int width, int height, int ticks)
 
     for (int y = 0; y < height; y++)
     {
-        byte *sta = wipe_scr_start + y * width;
-        byte *end = wipe_scr_end + y * width;
-        byte *dst = wipe_scr + y * video.pitch;
+        pixel_t *sta = wipe_scr_start + y * width;
+        pixel_t *end = wipe_scr_end + y * width;
+        pixel_t *dst = wipe_scr + y * video.pitch;
 
         for (int x = 0; x < width; x++)
         {
+            #if 0
             unsigned int *fg2rgb = Col2RGB8[fade_tick];
             unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
             unsigned int fg, bg;
@@ -90,6 +91,9 @@ static int wipe_doColorXForm(int width, int height, int ticks)
             bg = bg2rgb[sta[x]];
             fg = (fg + bg) | 0x1f07c1f;
             dst[x] = RGB32k[0][0][fg & (fg >> 15)];
+            #endif
+
+            if (fade_tick) { dst[x] = V_LerpRGB(sta[x], end[x], fade_tick, 64); }
         }
     }
 
@@ -406,12 +410,12 @@ static int wipe_doFizzle(int width, int height, int ticks)
         vrect_t rect = {x, y, 1, 1};
         V_ScaleRect(&rect);
 
-        byte *src = wipe_scr_end + rect.sy * width + rect.sx;
-        byte *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
+        pixel_t *src = wipe_scr_end + rect.sy * width + rect.sx;
+        pixel_t *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
 
         while (rect.sh--)
         {
-            memcpy(dest, src, rect.sw);
+            V_RGBCopy(dest, src, rect.sw);
             src += width;
             dest += video.pitch;
         }

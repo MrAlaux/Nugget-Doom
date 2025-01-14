@@ -182,6 +182,46 @@ void V_DrawPatchTRTL(int x, int y, struct patch_s *patch, byte *outr, byte *tl);
 extern int automap_overlay_darkening;
 extern int menu_backdrop_darkening;
 
+// True color ----------------------------------------------------------------
+
+extern int *palcolors, palscolors[14][256];
+
+void V_InitPalsColors(void);
+void V_SetPalColors(const int palette_index);
+
+// The upper byte corresponding to the alpha channel
+// actually stores the index from which the color derives
+
+inline static pixel_t V_IndexToRGB(const byte index)
+{
+  return (index << 24) + palcolors[index];
+}
+
+inline static byte V_IndexFromRGB(const pixel_t rgb)
+{
+  return rgb >> 24;
+}
+
+#define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
+inline static void V_RGBSet(pixel_t *const dest, const pixel_t color, const int count)
+{
+  for (int i = 0;  i < count;  i++) { dest[i] = color; }
+}
+
+inline static void V_RGBCopy(pixel_t *const dest, const pixel_t *const src, const int count)
+{
+  for (int i = 0;  i < count;  i++) { dest[i] = src[i]; }
+}
+
+inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const int level, const int maxlevel)
+{
+  return (((((a & 0xFF0000) >> 16) * (maxlevel - level) / maxlevel) + (((b & 0xFF0000) >> 16) * level / maxlevel)) << 16)
+       + (((((a & 0x00FF00) >>  8) * (maxlevel - level) / maxlevel) + (((b & 0x00FF00) >>  8) * level / maxlevel)) <<  8)
+       + (((((a & 0x0000FF)      ) * (maxlevel - level) / maxlevel) + (((b & 0x0000FF)      ) * level / maxlevel))      );
+}
+
+pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel);
+
 // HUD/menu shadows ----------------------------------------------------------
 
 extern boolean hud_menu_shadows;
@@ -263,7 +303,10 @@ void V_GetBlock(int x, int y, int width, int height, pixel_t *dest);
 
 void V_PutBlock(int x, int y, int width, int height, pixel_t *src);
 
-void V_FillRect(int x, int y, int width, int height, byte color);
+#define V_FillRect(x, y, w, h, c) \
+  V_FillRectRGB(x, y, w, h, V_IndexToRGB(c))
+
+void V_FillRectRGB(int x, int y, int width, int height, pixel_t color);
 
 void V_TileBlock64(int line, int width, int height, const byte *src);
 
