@@ -1833,7 +1833,8 @@ static void CreateSurfaces(int w, int h)
         SDL_FreeSurface(screenbuffer);
     }
 
-    screenbuffer = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
+    screenbuffer = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
+    SDL_SetSurfaceBlendMode(screenbuffer, SDL_BLENDMODE_NONE);
     SDL_FillRect(screenbuffer, NULL, 0);
 
     I_VideoBuffer = screenbuffer->pixels;
