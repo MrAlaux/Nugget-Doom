@@ -242,9 +242,12 @@ void V_InitPalsColors(void)
       a_lo = 0.0f + a_lo;
 
       // Calculate final color values
-      pc[j] = ((byte) ((a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2])) << 16)
-            + ((byte) ((a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2])) <<  8)
-            + ((byte) ((a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]))      );
+      pc[j] = ((byte) ((a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]))
+                      << PIXEL_RED_SHIFT)
+            + ((byte) ((a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]))
+                      << PIXEL_GREEN_SHIFT)
+            + ((byte) ((a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]))
+                      << PIXEL_BLUE_SHIFT);
     }
   }
 }
@@ -256,15 +259,15 @@ void V_SetPalColors(const int palette_index)
 
 pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
 {
-  short r = (rgb & 0xFF0000) >> 16,
-        g = (rgb & 0x00FF00) >> 8,
-        b = (rgb & 0x0000FF);
+  short r = V_RedFromRGB(rgb),
+        g = V_GreenFromRGB(rgb),
+        b = V_BlueFromRGB(rgb);
 
   r = r * (maxlevel - level) / maxlevel;
   g = g * (maxlevel - level) / maxlevel;
   b = b * (maxlevel - level) / maxlevel;
 
-  return (r << 16) + (g << 8) + (b);
+  return (r << PIXEL_RED_SHIFT) + (g << PIXEL_GREEN_SHIFT) + (b << PIXEL_BLUE_SHIFT);
 }
 
 // [Nugget] -----------------------------------------------------------------/

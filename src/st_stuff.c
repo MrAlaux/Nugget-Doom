@@ -1802,14 +1802,14 @@ static void DrawSolidBackground(void)
             {
                 pixel_t *c = st_backing_screen + V_ScaleY(y) * video.pitch
                           + V_ScaleX(x);
-                r += (*c & 0xFF0000) >> 16;
-                g += (*c & 0x00FF00) >> 8;
-                b += (*c & 0x0000FF);
+                r += V_RedFromRGB(*c);
+                g += V_GreenFromRGB(*c);
+                b += V_BlueFromRGB(*c);
 
                 c += V_ScaleX(width - 2 * x - 1);
-                r += (*c & 0xFF0000) >> 16;
-                g += (*c & 0x00FF00) >> 8;
-                b += (*c & 0x0000FF);
+                r += V_RedFromRGB(*c);
+                g += V_GreenFromRGB(*c);
+                b += V_BlueFromRGB(*c);
             }
         }
 
@@ -1818,7 +1818,9 @@ static void DrawSolidBackground(void)
         b /= 2 * depth * (v1 - v0);
 
         // [FG] tune down to half saturation (for empiric reasons)
-        col = ((r/2) << 16) + ((g/2) << 8) + ((b/2));
+        col = ((r / 2) << PIXEL_RED_SHIFT)
+            + ((g / 2) << PIXEL_GREEN_SHIFT)
+            + ((b / 2) << PIXEL_BLUE_SHIFT);
 
         V_FillRectRGB(0, v0, video.unscaledw, v1 - v0, col);
     }

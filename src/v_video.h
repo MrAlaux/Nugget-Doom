@@ -192,14 +192,39 @@ void V_SetPalColors(const int palette_index);
 // The upper byte corresponding to the alpha channel
 // actually stores the index from which the color derives
 
+#define PIXEL_INDEX_SHIFT 24
+#define PIXEL_RED_SHIFT   16
+#define PIXEL_GREEN_SHIFT 8
+#define PIXEL_BLUE_SHIFT  0
+
+#define PIXEL_INDEX_MASK (0xFF << PIXEL_INDEX_SHIFT)
+#define PIXEL_RED_MASK   (0xFF << PIXEL_RED_SHIFT)
+#define PIXEL_GREEN_MASK (0xFF << PIXEL_GREEN_SHIFT)
+#define PIXEL_BLUE_MASK  (0xFF << PIXEL_BLUE_SHIFT)
+
 inline static pixel_t V_IndexToRGB(const byte index)
 {
-  return (index << 24) + palcolors[index];
+  return (index << PIXEL_INDEX_SHIFT) + palcolors[index];
 }
 
 inline static byte V_IndexFromRGB(const pixel_t rgb)
 {
-  return rgb >> 24;
+  return (rgb & PIXEL_INDEX_MASK) >> PIXEL_INDEX_SHIFT;
+}
+
+inline static byte V_RedFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_RED_MASK) >> PIXEL_RED_SHIFT;
+}
+
+inline static byte V_GreenFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_GREEN_MASK) >> PIXEL_GREEN_SHIFT;
+}
+
+inline static byte V_BlueFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_BLUE_MASK) >> PIXEL_BLUE_SHIFT;
 }
 
 #define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
@@ -215,9 +240,12 @@ inline static void V_RGBCopy(pixel_t *const dest, const pixel_t *const src, cons
 
 inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const int level, const int maxlevel)
 {
-  return (((((a & 0xFF0000) >> 16) * (maxlevel - level) / maxlevel) + (((b & 0xFF0000) >> 16) * level / maxlevel)) << 16)
-       + (((((a & 0x00FF00) >>  8) * (maxlevel - level) / maxlevel) + (((b & 0x00FF00) >>  8) * level / maxlevel)) <<  8)
-       + (((((a & 0x0000FF)      ) * (maxlevel - level) / maxlevel) + (((b & 0x0000FF)      ) * level / maxlevel))      );
+  return (((V_RedFromRGB(a)   * (maxlevel - level) / maxlevel)
+         + (V_RedFromRGB(b)   *             level  / maxlevel)) << PIXEL_RED_SHIFT)
+       + (((V_GreenFromRGB(a) * (maxlevel - level) / maxlevel)
+         + (V_GreenFromRGB(b) *             level  / maxlevel)) << PIXEL_GREEN_SHIFT)
+       + (((V_BlueFromRGB(a)  * (maxlevel - level) / maxlevel)
+         + (V_BlueFromRGB(b)  *             level  / maxlevel)) << PIXEL_BLUE_SHIFT);
 }
 
 pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel);

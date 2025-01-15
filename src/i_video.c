@@ -1063,9 +1063,9 @@ void I_SetPalette(byte *palette)
         // "flash" the pillars/letterboxes with palette changes,
         // emulating VGA "porch" behaviour
         SDL_SetRenderDrawColor(renderer,
-                               (palscolors[0][0] & 0xFF0000) >> 16,
-                               (palscolors[0][0] & 0x00FF00) >> 8,
-                               (palscolors[0][0] & 0x0000FF),
+                               V_RedFromRGB(palscolors[0][0]),
+                               V_GreenFromRGB(palscolors[0][0]),
+                               V_BlueFromRGB(palscolors[0][0]),
                                SDL_ALPHA_OPAQUE);
     }
 }
