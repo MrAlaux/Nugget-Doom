@@ -82,18 +82,20 @@ static int wipe_doColorXForm(int width, int height, int ticks)
 
         for (int x = 0; x < width; x++)
         {
-            #if 0
-            unsigned int *fg2rgb = Col2RGB8[fade_tick];
-            unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
-            unsigned int fg, bg;
+            if (truecolor_rendering)
+            {
+                if (fade_tick) { dst[x] = V_LerpRGB(sta[x], end[x], fade_tick, 64); }
+            }
+            else {
+                unsigned int *fg2rgb = Col2RGB8[fade_tick];
+                unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
+                unsigned int fg, bg;
 
-            fg = fg2rgb[end[x]];
-            bg = bg2rgb[sta[x]];
-            fg = (fg + bg) | 0x1f07c1f;
-            dst[x] = RGB32k[0][0][fg & (fg >> 15)];
-            #endif
-
-            if (fade_tick) { dst[x] = V_LerpRGB(sta[x], end[x], fade_tick, 64); }
+                fg = fg2rgb[V_IndexFromRGB(end[x])];
+                bg = bg2rgb[V_IndexFromRGB(sta[x])];
+                fg = (fg + bg) | 0x1f07c1f;
+                dst[x] = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
+            }
         }
     }
 

@@ -849,9 +849,7 @@ void V_DrawPatchFullScreen(patch_t *patch)
 
 void V_ShadeScreen(const int level) // [Nugget]
 {
-    #if 0
     const byte *darkcolormap = &colormaps[0][level * 256];
-    #endif
 
     pixel_t *row = dest_screen;
     int height = video.height;
@@ -863,10 +861,15 @@ void V_ShadeScreen(const int level) // [Nugget]
 
         while (width--)
         {
-            #if 0
-            *col = darkcolormap[*col];
-            #endif
-            *col = V_ShadeRGB(*col, level, 32);
+            if (truecolor_rendering)
+            {
+                *col = V_ShadeRGB(*col, level, 32);
+            }
+            else
+            {
+                *col = V_IndexToRGB(darkcolormap[V_IndexFromRGB(*col)]);
+            }
+
             ++col;
         }
 

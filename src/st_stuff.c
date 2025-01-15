@@ -1780,9 +1780,7 @@ static void DrawSolidBackground(void)
     // [FG] temporarily draw status bar to background buffer
     V_DrawPatch(-video.deltaw, 0, sbar);
 
-    #if 0
     byte *pal = W_CacheLumpName("PLAYPAL", PU_CACHE);
-    #endif
 
     const int width = MIN(SHORT(sbar->width), video.unscaledw);
     const int depth = 16;
@@ -1802,14 +1800,32 @@ static void DrawSolidBackground(void)
             {
                 pixel_t *c = st_backing_screen + V_ScaleY(y) * video.pitch
                           + V_ScaleX(x);
-                r += V_RedFromRGB(*c);
-                g += V_GreenFromRGB(*c);
-                b += V_BlueFromRGB(*c);
+
+                if (truecolor_rendering)
+                {
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+                }
+                else {
+                    r += pal[3 * V_IndexFromRGB(c[0]) + 0];
+                    g += pal[3 * V_IndexFromRGB(c[0]) + 1];
+                    b += pal[3 * V_IndexFromRGB(c[0]) + 2];
+                }
 
                 c += V_ScaleX(width - 2 * x - 1);
-                r += V_RedFromRGB(*c);
-                g += V_GreenFromRGB(*c);
-                b += V_BlueFromRGB(*c);
+
+                if (truecolor_rendering)
+                {
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+                }
+                else {
+                    r += pal[3 * V_IndexFromRGB(c[0]) + 0];
+                    g += pal[3 * V_IndexFromRGB(c[0]) + 1];
+                    b += pal[3 * V_IndexFromRGB(c[0]) + 2];
+                }
             }
         }
 
@@ -1818,9 +1834,16 @@ static void DrawSolidBackground(void)
         b /= 2 * depth * (v1 - v0);
 
         // [FG] tune down to half saturation (for empiric reasons)
-        col = ((r / 2) << PIXEL_RED_SHIFT)
-            + ((g / 2) << PIXEL_GREEN_SHIFT)
-            + ((b / 2) << PIXEL_BLUE_SHIFT);
+        if (truecolor_rendering)
+        {
+            col = ((r / 2) << PIXEL_RED_SHIFT)
+                + ((g / 2) << PIXEL_GREEN_SHIFT)
+                + ((b / 2) << PIXEL_BLUE_SHIFT);
+        }
+        else
+        {
+            col = V_IndexToRGB(I_GetNearestColor(pal, r / 2, g / 2, b / 2));
+        }
 
         V_FillRectRGB(0, v0, video.unscaledw, v1 - v0, col);
     }

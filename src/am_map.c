@@ -1697,25 +1697,26 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 {
   if (STRICTMODE(flip_levels)) { x = f_x*2 + f_w - 1 - x; } // [Nugget] Flip levels
 
-   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
-   #if 0
-   unsigned int *fg2rgb = Col2RGB8[weight];
-   unsigned int *bg2rgb = Col2RGB8[64 - weight];
-   unsigned int fg, bg;
-   #endif
-
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
   { return; }
 
-   #if 0
-   fg = fg2rgb[color];
-   bg = bg2rgb[*dest];
-   fg = (fg + bg) | 0x1f07c1f;
-   *dest = RGB32k[0][0][fg & (fg >> 15)];
-   #endif
+   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
 
-   if (weight) { *dest = V_LerpRGB(*dest, V_IndexToRGB(color), weight, 64); }
+   if (truecolor_rendering)
+   {
+      if (weight) { *dest = V_LerpRGB(*dest, V_IndexToRGB(color), weight, 64); }
+   }
+   else {
+      unsigned int *fg2rgb = Col2RGB8[weight];
+      unsigned int *bg2rgb = Col2RGB8[64 - weight];
+      unsigned int fg, bg;
+
+      fg = fg2rgb[color];
+      bg = bg2rgb[V_IndexFromRGB(*dest)];
+      fg = (fg + bg) | 0x1f07c1f;
+      *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
+   }
 }
 
 

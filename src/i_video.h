@@ -83,6 +83,8 @@ extern boolean screenvisible;
 
 // [Nugget] /-----------------------------------------------------------------
 
+extern boolean truecolor_rendering;
+
 extern int red_intensity, green_intensity, blue_intensity;
 extern int color_saturation, color_contrast;
 
