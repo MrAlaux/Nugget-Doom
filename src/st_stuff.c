@@ -1837,8 +1837,8 @@ static void DrawSolidBackground(void)
         if (truecolor_rendering)
         {
             col = ((r / 2) << PIXEL_RED_SHIFT)
-                + ((g / 2) << PIXEL_GREEN_SHIFT)
-                + ((b / 2) << PIXEL_BLUE_SHIFT);
+                | ((g / 2) << PIXEL_GREEN_SHIFT)
+                | ((b / 2) << PIXEL_BLUE_SHIFT);
         }
         else
         {

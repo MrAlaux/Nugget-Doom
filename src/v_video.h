@@ -204,7 +204,7 @@ void V_SetPalColors(const int palette_index);
 
 inline static pixel_t V_IndexToRGB(const byte index)
 {
-  return (index << PIXEL_INDEX_SHIFT) + palcolors[index];
+  return (index << PIXEL_INDEX_SHIFT) | palcolors[index];
 }
 
 inline static byte V_IndexFromRGB(const pixel_t rgb)
@@ -242,9 +242,9 @@ inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const int leve
 {
   return (((V_RedFromRGB(a)   * (maxlevel - level) / maxlevel)
          + (V_RedFromRGB(b)   *             level  / maxlevel)) << PIXEL_RED_SHIFT)
-       + (((V_GreenFromRGB(a) * (maxlevel - level) / maxlevel)
+       | (((V_GreenFromRGB(a) * (maxlevel - level) / maxlevel)
          + (V_GreenFromRGB(b) *             level  / maxlevel)) << PIXEL_GREEN_SHIFT)
-       + (((V_BlueFromRGB(a)  * (maxlevel - level) / maxlevel)
+       | (((V_BlueFromRGB(a)  * (maxlevel - level) / maxlevel)
          + (V_BlueFromRGB(b)  *             level  / maxlevel)) << PIXEL_BLUE_SHIFT);
 }
 

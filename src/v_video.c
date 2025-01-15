@@ -244,9 +244,9 @@ void V_InitPalsColors(void)
       // Calculate final color values
       pc[j] = ((byte) ((a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]))
                       << PIXEL_RED_SHIFT)
-            + ((byte) ((a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]))
+            | ((byte) ((a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]))
                       << PIXEL_GREEN_SHIFT)
-            + ((byte) ((a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]))
+            | ((byte) ((a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]))
                       << PIXEL_BLUE_SHIFT);
     }
   }
@@ -267,7 +267,7 @@ pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
   g = g * (maxlevel - level) / maxlevel;
   b = b * (maxlevel - level) / maxlevel;
 
-  return (r << PIXEL_RED_SHIFT) + (g << PIXEL_GREEN_SHIFT) + (b << PIXEL_BLUE_SHIFT);
+  return (r << PIXEL_RED_SHIFT) | (g << PIXEL_GREEN_SHIFT) | (b << PIXEL_BLUE_SHIFT);
 }
 
 // [Nugget] -----------------------------------------------------------------/
