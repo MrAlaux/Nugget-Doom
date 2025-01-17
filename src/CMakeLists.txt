@@ -3,6 +3,7 @@ include(NuggetDoomSettings)
 set(NUGGETDOOM_SOURCES
     am_map.c               am_map.h
     d_deh.c                d_deh.h
+    d_demoloop.c           d_demoloop.h
                            d_englsh.h
                            d_event.h
                            d_french.h

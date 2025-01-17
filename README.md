@@ -162,7 +162,6 @@ All of these are CFG-only, so their CVAR names are included.
 - Attackers face fuzzy targets straight (`comp_faceshadow`)
 - Fix lopsided Icon of Sin explosions (`comp_iosdeath`)
 - Permanent IDCHOPPERS invulnerability (`comp_choppers`)
-- Blazing doors reopen with wrong sound (`comp_blazing2`) [p.f. Crispy Doom]
 - Manually toggled moving doors are silent (`comp_manualdoor`) [p.f. Crispy Doom]
 - Corrected switch sound source (`comp_switchsource`) [p.f. Crispy Doom]
 - Chaingun makes two sounds with one bullet (`comp_cgundblsnd`)
@@ -337,7 +336,8 @@ Copyright:
  © 2022-2024 ceski;  
  © 2023 Andrew Apted;  
  © 2023 liPillON;  
- © 2024 pvictress.   
+ © 2024 pvictress;  
+ © 2025 Guilherme Miranda.  
 License: [GPL-2.0+](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
 Files: `src/i_flickstick.*, src/i_gyro.*`  

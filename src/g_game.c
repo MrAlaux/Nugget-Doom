@@ -107,7 +107,7 @@
 static size_t   savegamesize = SAVEGAMESIZE; // killough
 static char     *demoname = NULL;
 // [crispy] the name originally chosen for the demo, i.e. without "-00000"
-static char     *orig_demoname = NULL;
+static const char *orig_demoname = NULL;
 static boolean  netdemo;
 static byte     *demobuffer;   // made some static -- killough
 static size_t   maxdemosize;
@@ -1836,7 +1836,7 @@ static void CheckPlayersInNetGame(void)
 
 int playback_tic = 0, playback_totaltics = 0;
 
-static char *defdemoname;
+static const char *defdemoname;
 
 #define DEMOMARKER    0x80
 
@@ -5191,7 +5191,7 @@ void G_InitNew(skill_t skill, int episode, int map)
 // G_RecordDemo
 //
 
-void G_RecordDemo(char *name)
+void G_RecordDemo(const char *name)
 {
   int i;
   size_t demoname_size;
@@ -5643,7 +5643,7 @@ void G_BeginRecording(void)
 
 void D_CheckNetPlaybackSkip(void);
 
-void G_DeferedPlayDemo(char* name)
+void G_DeferedPlayDemo(const char* name)
 {
   defdemoname = name;
   gameaction = ga_playdemo;
@@ -6104,7 +6104,7 @@ void G_BindCompVariables(void)
   BIND_COMP(comp_vile,      0, "Arch-viles can create ghost monsters");
   BIND_COMP(comp_pain,      0, "Pain elementals are limited to 20 lost souls");
   BIND_COMP(comp_skull,     0, "Lost souls can spawn past impassable lines");
-  BIND_COMP(comp_blazing,   0, "Blazing doors make double closing sounds");
+  BIND_COMP(comp_blazing,   0, "Incorrect sound behavior for blazing doors");
   BIND_COMP(comp_doorlight, 0, "Door lighting changes are immediate");
   BIND_COMP(comp_god,       0, "God mode isn't absolute");
   BIND_COMP(comp_skymap,    0, "Don't apply invulnerability palette to skies");
