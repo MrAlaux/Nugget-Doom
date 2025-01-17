@@ -41,6 +41,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "i_video.h"
+
 // OPTIMIZE: closed two sided lines as single sided
 
 // killough 1/6/98: replaced globals with statics where appropriate
@@ -171,6 +174,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
       {
+        dc_nextcolormap = NULL; // [Nugget] True color
+
         if (!fixedcolormap)      // calculate lighting
           {                             // killough 11/98:
             const int index = STRICTMODE(!diminished_lighting) // [Nugget]
@@ -180,6 +185,16 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
             dc_brightmap = texturebrightmap[texnum];
             dc_colormap[0] = walllights[index];
             dc_colormap[1] = STRICTMODE(brightmaps) ? fullcolormap : dc_colormap[0];
+
+            // [Nugget] True color -------------------------------------------
+
+            if (truecolor_rendering
+                && index < MAXLIGHTSCALE-1
+                && dc_colormap[0] != walllights[index + 1])
+            {
+              dc_lightindex = R_GetLightIndexFrac();
+              dc_nextcolormap = walllights[index + 1];
+            }
           }
 
         // killough 3/2/98:
@@ -398,6 +413,18 @@ static void R_RenderSegLoop (void)
                            fullcolormap : dc_colormap[0];
           dc_x = rw_x;
           dc_iscale = 0xffffffffu / (unsigned)rw_scale;
+
+          // [Nugget] True color ---------------------------------------------
+
+          dc_nextcolormap = NULL;
+
+          if (truecolor_rendering
+              && index < MAXLIGHTSCALE-1
+              && dc_colormap[0] != walllights[index + 1])
+          {
+            dc_lightindex = R_GetLightIndexFrac();
+            dc_nextcolormap = walllights[index + 1];
+          }
         }
 
       // draw the wall tiers

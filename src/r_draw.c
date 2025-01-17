@@ -84,6 +84,10 @@ int dc_texheight; // killough
 byte *dc_source;  // first pixel in a column (possibly virtual)
 byte dc_skycolor;
 
+// [Nugget] True color
+byte dc_lightindex, dc_maxlightindex;
+lighttable_t *dc_nextcolormap;
+
 //
 // A column is a vertical slice/span from a wall texture that,
 //  given the DOOM style restrictions on the view orientation,
@@ -115,7 +119,7 @@ byte dc_skycolor;
                     dc_x);                                               \
         }                                                                \
                                                                          \
-        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                   \
+        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                \
                                                                          \
         const fixed_t fracstep = dc_iscale;                              \
         fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
@@ -136,7 +140,7 @@ byte dc_skycolor;
             do                                                           \
             {                                                            \
                 byte src = dc_source[frac >> FRACBITS];                  \
-                *dest = V_IndexToRGB(SRCPIXEL);                          \
+                *dest = SRCPIXEL;                                        \
                 dest += linesize;                                        \
                 if ((frac += fracstep) >= heightmask)                    \
                     frac -= heightmask;                                  \
@@ -147,24 +151,39 @@ byte dc_skycolor;
             while ((count -= 2) >= 0)                                    \
             {                                                            \
                 byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = V_IndexToRGB(SRCPIXEL);                          \
+                *dest = SRCPIXEL;                                        \
                 dest += linesize;                                        \
                 frac += fracstep;                                        \
                 src = dc_source[(frac >> FRACBITS) & heightmask];        \
-                *dest = V_IndexToRGB(SRCPIXEL);                          \
+                *dest = SRCPIXEL;                                        \
                 dest += linesize;                                        \
                 frac += fracstep;                                        \
             }                                                            \
             if (count & 1)                                               \
             {                                                            \
                 byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = V_IndexToRGB(SRCPIXEL);                          \
+                *dest = SRCPIXEL;                                        \
             }                                                            \
         }                                                                \
     }
 
-DRAW_COLUMN(, dc_colormap[0][src])
-DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
+DRAW_COLUMN(,
+  (dc_nextcolormap)
+  ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
+              V_IndexToRGB(dc_nextcolormap[src]),
+              dc_lightindex,
+              dc_maxlightindex)
+  : V_IndexToRGB(dc_colormap[0][src])
+)
+
+DRAW_COLUMN(Brightmap,
+  (dc_nextcolormap && !dc_brightmap[src])
+  ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
+              V_IndexToRGB(dc_nextcolormap[src]),
+              dc_lightindex,
+              dc_maxlightindex)
+  : V_IndexToRGB(dc_colormap[dc_brightmap[src]][src])
+)
 
 // Here is the version of R_DrawColumn that deals with translucent  // phares
 // textures and sprites. It's identical to R_DrawColumn except      //    |
@@ -179,9 +198,14 @@ DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
 // actual code differences are.
 
 DRAW_COLUMN(TL,
-    tranmap[(V_IndexFromRGB(*dest) << 8) + dc_colormap[0][src]])
+    V_IndexToRGB(tranmap[(V_IndexFromRGB(*dest) << 8)
+                         + dc_colormap[0][src]])
+)
+
 DRAW_COLUMN(TLBrightmap,
-    tranmap[(V_IndexFromRGB(*dest) << 8) + dc_colormap[dc_brightmap[src]][src]])
+    V_IndexToRGB(tranmap[(V_IndexFromRGB(*dest) << 8)
+                         + dc_colormap[dc_brightmap[src]][src]])
+)
 
 //
 // Sky drawing: for showing just a color above the texture
@@ -728,6 +752,10 @@ fixed_t ds_yfrac;
 fixed_t ds_xstep;
 fixed_t ds_ystep;
 
+// [Nugget] True color
+byte ds_lightindex, ds_maxlightindex;
+lighttable_t *ds_nextcolormap;
+
 // start of a 64*64 tile image
 byte *ds_source;
 
@@ -749,7 +777,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[0] = V_IndexToRGB(SRCPIXEL);          \
+            dest[0] = SRCPIXEL;                        \
                                                        \
             ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
             xtemp = (ds_xfrac >> 16) & 0x003F;         \
@@ -757,7 +785,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[1] = V_IndexToRGB(SRCPIXEL);          \
+            dest[1] = SRCPIXEL;                        \
                                                        \
             ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
             xtemp = (ds_xfrac >> 16) & 0x003F;         \
@@ -765,7 +793,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[2] = V_IndexToRGB(SRCPIXEL);          \
+            dest[2] = SRCPIXEL;                        \
                                                        \
             ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
             xtemp = (ds_xfrac >> 16) & 0x003F;         \
@@ -773,7 +801,7 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            dest[3] = V_IndexToRGB(SRCPIXEL);          \
+            dest[3] = SRCPIXEL;                        \
                                                        \
             dest += 4;                                 \
             count -= 4;                                \
@@ -788,13 +816,28 @@ byte *ds_source;
             ds_xfrac += ds_xstep;                      \
             ds_yfrac += ds_ystep;                      \
             src = ds_source[spot];                     \
-            *dest++ = V_IndexToRGB(SRCPIXEL);          \
+            *dest++ = SRCPIXEL;                        \
             count--;                                   \
         }                                              \
     }
 
-R_DRAW_SPAN(, ds_colormap[0][src])
-R_DRAW_SPAN(Brightmap, ds_colormap[ds_brightmap[src]][src])
+R_DRAW_SPAN(,
+  (ds_nextcolormap)
+  ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
+              V_IndexToRGB(ds_nextcolormap[src]),
+              ds_lightindex,
+              ds_maxlightindex)
+  : V_IndexToRGB(ds_colormap[0][src])
+)
+
+R_DRAW_SPAN(Brightmap,
+  (ds_nextcolormap && !ds_brightmap[src])
+  ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
+              V_IndexToRGB(ds_nextcolormap[src]),
+              ds_lightindex,
+              ds_maxlightindex)
+  : V_IndexToRGB(ds_colormap[ds_brightmap[src]][src])
+)
 
 void (*R_DrawColumn)(void) = DrawColumn;
 void (*R_DrawTLColumn)(void) = DrawColumnTL;

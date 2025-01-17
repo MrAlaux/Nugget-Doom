@@ -437,6 +437,11 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   dc_colormap[1] = vis->colormap[1];
   dc_brightmap = vis->brightmap;
 
+  // [Nugget] True color
+  dc_lightindex    = vis->lightindex;
+  dc_maxlightindex = vis->maxlightindex;
+  dc_nextcolormap  = vis->nextcolormap;
+
   // killough 4/11/98: rearrange and handle translucent sprites
   // mixed with translucent/non-translucent 2s normals
 
@@ -709,6 +714,8 @@ static void R_ProjectSprite (mobj_t* thing)
     vis->startfrac += vis->xiscale*(vis->x1-x1);
   vis->patch = lump;
 
+  vis->nextcolormap = NULL; // [Nugget] True color
+
   // get light level
   if (thing->flags & MF_SHADOW)
     vis->colormap[0] = vis->colormap[1] = NULL;               // shadow draw
@@ -723,6 +730,17 @@ static void R_ProjectSprite (mobj_t* thing)
 
       vis->colormap[0] = spritelights[index];
       vis->colormap[1] = fullcolormap;
+
+      // [Nugget] True color -------------------------------------------------
+
+      if (truecolor_rendering
+          && index < MAXLIGHTSCALE-1
+          && vis->colormap[0] != spritelights[index + 1])
+      {
+        vis->lightindex = R_GetLightIndexFrac();
+        vis->maxlightindex = dc_maxlightindex;
+        vis->nextcolormap = spritelights[index + 1];
+      }
     }
 
   vis->brightmap = R_BrightmapForState(thing->state - states);
@@ -943,6 +961,8 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
     vis->startfrac += vis->xiscale*(vis->x1-x1);
 
   vis->patch = lump;
+
+  vis->nextcolormap = NULL; // [Nugget] True color
 
   // killough 7/11/98: beta psprites did not draw shadows
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)

@@ -847,10 +847,26 @@ void R_SmoothLight(void)
   P_SegLengths(true);
 }
 
+// [Nugget]
+static int64_t temp_lightindex = 0;
+
 int R_GetLightIndex(fixed_t scale)
 {
-  const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
+  // [Nugget] True color: calculate part of `dc_lightindex` here
+  const int index = (temp_lightindex = (int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
   return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+}
+
+// [Nugget] True color
+byte R_GetLightIndexFrac(void)
+{
+  #define INDEX_PRECISION 255
+
+  dc_maxlightindex = INDEX_PRECISION;
+
+  return (temp_lightindex % (1 << LIGHTSCALESHIFT)) * INDEX_PRECISION / (1 << LIGHTSCALESHIFT);
+
+  #undef INDEX_PRECISION
 }
 
 static fixed_t viewpitch;

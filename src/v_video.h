@@ -238,9 +238,10 @@ inline static void V_RGBCopy(pixel_t *const dest, const pixel_t *const src, cons
   for (int i = 0;  i < count;  i++) { dest[i] = src[i]; }
 }
 
-inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const int level, const int maxlevel)
+inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const byte level, const byte maxlevel)
 {
-  return (((V_RedFromRGB(a)   * (maxlevel - level) / maxlevel)
+  return (a & PIXEL_INDEX_MASK)
+       | (((V_RedFromRGB(a)   * (maxlevel - level) / maxlevel)
          + (V_RedFromRGB(b)   *             level  / maxlevel)) << PIXEL_RED_SHIFT)
        | (((V_GreenFromRGB(a) * (maxlevel - level) / maxlevel)
          + (V_GreenFromRGB(b) *             level  / maxlevel)) << PIXEL_GREEN_SHIFT)

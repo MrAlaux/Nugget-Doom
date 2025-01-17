@@ -209,6 +209,8 @@ static void R_MapPlane(int y, int x1, int x2)
   ds_xfrac =  viewx + FixedMul(viewcos, distance) + (dx * ds_xstep) + xoffs;
   ds_yfrac = -viewy - FixedMul(viewsin, distance) + (dx * ds_ystep) + yoffs;
 
+  ds_nextcolormap = NULL; // [Nugget] True color
+
   if (!(ds_colormap[0] = ds_colormap[1] = fixedcolormap))
     {
       index = distance >> LIGHTZSHIFT;
@@ -219,6 +221,22 @@ static void R_MapPlane(int y, int x1, int x2)
 
       ds_colormap[0] = planezlight[index];
       ds_colormap[1] = fullcolormap;
+
+      // [Nugget] True color -------------------------------------------
+
+      if (truecolor_rendering
+          && 0 < index
+          && ds_colormap[0] != planezlight[index - 1])
+      {
+        #define INDEX_PRECISION 255
+
+        ds_maxlightindex = INDEX_PRECISION;
+        ds_lightindex = INDEX_PRECISION-1 - (distance % (1 << LIGHTZSHIFT)) * INDEX_PRECISION / (1 << LIGHTZSHIFT);
+
+        #undef INDEX_PRECISION
+
+        ds_nextcolormap = planezlight[index - 1];
+      }
     }
 
   ds_y = y;
@@ -589,6 +607,8 @@ static void do_draw_plane(visplane_t *pl)
     {
         return;
     }
+
+    ds_nextcolormap = NULL; // [Nugget] True color
 
     // sky flat
 
