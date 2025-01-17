@@ -30,7 +30,6 @@ struct player_s;
 struct sector_s;
 
 // [Nugget] CVARs
-extern boolean comp_blazing2;
 extern boolean comp_manualdoor;
 extern boolean comp_switchsource;
 extern boolean comp_keynoway;

@@ -6140,7 +6140,6 @@ void G_BindCompVariables(void)
   M_BindBool("comp_nonbleeders",  &comp_nonbleeders,  NULL, false, ss_none, wad_yes, "Non-bleeders don't bleed when crushed");
   M_BindBool("comp_iosdeath",     &comp_iosdeath,     NULL, false, ss_none, wad_yes, "Fix lopsided Icon of Sin explosions");
   M_BindBool("comp_choppers",     &comp_choppers,     NULL, false, ss_none, wad_yes, "Permanent IDCHOPPERS invulnerability");
-  M_BindBool("comp_blazing2",     &comp_blazing2,     NULL, true,  ss_none, wad_yes, "Blazing doors reopen with wrong sound");
   M_BindBool("comp_manualdoor",   &comp_manualdoor,   NULL, true,  ss_none, wad_yes, "Manually toggled moving doors are silent");
   M_BindBool("comp_switchsource", &comp_switchsource, NULL, false, ss_none, wad_yes, "Corrected switch sound source");
   M_BindBool("comp_cgundblsnd",   &comp_cgundblsnd,   NULL, true,  ss_none, wad_yes, "Chaingun makes two sounds with one bullet");
