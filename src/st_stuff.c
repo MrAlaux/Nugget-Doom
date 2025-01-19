@@ -59,10 +59,14 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "mn_internal.h"
 #include "m_nughud.h"
 #include "sounds.h"
 
 // [Nugget] /=================================================================
+
+static sbardef_t *normal_sbardef = NULL,
+                 *nughud_sbardef = NULL;  // NUGHUD
 
 static patch_t *stbersrk;
 static int lu_berserk;
@@ -84,14 +88,7 @@ boolean no_radsuit_tint;
 boolean comp_godface;
 boolean comp_unusedpals;
 
-typedef enum hudtype_s
-{
-  HUDTYPE_SBARDEF,
-  HUDTYPE_NUGHUD
-} hudtype_t;
-
-static hudtype_t hud_type;
-
+static boolean use_nughud;
 static boolean hud_blink_keys;
 static boolean sts_show_berserk;
 int force_carousel;
@@ -141,7 +138,11 @@ boolean ST_GetNughudOn(void)
 
 static void UpdateNughudOn(void)
 {
-  st_nughud = screenblocks == 11 && hud_type == HUDTYPE_NUGHUD && automap_off;
+  // If we have no proper status bars (e.g. SBARDEF is empty),
+  // use NUGHUD when `screenblocks == 11`
+  st_nughud = automap_off
+              && (   ( normal_sbardef && screenblocks == maxscreenblocks - 1 && use_nughud)
+                  || (!normal_sbardef && screenblocks == 11));
 }
 
 static sbarelem_t *nughud_health_elem = NULL,
@@ -1189,12 +1190,22 @@ static void UpdateStatusBar(player_t *player)
 
     int barindex = MAX(screenblocks - 10, 0);
 
+    // [Nugget] NUGHUD
+    if (st_nughud)
+    {
+        barindex = -2;
+    }
+    else
+
+    if (barindex >= array_size(sbardef->statusbars))
+    {
+        barindex = array_size(sbardef->statusbars) - 1;
+    }
+
     if (automapactive == AM_FULL && automapoverlay == AM_OVERLAY_OFF)
     {
         barindex = 0;
     }
-
-    if (st_nughud) { barindex = 3; } // [Nugget] NUGHUD
 
     if (oldbarindex != barindex)
     {
@@ -2237,11 +2248,6 @@ void ST_Drawer(void)
     }
 
     DrawStatusBar();
-
-    if (hud_crosshair_on) // [Nugget] Crosshair toggle
-    {
-        HU_DrawCrosshair();
-    }
 }
 
 void ST_Start(void)
@@ -2270,13 +2276,12 @@ void ST_Init(void)
 
     static boolean firsttime = true;
 
-    static sbardef_t *normal_sbardef = NULL, *nughud_sbardef = NULL;
-
     if (firsttime)
     {
         normal_sbardef = ST_ParseSbarDef();
         nughud_sbardef = CreateNughudSbarDef();
 
+        ST_StatusbarList(); // Calculate `maxscreenblocks`
         UpdateNughudOn();
     }
 
@@ -2406,6 +2411,44 @@ void ST_InitRes(void)
   // [Nugget] Status-Bar chunks
   // More than necessary (we only use the section visible in 4:3), but so be it
   st_bar = Z_Malloc((video.pitch * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+}
+
+const char **ST_StatusbarList(void)
+{
+    // [Nugget] Use `normal_sbardef`; calculate `maxscreenblocks` here
+
+    if (!normal_sbardef)
+    {
+        maxscreenblocks = 11; // [Nugget] NUGHUD
+        return NULL;
+    }
+
+    maxscreenblocks = 10;
+
+    static const char **strings;
+
+    if (array_size(strings))
+    {
+        maxscreenblocks += array_size(strings) - 1;
+        return strings;
+    }
+
+    statusbar_t *item;
+    array_foreach(item, normal_sbardef->statusbars)
+    {
+        if (item->fullscreenrender)
+        {
+            array_push(strings, "Fullscreen");
+        }
+        else
+        {
+            array_push(strings, "Status Bar");
+        }
+    }
+
+    maxscreenblocks += array_size(strings) - 1;
+
+    return strings;
 }
 
 void ST_ResetPalette(void)
@@ -3730,16 +3773,15 @@ end_amnum:
 void ST_BindSTSVariables(void)
 {
   // [Nugget] NUGHUD
-  M_BindNum("fullscreen_hud_type", &hud_type, NULL,
-            HUDTYPE_SBARDEF, HUDTYPE_SBARDEF, HUDTYPE_NUGHUD,
-            ss_stat, wad_no, "Fullscreen HUD type (0 = SBARDEF; 1 = NUGHUD)");
+  M_BindBool("use_nughud", &use_nughud, NULL,
+             true, ss_stat, wad_no, "Replace second-to-last HUD with NUGHUD");
 
   M_BindNum("st_layout", &st_layout, NULL,  st_wide, st_original, st_wide,
              ss_stat, wad_no, "HUD layout");
   M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
              false, ss_stat, wad_yes, "Colored numbers on the status bar");
   M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,
-             false, ss_stat, wad_yes,
+             false, ss_none, wad_yes,
              "Percent signs on the status bar are always gray");
   M_BindBool("st_solidbackground", &st_solidbackground, NULL,
              false, ss_stat, wad_no,

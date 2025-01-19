@@ -137,6 +137,8 @@ extern boolean comp_powerrunout;
 
 extern boolean have_crouch_sprites;
 
+fixed_t R_GetNughudViewPitch(void);
+
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
 

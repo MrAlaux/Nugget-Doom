@@ -138,6 +138,13 @@ int extra_level_brightness;               // level brightness feature
 
 // [Nugget] /=================================================================
 
+static fixed_t nughud_viewpitch;
+
+fixed_t R_GetNughudViewPitch(void)
+{
+  return nughud_viewpitch;
+}
+
 // CVARs ---------------------------------------------------------------------
 
 boolean vertical_lockon;
@@ -886,10 +893,17 @@ static void R_SetupFreelook(void)
     dy = 0;
   }
 
+  // [Nugget] NUGHUD /--------------------------------------------------------
+
   if (STRICTMODE(ST_GetNughudOn()) && gamestate == GS_LEVEL)
   {
-    dy += (nughud.viewoffset * viewheight / SCREENHEIGHT) << FRACBITS;
+    nughud_viewpitch = (nughud.viewoffset * viewheight / SCREENHEIGHT) << FRACBITS;
   }
+  else { nughud_viewpitch = 0; }
+
+  dy += nughud_viewpitch;
+
+  // [Nugget] ---------------------------------------------------------------/
 
   centery = viewheight / 2 + (dy >> FRACBITS);
   centeryfrac = centery << FRACBITS;
@@ -1054,12 +1068,9 @@ void R_ExecuteSetViewSize (void)
         }
     }
 
-  // [crispy] forcefully initialize the status bar backing screen
-  // [Nugget] Unless the alt. intermission background is enabled
+  // [Nugget] Alt. intermission background
   if (!WI_UsingAltInterpic())
     ST_refreshBackground(); // [Nugget] NUGHUD
-
-  /*pspr_interp = false;*/ // [Nugget] New weapon interpolation: don't need this
 }
 
 //
@@ -1260,7 +1271,7 @@ void R_SetupFrame (player_t *player)
     }
 
     if ((use_localview || (freecam_on && freecam_mode == FREECAM_CAM)) // [Nugget] Freecam
-        && raw_input && !player->centering && (mouselook || padlook)) // [Nugget]
+        && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
       basepitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, basepitch);
@@ -1896,22 +1907,19 @@ void R_BindRenderVariables(void)
   // [Nugget] (CFG-only)
   BIND_BOOL(no_killough_face, false, "Disable the Killough-face easter egg");
 
-  BIND_NUM(screenblocks, 10, 3, 12, "Size of game-world screen");
+  BIND_NUM(screenblocks, 10, 3, UL, "Size of game-world screen");
 
   M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
              "Translucency for some things");
   M_BindNum("tran_filter_pct", &tran_filter_pct, NULL,
-            66, 0, 100, ss_gen, wad_yes,
+            66, 0, 100, ss_none, wad_yes,
             "Percent of foreground/background translucency mix");
 
   M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
              "Randomly mirrored death animations");
-  M_BindBool("fuzzcolumn_mode", &fuzzcolumn_mode, NULL, true, ss_enem, wad_no, // [Nugget] Restored menu item
-             "Fuzz rendering (0 = Resolution-dependent; 1 = Blocky)");
-
-  // [Nugget - ceski] Selective fuzz darkening
-  M_BindBool("fuzzdark_mode", &fuzzdark_mode, NULL, false, ss_enem, wad_no,
-             "Selective fuzz darkening");
+  M_BindNum("fuzzmode", &fuzzmode, NULL,
+            FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_SHADOW, ss_none, wad_no,
+            "Partial Invisibility (0 = Vanilla; 1 = Refraction; 2 = Shadow)");
 
   BIND_BOOL(draw_nearby_sprites, true,
     "Draw sprites overlapping into visible sectors");

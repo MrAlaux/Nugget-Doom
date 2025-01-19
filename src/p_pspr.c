@@ -189,22 +189,26 @@ static void P_BringUpWeapon(player_t *player)
 
   player->pendingweapon = wp_nochange;
 
+  pspdef_t *psp = &player->psprites[ps_weapon];
+
   // [Nugget] Weapon-switch interruption
   if (switch_interrupted)
   {
     switch_interrupted = false;
   }
   else
-  // killough 12/98: prevent pistol from starting visibly at bottom of screen:
-  player->psprites[ps_weapon].sy2 = // [Nugget]
-  player->psprites[ps_weapon].sy = demo_version >= DV_MBF ? 
-    WEAPONBOTTOM+FRACUNIT*2 : WEAPONBOTTOM;
+  {
+    // killough 12/98: prevent pistol from starting visibly at bottom of screen:
+    psp->sy = demo_version >= DV_MBF ? WEAPONBOTTOM + FRACUNIT * 2 : WEAPONBOTTOM;
+
+    psp->sy2 = psp->oldsy2 = psp->sy;
+  }
 
   // [Nugget]: [crispy] squat down weapon sprite
-  player->psprites[ps_weapon].dy = 0;
+  psp->dy = 0;
   // [Nugget] Reset offsets for weapon inertia
-  player->psprites[ps_weapon].wix = 0;
-  player->psprites[ps_weapon].wiy = 0;
+  psp->wix = 0;
+  psp->wiy = 0;
 
   P_SetPsprite(player, ps_weapon, newstate);
 }
@@ -1531,9 +1535,10 @@ void P_MovePsprites(player_t *player)
 
   weapon_ready = false; // [Nugget]
 
-  // [Nugget]
   psp[ps_weapon].oldsx2 = psp[ps_weapon].sx2;
   psp[ps_weapon].oldsy2 = psp[ps_weapon].sy2;
+
+  // [Nugget]
   psp[ps_weapon].oldwix = psp[ps_weapon].wix;
   psp[ps_weapon].oldwiy = psp[ps_weapon].wiy;
 
@@ -1606,10 +1611,10 @@ void P_MovePsprites(player_t *player)
 
   player->psprites[ps_flash].sx2 = player->psprites[ps_weapon].sx2;
   player->psprites[ps_flash].sy2 = player->psprites[ps_weapon].sy2;
-
-  // [Nugget]
   player->psprites[ps_flash].oldsx2 = player->psprites[ps_weapon].oldsx2;
   player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
+
+  // [Nugget]
   player->psprites[ps_flash].dy     = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].wix    = player->psprites[ps_weapon].wix;
   player->psprites[ps_flash].oldwix = player->psprites[ps_weapon].oldwix;

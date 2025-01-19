@@ -772,7 +772,6 @@ static boolean P_NuggetForceGibbing(
 )
 {
   extern boolean gibbers; // GIBBERS cheat
-  extern void A_Punch(), A_Saw(), A_FireShotgun2();
 
   if (!casual_play) { return false; }
 

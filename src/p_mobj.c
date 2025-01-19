@@ -1287,8 +1287,6 @@ void P_SpawnPlayer (mapthing_t* mthing)
 
   p->momx = p->momy = 0;   // killough 10/98: initialize bobbing to 0.
 
-  pspr_interp = false;
-
   // setup gun psprite
 
   P_SetupPsprites (p);

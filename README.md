@@ -97,6 +97,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Application while firing determined by the CFG-only `weapon_inertia_fire` CVAR
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
 - **_Translucent Flashes_** setting (translucency determined by the CFG-only `translucent_pspr_pct` CVAR) [i.b. Crispy Doom]
+- **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting, to toggle the 1px misalignment of first-person sprites (CFG-only: `sx_fix`)
 
 ### Status Bar/HUD
@@ -148,7 +149,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Extra Gibbing_** setting, to force gibbing under certain conditions (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
 - **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
 - **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
-- **_Selective Fuzz Darkening_** setting [by _ceski_]
 
 ### Doom Compatibility settings
 
@@ -164,7 +164,6 @@ All of these are CFG-only, so their CVAR names are included.
 - Attackers face fuzzy targets straight (`comp_faceshadow`)
 - Fix lopsided Icon of Sin explosions (`comp_iosdeath`)
 - Permanent IDCHOPPERS invulnerability (`comp_choppers`)
-- Blazing doors reopen with wrong sound (`comp_blazing2`) [p.f. Crispy Doom]
 - Manually toggled moving doors are silent (`comp_manualdoor`) [p.f. Crispy Doom]
 - Corrected switch sound source (`comp_switchsource`) [p.f. Crispy Doom]
 - Chaingun makes two sounds with one bullet (`comp_cgundblsnd`)
@@ -260,7 +259,7 @@ The Nugget Doom source code is available at GitHub: <https://github.com/MrAlaux/
 
 The following build system and libraries need to be installed:
  
- * [CMake](https://cmake.org) (>= 3.9)
+ * [CMake](https://cmake.org) (>= 3.15)
  * [SDL2](https://github.com/libsdl-org/SDL/tree/SDL2) (>= 2.0.18)
  * [SDL2_net](https://github.com/libsdl-org/SDL_net)
  * [openal-soft](https://github.com/kcat/openal-soft) (>= 1.22.0 for PC Speaker emulation)
@@ -330,7 +329,6 @@ Copyright:
  © 2007-2011 Moritz "Ripper" Kroll;  
  © 2008-2019 Simon Judd;  
  © 2017 Christoph Oelckers;  
- © 2019 Fernando Carmona Varo;  
  © 2020 Alex Mayfield;  
  © 2020 JadingTsunami;  
  © 2020-2024 Fabian Greffrath;  
@@ -341,7 +339,8 @@ Copyright:
  © 2022-2024 ceski;  
  © 2023 Andrew Apted;  
  © 2023 liPillON;  
- © 2024 pvictress.   
+ © 2024 pvictress;  
+ © 2025 Guilherme Miranda.  
 License: [GPL-2.0+](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
 Files: `src/i_flickstick.*, src/i_gyro.*`  
@@ -356,10 +355,9 @@ Copyright:
  © 2023 Andrew Apted.  
 License: [MIT](https://opensource.org/licenses/MIT)
 
-Files: `src/u_scanner.*`  
+Files: `src/m_scanner.*`  
 Copyright:  
- © 2010 Braden "Blzut3" Obrzut;  
- © 2019 Fernando Carmona Varo.  
+ © 2015 Braden "Blzut3" Obrzut.  
 License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
 
 Files: `src/v_flextran.*`  

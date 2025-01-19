@@ -37,6 +37,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "wi_stuff.h"
+
 static boolean voxels_found;
 boolean voxels_rendering, default_voxels_rendering;
 
@@ -874,13 +877,14 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 			fixed_t uy0 = uy1;
 
 			// clip the slab vertically
-			if (uy1 >= clip_y2) break;
-			if (uy2 <= clip_y1) continue;
+			if (uy1 >= clip_y2) uy1 = clip_y2;
+			if (uy2 <= clip_y1) uy2 = clip_y1;
 
 			if (uy1 < clip_y1) uy1 = clip_y1;
 			if (uy2 > clip_y2) uy2 = clip_y2;
 
-			boolean has_side = ((face & (ux > Bx ? B_face : A_face)) != 0);
+			boolean has_side = ((face & (ux > Bx ? B_face : A_face)) != 0
+                          && uy1 < clip_y2 && uy2 > clip_y1);
 
 			// handle the fuzz effect for Spectres
 			if (shadow)
@@ -1081,4 +1085,71 @@ void VX_DrawVoxel (vissprite_t * spr)
 	vx_eye_y = v->y_pivot + FixedMul (delta_x, s) - FixedMul (delta_y, c);
 
 	VX_RecursiveDraw (spr, 0, 0, v->x_size, v->y_size);
+}
+
+// [Nugget] Weapon voxels
+boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
+                              const boolean translucent)
+{
+  if (STRICTMODE(hide_weapon)
+      || R_GetChasecamOn() // Chasecam
+      || R_GetFreecamOn() // Freecam
+      || (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))) // Alt. intermission background
+  {
+    return false;
+  }
+
+  mobj_t thing = {0};
+
+  fixed_t sx2, sy2, wix, wiy;
+
+  if (uncapped && oldleveltime < leveltime)
+  {
+    sx2 = LerpFixed(psp->oldsx2, psp->sx2);
+    sy2 = LerpFixed(psp->oldsy2, psp->sy2);
+    wix = LerpFixed(psp->oldwix, psp->wix);
+    wiy = LerpFixed(psp->oldwiy, psp->wiy);
+  }
+  else {
+    sx2 = psp->sx2;
+    sy2 = psp->sy2;
+    wix = psp->wix;
+    wiy = psp->wiy;
+  }
+
+  fixed_t x = sx2,
+          y = sy2 - 32*FRACUNIT;
+
+  if (STRICTMODE(weapon_inertia))
+  {
+    x += wix / 2;
+
+    if (default_vertical_aiming != VERTAIM_AUTO)
+    { y += wiy / 2; }
+  }
+
+  x /= 5;
+  y /= 5;
+
+  thing.x = thing.oldx = viewx + FixedMul(x,   finesine[viewangle >> ANGLETOFINESHIFT]);
+  thing.y = thing.oldy = viewy - FixedMul(x, finecosine[viewangle >> ANGLETOFINESHIFT]);
+  thing.z = thing.oldz = viewz - y;
+
+  thing.angle = thing.oldangle = viewangle - ANG90;
+
+  thing.sprite = psp->state->sprite;
+  thing.frame  = psp->state->frame;
+
+  if (translucent)
+  { thing.flags |= MF_TRANSLUCENT; }
+
+  if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
+  { thing.flags |= MF_SHADOW; }
+
+  // Albeit unused, `R_ProjectVoxel()` accesses `heightsec`
+  sector_t sector = {0};
+  subsector_t sub = { .sector = &sector };
+  thing.subsector = &sub;
+
+  return VX_ProjectVoxel(&thing);
 }

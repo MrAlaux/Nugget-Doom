@@ -98,10 +98,10 @@ typedef struct pspdef_s
   // [FG] centered weapon sprite
   fixed_t sx2;
   fixed_t sy2;
+  fixed_t oldsx2;
+  fixed_t oldsy2;
 
   // [Nugget] ----------------------------------------------------------------
-
-  fixed_t oldsx2, oldsy2;
 
   // [crispy] squat down weapon sprite
   fixed_t dy;

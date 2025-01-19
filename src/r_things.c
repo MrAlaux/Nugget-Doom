@@ -143,6 +143,11 @@ void R_InitSpritesRes(void)
 static void R_InstallSpriteLump(int lump, unsigned frame,
                                 unsigned rotation, boolean flipped)
 {
+  if (frame == '^' - 'A')
+  {
+    frame = '\\' - 'A';
+  }
+
   if (frame >= MAX_SPRITE_FRAMES || rotation > 8)
     I_Error("R_InstallSpriteLump: Bad frame characters in lump %i", lump);
 
@@ -849,11 +854,11 @@ void R_NearbySprites (void)
   array_clear(nearby_sprites);
 }
 
+static int queued_weapon_voxels = 0; // [Nugget] Weapon voxels
+
 //
 // R_DrawPSprite
 //
-
-boolean pspr_interp = true; // weapon bobbing interpolation
 
 void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent flashes
 {
@@ -865,6 +870,15 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   boolean       flip;
   vissprite_t   *vis;
   vissprite_t   avis;
+
+  // [Nugget] Weapon voxels
+  if (VX_ProjectWeaponVoxel(psp, translucent))
+  {
+    queued_weapon_voxels++;
+    return;
+  }
+  // If any are queued, don't draw sprites
+  else if (queued_weapon_voxels) { return; }
 
   // decide which patch to use
 
@@ -887,30 +901,29 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   lump = sprframe->lump[0];
   flip = (boolean) sprframe->flip[0];
 
-  // [Nugget] New interpolation /---------------------------------------------
+  fixed_t sx2, sy2;
 
-  fixed_t sx2, sy2, wix, wiy;
+  fixed_t wix, wiy; // [Nugget]
 
-  if (uncapped && oldleveltime < leveltime && pspr_interp)
+  if (uncapped && oldleveltime < leveltime)
   {
     sx2 = LerpFixed(psp->oldsx2, psp->sx2);
     sy2 = LerpFixed(psp->oldsy2, psp->sy2);
+
     wix = LerpFixed(psp->oldwix, psp->wix);
     wiy = LerpFixed(psp->oldwiy, psp->wiy);
   }
-  else {
-    pspr_interp = true;
-
+  else
+  {
     sx2 = psp->sx2;
     sy2 = psp->sy2;
+
     wix = psp->wix;
     wiy = psp->wiy;
   }
 
-  // [Nugget] ---------------------------------------------------------------/
-
   // calculate edges of the shape
-  tx = sx2-160*FRACUNIT; // [FG] centered weapon sprite
+  tx = sx2 - 160*FRACUNIT; // [FG] centered weapon sprite
 
   // [Nugget] Weapon inertia | Flip levels
   if (STRICTMODE(weapon_inertia))
@@ -937,10 +950,11 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // killough 12/98: fix psprite positioning problem
   vis->texturemid = (BASEYCENTER<<FRACBITS) /* + FRACUNIT/2 */ -
-                    (sy2-spritetopoffset[lump]) // [FG] centered weapon sprite
-                    // [Nugget]
-                    - (STRICTMODE(weapon_inertia) ? wiy : 0) // Weapon inertia
-                    + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
+                    (sy2 - spritetopoffset[lump]); // [FG] centered weapon sprite
+
+  // [Nugget]
+  vis->texturemid += (STRICTMODE(weapon_inertia) ? -wiy : 0) // Weapon inertia
+                   + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
@@ -984,8 +998,6 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // [Nugget] Translucent flashes
   vis->tranmap = translucent ? R_GetGenericTranMap(pspr_translucency_pct) : NULL;
-
-  // [Nugget] Removed old interpolation code
 
   // [crispy] free look
   vis->texturemid += (centery - viewheight/2) * pspriteiscale
@@ -1036,6 +1048,8 @@ void R_DrawPlayerSprites(void)
   if (hud_crosshair_on) // [Nugget] Use crosshair toggle
     HU_DrawCrosshair();
 
+  queued_weapon_voxels = 0; // [Nugget] Weapon voxels
+
   // add all active psprites
   for (i=0, psp=viewplayer->psprites;
        // [Nugget]: [crispy] A11Y number of player (first person) sprites to draw
@@ -1043,6 +1057,22 @@ void R_DrawPlayerSprites(void)
        i++,psp++)
     if (psp->state)
       R_DrawPSprite (psp, i == ps_flash && STRICTMODE(pspr_translucency_pct != 100)); // [Nugget] Translucent flashes
+
+  // [Nugget] Weapon voxels
+  if (queued_weapon_voxels)
+  {
+    const fixed_t old_centeryfrac = centeryfrac;
+
+    // Hack to make weapon voxels be unaffected by view pitch
+    if (default_vertical_aiming != VERTAIM_AUTO)
+    { centeryfrac = (viewheight / 2 + (R_GetNughudViewPitch() >> FRACBITS)) << FRACBITS; }
+
+    // Drawn in reverse order
+    for (i = 0;  i < queued_weapon_voxels;  i++)
+    { VX_DrawVoxel(&vissprites[num_vissprite - (1 + i)]); }
+
+    centeryfrac = old_centeryfrac;
+  }
 }
 
 //

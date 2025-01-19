@@ -27,7 +27,7 @@ struct event_s;
 // [Nugget] CVARs
 extern boolean comp_choppers;
 
-typedef void (*cheatf_v)();
+typedef void (*cheatf_v)(void);
 typedef void (*cheatf_i)(int i);
 typedef void (*cheatf_s)(char *s);
 

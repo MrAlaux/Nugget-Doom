@@ -3,6 +3,7 @@ include(NuggetDoomSettings)
 set(NUGGETDOOM_SOURCES
     am_map.c               am_map.h
     d_deh.c                d_deh.h
+    d_demoloop.c           d_demoloop.h
                            d_englsh.h
                            d_event.h
                            d_french.h
@@ -27,6 +28,7 @@ set(NUGGETDOOM_SOURCES
     g_game.c               g_game.h
     g_input.c              g_input.h
     g_nextweapon.c         g_nextweapon.h
+    g_umapinfo.c           g_umapinfo.h
     hu_command.c           hu_command.h
     hu_coordinates.c       hu_coordinates.h
     hu_crosshair.c         hu_crosshair.h
@@ -64,6 +66,7 @@ set(NUGGETDOOM_SOURCES
     m_input.c              m_input.h
     m_io.c                 m_io.h
     m_json.c               m_json.h
+    m_scanner.c            m_scanner.h
     mn_font.c              mn_font.h
     mn_menu.c              mn_menu.h
     mn_setup.c             mn_internal.h
@@ -137,8 +140,6 @@ set(NUGGETDOOM_SOURCES
     st_widgets.c           st_widgets.h
     statdump.c             statdump.h
     tables.c               tables.h
-    u_mapinfo.c            u_mapinfo.h
-    u_scanner.c            u_scanner.h
     v_flextran.c           v_flextran.h
     v_fmt.c                v_fmt.h
     v_trans.c              v_trans.h

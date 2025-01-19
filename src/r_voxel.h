@@ -27,6 +27,10 @@ boolean VX_ProjectVoxel (struct mobj_s * thing);
 struct vissprite_s;
 void VX_DrawVoxel (struct vissprite_s * vis);
 
+// [Nugget] Weapon voxels
+boolean VX_ProjectWeaponVoxel(const struct pspdef_s *const psp,
+                              const boolean translucent);
+
 extern boolean voxels_rendering, default_voxels_rendering;
 
 void VX_IncreaseMaxDist (void);

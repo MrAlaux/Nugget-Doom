@@ -1,7 +1,7 @@
 # Nugget Doom's NUGHUD guide
 
 **The `NUGHUD` lump** is a variant of MBF's `OPTIONS` lump, **used exclusively by Nugget Doom to customize the fullscreen HUD**
-used when the `screenblocks` CVAR is set to 11 and the _Fullscreen HUD Type_ setting is set to _NUGHUD_.
+used when the `screenblocks` CVAR is set to the maximum size minus one (usually 12) and the _Use NUGHUD_ setting is enabled.
 
 From this point onwards, _NUGHUD_ refers to the customization system in general, whereas _`NUGHUD`_ refers to a NUGHUD lump.
 
