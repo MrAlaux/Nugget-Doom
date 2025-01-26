@@ -188,7 +188,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
             // [Nugget] True color -------------------------------------------
 
-            if (truecolor_rendering
+            if (truecolor_rendering == TRUECOLOR_HYBRID
                 && index < MAXLIGHTSCALE-1
                 && dc_colormap[0] != walllights[index + 1])
             {
@@ -418,7 +418,13 @@ static void R_RenderSegLoop (void)
 
           dc_nextcolormap = NULL;
 
-          if (truecolor_rendering
+          if (truecolor_rendering == TRUECOLOR_FULL)
+          {
+            dc_lightindex = dc_minlightindex + R_GetLightIndexFrac();
+
+            dc_lightindex = BETWEEN(0, 255, dc_lightindex);
+          }
+          else if (truecolor_rendering == TRUECOLOR_HYBRID
               && index < MAXLIGHTSCALE-1
               && dc_colormap[0] != walllights[index + 1])
           {
@@ -824,28 +830,56 @@ void R_StoreWallRange(const int start, const int stop)
       // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
       if (!fixedcolormap)
         {
-          int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
-
-          // [crispy] smoother fake contrast
-          if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
+          // [Nugget] True color
+          if (truecolor_rendering == TRUECOLOR_FULL)
           {
-            lightnum += curline->fakecontrast;
-          }
-          // [Nugget] Vanilla effect
-          else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
-          {
-            if (curline->v1->y == curline->v2->y)
-              lightnum--;
-            else if (curline->v1->x == curline->v2->x)
-              lightnum++;
-          }
+            dc_minlightindex = frontsector->lightlevel + (extralight * 16);
 
-          if (lightnum < 0)
-            walllights = scalelight[0];
-          else if (lightnum >= LIGHTLEVELS)
-            walllights = scalelight[LIGHTLEVELS-1];
-          else
-            walllights = scalelight[lightnum];
+            int fakecontrast = 0;
+
+            // [crispy] smoother fake contrast
+            if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
+            {
+              fakecontrast = curline->fakecontrast;
+            }
+            // [Nugget] Vanilla effect
+            else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
+            {
+              if (curline->v1->y == curline->v2->y)
+                fakecontrast = -1;
+              else if (curline->v1->x == curline->v2->x)
+                fakecontrast = 1;
+            }
+
+            dc_minlightindex += fakecontrast * 16;
+
+            dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
+          }
+          //else
+          {
+            int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+            // [crispy] smoother fake contrast
+            if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
+            {
+              lightnum += curline->fakecontrast;
+            }
+            // [Nugget] Vanilla effect
+            else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
+            {
+              if (curline->v1->y == curline->v2->y)
+                lightnum--;
+              else if (curline->v1->x == curline->v2->x)
+                lightnum++;
+            }
+
+            if (lightnum < 0)
+              walllights = scalelight[0];
+            else if (lightnum >= LIGHTLEVELS)
+              walllights = scalelight[LIGHTLEVELS-1];
+            else
+              walllights = scalelight[lightnum];
+          }
         }
     }
 

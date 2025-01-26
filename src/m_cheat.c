@@ -62,13 +62,13 @@
 
 // [Nugget] Testing cheat /------------
 
-//#define NUGMAGIC
+#define NUGMAGIC
 
 #ifdef NUGMAGIC
 
 static void cheat_magic(void)
 {
-  
+  displaymsg("Light %s", (diminished_lighting = !diminished_lighting) ? "ON" : "OFF");
 }
 
 static void cheat_magic2(void)

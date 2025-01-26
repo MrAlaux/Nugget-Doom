@@ -224,7 +224,7 @@ static void R_MapPlane(int y, int x1, int x2)
 
       // [Nugget] True color -------------------------------------------
 
-      if (truecolor_rendering
+      if (truecolor_rendering == TRUECOLOR_HYBRID
           && 0 < index
           && ds_colormap[0] != planezlight[index - 1])
       {

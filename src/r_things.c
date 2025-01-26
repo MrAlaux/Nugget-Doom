@@ -733,7 +733,7 @@ static void R_ProjectSprite (mobj_t* thing)
 
       // [Nugget] True color -------------------------------------------------
 
-      if (truecolor_rendering
+      if (truecolor_rendering == TRUECOLOR_HYBRID
           && index < MAXLIGHTSCALE-1
           && vis->colormap[0] != spritelights[index + 1])
       {

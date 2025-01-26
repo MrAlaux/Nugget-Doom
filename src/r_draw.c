@@ -85,7 +85,7 @@ byte *dc_source;  // first pixel in a column (possibly virtual)
 byte dc_skycolor;
 
 // [Nugget] True color
-byte dc_lightindex, dc_maxlightindex;
+short dc_lightindex, dc_minlightindex, dc_maxlightindex;
 lighttable_t *dc_nextcolormap;
 
 //
@@ -168,12 +168,14 @@ lighttable_t *dc_nextcolormap;
     }
 
 DRAW_COLUMN(,
-  (dc_nextcolormap)
-  ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
-              V_IndexToRGB(dc_nextcolormap[src]),
-              dc_lightindex,
-              dc_maxlightindex)
-  : V_IndexToRGB(dc_colormap[0][src])
+  (truecolor_rendering == TRUECOLOR_FULL)
+  ? V_ShadeRGB(V_IndexToRGB(src), 255 - dc_lightindex, 255)
+  : (dc_nextcolormap)
+    ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
+                V_IndexToRGB(dc_nextcolormap[src]),
+                dc_lightindex,
+                dc_maxlightindex)
+    : V_IndexToRGB(dc_colormap[0][src])
 )
 
 DRAW_COLUMN(Brightmap,
@@ -753,7 +755,7 @@ fixed_t ds_xstep;
 fixed_t ds_ystep;
 
 // [Nugget] True color
-byte ds_lightindex, ds_maxlightindex;
+byte ds_lightindex, ds_minlightindex, ds_maxlightindex;
 lighttable_t *ds_nextcolormap;
 
 // start of a 64*64 tile image

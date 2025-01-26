@@ -83,7 +83,15 @@ extern boolean screenvisible;
 
 // [Nugget] /-----------------------------------------------------------------
 
-extern boolean truecolor_rendering;
+typedef enum truecolormode_s {
+  TRUECOLOR_OFF,
+  TRUECOLOR_HYBRID,
+  TRUECOLOR_FULL,
+
+  NUM_TRUECOLOR_MODES
+} truecolormode_t;
+
+extern truecolormode_t truecolor_rendering;
 
 extern int red_intensity, green_intensity, blue_intensity;
 extern int color_saturation, color_contrast;
