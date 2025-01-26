@@ -257,19 +257,6 @@ void V_SetPalColors(const int palette_index)
   palcolors = palscolors[palette_index];
 }
 
-pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
-{
-  short r = V_RedFromRGB(rgb),
-        g = V_GreenFromRGB(rgb),
-        b = V_BlueFromRGB(rgb);
-
-  r = r * (maxlevel - level) / maxlevel;
-  g = g * (maxlevel - level) / maxlevel;
-  b = b * (maxlevel - level) / maxlevel;
-
-  return (r << PIXEL_RED_SHIFT) | (g << PIXEL_GREEN_SHIFT) | (b << PIXEL_BLUE_SHIFT);
-}
-
 // [Nugget] -----------------------------------------------------------------/
 
 // killough 5/2/98: tiny engine driven by table above

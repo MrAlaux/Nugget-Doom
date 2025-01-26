@@ -871,8 +871,16 @@ byte R_GetLightIndexFrac(void)
 
   dc_maxlightindex = INDEX_PRECISION;
 
-  return (temp_lightindex % ((int64_t) 1 << LIGHTSCALESHIFT))
-        * INDEX_PRECISION / ((int64_t) 1 << LIGHTSCALESHIFT);
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    int64_t temp_lightindex_scaled = temp_lightindex / 772;
+
+    return BETWEEN(0, 255, temp_lightindex_scaled);
+  }
+  else {
+    return (temp_lightindex % ((int64_t) 1 << LIGHTSCALESHIFT))
+          * INDEX_PRECISION / ((int64_t) 1 << LIGHTSCALESHIFT);
+  }
 
   #undef INDEX_PRECISION
 }

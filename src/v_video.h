@@ -249,7 +249,13 @@ inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const byte lev
          + (V_BlueFromRGB(b)  *             level  / maxlevel)) << PIXEL_BLUE_SHIFT);
 }
 
-pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel);
+inline static pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
+{
+  return (colormaps[0][(level * 256) + V_IndexFromRGB(rgb)]     << PIXEL_INDEX_SHIFT)
+       | ((V_RedFromRGB(rgb)   * (maxlevel - level) / maxlevel) << PIXEL_RED_SHIFT)
+       | ((V_GreenFromRGB(rgb) * (maxlevel - level) / maxlevel) << PIXEL_GREEN_SHIFT)
+       | ((V_BlueFromRGB(rgb)  * (maxlevel - level) / maxlevel) << PIXEL_BLUE_SHIFT);
+}
 
 // HUD/menu shadows ----------------------------------------------------------
 
