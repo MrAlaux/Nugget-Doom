@@ -26,6 +26,9 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
+// [Nugget]
+#include "r_state.h"
+
 struct patch_s;
 
 //
