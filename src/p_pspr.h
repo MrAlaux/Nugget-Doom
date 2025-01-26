@@ -103,6 +103,8 @@ typedef struct pspdef_s
 
   // [Nugget] ----------------------------------------------------------------
 
+  int extraheight;
+
   // [crispy] squat down weapon sprite
   fixed_t dy;
 

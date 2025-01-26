@@ -1487,24 +1487,7 @@ static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
 
   if (psp->wiy != 0)
   {
-    static int sprite = -1, frame = -1;
-    static const actualspriteheight_t *ash = NULL;
-    static short spritetopoffset;
-
-    if (psp->state->sprite != sprite || (psp->state->frame & FF_FRAMEMASK) != frame)
-    {
-      sprite = psp->state->sprite;
-      frame  = psp->state->frame & FF_FRAMEMASK;
-
-      ash = R_GetActualSpriteHeight(sprite, frame);
-
-      const patch_t *const patch = (patch_t *) W_CacheLumpNum(ash->lump, PU_CACHE);
-      spritetopoffset = SHORT(patch->topoffset);
-    }
-
-    const int screenbottom = SCREENHEIGHT - ((screenblocks < 11) ? 48 : 32);
-
-    fixed_t min = WEAPONTOP - ((-spritetopoffset + ash->height - screenbottom) * FRACUNIT);
+    fixed_t min = WEAPONTOP - (psp->extraheight * FRACUNIT);
 
     min = MIN(min, WEAPONTOP);
 
@@ -1526,7 +1509,8 @@ static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
 
     WeaponInertiaHorizontal(player, psp);
 
-    if (mouselook || padlook || player->pitch || psp->wiy)
+    if ((mouselook || padlook || player->pitch || psp->wiy)
+        && default_vertical_aiming != VERTAIM_AUTO)
       WeaponInertiaVertical(player, psp);
   }
 }
@@ -1618,9 +1602,37 @@ void P_MovePsprites(player_t *player)
           psp->sy2 = WEAPONTOP;
       }
     }
+
+    // [Nugget] --------------------------------------------------------------
+
+    static int sprite = -1, frame = -1;
+    static const actualspriteheight_t *ash = NULL;
+    static short spritetopoffset;
+
+    if (psp->state->sprite != sprite || (psp->state->frame & FF_FRAMEMASK) != frame)
+    {
+      sprite = psp->state->sprite;
+      frame  = psp->state->frame & FF_FRAMEMASK;
+
+      ash = R_GetActualSpriteHeight(sprite, frame);
+
+      const patch_t *const patch = (patch_t *) W_CacheLumpNum(ash->lump, PU_CACHE);
+      spritetopoffset = SHORT(patch->topoffset);
+    }
+
+    const int screenbottom = SCREENHEIGHT - ((screenblocks < 11) ? 48 : 32);
+
+    psp->extraheight = -spritetopoffset + ash->height - screenbottom;
   }
 
-  // [Nugget]: [crispy] squat down weapon sprite a bit after hitting the ground
+  player->psprites[ps_flash].sx2 = player->psprites[ps_weapon].sx2;
+  player->psprites[ps_flash].sy2 = player->psprites[ps_weapon].sy2;
+  player->psprites[ps_flash].oldsx2 = player->psprites[ps_weapon].oldsx2;
+  player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
+
+  // [Nugget] ----------------------------------------------------------------
+
+  // [crispy] squat down weapon sprite a bit after hitting the ground
   if (psp->dy)
   {
     if (psp->dy > 24*FRACUNIT) { psp->dy = 24*FRACUNIT; }
@@ -1631,12 +1643,8 @@ void P_MovePsprites(player_t *player)
 
   P_NuggetWeaponInertia(player, psp);
 
-  player->psprites[ps_flash].sx2 = player->psprites[ps_weapon].sx2;
-  player->psprites[ps_flash].sy2 = player->psprites[ps_weapon].sy2;
-  player->psprites[ps_flash].oldsx2 = player->psprites[ps_weapon].oldsx2;
-  player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
+  player->psprites[ps_flash].extraheight = player->psprites[ps_weapon].extraheight;
 
-  // [Nugget]
   player->psprites[ps_flash].dy     = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].wix    = player->psprites[ps_weapon].wix;
   player->psprites[ps_flash].oldwix = player->psprites[ps_weapon].oldwix;

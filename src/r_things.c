@@ -1043,7 +1043,17 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   vis->tranmap = translucent ? R_GetGenericTranMap(pspr_translucency_pct) : NULL;
 
   // [crispy] free look
-  vis->texturemid += (centery - viewheight/2) * pspriteiscale;
+  // [Nugget] Conditioned
+  if (strictmode || default_vertical_aiming != VERTAIM_AUTO)
+  {
+    vis->texturemid += (centery - viewheight/2) * pspriteiscale;
+  }
+  else {
+    int offset = (psp->extraheight * viewheight / SCREENHEIGHT)
+               + (centery - viewheight/2);
+
+    if (offset < 0) { vis->texturemid += offset * pspriteiscale; }
+  }
 
   // [Nugget] NUGHUD
   if (STRICTMODE(ST_GetNughudOn()))
