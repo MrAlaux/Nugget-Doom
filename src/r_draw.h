@@ -84,7 +84,7 @@ extern fixed_t ds_xstep;
 extern fixed_t ds_ystep;
 
 // [Nugget] True color
-extern byte ds_lightindex, ds_minlightindex, ds_maxlightindex;
+extern short ds_lightindex, ds_minlightindex, ds_maxlightindex;
 extern lighttable_t *ds_nextcolormap;
 
 // start of a 64*64 tile image

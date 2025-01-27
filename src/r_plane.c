@@ -214,30 +214,49 @@ static void R_MapPlane(int y, int x1, int x2)
 
   if (!(ds_colormap[0] = ds_colormap[1] = fixedcolormap))
     {
-      index = distance >> LIGHTZSHIFT;
-      if (index >= MAXLIGHTZ )
-        index = MAXLIGHTZ-1;
+      // [Nugget] True color
 
-      if (STRICTMODE(!diminished_lighting)) { index = MAXLIGHTZ-1; } // [Nugget]
+      #define INDEX_PRECISION 255
 
-      ds_colormap[0] = planezlight[index];
-      ds_colormap[1] = fullcolormap;
-
-      // [Nugget] True color -------------------------------------------
-
-      if (truecolor_rendering == TRUECOLOR_HYBRID
-          && 0 < index
-          && ds_colormap[0] != planezlight[index - 1])
+      if (truecolor_rendering == TRUECOLOR_FULL)
       {
-        #define INDEX_PRECISION 255
+        ds_lightindex = ds_minlightindex;
 
-        ds_maxlightindex = INDEX_PRECISION;
-        ds_lightindex = INDEX_PRECISION-1 - (distance % (1 << LIGHTZSHIFT)) * INDEX_PRECISION / (1 << LIGHTZSHIFT);
+        if (!STRICTMODE(!diminished_lighting))
+        {
+          const fixed_t max = MAXLIGHTZ * (1 << LIGHTZSHIFT),
+                        step = max / 32;
 
-        #undef INDEX_PRECISION
+          const fixed_t invdistance = max - distance;
 
-        ds_nextcolormap = planezlight[index - 1];
+          if (invdistance > step)
+          { ds_lightindex += invdistance / step; }
+        }
+
+        ds_lightindex = BETWEEN(0, INDEX_PRECISION, ds_lightindex);
       }
+      else
+      {
+        index = distance >> LIGHTZSHIFT;
+        if (index >= MAXLIGHTZ )
+          index = MAXLIGHTZ-1;
+
+        if (STRICTMODE(!diminished_lighting)) { index = MAXLIGHTZ-1; } // [Nugget]
+
+        ds_colormap[0] = planezlight[index];
+        ds_colormap[1] = fullcolormap;
+
+        if (truecolor_rendering == TRUECOLOR_HYBRID
+            && 0 < index
+            && ds_colormap[0] != planezlight[index - 1])
+        {
+          ds_lightindex = INDEX_PRECISION-1 - ((distance % (1 << LIGHTZSHIFT)) * INDEX_PRECISION / (1 << LIGHTZSHIFT));
+
+          ds_nextcolormap = planezlight[index - 1];
+        }
+      }
+
+      #undef INDEX_PRECISION
     }
 
   ds_y = y;
@@ -659,20 +678,29 @@ static void do_draw_plane(visplane_t *pl)
     xoffs = pl->xoffs; // killough 2/28/98: Add offsets
     yoffs = pl->yoffs;
     planeheight = abs(pl->height - viewz);
-    light = (pl->lightlevel >> LIGHTSEGSHIFT) + extralight;
 
-    if (light >= LIGHTLEVELS)
+    if (truecolor_rendering == TRUECOLOR_FULL)
     {
-        light = LIGHTLEVELS - 1;
+      ds_minlightindex = pl->lightlevel + (extralight * 16);
     }
-
-    if (light < 0)
+    else
     {
-        light = 0;
+        light = (pl->lightlevel >> LIGHTSEGSHIFT) + extralight;
+
+        if (light >= LIGHTLEVELS)
+        {
+            light = LIGHTLEVELS - 1;
+        }
+
+        if (light < 0)
+        {
+            light = 0;
+        }
+
+        planezlight = zlight[light];
     }
 
     stop = pl->maxx + 1;
-    planezlight = zlight[light];
     pl->top[pl->minx - 1] = pl->top[stop] = USHRT_MAX;
 
     for (int x = pl->minx; x <= stop; x++)

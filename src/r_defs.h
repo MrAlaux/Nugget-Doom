@@ -393,7 +393,7 @@ typedef struct vissprite_s
   byte *tranmap;
 
   // True color
-  byte lightindex, maxlightindex;
+  short lightindex;
   lighttable_t *nextcolormap;
 } vissprite_t;
 

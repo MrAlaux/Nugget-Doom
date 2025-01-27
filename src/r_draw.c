@@ -82,7 +82,7 @@ byte *dc_source;  // first pixel in a column (possibly virtual)
 byte dc_skycolor;
 
 // [Nugget] True color
-short dc_lightindex, dc_minlightindex, dc_maxlightindex;
+short dc_lightindex, dc_minlightindex, dc_maxlightindex = 255;
 lighttable_t *dc_nextcolormap;
 
 //
@@ -165,8 +165,12 @@ lighttable_t *dc_nextcolormap;
     }
 
 DRAW_COLUMN(,
-  (truecolor_rendering == TRUECOLOR_FULL)
-  ? V_ShadeRGB(V_IndexToRGB(src), 255 - dc_lightindex, 255)
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      dc_maxlightindex - dc_lightindex,
+      dc_maxlightindex
+    )
   : (dc_nextcolormap)
     ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
                 V_IndexToRGB(dc_nextcolormap[src]),
@@ -176,12 +180,18 @@ DRAW_COLUMN(,
 )
 
 DRAW_COLUMN(Brightmap,
-  (dc_nextcolormap && !dc_brightmap[src])
-  ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
-              V_IndexToRGB(dc_nextcolormap[src]),
-              dc_lightindex,
-              dc_maxlightindex)
-  : V_IndexToRGB(dc_colormap[dc_brightmap[src]][src])
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      dc_brightmap[src] ? 0 : dc_maxlightindex - dc_lightindex,
+      dc_maxlightindex
+    )
+  : (dc_nextcolormap && !dc_brightmap[src])
+    ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
+                V_IndexToRGB(dc_nextcolormap[src]),
+                dc_lightindex,
+                dc_maxlightindex)
+    : V_IndexToRGB(dc_colormap[dc_brightmap[src]][src])
 )
 
 // Here is the version of R_DrawColumn that deals with translucent  // phares
@@ -799,7 +809,7 @@ fixed_t ds_xstep;
 fixed_t ds_ystep;
 
 // [Nugget] True color
-byte ds_lightindex, ds_minlightindex, ds_maxlightindex;
+short ds_lightindex, ds_minlightindex, ds_maxlightindex = 255;
 lighttable_t *ds_nextcolormap;
 
 // start of a 64*64 tile image
@@ -868,21 +878,33 @@ byte *ds_source;
     }
 
 R_DRAW_SPAN(,
-  (ds_nextcolormap)
-  ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
-              V_IndexToRGB(ds_nextcolormap[src]),
-              ds_lightindex,
-              ds_maxlightindex)
-  : V_IndexToRGB(ds_colormap[0][src])
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      ds_maxlightindex - ds_lightindex,
+      ds_maxlightindex
+    )
+  : (ds_nextcolormap)
+    ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
+                V_IndexToRGB(ds_nextcolormap[src]),
+                ds_lightindex,
+                ds_maxlightindex)
+    : V_IndexToRGB(ds_colormap[0][src])
 )
 
 R_DRAW_SPAN(Brightmap,
-  (ds_nextcolormap && !ds_brightmap[src])
-  ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
-              V_IndexToRGB(ds_nextcolormap[src]),
-              ds_lightindex,
-              ds_maxlightindex)
-  : V_IndexToRGB(ds_colormap[ds_brightmap[src]][src])
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      dc_brightmap[src] ? 0 : ds_maxlightindex - ds_lightindex,
+      ds_maxlightindex
+    )
+  : (ds_nextcolormap && !ds_brightmap[src])
+    ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
+                V_IndexToRGB(ds_nextcolormap[src]),
+                ds_lightindex,
+                ds_maxlightindex)
+    : V_IndexToRGB(ds_colormap[ds_brightmap[src]][src])
 )
 
 void (*R_DrawColumn)(void) = DrawColumn;

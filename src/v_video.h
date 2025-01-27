@@ -254,7 +254,7 @@ inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const byte lev
 
 inline static pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
 {
-  return (colormaps[0][(level * 256) + V_IndexFromRGB(rgb)]     << PIXEL_INDEX_SHIFT)
+  return (rgb & PIXEL_INDEX_MASK)
        | ((V_RedFromRGB(rgb)   * (maxlevel - level) / maxlevel) << PIXEL_RED_SHIFT)
        | ((V_GreenFromRGB(rgb) * (maxlevel - level) / maxlevel) << PIXEL_GREEN_SHIFT)
        | ((V_BlueFromRGB(rgb)  * (maxlevel - level) / maxlevel) << PIXEL_BLUE_SHIFT);

@@ -444,7 +444,6 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
   // [Nugget] True color
   dc_lightindex    = vis->lightindex;
-  dc_maxlightindex = vis->maxlightindex;
   dc_nextcolormap  = vis->nextcolormap;
 
   // killough 4/11/98: rearrange and handle translucent sprites
@@ -727,24 +726,49 @@ static void R_ProjectSprite (mobj_t* thing)
   else if (fixedcolormap)
     vis->colormap[0] = vis->colormap[1] = fixedcolormap;      // fixed map
   else if (frame & FF_FULLBRIGHT)
+  {
     vis->colormap[0] = vis->colormap[1] = fullcolormap;       // full bright  // killough 3/20/98
+    vis->lightindex = 255; // [Nugget] True color
+  }
   else
-    {      // diminished light
-      const int index = STRICTMODE(!diminished_lighting) // [Nugget]
-                        ? 0 : R_GetLightIndex(xscale);
+    {
+      // diminished light
+      // [Nugget] True color
 
-      vis->colormap[0] = spritelights[index];
-      vis->colormap[1] = fullcolormap;
-
-      // [Nugget] True color -------------------------------------------------
-
-      if (truecolor_rendering == TRUECOLOR_HYBRID
-          && index < MAXLIGHTSCALE-1
-          && vis->colormap[0] != spritelights[index + 1])
+      if (truecolor_rendering == TRUECOLOR_FULL)
       {
-        vis->lightindex = R_GetLightIndexFrac();
-        vis->maxlightindex = dc_maxlightindex;
-        vis->nextcolormap = spritelights[index + 1];
+        #define INDEX_PRECISION 255
+
+        vis->lightindex = dc_minlightindex;
+
+        if (!STRICTMODE(!diminished_lighting))
+        {
+          R_GetLightIndex(xscale);
+          vis->lightindex += R_GetLightIndexFrac();
+        }
+
+        vis->lightindex = BETWEEN(0, INDEX_PRECISION, vis->lightindex);
+
+        #undef INDEX_PRECISION
+
+        // Assign a colormap so that it doesn't apply the fuzz effect
+        vis->colormap[0] = scalelight[0][0];
+      }
+      else
+      {
+        const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+                          ? 0 : R_GetLightIndex(xscale);
+
+        vis->colormap[0] = spritelights[index];
+        vis->colormap[1] = fullcolormap;
+
+        if (truecolor_rendering == TRUECOLOR_HYBRID
+            && index < MAXLIGHTSCALE-1
+            && vis->colormap[0] != spritelights[index + 1])
+        {
+          vis->lightindex = R_GetLightIndexFrac();
+          vis->nextcolormap = spritelights[index + 1];
+        }
       }
     }
 
@@ -799,14 +823,22 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   if (demo_version <= DV_BOOM)
     lightlevel = sec->lightlevel;
 
-  lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
-
-  if (lightnum < 0)
-    spritelights = scalelight[0];
-  else if (lightnum >= LIGHTLEVELS)
-    spritelights = scalelight[LIGHTLEVELS-1];
+  // [Nugget] True color
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    dc_minlightindex = lightlevel + (extralight * 16);
+  }
   else
-    spritelights = scalelight[lightnum];
+  {
+    lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+    if (lightnum < 0)
+      spritelights = scalelight[0];
+    else if (lightnum >= LIGHTLEVELS)
+      spritelights = scalelight[LIGHTLEVELS-1];
+    else
+      spritelights = scalelight[lightnum];
+  }
 
   // Handle all things in sector.
 
@@ -993,6 +1025,15 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
     vis->colormap[0] = spritelights[index];  // local light
     vis->colormap[1] = fullcolormap;
+
+    // [Nugget] True color -------------------------------------------------
+
+    if (truecolor_rendering == TRUECOLOR_FULL)
+    {
+      vis->lightindex = dc_minlightindex + index;
+
+      vis->lightindex = BETWEEN(0, 255, vis->lightindex);
+    }
   }
   vis->brightmap = R_BrightmapForState(psp->state - states);
 
@@ -1030,15 +1071,25 @@ void R_DrawPlayerSprites(void)
 
   R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
              &floorlightlevel, &ceilinglightlevel, 0);
-  lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
-    + extralight;
 
-  if (lightnum < 0)
-    spritelights = scalelight[0];
-  else if (lightnum >= LIGHTLEVELS)
-    spritelights = scalelight[LIGHTLEVELS-1];
-  else
-    spritelights = scalelight[lightnum];
+  // [Nugget] True color
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    dc_minlightindex = ((floorlightlevel + ceilinglightlevel) >> 1)
+                     + (extralight * 16);
+  }
+  //else
+  {
+    lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
+      + extralight;
+
+    if (lightnum < 0)
+      spritelights = scalelight[0];
+    else if (lightnum >= LIGHTLEVELS)
+      spritelights = scalelight[LIGHTLEVELS-1];
+    else
+      spritelights = scalelight[lightnum];
+  }
 
   // clip to screen bounds
   mfloorclip = screenheightarray;
