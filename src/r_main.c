@@ -854,10 +854,33 @@ void R_SmoothLight(void)
   P_SegLengths(true);
 }
 
+// [Nugget]
+static int64_t temp_lightindex = 0;
+
 int R_GetLightIndex(fixed_t scale)
 {
-  const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
+  // [Nugget] True color: calculate part of `dc_lightindex` here
+  const int index = (temp_lightindex = (int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
   return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+}
+
+// [Nugget] True color
+byte R_GetLightIndexFrac(void)
+{
+  #define INDEX_PRECISION 255
+
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    int64_t temp_lightindex_scaled = temp_lightindex / (MAXLIGHTSCALE * (1 << LIGHTSCALESHIFT) / 32);
+
+    return BETWEEN(0, INDEX_PRECISION, temp_lightindex_scaled);
+  }
+  else {
+    return (temp_lightindex % ((int64_t) 1 << LIGHTSCALESHIFT))
+          * INDEX_PRECISION / ((int64_t) 1 << LIGHTSCALESHIFT);
+  }
+
+  #undef INDEX_PRECISION
 }
 
 static fixed_t viewpitch;
@@ -1782,7 +1805,7 @@ void R_RenderPlayerView (player_t* player)
     int first_y = ((viewheight % ph) / 2),
         first_x;
 
-    byte *const dest = I_VideoBuffer;
+    pixel_t *const dest = I_VideoBuffer;
 
     for (y = viewwindowy;  y < (viewwindowy + viewheight);)
     {
@@ -1792,7 +1815,7 @@ void R_RenderPlayerView (player_t* player)
       {
         for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
         {
-          memset(
+          V_RGBSet(
             dest + ((y + y2) * video.pitch) + x,
             dest[
               ( (first_y ? viewwindowy + first_y

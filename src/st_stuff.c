@@ -1803,22 +1803,40 @@ static void DrawSolidBackground(void)
         int x, y;
         const int v0 = vstep[v][0], v1 = vstep[v][1];
         unsigned r = 0, g = 0, b = 0;
-        byte col;
+        pixel_t col;
 
         for (y = v0; y < v1; y++)
         {
             for (x = 0; x < depth; x++)
             {
-                byte *c = st_backing_screen + V_ScaleY(y) * video.pitch
+                pixel_t *c = st_backing_screen + V_ScaleY(y) * video.pitch
                           + V_ScaleX(x);
-                r += pal[3 * c[0] + 0];
-                g += pal[3 * c[0] + 1];
-                b += pal[3 * c[0] + 2];
+
+                if (truecolor_rendering)
+                {
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+                }
+                else {
+                    r += pal[3 * V_IndexFromRGB(c[0]) + 0];
+                    g += pal[3 * V_IndexFromRGB(c[0]) + 1];
+                    b += pal[3 * V_IndexFromRGB(c[0]) + 2];
+                }
 
                 c += V_ScaleX(width - 2 * x - 1);
-                r += pal[3 * c[0] + 0];
-                g += pal[3 * c[0] + 1];
-                b += pal[3 * c[0] + 2];
+
+                if (truecolor_rendering)
+                {
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+                }
+                else {
+                    r += pal[3 * V_IndexFromRGB(c[0]) + 0];
+                    g += pal[3 * V_IndexFromRGB(c[0]) + 1];
+                    b += pal[3 * V_IndexFromRGB(c[0]) + 2];
+                }
             }
         }
 
@@ -1827,9 +1845,18 @@ static void DrawSolidBackground(void)
         b /= 2 * depth * (v1 - v0);
 
         // [FG] tune down to half saturation (for empiric reasons)
-        col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
+        if (truecolor_rendering)
+        {
+            col = ((r / 2) << PIXEL_RED_SHIFT)
+                | ((g / 2) << PIXEL_GREEN_SHIFT)
+                | ((b / 2) << PIXEL_BLUE_SHIFT);
+        }
+        else
+        {
+            col = V_IndexToRGB(I_GetNearestColor(pal, r / 2, g / 2, b / 2));
+        }
 
-        V_FillRect(0, v0, video.unscaledw, v1 - v0, col);
+        V_FillRectRGB(0, v0, video.unscaledw, v1 - v0, col);
     }
 }
 
@@ -2135,6 +2162,8 @@ static void DoPaletteStuff(player_t *player)
         // a GNU C extension
         I_SetPalette((byte *)W_CacheLumpName("PLAYPAL", PU_CACHE)
                      + palette * 768);
+
+        V_SetPalColors(palette);
     }
 }
 
