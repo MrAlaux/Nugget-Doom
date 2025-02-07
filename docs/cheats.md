@@ -143,8 +143,11 @@ If the Automap is enabled and the Follow Mode is off, the actors will be spawned
 Otherwise, they will be spawned in front of the player.
 
 `IDDF[C][T]`  
-Find a key on the Automap.
+Find a key in the Automap.
 This cheat functions similarly to the `KEY` cheat, with `C` and `T` specifying the key color and type respectively.
+
+`IDDET`  
+Find exits in the Automap.
 
 `RESURRECT` / `IDRES`  
 Resurrect the player without toggling IDDQD.

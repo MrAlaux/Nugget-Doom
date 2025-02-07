@@ -189,7 +189,8 @@ All of these are CFG-only, so their CVAR names are included.
 - **_'RIOTMODE'_** cheat, to make enemies attack all sentient entities
 - **_'IDFLY'_** to fly (uses jumping/crouching buttons) [i.b. PrBoom+, ZDoom]
 - **_'SUMMON'_** to spawn an actor based on its type index [i.b. ZDoom, PrBoomX]
-- **_'IDDF'_** to find a key on the Automap
+- **_'IDDF'_** to find a key in the Automap
+- **_'IDDET'_** to find exits in the Automap
 - **_'RESURRECT' / 'IDRES'_** to resurrect the player without toggling IDDQD [i.b. ZDoom]
 - **_'LINETARGET'_** to give some info on the player's linetarget [i.b. ZDoom]
 - **_'TRAILS'_** to show hitscan trails

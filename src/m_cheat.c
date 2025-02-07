@@ -171,6 +171,7 @@ static void cheat_reveal_key(void);
 static void cheat_reveal_keyx(void);
 static void cheat_reveal_keyxx(int key);
 
+static void cheat_reveal_exit(void);
 static void cheat_linetarget(void); // Give info on the current linetarget
 static void cheat_trails(void);     // Show hitscan trails
 static void cheat_mdk(void);        // Inspired by ZDoom's console command
@@ -442,13 +443,14 @@ struct cheat_s cheat[] = {
   {"iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3 },
   {"iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4 },
 
-  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget} }, // Give info on the current linetarget
-  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}     }, // Show hitscan trails
-  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}        },
-  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}    }, // MDK Fist
-  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}    }, // Explosive hitscan
-  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese}     },
-  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}      },
+  {"iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit} }, // Exit finder
+  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget}  }, // Give info on the current linetarget
+  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}      }, // Show hitscan trails
+  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}         },
+  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}     }, // MDK Fist
+  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}     }, // Explosive hitscan
+  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese}      },
+  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}       },
 
   #ifdef NUGMAGIC
 
@@ -796,6 +798,68 @@ static void cheat_reveal_keyxx(int key)
 }
 
 // ---------------------------------------------------------------------------
+
+// Exit finder
+static void cheat_reveal_exit(void)
+{
+  if (automapactive != AM_FULL) { return; }
+
+  static int last_exit_line = -1;
+  int i, start_i;
+
+  i = last_exit_line + 1;
+
+  if (i >= numlines) { i = 0; }
+
+  start_i = i;
+
+  // (found_exit & 1) == normal
+  // (found_exit & 2) == secret
+  // Can be both
+  int found_exit = 0;
+
+  do {
+    const line_t *const line = &lines[i];
+    const short special = line->special;
+
+    if (   special ==  11 || special ==  51 || special ==  52
+        || special == 124 || special == 197 || special == 198)
+    {
+      found_exit |= 1 + (special == 51 || special == 124 || special == 198);
+    }
+
+    for (int j = 0;  j < 2;  j++)
+    {
+      sector_t *const sector = j ? line->backsector : line->frontsector;
+
+      if (sector && P_IsDeathExit(sector))
+      {
+        found_exit |= 1 + (   (sector->special & DEATH_MASK)
+                           && (sector->special & DAMAGE_MASK) == DAMAGE_MASK);
+      }
+    }
+
+    if (found_exit)
+    {
+      followplayer = false;
+      AM_SetMapCenter(line->v1->x, line->v1->y);
+
+      displaymsg(
+        "Exit Finder: found %s",
+          (found_exit == 3) ? "normal and secret exits"
+        : (found_exit == 2) ? "secret exit"
+        :                     "normal exit"
+      );
+
+      last_exit_line = i;
+      break;
+    }
+
+    if (++i >= numlines) { i = 0; }
+  } while (i != start_i);
+
+  if (!found_exit) { displaymsg("Exit Finder: no exits found"); }
+}
 
 // Give info on the current `linetarget`
 static void cheat_linetarget(void)
