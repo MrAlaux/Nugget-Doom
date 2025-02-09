@@ -87,6 +87,7 @@ static boolean message_flash;
 static int hud_msg_duration;
 static int hud_chat_duration;
 static int hud_msg_lines;
+static int hud_msg_total_lines;
 static boolean hud_msg_scrollup;
 static boolean hud_msg_group;
 
@@ -101,7 +102,7 @@ boolean ST_MessageFadeoutOn(void)
 
 int ST_GetNumMessageLines(void)
 {
-    return hud_msg_lines;
+    return MAX(hud_msg_total_lines, hud_msg_lines);
 }
 
 void FadeOutLine(widgetline_t *const line, const int duration_left)
@@ -170,7 +171,7 @@ const int MAX_COPIES = 99999;
 typedef struct linkedmessage_s
 {
     struct linkedmessage_s *prev, *next;
-    char string[HU_MAXLINELENGTH + 8]; // Extra space for " [MAX_COPIES]"
+    char string[HU_MAXLINELENGTH + 8]; // Extra space for " [#]", where # is MAX_COPIES
     size_t orig_length;
     int duration_left;
     int flash_duration_left; // Message flash
@@ -182,7 +183,8 @@ typedef struct linkedmessage_s
 
 static linkedmessage_t *message_list_head = NULL, *message_list_tail = NULL;
 
-static int message_index = 0;
+static int num_messages = 0;
+static int message_review_duration_left = 0;
 
 static void AddMessage(char *const string, int duration, const boolean is_chat_msg)
 {
@@ -201,12 +203,12 @@ static void AddMessage(char *const string, int duration, const boolean is_chat_m
         );
     }
     else {
-        message_index++;
+        num_messages++;
         num_copies = 1;
 
-        if (message_list_tail && message_index > hud_msg_lines)
+        if (message_list_tail && num_messages > ST_GetNumMessageLines())
         {
-            message_index--;
+            num_messages--;
 
             linkedmessage_t *m = message_list_head;
 
@@ -291,7 +293,8 @@ void ST_ClearMessages(void)
     }
 
     message_list_head = message_list_tail = NULL;
-    message_index = 0;
+    num_messages = 0;
+    message_review_duration_left = 0;
 }
 
 void ST_HideMessages(void)
@@ -303,6 +306,8 @@ void ST_HideMessages(void)
         m->duration_left = 0;
         m = m->next;
     }
+
+    message_review_duration_left = 0;
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -314,9 +319,9 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
     ST_ClearLines(widget);
 
     // Handle setting changes
-    while (message_index > hud_msg_lines)
+    while (num_messages > ST_GetNumMessageLines())
     {
-        message_index--;
+        num_messages--;
 
         message_list_head = message_list_head->next;
         Z_Free(message_list_head->prev);
@@ -339,14 +344,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
         else if (message_review)
         {
             message_review = false;
-
-            linkedmessage_t *m = message_list_head;
-
-            while (m)
-            {
-                m->duration_left = widget->duration;
-                m = m->next;
-            }
+            message_review_duration_left = hud_msg_duration ? hud_msg_duration : widget->duration;
         }
     }
 
@@ -357,30 +355,52 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
 
     linkedmessage_t *m = hud_msg_scrollup ? message_list_head : message_list_tail;
 
-    while (m)
+    // If true, show full list, otherwise maybe omit some messages
+    if (message_review_duration_left > 0)
     {
-        if (m->duration_left > 0)
+        message_review_duration_left--;
+    }
+
+    for (int index = hud_msg_scrollup ? 0 : num_messages-1;  m;)
+    {
+        if ((m->duration_left > 0 && index >= num_messages - hud_msg_lines)
+            || message_review_duration_left > 0)
         {
-            m->duration_left--;
+            if (m->duration_left > 0) { m->duration_left--; }
 
             ST_AddLine(widget, m->string);
 
             widgetline_t *const line = &widget->lines[array_size(widget->lines) - 1];
 
-            FadeOutLine(line, m->duration_left); // Message fadeout
+            // Message fadeout -----------------------------------------------
+
+            const int fadeout_time = (index < num_messages - hud_msg_lines)
+                                     ? message_review_duration_left
+                                     : MAX(m->duration_left, message_review_duration_left);
+
+            FadeOutLine(line, fadeout_time);
 
             // Message flash -------------------------------------------------
 
-            if (m->flash_duration_left) { m->flash_duration_left--; }
+            if (m->flash_duration_left > 0) { m->flash_duration_left--; }
 
             line->flash = !!m->flash_duration_left;
         }
         else {
+            m->duration_left = 0;
             m->is_chat_msg = false; // Allow overwriting
             m->flash_duration_left = 0;
         }
 
-        m = hud_msg_scrollup ? m->next : m->prev;
+        if (hud_msg_scrollup)
+        {
+            m = m->next;
+            index++;
+        }
+        else {
+            m = m->prev;
+            index--;
+        }
     }
 }
 
@@ -1853,7 +1873,10 @@ void ST_BindHUDVariables(void)
            "Force duration of chat messages, in tics (0 = Don't force)");
 
   BIND_NUM(hud_msg_lines, 1, 1, 8,
-           "Number of lines in message list");
+           "Number of lines in message list shown normally");
+
+  BIND_NUM(hud_msg_total_lines, 1, 1, 8,
+           "Number of lines in message list shown during message review");
 
   M_BindBool("hud_msg_group", &hud_msg_group, NULL,
              false, ss_stat, wad_no,

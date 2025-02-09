@@ -6294,6 +6294,11 @@ void G_BindWeapVariables(void)
              false, ss_weap, wad_no,
              "Recoil pitch from weapon fire");
 
+  // [Nugget] (CFG-only)
+  M_BindNum("weapon_recoilpitch_scale_pct", &weapon_recoilpitch_scale_pct, NULL,
+            100, 10, 100, ss_none, wad_no,
+            "Recoil-pitch scale percent");
+
   M_BindBool("weapon_recoil", &default_weapon_recoil, &weapon_recoil,
              false, ss_weap, wad_yes, // [Nugget] Restored menu item
              "Physical recoil from weapon fire (affects compatibility)");

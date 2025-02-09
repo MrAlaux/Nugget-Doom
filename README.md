@@ -85,8 +85,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### Weapons
 
-- **Improved interpolation**
 - **Extended _View/Weapon Bob_ percentages**
+- **Recoil-pitch scale percent** setting
 - **_Smart Autoaim_** setting
 - **_No Horizontal Autoaim_** setting
 - **_Switch [Weapon] on Pickup_** setting
@@ -122,7 +122,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
 - **_Message Fadeout_** setting
 - **_Message Flash_** setting
-- **_Message Lines_** setting (scrolling direction determined by the CFG-only `hud_msg_scrollup` CVAR)
+- **_Message Lines_** settings (scrolling direction determined by the CFG-only `hud_msg_scrollup` CVAR)
+  - The CFG-only `hud_msg_total_lines` CVAR determines how many messages will be shown during message review;
+    if lesser than `hud_msg_lines`, that will be used instead
 - **_Group Repeated Messages_** setting [i.b. Doom Retro]
 - **_(Chat) Message Duration_** settings
 - **_Show Powerup Timers_** setting

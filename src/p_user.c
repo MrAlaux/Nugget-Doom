@@ -705,13 +705,15 @@ void P_PlayerThink (player_t* player)
   // [crispy] weapon recoil pitch
   if (player->recoilpitch)
   {
+    // [Nugget] Capped the values;
+    // the old code assumed that `recoilpitch` was always a multiple of `ANG1`
     if (player->recoilpitch > 0)
     {
-      player->recoilpitch -= ANG1;
+      player->recoilpitch = MAX(0, player->recoilpitch - ANG1);
     }
     else if (player->recoilpitch < 0)
     {
-      player->recoilpitch += ANG1;
+      player->recoilpitch = MIN(0, player->recoilpitch + ANG1);
     }
   }
 
