@@ -422,6 +422,8 @@ boolean P_BlockLinesIterator(int x, int y, boolean func(line_t*))
 
 boolean blockmapfix;
 
+boolean hitbox_hitscan; // [Nugget] Hitbox-based hitscan collision
+
 boolean P_BlockThingsIterator(int x, int y, boolean func(mobj_t*),
                               boolean do_blockmapfix)
 {
@@ -652,40 +654,126 @@ boolean PIT_AddLineIntercepts(line_t *ld)
 
 boolean PIT_AddThingIntercepts(mobj_t *thing)
 {
-  fixed_t   x1, y1;
-  fixed_t   x2, y2;
-  int       s1, s2;
-  divline_t dl;
   fixed_t   frac;
 
-  // check a corner to corner crossection for hit
-  if ((trace.dx ^ trace.dy) > 0)
+  // [Nugget] Hitbox-based hitscan collision
+  if (CASUALPLAY(hitbox_hitscan))
+  {
+    #define CHECK_POINTS_ON_SIDE(dl, crossed, x1, x2, y1, y2) \
+      if (   P_PointOnDivlineSide((x1), (y1), &trace)         \
+          != P_PointOnDivlineSide((x2), (y2), &trace))        \
+      {                                                       \
+        (crossed) = true;                                     \
+                                                              \
+        (dl).x  = (x1);                                       \
+        (dl).dx = (x2) - (x1);                                \
+        (dl).y  = (y1);                                       \
+        (dl).dy = (y2) - (y1);                                \
+      }
+
+    signed char hside = (trace.x > thing->x + thing->radius)
+                      - (trace.x < thing->x - thing->radius);
+
+    signed char vside = (trace.y > thing->y + thing->radius)
+                      - (trace.y < thing->y - thing->radius);
+
+    const boolean inside = !(hside || vside);
+
+    divline_t vdl;
+    boolean vcrossed = false;
+
+    if (hside == -1 || (inside && trace.dx < 0))
     {
-      x1 = thing->x - thing->radius;
-      y1 = thing->y + thing->radius;
-      x2 = thing->x + thing->radius;
-      y2 = thing->y - thing->radius;
+      // Use left side
+
+      const fixed_t x  = thing->x - thing->radius,
+                    y1 = thing->y - thing->radius,
+                    y2 = thing->y + thing->radius;
+
+      CHECK_POINTS_ON_SIDE(vdl, vcrossed, x, x, y1, y2);
     }
+    else if (hside == 1 || (inside && trace.dx > 0))
+    {
+      // Use right side
+
+      const fixed_t x  = thing->x + thing->radius,
+                    y1 = thing->y - thing->radius,
+                    y2 = thing->y + thing->radius;
+
+      CHECK_POINTS_ON_SIDE(vdl, vcrossed, x, x, y1, y2);
+    }
+
+    divline_t hdl;
+    boolean hcrossed = false;
+
+    if (vside == -1 || (inside && trace.dy < 0))
+    {
+      // Use bottom side
+
+      const fixed_t y  = thing->y - thing->radius,
+                    x1 = thing->x - thing->radius,
+                    x2 = thing->x + thing->radius;
+
+      CHECK_POINTS_ON_SIDE(hdl, hcrossed, x1, x2, y, y);
+    }
+    else if (vside == 1 || (inside && trace.dy > 0))
+    {
+      // Use top side
+
+      const fixed_t y  = thing->y + thing->radius,
+                    x1 = thing->x - thing->radius,
+                    x2 = thing->x + thing->radius;
+
+      CHECK_POINTS_ON_SIDE(hdl, hcrossed, x1, x2, y, y);
+    }
+
+    if (!(hcrossed || vcrossed)) { return true; } // Lines aren't crossed
+
+    const fixed_t hfrac = hcrossed ? P_InterceptVector(&trace, &hdl) : -1,
+                  vfrac = vcrossed ? P_InterceptVector(&trace, &vdl) : -1;
+
+    frac = (hfrac >= 0 && vfrac >= 0) ? MIN(hfrac, vfrac)
+         : (hfrac >= 0)               ? hfrac
+         :                              vfrac;
+
+    #undef CHECK_POINTS_ON_SIDE
+  }
   else
-    {
-      x1 = thing->x - thing->radius;
-      y1 = thing->y - thing->radius;
-      x2 = thing->x + thing->radius;
-      y2 = thing->y + thing->radius;
-    }
+  {
+    fixed_t   x1, y1;
+    fixed_t   x2, y2;
+    int       s1, s2;
+    divline_t dl;
 
-  s1 = P_PointOnDivlineSide (x1, y1, &trace);
-  s2 = P_PointOnDivlineSide (x2, y2, &trace);
+    // check a corner to corner crossection for hit
+    if ((trace.dx ^ trace.dy) > 0)
+      {
+        x1 = thing->x - thing->radius;
+        y1 = thing->y + thing->radius;
+        x2 = thing->x + thing->radius;
+        y2 = thing->y - thing->radius;
+      }
+    else
+      {
+        x1 = thing->x - thing->radius;
+        y1 = thing->y - thing->radius;
+        x2 = thing->x + thing->radius;
+        y2 = thing->y + thing->radius;
+      }
 
-  if (s1 == s2)
-    return true;                // line isn't crossed
+    s1 = P_PointOnDivlineSide (x1, y1, &trace);
+    s2 = P_PointOnDivlineSide (x2, y2, &trace);
 
-  dl.x = x1;
-  dl.y = y1;
-  dl.dx = x2-x1;
-  dl.dy = y2-y1;
+    if (s1 == s2)
+      return true;                // line isn't crossed
 
-  frac = P_InterceptVector (&trace, &dl);
+    dl.x = x1;
+    dl.y = y1;
+    dl.dx = x2-x1;
+    dl.dy = y2-y1;
+
+    frac = P_InterceptVector (&trace, &dl);
+  }
 
   if (frac < 0)
     return true;                // behind source

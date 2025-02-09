@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Hitbox-based Hitscan Collision_** setting
 - **_'IDDET'_ cheat**, to find exits in the automap
 
 ## Changes

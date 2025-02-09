@@ -6191,6 +6191,11 @@ void G_BindCompVariables(void)
 
   M_BindBool("blockmapfix", &blockmapfix, NULL, false, ss_comp, wad_no,
              "Fix blockmap bug (improves hit detection)");
+
+  // [Nugget] Hitbox-based hitscan collision
+  M_BindBool("hitbox_hitscan", &hitbox_hitscan, NULL, false, ss_comp, wad_no,
+             "Hitbox-based hitscan collision (fixes melee against large things)");
+
   M_BindBool("checksight12", &checksight12, NULL, false, ss_comp, wad_no,
              "Fast blockmap-based line-of-sight calculation");
 
