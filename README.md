@@ -84,8 +84,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### Weapons
 
-- **Improved interpolation**
 - **Extended _View/Weapon Bob_ percentages**
+- **Recoil-pitch scale percent** setting
 - **_Smart Autoaim_** setting
 - **_No Horizontal Autoaim_** setting
 - **_Switch [Weapon] on Pickup_** setting

@@ -47,7 +47,10 @@
 #include "r_things.h"
 #include "w_wad.h" // W_CheckNumForName
 
-// [Nugget] CVARs
+// [Nugget] /=================================================================
+
+// CVARs
+int weapon_recoilpitch_scale_pct;
 boolean weapswitch_interruption;
 boolean always_bob;
 bobstyle_t bobbing_style;
@@ -60,6 +63,23 @@ boolean weaponsquat;
 boolean sx_fix;
 boolean comp_nomeleesnap;
 boolean comp_cgundblsnd;
+
+static void ApplyRecoil(player_t *const player, int recoil)
+{
+    if (player && weapon_recoilpitch)
+    {
+        player->recoilpitch = recoil * ANG1;
+
+        if (weapon_recoilpitch_scale_pct != 100)
+        {
+            player->recoilpitch = (int64_t) player->recoilpitch
+                                * weapon_recoilpitch_scale_pct
+                                / 100;
+        }
+    }
+}
+
+// [Nugget] =================================================================/
 
 #define LOWERSPEED   (FRACUNIT*6)
 #define RAISESPEED   (FRACUNIT*6)
@@ -90,10 +110,8 @@ boolean weapon_recoilpitch;
 
 void A_Recoil(player_t* player)
 {
-    if (player && weapon_recoilpitch)
-    {
-        player->recoilpitch = recoil_values[player->readyweapon].pitch * ANG1;
-    }
+    // [Nugget] Factored out
+    ApplyRecoil(player, recoil_values[player->readyweapon].pitch);
 }
 
 //
@@ -1045,7 +1063,8 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
 
   if (weapon_recoilpitch && (leveltime & 2))
   {
-    player->recoilpitch = recoil_values[wp_plasma].pitch * ANG1;
+    // [Nugget] Factored out
+    ApplyRecoil(player, recoil_values[wp_plasma].pitch);
   }
 
   P_SubtractAmmo(player, 1);
