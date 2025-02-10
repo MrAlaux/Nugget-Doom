@@ -576,17 +576,49 @@ void P_DeathThink (player_t* player)
           player->mo->angle += ANG5;
         else
           player->mo->angle -= ANG5;
+
+      // [Nugget] Look at killer vertically
+      if ((mouselook || padlook))
+      {
+        player->centering = false;
+
+        fixed_t pitch;
+
+        if (!R_GetChasecamOn())
+        {
+          const fixed_t slope =
+            FixedDiv(
+              (player->attacker->z + player->attacker->height/2) - (player->mo->z + player->viewheight),
+              P_AproxDistance(
+                player->mo->x - player->attacker->x,
+                player->mo->y - player->attacker->y
+              )
+            );
+
+          pitch = P_SlopeToPitch(slope);
+
+          pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, pitch);
+        }
+        else { pitch = 0; }
+
+        if (player->pitch > pitch)
+        {
+          player->pitch = MAX(pitch, player->pitch - ANG1/2);
+        }
+        else if (player->pitch < pitch)
+        {
+          player->pitch = MIN(pitch, player->pitch + ANG1/2);
+        }
+
+        player->slope = PlayerSlope(player);
+      }
     }
   else
+  {
     if (player->damagecount)
       player->damagecount--;
 
-  // [Nugget] Allow some freelook while dead
-  if ((player->viewheight == 6*FRACUNIT) && !menuactive && !demoplayback)
-  {
-    player->pitch += player->cmd.pitch;
-    player->pitch = BETWEEN(-MAX_PITCH_ANGLE/2, MAX_PITCH_ANGLE/2, player->pitch);
-    player->slope = PlayerSlope(player);
+    player->centering = true; // [Nugget] Byproduct of looking at killer vertically
   }
 
   if (player->cmd.buttons & BT_USE)

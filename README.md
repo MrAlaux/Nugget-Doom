@@ -217,7 +217,7 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
-- **Allowed mouselook while dead**
+- **When dying with freelook enabled, the camera is pitched towards the killer**
 - **Interactive character cast** (Turn buttons to rotate enemy, Run button to gib, Strafe buttons to skip) [p.f. Crispy Doom]
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
   - Jumping: `DSPLJUMP`;

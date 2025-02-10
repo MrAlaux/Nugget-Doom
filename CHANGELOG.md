@@ -6,7 +6,8 @@
 
 ## Changes
 
-None.
+- **When dying with freelook enabled, the camera is now pitched towards the killer**
+  - Consequently, freelook can't be controlled manually while dead anymore
 
 ## Bug Fixes
 
