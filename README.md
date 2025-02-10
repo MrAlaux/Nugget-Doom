@@ -233,7 +233,7 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-only: `sp_chat`)
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
-- Restored menu items for various Woof settings
+- Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter
 - Decreased minimum window size to 200p (240p with aspect-ratio correction)
 

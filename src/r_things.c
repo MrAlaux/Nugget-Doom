@@ -372,7 +372,7 @@ static actualspriteheight_t *actual_sprite_heights = NULL;
 
 static const actualspriteheight_t *CalculateActualSpriteHeight(const int lump)
 {
-  patch_t *const patch = W_CacheLumpNum(lump, PU_CACHE);
+  patch_t *const patch = V_CachePatchNum(lump, PU_CACHE);
   const short width = SHORT(patch->width);
 
   short actualheight = 0, toppadding = SHRT_MAX;
