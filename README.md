@@ -101,7 +101,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Scale determined by the CFG-only `weapon_inertia_scale_pct` CVAR
   - Application while firing determined by the CFG-only `weapon_inertia_fire` CVAR
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
-- **_Translucent Flashes_** setting (translucency determined by the CFG-only `translucent_pspr_pct` CVAR) [i.b. Crispy Doom]
+- **_[Weapon] Flash Translucency_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting, to toggle the 1px misalignment of first-person sprites (CFG-only: `sx_fix`)
 
@@ -111,11 +111,11 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **SBARDEF:**
   - Chat hack to move it vertically based on the height of the message list
 - **Crosshair:**
-  - Translucency;
-  - Vertical-only target lock-on;
-  - Horizontal-autoaim indicators;
-  - Option to account for fuzzy targets [i.b. From Doom With Love];
-  - Dedicated toggle button.
+  - Translucency setting
+  - Vertical-only target lock-on
+  - Horizontal-autoaim indicators
+  - Option to account for fuzzy targets [i.b. From Doom With Love]
+  - Dedicated toggle button
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
 - **Show Save Messages** setting (CFG-only: `show_save_messages`)
 - **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
@@ -220,14 +220,14 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - **When dying with freelook enabled, the camera is pitched towards the killer**
 - **Interactive character cast** (Turn buttons to rotate enemy, Run button to gib, Strafe buttons to skip) [p.f. Crispy Doom]
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
-  - Jumping: `DSPLJUMP`;
-  - Landing: `DSPLLAND`;
-  - Key-locked door: `DSLOCKED`;
-  - Key pickup: `DSKEYUP`;
-  - Key blinking on HUD: `DSKEYBNK`;
-  - Menus: `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`;
-  - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS`;
-  - Health-based player pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom].
+  - Jumping: `DSPLJUMP`
+  - Landing: `DSPLLAND`
+  - Key-locked door: `DSLOCKED`
+  - Key pickup: `DSKEYUP`
+  - Key blinking on HUD: `DSKEYBNK`
+  - Menus: `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`
+  - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS`
+  - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
 - **Customizable darkening level for dark menu background and Automap overlay** (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
 - The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
