@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Hitbox-based Hitscan Collision_** setting
 - **Recoil-pitch scale percent** setting
 - **_'IDDET'_ cheat**, to find exits in the automap
 - **Number of total message lines** setting, to let the message review show more messages
