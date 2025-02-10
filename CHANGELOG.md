@@ -11,6 +11,6 @@
 
 ## Bug Fixes
 
-- **Rare crash involving PNG graphics and weapon inertia**
+- **Rare crash involving PNG graphics and weapon inertia** [thanks @rfomin]
 - **Message review overriding message durations even when the new one were shorter**
 - **Message review ignoring the forced-duration setting**
