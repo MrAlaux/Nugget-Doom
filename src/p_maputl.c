@@ -422,8 +422,6 @@ boolean P_BlockLinesIterator(int x, int y, boolean func(line_t*))
 
 boolean blockmapfix;
 
-boolean hitbox_hitscan; // [Nugget] Hitbox-based hitscan collision
-
 boolean P_BlockThingsIterator(int x, int y, boolean func(mobj_t*),
                               boolean do_blockmapfix)
 {
@@ -647,6 +645,39 @@ boolean PIT_AddLineIntercepts(line_t *ld)
   return true;  // continue
 }
 
+// [Nugget] Hitbox-based hitscan collision /----------------------------------
+
+boolean hitbox_hitscan;
+
+static void CheckPointOnSides(mobj_t *thing, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
+{
+  if (   P_PointOnDivlineSide(x1, y1, &trace)
+      != P_PointOnDivlineSide(x2, y2, &trace))
+  {
+    divline_t dl = {
+      .x  = x1,
+      .dx = x2 - x1,
+      .y  = y1,
+      .dy = y2 - y1
+    };
+
+    const fixed_t frac = P_InterceptVector(&trace, &dl);
+
+    if (frac >= 0)
+    {
+      check_intercept();
+
+      intercept_p->frac = frac;
+      intercept_p->isaline = false;
+      intercept_p->d.thing = thing;
+      InterceptsOverrun(intercept_p - intercepts, intercept_p);
+      intercept_p++;
+    }
+  }
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 //
 // PIT_AddThingIntercepts
 //
@@ -654,89 +685,18 @@ boolean PIT_AddLineIntercepts(line_t *ld)
 
 boolean PIT_AddThingIntercepts(mobj_t *thing)
 {
-  fixed_t   frac;
-
   // [Nugget] Hitbox-based hitscan collision
   if (CASUALPLAY(hitbox_hitscan))
   {
-    #define CHECK_POINTS_ON_SIDE(dl, crossed, x1, x2, y1, y2) \
-      if (   P_PointOnDivlineSide((x1), (y1), &trace)         \
-          != P_PointOnDivlineSide((x2), (y2), &trace))        \
-      {                                                       \
-        (crossed) = true;                                     \
-                                                              \
-        (dl).x  = (x1);                                       \
-        (dl).dx = (x2) - (x1);                                \
-        (dl).y  = (y1);                                       \
-        (dl).dy = (y2) - (y1);                                \
-      }
+    const fixed_t lx = thing->x - thing->radius,
+                  rx = thing->x + thing->radius,
+                  by = thing->y - thing->radius,
+                  ty = thing->y + thing->radius;
 
-    signed char hside = (trace.x > thing->x + thing->radius)
-                      - (trace.x < thing->x - thing->radius);
-
-    signed char vside = (trace.y > thing->y + thing->radius)
-                      - (trace.y < thing->y - thing->radius);
-
-    const boolean inside = !(hside || vside);
-
-    divline_t vdl;
-    boolean vcrossed = false;
-
-    if (hside == -1 || (inside && trace.dx < 0))
-    {
-      // Use left side
-
-      const fixed_t x  = thing->x - thing->radius,
-                    y1 = thing->y - thing->radius,
-                    y2 = thing->y + thing->radius;
-
-      CHECK_POINTS_ON_SIDE(vdl, vcrossed, x, x, y1, y2);
-    }
-    else if (hside == 1 || (inside && trace.dx > 0))
-    {
-      // Use right side
-
-      const fixed_t x  = thing->x + thing->radius,
-                    y1 = thing->y - thing->radius,
-                    y2 = thing->y + thing->radius;
-
-      CHECK_POINTS_ON_SIDE(vdl, vcrossed, x, x, y1, y2);
-    }
-
-    divline_t hdl;
-    boolean hcrossed = false;
-
-    if (vside == -1 || (inside && trace.dy < 0))
-    {
-      // Use bottom side
-
-      const fixed_t y  = thing->y - thing->radius,
-                    x1 = thing->x - thing->radius,
-                    x2 = thing->x + thing->radius;
-
-      CHECK_POINTS_ON_SIDE(hdl, hcrossed, x1, x2, y, y);
-    }
-    else if (vside == 1 || (inside && trace.dy > 0))
-    {
-      // Use top side
-
-      const fixed_t y  = thing->y + thing->radius,
-                    x1 = thing->x - thing->radius,
-                    x2 = thing->x + thing->radius;
-
-      CHECK_POINTS_ON_SIDE(hdl, hcrossed, x1, x2, y, y);
-    }
-
-    if (!(hcrossed || vcrossed)) { return true; } // Lines aren't crossed
-
-    const fixed_t hfrac = hcrossed ? P_InterceptVector(&trace, &hdl) : -1,
-                  vfrac = vcrossed ? P_InterceptVector(&trace, &vdl) : -1;
-
-    frac = (hfrac >= 0 && vfrac >= 0) ? MIN(hfrac, vfrac)
-         : (hfrac >= 0)               ? hfrac
-         :                              vfrac;
-
-    #undef CHECK_POINTS_ON_SIDE
+    CheckPointOnSides(thing, lx, by, lx, ty); // Left side
+    CheckPointOnSides(thing, rx, by, rx, ty); // Right side
+    CheckPointOnSides(thing, lx, by, rx, by); // Bottom side
+    CheckPointOnSides(thing, lx, ty, rx, ty); // Top side
   }
   else
   {
@@ -744,6 +704,7 @@ boolean PIT_AddThingIntercepts(mobj_t *thing)
     fixed_t   x2, y2;
     int       s1, s2;
     divline_t dl;
+    fixed_t   frac;
 
     // check a corner to corner crossection for hit
     if ((trace.dx ^ trace.dy) > 0)
@@ -773,18 +734,18 @@ boolean PIT_AddThingIntercepts(mobj_t *thing)
     dl.dy = y2-y1;
 
     frac = P_InterceptVector (&trace, &dl);
+  
+    if (frac < 0)
+      return true;                // behind source
+
+    check_intercept();            // killough
+
+    intercept_p->frac = frac;
+    intercept_p->isaline = false;
+    intercept_p->d.thing = thing;
+    InterceptsOverrun(intercept_p - intercepts, intercept_p);
+    intercept_p++;
   }
-
-  if (frac < 0)
-    return true;                // behind source
-
-  check_intercept();            // killough
-
-  intercept_p->frac = frac;
-  intercept_p->isaline = false;
-  intercept_p->d.thing = thing;
-  InterceptsOverrun(intercept_p - intercepts, intercept_p);
-  intercept_p++;
 
   return true;          // keep going
 }
