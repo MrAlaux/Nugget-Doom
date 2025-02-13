@@ -649,7 +649,9 @@ boolean PIT_AddLineIntercepts(line_t *ld)
 
 boolean hitbox_hitscan;
 
-static void CheckPointOnSides(mobj_t *thing, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
+static const inline boolean CheckPointsOnSides(mobj_t *const thing,
+                                               const fixed_t x1, const fixed_t y1,
+                                               const fixed_t x2, const fixed_t y2)
 {
   if (   P_PointOnDivlineSide(x1, y1, &trace)
       != P_PointOnDivlineSide(x2, y2, &trace))
@@ -672,8 +674,12 @@ static void CheckPointOnSides(mobj_t *thing, fixed_t x1, fixed_t y1, fixed_t x2,
       intercept_p->d.thing = thing;
       InterceptsOverrun(intercept_p - intercepts, intercept_p);
       intercept_p++;
+
+      return true;
     }
   }
+
+  return false;
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -688,15 +694,105 @@ boolean PIT_AddThingIntercepts(mobj_t *thing)
   // [Nugget] Hitbox-based hitscan collision
   if (CASUALPLAY(hitbox_hitscan))
   {
+    #define CHECK_POINTS_ON_LEFT()   CheckPointsOnSides(thing, lx, by, lx, ty)
+    #define CHECK_POINTS_ON_RIGHT()  CheckPointsOnSides(thing, rx, by, rx, ty)
+    #define CHECK_POINTS_ON_BOTTOM() CheckPointsOnSides(thing, lx, by, rx, by)
+    #define CHECK_POINTS_ON_TOP()    CheckPointsOnSides(thing, lx, ty, rx, ty)
+
     const fixed_t lx = thing->x - thing->radius,
                   rx = thing->x + thing->radius,
                   by = thing->y - thing->radius,
                   ty = thing->y + thing->radius;
 
-    CheckPointOnSides(thing, lx, by, lx, ty); // Left side
-    CheckPointOnSides(thing, rx, by, rx, ty); // Right side
-    CheckPointOnSides(thing, lx, by, rx, by); // Bottom side
-    CheckPointOnSides(thing, lx, ty, rx, ty); // Top side
+    signed char hside = (trace.x > rx)
+                      - (trace.x < lx);
+
+    signed char vside = (trace.y > ty)
+                      - (trace.y < by);
+
+    if (hside == -1) // Left quadrant
+    {
+      if (vside == -1) // Bottom-left quadrant
+      {
+        if (CHECK_POINTS_ON_LEFT() || CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_RIGHT()) { CHECK_POINTS_ON_TOP(); }
+        }
+      }
+      else if (vside == 0) // Middle-left quadrant
+      {
+        if (CHECK_POINTS_ON_LEFT())
+        {
+          if (!CHECK_POINTS_ON_RIGHT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-left quadrant
+        if (CHECK_POINTS_ON_LEFT() || CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_RIGHT()) { CHECK_POINTS_ON_BOTTOM(); }
+        }
+      }
+    }
+    else if (hside == 0) // Middle quadrant
+    {
+      if (vside == -1) // Bottom-middle quadrant
+      {
+        if (CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_TOP())
+          {
+            if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_RIGHT(); }
+          }
+        }
+      }
+      else if (vside == 0) // Middle-middle quadrant
+      {
+        if (!CHECK_POINTS_ON_LEFT())
+        {
+          if (!CHECK_POINTS_ON_RIGHT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-middle quadrant
+        if (CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_BOTTOM())
+          {
+            if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_RIGHT(); }
+          }
+        }
+      }
+    }
+    else { // hside == 1 | Right quadrant
+      if (vside == -1) // Bottom-right quadrant
+      {
+        if (CHECK_POINTS_ON_RIGHT() || CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_TOP(); }
+        }
+      }
+      else if (vside == 0) // Middle-right quadrant
+      {
+        if (CHECK_POINTS_ON_RIGHT())
+        {
+          if (!CHECK_POINTS_ON_LEFT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-right quadrant
+        if (CHECK_POINTS_ON_RIGHT() || CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_BOTTOM(); }
+        }
+      }
+    }
   }
   else
   {
