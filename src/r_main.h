@@ -219,7 +219,7 @@ extern void                 R_UpdateFreecamMobj(struct mobj_s *const mobj);
 extern const struct mobj_s *R_GetFreecamMobj(void);
 
 extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
-                            fixed_t pitch, boolean center, boolean lock);
+                            angle_t ticangle, fixed_t pitch, boolean center, boolean lock);
 
 // [Nugget] =================================================================/
 

@@ -4238,7 +4238,8 @@ void G_Ticker(void)
     fixed_t x = 0,
             y = 0,
             z = 0;
-    angle_t angle = 0;
+    angle_t angle = 0,
+            ticangle = 0;
     fixed_t pitch = 0;
     boolean center = false,
             lock = false;
@@ -4266,7 +4267,10 @@ void G_Ticker(void)
       }
       else {
         if (!R_GetFreecamMobj() || R_GetChasecamOn())
-        { angle = cmd->angleturn << 16; }
+        {
+          angle = cmd->angleturn << 16;
+          ticangle = cmd->ticangleturn << FRACBITS;
+        }
 
         if (!R_GetFreecamMobj())
         {
@@ -4324,7 +4328,7 @@ void G_Ticker(void)
       #undef INPUT
     }
 
-    R_UpdateFreecam(x, y, z, angle, pitch, center, lock);
+    R_UpdateFreecam(x, y, z, angle, ticangle, pitch, center, lock);
   }
 }
 

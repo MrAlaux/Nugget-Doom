@@ -335,10 +335,8 @@ static boolean       freecam_on = false;
 static freecammode_t freecam_mode = FREECAM_OFF + 1;
 
 static struct {
-  fixed_t x, ox,
-          y, oy,
-          z, oz;
-  angle_t angle, oangle;
+  fixed_t x, ox, y, oy, z, oz;
+  angle_t angle, oangle, ticangle, oticangle;
   fixed_t pitch, opitch;
 
   int     reset;
@@ -401,17 +399,18 @@ const mobj_t *R_GetFreecamMobj(void)
 }
 
 void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
-                     fixed_t pitch, boolean center, boolean lock)
+                     angle_t ticangle, fixed_t pitch, boolean center, boolean lock)
 {
   if (freecam.reset)
   {
     const player_t *const player = &players[displayplayer];
 
-    freecam.x     = player->mo->x;
-    freecam.y     = player->mo->y;
-    freecam.z     = player->mo->z + player->viewheight;
-    freecam.angle = player->mo->angle;
-    freecam.pitch = player->pitch;
+    freecam.x = player->mo->x;
+    freecam.y = player->mo->y;
+    freecam.z = player->mo->z + player->viewheight;
+    freecam.angle    = player->mo->angle;
+    freecam.ticangle = player->ticangle;
+    freecam.pitch    = player->pitch;
 
     freecam.interp = false;
     freecam.centering = false;
@@ -439,6 +438,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
       overflow[emu_intercepts].enabled = false;
 
       player_t dummyplayer = {0};
+      dummyplayer.ticangle = 0;
       dummyplayer.slope = P_PitchToSlope(freecam.pitch);
 
       mobj_t dummymo = {0};
@@ -461,28 +461,32 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     }
   }
 
-  freecam.ox     = freecam.x;
-  freecam.oy     = freecam.y;
-  freecam.oz     = freecam.z;
-  freecam.oangle = freecam.angle;
-  freecam.opitch = freecam.pitch;
+  freecam.ox = freecam.x;
+  freecam.oy = freecam.y;
+  freecam.oz = freecam.z;
+  freecam.oangle    = freecam.angle;
+  freecam.oticangle = freecam.ticangle;
+  freecam.opitch    = freecam.pitch;
 
   if (freecam.mobj && freecam.mobj->health > 0)
   {
-    freecam.x     = freecam.mobj->x;
-    freecam.y     = freecam.mobj->y;
-    freecam.z     = freecam.mobj->z + (freecam.mobj->height * 13/16);
+    freecam.x = freecam.mobj->x;
+    freecam.y = freecam.mobj->y;
+    freecam.z = freecam.mobj->z + (freecam.mobj->height * 13/16);
 
     if (chasecam_on)
-    { freecam.angle += angle; }
-    else
-    { freecam.angle = 0; }
+    {
+      freecam.angle    += angle;
+      freecam.ticangle += ticangle;
+    }
+    else { freecam.angle = freecam.ticangle = 0; }
   }
   else {
-    freecam.x     += x;
-    freecam.y     += y;
-    freecam.z     += z;
-    freecam.angle += angle;
+    freecam.x += x;
+    freecam.y += y;
+    freecam.z += z;
+    freecam.angle    += angle;
+    freecam.ticangle += ticangle;
 
     R_UpdateFreecamMobj(NULL);
   }
@@ -1221,10 +1225,12 @@ void R_SetupFrame (player_t *player)
       dummymobj.subsector = R_PointInSubsector(freecam.x, freecam.y);
     }
 
-    dummyplayer.oldviewz = freecam.oz;
-    dummyplayer.viewz    = freecam.z;
-    dummyplayer.oldpitch = freecam.opitch;
-    dummyplayer.pitch    = freecam.pitch;
+    dummyplayer.oldviewz    = freecam.oz;
+    dummyplayer.viewz       = freecam.z;
+    dummyplayer.oldticangle = freecam.oticangle;
+    dummyplayer.ticangle    = freecam.ticangle;
+    dummyplayer.oldpitch    = freecam.opitch;
+    dummyplayer.pitch       = freecam.pitch;
 
     dummyplayer.centering = (dummyplayer.centering && freecam.opitch != freecam.pitch)
                           | freecam.centering;
