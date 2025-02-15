@@ -4266,7 +4266,7 @@ void G_Ticker(void)
         lock = true;
       }
       else {
-        if (!R_GetFreecamMobj() || R_GetChasecamOn())
+        if (R_FreecamTurningOverride())
         {
           angle = cmd->angleturn << 16;
           ticangle = cmd->ticangleturn << FRACBITS;

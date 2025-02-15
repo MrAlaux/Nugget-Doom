@@ -13,6 +13,6 @@
 
 - **Rare crash involving PNG graphics and weapon inertia** [thanks @rfomin]
 - **Direct vertical aiming for melee provoking hit effect without actually hitting an entity**
-- **No interpolation for keyboard-turning in freecam**
+- **Freecam interpolation issues**
 - **Message review overriding message durations even when the new one were shorter**
 - **Message review ignoring the forced-duration setting**

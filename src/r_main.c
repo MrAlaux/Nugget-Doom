@@ -369,6 +369,11 @@ angle_t R_GetFreecamAngle(void)
   return freecam.angle;
 }
 
+boolean R_FreecamTurningOverride(void)
+{
+  return freecam_on && (!freecam.mobj || R_GetChasecamOn());
+}
+
 void R_ResetFreecam(const boolean newmap)
 {
   freecam.reset = (int) true + newmap;
@@ -474,7 +479,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     freecam.y = freecam.mobj->y;
     freecam.z = freecam.mobj->z + (freecam.mobj->height * 13/16);
 
-    if (chasecam_on)
+    if (R_GetChasecamOn())
     {
       freecam.angle    += angle;
       freecam.ticangle += ticangle;
@@ -1129,7 +1134,7 @@ static inline boolean CheckLocalView(const player_t *player)
 {
   // [Nugget] Freecam: use localview unless
   // locked onto a mobj in first person, or not controlling the camera
-  if (freecam_on && (!freecam.mobj || chasecam_on) && freecam_mode == FREECAM_CAM)
+  if (R_FreecamTurningOverride() && R_GetFreecamMode() == FREECAM_CAM)
   { return true; }
 
   return (
@@ -1184,10 +1189,10 @@ void R_SetupFrame (player_t *player)
 {
   // [Nugget]
   chasecam_on = gamestate == GS_LEVEL
-                && !(freecam_on && !freecam.mobj)
+                && !(R_GetFreecamOn() && !R_GetFreecamMobj())
                 && STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0
                                                 && player->playerstate == PST_DEAD
-                                                && !freecam_on));
+                                                && !R_GetFreecamOn()));
 
   // [Nugget] Freecam
   if (freecam_on && gamestate == GS_LEVEL)
@@ -1199,7 +1204,7 @@ void R_SetupFrame (player_t *player)
     {
       dummymobj = *freecam.mobj;
 
-      if (chasecam_on)
+      if (R_GetChasecamOn())
       {
         if (uncapped && leveltime > oldleveltime)
         { dummymobj.angle = LerpAngle(dummymobj.oldangle, dummymobj.angle); }
@@ -1252,7 +1257,7 @@ void R_SetupFrame (player_t *player)
     player->mo->interp == true &&
     // Don't interpolate during a paused state
     (leveltime > oldleveltime
-     || (freecam_on && (!freecam.mobj || chasecam_on) && gamestate == GS_LEVEL)) // [Nugget] Freecam
+     || (R_FreecamTurningOverride() && gamestate == GS_LEVEL)) // [Nugget] Freecam
   );
 
   // [Nugget]
@@ -1281,7 +1286,7 @@ void R_SetupFrame (player_t *player)
       viewangle = LerpAngle(player->mo->oldangle, player->mo->angle);
     }
 
-    if ((use_localview || (freecam_on && freecam_mode == FREECAM_CAM)) // [Nugget] Freecam
+    if ((use_localview || (R_GetFreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
         && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
@@ -1678,7 +1683,7 @@ void R_RenderPlayerView (player_t* player)
 
       for (int i = 0;  i < NUMFOVFX;  i++)
       {
-        if (FOVFX_ZOOM < i && freecam_on) { break; }
+        if (FOVFX_ZOOM < i && R_GetFreecamOn()) { break; }
 
         targetfov += fovfx[i].current;
       }

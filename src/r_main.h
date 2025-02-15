@@ -212,6 +212,7 @@ extern void          R_SetFreecamOn(const boolean value);
 extern freecammode_t R_GetFreecamMode(void);
 extern freecammode_t R_CycleFreecamMode(void);
 extern angle_t       R_GetFreecamAngle(void);
+extern boolean       R_FreecamTurningOverride(void);
 extern void          R_ResetFreecam(const boolean newmap);
 extern void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
 

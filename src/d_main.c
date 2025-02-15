@@ -291,7 +291,7 @@ void D_Display (void)
     fractionaltic = I_GetFracTime();
 
     if (!menuactive && gamestate == GS_LEVEL && raw_input
-        && (!paused || (R_GetFreecamOn() && !R_GetFreecamMobj()))) // [Nugget] Freecam
+        && (!paused || R_FreecamTurningOverride())) // [Nugget] Freecam
     {
       I_StartDisplay();
     }
