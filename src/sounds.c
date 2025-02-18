@@ -285,6 +285,10 @@ sfxinfo_t original_S_sfx[NUMSFX] = {
   SOUND("ppai75", sg_none,   96),
   SOUND("ppa100", sg_none,   96),
 
+  // Slow Motion
+  SOUND("ngslon", sg_none, 60),
+  SOUND("ngslof", sg_none, 60),
+
   // [Nugget] ---------------------------------------------------------------/
 
   [500] = SOUND("fre000", sg_none, 127),

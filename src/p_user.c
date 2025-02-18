@@ -866,7 +866,8 @@ void P_PlayerThink (player_t* player)
   {
     slowMoKeyDown = true;
 
-    if (!G_GetSlowMotion()) { S_StartSoundPitch(NULL, sfx_getpow, PITCH_NONE); }
+    if (G_GetSlowMotion()) { S_StartSoundPitchOptional(NULL, sfx_ngslof,         -1, PITCH_NONE); }
+    else                   { S_StartSoundPitchOptional(NULL, sfx_ngslon, sfx_getpow, PITCH_NONE); }
 
     G_SetSlowMotion(!G_GetSlowMotion());
   }
