@@ -6164,6 +6164,11 @@ void G_BindEnemVariables(void)
              false, ss_enem, wad_yes,
              "Bloodier gibbing");
 
+  // (CFG-only)
+  M_BindNum("bloodier_gibbing_splats", &bloodier_gibbing_splats, &bloodier_gibbing_splats,
+            40, 10, 256, ss_none, wad_yes,
+            "Max. number of bloodier-gibbing splats");
+
   M_BindBool("tossdrop", &tossdrop, NULL,
              false, ss_enem, wad_yes,
              "Enemies toss their items dropped upon death");

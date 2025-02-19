@@ -153,7 +153,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 ### Enemies
 
 - **_Extra Gibbing_** setting, to force gibbing under certain conditions (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
-- **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
+- **_Bloodier Gibbing_** setting (number of splats determined by the CFG-only `bloodier_gibbing_splats` CVAR) [i.b. Smooth Doom]
 - **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
 
 ### Doom Compatibility settings
