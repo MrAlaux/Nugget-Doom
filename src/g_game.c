@@ -101,19 +101,6 @@
 #include "m_cheat.h"
 #include "p_spec.h"
 
-#define SAVEGAMESIZE  0x20000
-#define SAVESTRINGSIZE  24
-
-static size_t   savegamesize = SAVEGAMESIZE; // killough
-static char     *demoname = NULL;
-// the original name of the demo, without "-00000" and file extension
-static char *demoname_orig = NULL;
-static boolean  netdemo;
-static byte     *demobuffer;   // made some static -- killough
-static size_t   maxdemosize;
-static byte     *demo_p;
-static byte     consistancy[MAXPLAYERS][BACKUPTICS];
-
 // [Nugget] /=================================================================
 
 // CVARs ---------------------------------------------------------------------
@@ -128,6 +115,29 @@ boolean comp_longautoaim;
 boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
 
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
+
+static float mouse_h_modifier = 1.0f,
+             mouse_v_modifier = 1.0f;
+
+static void UpdateMouseModifiers(void)
+{
+  mouse_h_modifier = mouse_v_modifier = 1.0f;
+
+  if (strictmode) { return; }
+
+  // Decrease the intensity of some movements if zoomed in -------------------
+
+  const int zoom = R_GetFOVFX(FOVFX_ZOOM);
+
+  if (zoom)
+  { mouse_h_modifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
+
+  mouse_v_modifier = mouse_h_modifier;
+
+  // Flip levels -------------------------------------------------------------
+
+  if (STRICTMODE(flip_levels)) { mouse_h_modifier = -mouse_h_modifier; }
+}
 
 // Periodic auto save --------------------------------------------------------
 
@@ -404,6 +414,19 @@ static void G_UpdateInitialLoadout(void)
 }
 
 // [Nugget] =================================================================/
+
+#define SAVEGAMESIZE  0x20000
+#define SAVESTRINGSIZE  24
+
+static size_t   savegamesize = SAVEGAMESIZE; // killough
+static char     *demoname = NULL;
+// the original name of the demo, without "-00000" and file extension
+static char *demoname_orig = NULL;
+static boolean  netdemo;
+static byte     *demobuffer;   // made some static -- killough
+static size_t   maxdemosize;
+static byte     *demo_p;
+static byte     consistancy[MAXPLAYERS][BACKUPTICS];
 
 static int G_GameOptionSize(void);
 
@@ -773,38 +796,18 @@ static void ApplyQuickstartCache(ticcmd_t *cmd, boolean strafe)
 
 void G_PrepMouseTiccmd(void)
 {
-  // [Nugget] /===============================================================
-
-  float hmodifier = 1.0f;
-
-  // Decrease the intensity of some movements if zoomed in -------------------
-
-  if (!strictmode)
-  {
-    const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-    if (zoom)
-    { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
-  }
-
-  float vmodifier = hmodifier;
-
-  // Flip levels ------------------------------------------------------------
-
-  if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
-
-  // [Nugget] ===============================================================/
+  UpdateMouseModifiers(); // [Nugget]
 
   if (mousex && !M_InputGameActive(input_strafe))
   {
-    localview.rawangle -= G_CalcMouseAngle(mousex) / hmodifier;
+    localview.rawangle -= G_CalcMouseAngle(mousex) / mouse_h_modifier;
     basecmd.angleturn = G_CarryAngle(localview.rawangle);
     mousex = 0;
   }
 
   if (mousey && mouselook)
   {
-    localview.rawpitch += G_CalcMousePitch(mousey) / vmodifier;
+    localview.rawpitch += G_CalcMousePitch(mousey) / mouse_v_modifier;
     basecmd.pitch = G_CarryPitch(localview.rawpitch);
     mousey = 0;
   }
@@ -814,27 +817,7 @@ void G_PrepGamepadTiccmd(void)
 {
   if (I_UseGamepad())
   {
-    // [Nugget] /=============================================================
-
-    float hmodifier = 1.0f;
-
-    // Decrease the intensity of some movements if zoomed in -----------------
-
-    if (!strictmode)
-    {
-      const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-      if (zoom)
-      { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
-    }
-
-    float vmodifier = hmodifier;
-
-    // Flip levels ----------------------------------------------------------
-
-    if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
-
-    // [Nugget] =============================================================/
+    UpdateMouseModifiers(); // [Nugget]
 
     const boolean strafe = M_InputGameActive(input_strafe);
 
@@ -843,14 +826,14 @@ void G_PrepGamepadTiccmd(void)
 
     if (axes[AXIS_TURN] && !strafe)
     {
-      localview.rawangle -= G_CalcGamepadAngle() / hmodifier;
+      localview.rawangle -= G_CalcGamepadAngle() / mouse_h_modifier;
       basecmd.angleturn = G_CarryAngle(localview.rawangle);
       axes[AXIS_TURN] = 0.0f;
     }
 
     if (axes[AXIS_LOOK] && padlook)
     {
-      localview.rawpitch -= G_CalcGamepadPitch() / vmodifier;
+      localview.rawpitch -= G_CalcGamepadPitch() / mouse_v_modifier;
       basecmd.pitch = G_CarryPitch(localview.rawpitch);
       axes[AXIS_LOOK] = 0.0f;
     }
@@ -861,41 +844,21 @@ void G_PrepGyroTiccmd(void)
 {
   if (I_UseGamepad())
   {
-    // [Nugget] /=============================================================
-
-    float hmodifier = 1.0f;
-
-    // Decrease the intensity of some movements if zoomed in -----------------
-
-    if (!strictmode)
-    {
-      const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-      if (zoom)
-      { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
-    }
-
-    float vmodifier = hmodifier;
-
-    // Flip levels ----------------------------------------------------------
-
-    if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
-
-    // [Nugget] =============================================================/
+    UpdateMouseModifiers(); // [Nugget]
 
     I_CalcGyroAxes(M_InputGameActive(input_strafe));
     gyro_turn_tic = gyro_axes[GYRO_TURN];
 
     if (gyro_axes[GYRO_TURN])
     {
-      localview.rawangle += gyro_axes[GYRO_TURN] / hmodifier;
+      localview.rawangle += gyro_axes[GYRO_TURN] / mouse_h_modifier;
       basecmd.angleturn = G_CarryAngle(localview.rawangle);
       gyro_axes[GYRO_TURN] = 0.0f;
     }
 
     if (gyro_axes[GYRO_LOOK])
     {
-      localview.rawpitch += gyro_axes[GYRO_LOOK] / vmodifier;
+      localview.rawpitch += gyro_axes[GYRO_LOOK] / mouse_v_modifier;
       basecmd.pitch = G_CarryPitch(localview.rawpitch);
       gyro_axes[GYRO_LOOK] = 0.0f;
     }
