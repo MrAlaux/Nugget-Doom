@@ -335,10 +335,8 @@ static boolean       freecam_on = false;
 static freecammode_t freecam_mode = FREECAM_OFF + 1;
 
 static struct {
-  fixed_t x, ox,
-          y, oy,
-          z, oz;
-  angle_t angle, oangle;
+  fixed_t x, ox, y, oy, z, oz;
+  angle_t angle, oangle, ticangle, oticangle;
   fixed_t pitch, opitch;
 
   int     reset;
@@ -371,6 +369,11 @@ angle_t R_GetFreecamAngle(void)
   return freecam.angle;
 }
 
+boolean R_FreecamTurningOverride(void)
+{
+  return freecam_on && (!freecam.mobj || R_GetChasecamOn());
+}
+
 void R_ResetFreecam(const boolean newmap)
 {
   freecam.reset = (int) true + newmap;
@@ -401,17 +404,18 @@ const mobj_t *R_GetFreecamMobj(void)
 }
 
 void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
-                     fixed_t pitch, boolean center, boolean lock)
+                     angle_t ticangle, fixed_t pitch, boolean center, boolean lock)
 {
   if (freecam.reset)
   {
     const player_t *const player = &players[displayplayer];
 
-    freecam.x     = player->mo->x;
-    freecam.y     = player->mo->y;
-    freecam.z     = player->mo->z + player->viewheight;
-    freecam.angle = player->mo->angle;
-    freecam.pitch = player->pitch;
+    freecam.x = player->mo->x;
+    freecam.y = player->mo->y;
+    freecam.z = player->mo->z + player->viewheight;
+    freecam.angle    = player->mo->angle;
+    freecam.ticangle = player->ticangle;
+    freecam.pitch    = player->pitch;
 
     freecam.interp = false;
     freecam.centering = false;
@@ -439,6 +443,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
       overflow[emu_intercepts].enabled = false;
 
       player_t dummyplayer = {0};
+      dummyplayer.ticangle = 0;
       dummyplayer.slope = P_PitchToSlope(freecam.pitch);
 
       mobj_t dummymo = {0};
@@ -461,28 +466,32 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     }
   }
 
-  freecam.ox     = freecam.x;
-  freecam.oy     = freecam.y;
-  freecam.oz     = freecam.z;
-  freecam.oangle = freecam.angle;
-  freecam.opitch = freecam.pitch;
+  freecam.ox = freecam.x;
+  freecam.oy = freecam.y;
+  freecam.oz = freecam.z;
+  freecam.oangle    = freecam.angle;
+  freecam.oticangle = freecam.ticangle;
+  freecam.opitch    = freecam.pitch;
 
   if (freecam.mobj && freecam.mobj->health > 0)
   {
-    freecam.x     = freecam.mobj->x;
-    freecam.y     = freecam.mobj->y;
-    freecam.z     = freecam.mobj->z + (freecam.mobj->height * 13/16);
+    freecam.x = freecam.mobj->x;
+    freecam.y = freecam.mobj->y;
+    freecam.z = freecam.mobj->z + (freecam.mobj->height * 13/16);
 
-    if (chasecam_on)
-    { freecam.angle += angle; }
-    else
-    { freecam.angle = 0; }
+    if (R_GetChasecamOn())
+    {
+      freecam.angle    += angle;
+      freecam.ticangle += ticangle;
+    }
+    else { freecam.angle = freecam.ticangle = 0; }
   }
   else {
-    freecam.x     += x;
-    freecam.y     += y;
-    freecam.z     += z;
-    freecam.angle += angle;
+    freecam.x += x;
+    freecam.y += y;
+    freecam.z += z;
+    freecam.angle    += angle;
+    freecam.ticangle += ticangle;
 
     R_UpdateFreecamMobj(NULL);
   }
@@ -1125,7 +1134,7 @@ static inline boolean CheckLocalView(const player_t *player)
 {
   // [Nugget] Freecam: use localview unless
   // locked onto a mobj in first person, or not controlling the camera
-  if (freecam_on && (!freecam.mobj || chasecam_on) && freecam_mode == FREECAM_CAM)
+  if (R_FreecamTurningOverride() && R_GetFreecamMode() == FREECAM_CAM)
   { return true; }
 
   return (
@@ -1180,10 +1189,10 @@ void R_SetupFrame (player_t *player)
 {
   // [Nugget]
   chasecam_on = gamestate == GS_LEVEL
-                && !(freecam_on && !freecam.mobj)
+                && !(R_GetFreecamOn() && !R_GetFreecamMobj())
                 && STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0
                                                 && player->playerstate == PST_DEAD
-                                                && !freecam_on));
+                                                && !R_GetFreecamOn()));
 
   // [Nugget] Freecam
   if (freecam_on && gamestate == GS_LEVEL)
@@ -1195,7 +1204,7 @@ void R_SetupFrame (player_t *player)
     {
       dummymobj = *freecam.mobj;
 
-      if (chasecam_on)
+      if (R_GetChasecamOn())
       {
         if (uncapped && leveltime > oldleveltime)
         { dummymobj.angle = LerpAngle(dummymobj.oldangle, dummymobj.angle); }
@@ -1221,10 +1230,12 @@ void R_SetupFrame (player_t *player)
       dummymobj.subsector = R_PointInSubsector(freecam.x, freecam.y);
     }
 
-    dummyplayer.oldviewz = freecam.oz;
-    dummyplayer.viewz    = freecam.z;
-    dummyplayer.oldpitch = freecam.opitch;
-    dummyplayer.pitch    = freecam.pitch;
+    dummyplayer.oldviewz    = freecam.oz;
+    dummyplayer.viewz       = freecam.z;
+    dummyplayer.oldticangle = freecam.oticangle;
+    dummyplayer.ticangle    = freecam.ticangle;
+    dummyplayer.oldpitch    = freecam.opitch;
+    dummyplayer.pitch       = freecam.pitch;
 
     dummyplayer.centering = (dummyplayer.centering && freecam.opitch != freecam.pitch)
                           | freecam.centering;
@@ -1246,7 +1257,7 @@ void R_SetupFrame (player_t *player)
     player->mo->interp == true &&
     // Don't interpolate during a paused state
     (leveltime > oldleveltime
-     || (freecam_on && (!freecam.mobj || chasecam_on) && gamestate == GS_LEVEL)) // [Nugget] Freecam
+     || (R_FreecamTurningOverride() && gamestate == GS_LEVEL)) // [Nugget] Freecam
   );
 
   // [Nugget]
@@ -1275,7 +1286,7 @@ void R_SetupFrame (player_t *player)
       viewangle = LerpAngle(player->mo->oldangle, player->mo->angle);
     }
 
-    if ((use_localview || (freecam_on && freecam_mode == FREECAM_CAM)) // [Nugget] Freecam
+    if ((use_localview || (R_GetFreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
         && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
@@ -1672,7 +1683,7 @@ void R_RenderPlayerView (player_t* player)
 
       for (int i = 0;  i < NUMFOVFX;  i++)
       {
-        if (FOVFX_ZOOM < i && freecam_on) { break; }
+        if (FOVFX_ZOOM < i && R_GetFreecamOn()) { break; }
 
         targetfov += fovfx[i].current;
       }

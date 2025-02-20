@@ -102,7 +102,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Scale determined by the CFG-only `weapon_inertia_scale_pct` CVAR
   - Application while firing determined by the CFG-only `weapon_inertia_fire` CVAR
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
-- **_Translucent Flashes_** setting (translucency determined by the CFG-only `translucent_pspr_pct` CVAR) [i.b. Crispy Doom]
+- **_[Weapon] Flash Translucency_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting, to toggle the 1px misalignment of first-person sprites (CFG-only: `sx_fix`)
 
@@ -112,11 +112,11 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **SBARDEF:**
   - Chat hack to move it vertically based on the height of the message list
 - **Crosshair:**
-  - Translucency;
-  - Vertical-only target lock-on;
-  - Horizontal-autoaim indicators;
-  - Option to account for fuzzy targets [i.b. From Doom With Love];
-  - Dedicated toggle button.
+  - Translucency setting
+  - Vertical-only target lock-on
+  - Horizontal-autoaim indicators
+  - Option to account for fuzzy targets [i.b. From Doom With Love]
+  - Dedicated toggle button
 - **Secret count in "secret revealed" message** [p.f. Crispy Doom]
 - **Show Save Messages** setting (CFG-only: `show_save_messages`)
 - **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
@@ -154,7 +154,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 ### Enemies
 
 - **_Extra Gibbing_** setting, to force gibbing under certain conditions (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
-- **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
+- **_Bloodier Gibbing_** setting (number of splats determined by the CFG-only `bloodier_gibbing_splats` CVAR) [i.b. Smooth Doom]
 - **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
 
 ### Doom Compatibility settings
@@ -218,23 +218,24 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
-- **Allowed mouselook while dead**
+- **When dying with freelook enabled, the camera is pitched towards the killer**
 - **Interactive character cast** (Turn buttons to rotate enemy, Run button to gib, Strafe buttons to skip) [p.f. Crispy Doom]
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
-  - Jumping: `DSPLJUMP`;
-  - Landing: `DSPLLAND`;
-  - Key-locked door: `DSLOCKED`;
-  - Key pickup: `DSKEYUP`;
-  - Key blinking on HUD: `DSKEYBNK`;
-  - Menus: `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`;
-  - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS`;
-  - Health-based player pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom].
+  - Jumping: `DSPLJUMP`
+  - Landing: `DSPLLAND`
+  - Key-locked door: `DSLOCKED`
+  - Key pickup: `DSKEYUP`
+  - Key blinking on HUD: `DSKEYBNK`
+  - Menus: `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`
+  - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS` (last three unused)
+  - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
+  - Slow motion: `DSNGSLON`, `DSNGSLOF`
 - **Customizable darkening level for dark menu background and Automap overlay** (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
 - The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-only: `sp_chat`)
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
-- Restored menu items for various Woof settings
+- Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter
 - Decreased minimum window size to 200p (240p with aspect-ratio correction)
 

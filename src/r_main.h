@@ -212,6 +212,7 @@ extern void          R_SetFreecamOn(const boolean value);
 extern freecammode_t R_GetFreecamMode(void);
 extern freecammode_t R_CycleFreecamMode(void);
 extern angle_t       R_GetFreecamAngle(void);
+extern boolean       R_FreecamTurningOverride(void);
 extern void          R_ResetFreecam(const boolean newmap);
 extern void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
 
@@ -219,7 +220,7 @@ extern void                 R_UpdateFreecamMobj(struct mobj_s *const mobj);
 extern const struct mobj_s *R_GetFreecamMobj(void);
 
 extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
-                            fixed_t pitch, boolean center, boolean lock);
+                            angle_t ticangle, fixed_t pitch, boolean center, boolean lock);
 
 // [Nugget] =================================================================/
 

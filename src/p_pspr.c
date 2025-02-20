@@ -920,7 +920,7 @@ void A_Punch(player_t *player, pspdef_t *psp)
   if (vertical_aiming == VERTAIM_DIRECT)
   {
     slope = player->slope;
-    P_AimLineAttack(player->mo, player->mo->angle, range, 0);
+    P_AimLineAttack(player->mo, player->mo->angle, range, CROSSHAIR_AIM);
   }
   else {
     // killough 8/2/98: make autoaiming prefer enemies
@@ -974,7 +974,7 @@ void A_Saw(player_t *player, pspdef_t *psp)
   if (vertical_aiming == VERTAIM_DIRECT)
   {
     slope = player->slope;
-    P_AimLineAttack(player->mo, player->mo->angle, range, 0);
+    P_AimLineAttack(player->mo, player->mo->angle, range, CROSSHAIR_AIM);
   }
   else {
     // killough 8/2/98: make autoaiming prefer enemies
@@ -1811,7 +1811,7 @@ void A_WeaponMeleeAttack(player_t *player, pspdef_t *psp)
   if (vertical_aiming == VERTAIM_DIRECT)
   {
     slope = player->slope;
-    P_AimLineAttack(player->mo, player->mo->angle, range, 0);
+    P_AimLineAttack(player->mo, player->mo->angle, range, CROSSHAIR_AIM);
   }
   else {
     // make autoaim prefer enemies

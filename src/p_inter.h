@@ -42,6 +42,7 @@ enum {
 }; extern boolean extra_gibbing[NUMEXGIBS];
 
 extern boolean bloodier_gibbing;
+extern int bloodier_gibbing_splats;
 extern boolean tossdrop;
 extern boolean comp_keypal;
 

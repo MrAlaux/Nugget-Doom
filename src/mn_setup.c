@@ -5261,6 +5261,8 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
             MN_ClearMenus();
             setup_active = false;
             setup_active_secondary = false;
+
+            M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
         }
         else
         {
@@ -5274,6 +5276,8 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
                 MN_Back();
                 setup_active = false;
             }
+
+            M_StartSoundOptional(sfx_mnubak, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
         }
 
         current_item->m_flags &= ~(S_HILITE | S_SELECT); // phares 4/19/98
@@ -5282,7 +5286,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
         default_verify = false;              // phares 4/19/98
         print_warning_about_changes = false; // [FG] reset
         active_thermo = NULL;
-        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        // [Nugget] Sounds are handled above
         return true;
     }
 
