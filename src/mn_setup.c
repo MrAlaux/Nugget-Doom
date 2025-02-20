@@ -2615,6 +2615,10 @@ setup_menu_t comp_settings1[] = {
     {"Improved Hit Detection", S_ONOFF | S_STRICT, M_X, M_SPC,
      {"blockmapfix"}},
 
+    // [Nugget] Hitbox-based hitscan collision
+    {"Hitbox-based Hitscan Collision", S_ONOFF | S_CRITICAL, M_X, M_SPC,
+     {"hitbox_hitscan"}},
+
     {"Fast Line-of-Sight Calculation", S_ONOFF | S_STRICT, M_X, M_SPC,
      {"checksight12"}, .action = P_UpdateCheckSight},
 

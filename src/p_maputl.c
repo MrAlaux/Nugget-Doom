@@ -645,6 +645,45 @@ boolean PIT_AddLineIntercepts(line_t *ld)
   return true;  // continue
 }
 
+// [Nugget] Hitbox-based hitscan collision /----------------------------------
+
+boolean hitbox_hitscan;
+
+static const inline boolean CheckPointsOnSides(mobj_t *const thing,
+                                               const fixed_t x1, const fixed_t y1,
+                                               const fixed_t x2, const fixed_t y2)
+{
+  if (   P_PointOnDivlineSide(x1, y1, &trace)
+      != P_PointOnDivlineSide(x2, y2, &trace))
+  {
+    divline_t dl = {
+      .x  = x1,
+      .dx = x2 - x1,
+      .y  = y1,
+      .dy = y2 - y1
+    };
+
+    const fixed_t frac = P_InterceptVector(&trace, &dl);
+
+    if (frac >= 0)
+    {
+      check_intercept();
+
+      intercept_p->frac = frac;
+      intercept_p->isaline = false;
+      intercept_p->d.thing = thing;
+      InterceptsOverrun(intercept_p - intercepts, intercept_p);
+      intercept_p++;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 //
 // PIT_AddThingIntercepts
 //
@@ -652,51 +691,157 @@ boolean PIT_AddLineIntercepts(line_t *ld)
 
 boolean PIT_AddThingIntercepts(mobj_t *thing)
 {
-  fixed_t   x1, y1;
-  fixed_t   x2, y2;
-  int       s1, s2;
-  divline_t dl;
-  fixed_t   frac;
+  // [Nugget] Hitbox-based hitscan collision
+  if (CASUALPLAY(hitbox_hitscan))
+  {
+    #define CHECK_POINTS_ON_LEFT()   CheckPointsOnSides(thing, lx, by, lx, ty)
+    #define CHECK_POINTS_ON_RIGHT()  CheckPointsOnSides(thing, rx, by, rx, ty)
+    #define CHECK_POINTS_ON_BOTTOM() CheckPointsOnSides(thing, lx, by, rx, by)
+    #define CHECK_POINTS_ON_TOP()    CheckPointsOnSides(thing, lx, ty, rx, ty)
 
-  // check a corner to corner crossection for hit
-  if ((trace.dx ^ trace.dy) > 0)
+    const fixed_t lx = thing->x - thing->radius,
+                  rx = thing->x + thing->radius,
+                  by = thing->y - thing->radius,
+                  ty = thing->y + thing->radius;
+
+    signed char hside = (trace.x > rx)
+                      - (trace.x < lx);
+
+    signed char vside = (trace.y > ty)
+                      - (trace.y < by);
+
+    if (hside == -1) // Left quadrant
     {
-      x1 = thing->x - thing->radius;
-      y1 = thing->y + thing->radius;
-      x2 = thing->x + thing->radius;
-      y2 = thing->y - thing->radius;
+      if (vside == -1) // Bottom-left quadrant
+      {
+        if (CHECK_POINTS_ON_LEFT() || CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_RIGHT()) { CHECK_POINTS_ON_TOP(); }
+        }
+      }
+      else if (vside == 0) // Middle-left quadrant
+      {
+        if (CHECK_POINTS_ON_LEFT())
+        {
+          if (!CHECK_POINTS_ON_RIGHT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-left quadrant
+        if (CHECK_POINTS_ON_LEFT() || CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_RIGHT()) { CHECK_POINTS_ON_BOTTOM(); }
+        }
+      }
     }
+    else if (hside == 0) // Middle quadrant
+    {
+      if (vside == -1) // Bottom-middle quadrant
+      {
+        if (CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_TOP())
+          {
+            if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_RIGHT(); }
+          }
+        }
+      }
+      else if (vside == 0) // Middle-middle quadrant
+      {
+        if (!CHECK_POINTS_ON_LEFT())
+        {
+          if (!CHECK_POINTS_ON_RIGHT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-middle quadrant
+        if (CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_BOTTOM())
+          {
+            if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_RIGHT(); }
+          }
+        }
+      }
+    }
+    else { // hside == 1 | Right quadrant
+      if (vside == -1) // Bottom-right quadrant
+      {
+        if (CHECK_POINTS_ON_RIGHT() || CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_TOP(); }
+        }
+      }
+      else if (vside == 0) // Middle-right quadrant
+      {
+        if (CHECK_POINTS_ON_RIGHT())
+        {
+          if (!CHECK_POINTS_ON_LEFT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-right quadrant
+        if (CHECK_POINTS_ON_RIGHT() || CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_BOTTOM(); }
+        }
+      }
+    }
+  }
   else
-    {
-      x1 = thing->x - thing->radius;
-      y1 = thing->y - thing->radius;
-      x2 = thing->x + thing->radius;
-      y2 = thing->y + thing->radius;
-    }
+  {
+    fixed_t   x1, y1;
+    fixed_t   x2, y2;
+    int       s1, s2;
+    divline_t dl;
+    fixed_t   frac;
 
-  s1 = P_PointOnDivlineSide (x1, y1, &trace);
-  s2 = P_PointOnDivlineSide (x2, y2, &trace);
+    // check a corner to corner crossection for hit
+    if ((trace.dx ^ trace.dy) > 0)
+      {
+        x1 = thing->x - thing->radius;
+        y1 = thing->y + thing->radius;
+        x2 = thing->x + thing->radius;
+        y2 = thing->y - thing->radius;
+      }
+    else
+      {
+        x1 = thing->x - thing->radius;
+        y1 = thing->y - thing->radius;
+        x2 = thing->x + thing->radius;
+        y2 = thing->y + thing->radius;
+      }
 
-  if (s1 == s2)
-    return true;                // line isn't crossed
+    s1 = P_PointOnDivlineSide (x1, y1, &trace);
+    s2 = P_PointOnDivlineSide (x2, y2, &trace);
 
-  dl.x = x1;
-  dl.y = y1;
-  dl.dx = x2-x1;
-  dl.dy = y2-y1;
+    if (s1 == s2)
+      return true;                // line isn't crossed
 
-  frac = P_InterceptVector (&trace, &dl);
+    dl.x = x1;
+    dl.y = y1;
+    dl.dx = x2-x1;
+    dl.dy = y2-y1;
 
-  if (frac < 0)
-    return true;                // behind source
+    frac = P_InterceptVector (&trace, &dl);
+  
+    if (frac < 0)
+      return true;                // behind source
 
-  check_intercept();            // killough
+    check_intercept();            // killough
 
-  intercept_p->frac = frac;
-  intercept_p->isaline = false;
-  intercept_p->d.thing = thing;
-  InterceptsOverrun(intercept_p - intercepts, intercept_p);
-  intercept_p++;
+    intercept_p->frac = frac;
+    intercept_p->isaline = false;
+    intercept_p->d.thing = thing;
+    InterceptsOverrun(intercept_p - intercepts, intercept_p);
+    intercept_p++;
+  }
 
   return true;          // keep going
 }
