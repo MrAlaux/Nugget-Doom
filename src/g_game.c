@@ -212,44 +212,52 @@ int G_GetSlowMotionFactor(void)
 
 boolean G_ToggleFistChainsaw(const player_t *const player, boolean vanilla)
 {
-  const boolean saw_preferred = vanilla || P_WeaponPreferred(wp_chainsaw, wp_fist);
   const boolean berserk = player->powers[pw_strength];
+  const boolean saw_preferred = vanilla || P_WeaponPreferred(wp_chainsaw, wp_fist) || !berserk;
+  const weapontype_t pendingweapon = player->pendingweapon,
+                       readyweapon = player->readyweapon;
 
   if (CASUALPLAY(weapswitch_interruption)
-      && player->pendingweapon != wp_nochange
-      && !(   player->pendingweapon == wp_fist
-           || player->pendingweapon == wp_chainsaw))
+      && pendingweapon != wp_nochange
+      && !(   pendingweapon == wp_fist
+           || pendingweapon == wp_chainsaw))
   {
-    return player->readyweapon == wp_chainsaw;
-  }
-  else if (CASUALPLAY(improved_weapon_toggles))
-  {
-    if (player->readyweapon == wp_fist
-        || player->pendingweapon == wp_fist
-        || player->pendingweapon == wp_chainsaw)
+    if (readyweapon == wp_fist || readyweapon == wp_chainsaw)
     {
-      return player->pendingweapon != wp_chainsaw || (vanilla && !berserk);
-    }
-    else if (player->readyweapon == wp_chainsaw)
-    {
-      return player->pendingweapon == wp_fist || (vanilla && !berserk);
+      return readyweapon == wp_chainsaw;
     }
     else
     {
-      return !berserk || saw_preferred;
+      return saw_preferred;
+    }
+  }
+  else if (CASUALPLAY(improved_weapon_toggles))
+  {
+    if (readyweapon == wp_fist
+        || pendingweapon == wp_fist
+        || pendingweapon == wp_chainsaw)
+    {
+      return pendingweapon != wp_chainsaw || (vanilla && !berserk);
+    }
+    else if (readyweapon == wp_chainsaw)
+    {
+      return pendingweapon == wp_fist || (vanilla && !berserk);
+    }
+    else
+    {
+      return saw_preferred;
     }
   }
   else
   {
     if (vanilla)
     {
-      return player->readyweapon != wp_chainsaw || !berserk;
+      return readyweapon != wp_chainsaw || !berserk;
     }
     else
     {
-      return player->readyweapon != wp_chainsaw
-             && (player->readyweapon == wp_fist
-                 || !berserk
+      return readyweapon != wp_chainsaw
+             && (readyweapon == wp_fist
                  || saw_preferred);
     }
   }
@@ -258,25 +266,34 @@ boolean G_ToggleFistChainsaw(const player_t *const player, boolean vanilla)
 boolean G_ToggleShotgunSSG(const player_t *const player, boolean vanilla)
 {
   const boolean ssg_preferred = vanilla || P_WeaponPreferred(wp_supershotgun, wp_shotgun);
+  const weapontype_t pendingweapon = player->pendingweapon,
+                       readyweapon = player->readyweapon;
 
   if (CASUALPLAY(weapswitch_interruption)
-      && player->pendingweapon != wp_nochange
-      && !(   player->pendingweapon == wp_shotgun
-           || player->pendingweapon == wp_supershotgun))
+      && pendingweapon != wp_nochange
+      && !(   pendingweapon == wp_shotgun
+           || pendingweapon == wp_supershotgun))
   {
-    return player->readyweapon == wp_supershotgun;
+    if (readyweapon == wp_shotgun || readyweapon == wp_supershotgun)
+    {
+      return readyweapon == wp_supershotgun;
+    }
+    else
+    {
+      return ssg_preferred;
+    }
   }
   else if (CASUALPLAY(improved_weapon_toggles))
   {
-    if (player->readyweapon == wp_shotgun
-        || player->pendingweapon == wp_shotgun
-        || player->pendingweapon == wp_supershotgun)
+    if (readyweapon == wp_shotgun
+        || pendingweapon == wp_shotgun
+        || pendingweapon == wp_supershotgun)
     {
-      return player->pendingweapon != wp_supershotgun;
+      return pendingweapon != wp_supershotgun;
     }
-    else if (player->readyweapon == wp_supershotgun)
+    else if (readyweapon == wp_supershotgun)
     {
-      return player->pendingweapon == wp_shotgun;
+      return pendingweapon == wp_shotgun;
     }
     else
     {
@@ -287,12 +304,12 @@ boolean G_ToggleShotgunSSG(const player_t *const player, boolean vanilla)
   {
     if (vanilla)
     {
-      return player->readyweapon != wp_supershotgun;
+      return readyweapon != wp_supershotgun;
     }
     else
     {
-      return player->readyweapon == wp_shotgun
-             || (player->readyweapon != wp_supershotgun
+      return readyweapon == wp_shotgun
+             || (readyweapon != wp_supershotgun
                  && ssg_preferred);
     }
   }
