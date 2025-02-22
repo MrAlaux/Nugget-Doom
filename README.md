@@ -55,8 +55,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Chasecam_** [i.b. ZDoom]
 - **Slow Motion** button
 - **Zoom** button
-- **_Background for all menus_** setting
-- **_No palette tint in menus_** setting [i.b. Crispy Doom]
+- **_Backdrop for all menus_** setting
+- **_No Palette Tint in Menus_** setting [i.b. Crispy Doom]
 - **_HUD/Menu Shadows_** setting [i.b. CRL]
   - Translucency level determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR
 - **_Thing Lighting Mode_** setting
@@ -70,6 +70,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Damage Tint Cap_** and **_Bonus Tint Cap_**, to attenuate or disable said screen tinting
 - **_Fake Contrast_** setting
 - Toggle for **diminishing lighting** (CFG-only: `diminishing_lighting`)
+  - _Diminishing lighting_ refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
 - **Color settings** [p.f. International Doom]
@@ -78,7 +79,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **_Auto Save Interval_** setting, for periodic auto saves
 - **Rewinding** [i.b. DSDA-Doom]
-- **_Play Internal Demos_** setting
+- **_Play Internal Demos_** setting, to control whether or not to play demos built into WADs
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
@@ -92,10 +93,16 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_No Horizontal Autoaim_** setting
 - **_Switch [Weapon] on Pickup_** setting
 - **_Improved Weapon Toggles_** setting
+  - Normally, when using the weapon toggles (that is, the same key for both the fist and chainsaw or shotgun and SSG),
+    one must wait until the first weapon in the toggle is equipped before being able to select the other weapon in it;
+    this setting changes that, allowing to select either weapon in the toggle without waiting
 - **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
 - **Always Bob** setting (CFG-only: `always_bob`)
+  - This setting forces the weapon to bob in every tic of its ready state,
+    whether or not the `A_WeaponReady` action is called in said tic,
+    fixing choppy bobbing for weapons like the chainsaw
 - **_Bobbing Styles_** selection [p.f. Zandronum]
 - **_Weapon Bob Speed_** setting
 - **_Bob While Switching_** setting
@@ -105,7 +112,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
 - **_[Weapon] Flash Translucency_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
-- **"Correct" first-person-sprite centering** setting, to toggle the 1px misalignment of first-person sprites (CFG-only: `sx_fix`)
+- **"Correct" first-person-sprite centering** setting (CFG-only: `sx_fix`)
+  - In vanilla Doom, weapon sprites are centered with an offset of one unit to the right;
+    this setting changes that
 
 ### Status Bar/HUD
 
@@ -149,7 +158,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 - **Minimap mode** [i.b. DSDA-Doom]
 - Button to **_Highlight Points of Interest_**; marks and keyed lines (default: <kbd>B</kbd>)
-- **_Tag Finder_**: Position the Automap pointer over a sector and press the _Tag Finder_ button to highlight its activator line(s), and vice versa [p.f. PrBoomX]
+- **_Tag Finder_** button [p.f. PrBoomX]
+  - Position the automap pointer over a sector and press this button
+    to highlight its activator line(s), and vice versa
 - Button to **_Teleport to Automap pointer_**
 - **_Show Thing Hitboxes_** setting
 - **Color for trigger lines**, used with IDDT (CFG-only: `mapcolor_trig`)
@@ -166,7 +177,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 All of these are CFG-only, so their CVAR names are included.
 
-- Bruiser attack (`A_BruisAttack()`) doesn't face target (`comp_bruistarget`)
+- Bruiser attack doesn't face target (`comp_bruistarget`)
 - Disable melee snapping (`comp_nomeleesnap`)
 - Double autoaim range (`comp_longautoaim`)
 - Fix Lost Soul colliding with items (`comp_lscollision`)
@@ -197,8 +208,8 @@ All of these are CFG-only, so their CVAR names are included.
 - **_'RIOTMODE'_** cheat, to make enemies attack all sentient entities
 - **_'IDFLY'_** to fly (uses jumping/crouching buttons) [i.b. PrBoom+, ZDoom]
 - **_'SUMMON'_** to spawn an actor based on its type index [i.b. ZDoom, PrBoomX]
-- **_'IDDF'_** to find a key in the Automap
-- **_'IDDET'_** to find exits in the Automap
+- **_'IDDF'_** to find a key in the automap
+- **_'IDDET'_** to find exits in the automap
 - **_'RESURRECT' / 'IDRES'_** to resurrect the player without toggling IDDQD [i.b. ZDoom]
 - **_'LINETARGET'_** to give some info on the player's linetarget [i.b. ZDoom]
 - **_'TRAILS'_** to show hitscan trails
@@ -224,7 +235,10 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
 - **When dying with freelook enabled, the camera is pitched towards the killer**
-- **Interactive character cast** (Turn buttons to rotate enemy, Run button to gib, Strafe buttons to skip) [p.f. Crispy Doom]
+- **Interactive character cast** [p.f. Crispy Doom]
+  - _Turn_ buttons to rotate
+  - _Run_ button to gib
+  - _Strafe_ buttons to skip
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
   - Jumping: `DSPLJUMP`
   - Landing: `DSPLLAND`
