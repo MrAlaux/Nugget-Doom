@@ -67,8 +67,9 @@ static boolean hud_stats_show_map[NUMSHOWSTATS];
 boolean hud_time[NUMTIMERS];
 
 static int hud_power_timers;
+static boolean hud_power_timers_notime;
 
-static boolean hud_allow_icons = false;
+static boolean hud_allow_icons;
 
 static int hudcolor_time_scale;
 static int hudcolor_total_time;
@@ -166,7 +167,7 @@ static boolean message_review;
 
 // [Nugget] Message list /----------------------------------------------------
 
-const int MAX_COPIES = 99999;
+static const int MAX_COPIES = 99999;
 
 typedef struct linkedmessage_s
 {
@@ -1444,30 +1445,33 @@ static void UpdatePowers(sbe_widget_t *widget, player_t *player)
     // TO-DO: Multi-lined?
 
     #define POWERUP_TIMER(_power_, _powerdur_, _numicon_, _string_, _color_) \
-        if (player->powers[_power_] > 0)                                     \
-        {                                                                    \
-          const boolean runout = POWER_RUNOUT(player->powers[_power_]);      \
-                                                                             \
-          if (hud_allow_icons && ST_IconAvailable(_numicon_))                \
-          {                                                                  \
-            offset += M_snprintf(                                            \
-              string + offset, sizeof(string) - offset, "\x1b%c%c\x1b%c",    \
-              '0' + (runout ? CR_NONE : CR_BLACK),                           \
-              (char) (HU_FONTEND + 1 + _numicon_),                           \
-              '0' + (runout ? _color_ : CR_BLACK)                            \
-            );                                                               \
-          }                                                                  \
-          else {                                                             \
-            offset += M_snprintf(                                            \
-              string + offset, sizeof(string) - offset, "\x1b%c" _string_,   \
-              '0' + (runout ? _color_ : CR_BLACK)                            \
-            );                                                               \
-          }                                                                  \
-                                                                             \
-          offset += M_snprintf(                                              \
-            string + offset, sizeof(string) - offset, " %i\" ",              \
-            MIN(_powerdur_/TICRATE, 1 + (player->powers[_power_] / TICRATE)) \
-          );                                                                 \
+        if (player->powers[_power_] > 0) \
+        { \
+          const boolean runout = POWER_RUNOUT(player->powers[_power_]); \
+          \
+          if (hud_allow_icons && ST_IconAvailable(_numicon_)) \
+          { \
+            offset += M_snprintf( \
+              string + offset, sizeof(string) - offset, "\x1b%c%c\x1b%c ", \
+              '0' + (runout ? CR_NONE : CR_BLACK), \
+              (char) (HU_FONTEND + 1 + _numicon_), \
+              '0' + (runout ? _color_ : CR_BLACK) \
+            ); \
+          } \
+          else { \
+            offset += M_snprintf( \
+              string + offset, sizeof(string) - offset, "\x1b%c" _string_ " ", \
+              '0' + (runout ? _color_ : CR_BLACK) \
+            ); \
+          } \
+          \
+          if (!hud_power_timers_notime) \
+          { \
+            offset += M_snprintf( \
+              string + offset, sizeof(string) - offset, "%i\" ", \
+              MIN(_powerdur_ / TICRATE, 1 + (player->powers[_power_] / TICRATE)) \
+            ); \
+          } \
         }
 
     POWERUP_TIMER(pw_invisibility,    INVISTICS,  3, "INVIS", CR_RED);
@@ -1479,7 +1483,7 @@ static void UpdatePowers(sbe_widget_t *widget, player_t *player)
 
     if (offset <= 0) { return; }
 
-    string[offset - 1] = '\0'; // Trim leading space
+    string[offset - 1] = '\0'; // Trim trailing space
     SetLine(widget, string);
 }
 
@@ -1763,6 +1767,10 @@ void ST_BindHUDVariables(void)
   M_BindNum("hud_power_timers", &hud_power_timers, NULL,
             HUD_WIDGET_OFF, HUD_WIDGET_OFF, HUD_WIDGET_ALWAYS, ss_stat, wad_no,
             "Show powerup-timers widget (1 = On automap; 2 = On HUD; 3 = Always)");
+
+  M_BindBool("hud_power_timers_notime", &hud_power_timers_notime, NULL,
+             false, ss_none, wad_no,
+             "Show only powerup names/icons in powerup-timers widget");
 
   // [Nugget] ---------------------------------------------------------------/
 

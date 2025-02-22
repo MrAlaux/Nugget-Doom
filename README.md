@@ -41,7 +41,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_View Height_** setting, which allows to enter a custom POV height value in the [32, 56] range [i.b. Brutal Doom]
 - **_Vertical Target Lock-on_** setting, to make the camera automatically lock onto targets vertically [i.b. Rise of the Triad]
 - **Flinching** setting, to flinch upon landing and/or taking damage
-- **_Explosion Shake Effect_** setting (intensity determined by the CFG-only `explosion_shake_intensity_pct` CVAR) [i.b. Doom Retro]
+- **_Explosion Shake Effect_** setting [i.b. Doom Retro]
+  - Shake intensity determined by the CFG-only `explosion_shake_intensity_pct` CVAR
 - **_Subtle Idle Bobbing/Breathing_** setting [p.f. International Doom]
 - **_Teleporter Zoom_** setting [i.b. ZDoom]
 - **_Death Camera_** setting [i.b. ZDoom]
@@ -56,7 +57,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Zoom** button
 - **_Background for all menus_** setting
 - **_No palette tint in menus_** setting [i.b. Crispy Doom]
-- **_HUD/Menu Shadows_** setting (translucency determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR) [i.b. CRL]
+- **_HUD/Menu Shadows_** setting [i.b. CRL]
+  - Translucency level determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR
 - **_Thing Lighting Mode_** setting
   - _Hitbox_ suggested by [@fragglet](https://github.com/fragglet)
   - _Per-column_ inspired by PSX Hexen
@@ -121,12 +123,14 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
 - **_Message Fadeout_** setting
 - **_Message Flash_** setting
-- **_Message Lines_** settings (scrolling direction determined by the CFG-only `hud_msg_scrollup` CVAR)
+- **_Message Lines_** settings
+  - Scrolling direction determined by the CFG-only `hud_msg_scrollup` CVAR
   - The CFG-only `hud_msg_total_lines` CVAR determines how many messages will be shown during message review;
     if lesser than `hud_msg_lines`, that will be used instead
 - **_Group Repeated Messages_** setting [i.b. Doom Retro]
 - **_(Chat) Message Duration_** settings
 - **_Show Powerup Timers_** setting
+  - The CFG-only `hud_power_timers_notime` CVAR can be enabled to show only the powerup names/icons
 - **_Blink Missing Keys_** setting [partially p.f. Crispy Doom]
 - **_Berserk display when using Fist_** setting [partially p.f. Crispy Doom]
 - **_Automap Level Stats Format_** setting
@@ -152,8 +156,10 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### Enemies
 
-- **_Extra Gibbing_** setting, to force gibbing under certain conditions (configurable through the CFG-only `extra_gibbing_#` CVARs) [i.b. Smooth Doom]
-- **_Bloodier Gibbing_** setting (number of splats determined by the CFG-only `bloodier_gibbing_splats` CVAR) [i.b. Smooth Doom]
+- **_Extra Gibbing_** setting, to force gibbing under certain conditions [i.b. Smooth Doom]
+  - Configurable through the CFG-only `extra_gibbing_#` CVARs
+- **_Bloodier Gibbing_** setting [i.b. Smooth Doom]
+  - Number of splats determined by the CFG-only `bloodier_gibbing_splats` CVAR
 - **_Toss Items Upon Death_** setting [i.b. ZDoom, Doom Retro]
 
 ### Doom Compatibility settings
