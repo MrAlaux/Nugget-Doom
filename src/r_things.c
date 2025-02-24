@@ -1148,10 +1148,32 @@ void R_DrawPlayerSprites(void)
   // killough 9/18/98: compute lightlevel from floor and ceiling lightlevels
   // (see r_bsp.c for similar calculations for non-player sprites)
 
-  R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
-             &floorlightlevel, &ceilinglightlevel, 0);
-  lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
-    + extralight;
+  // [Nugget] Thing lighting
+  if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
+  {
+    int lightlevel = 0;
+
+    for (int i = 0;  i < 9;  i++)
+    {
+      const fixed_t gx = viewx + (viewplayer->mo->radius * ((i % 3) - 1)),
+                    gy = viewy + (viewplayer->mo->radius * ((i / 3) - 1));
+
+      sector_t *const sector = R_PointInSubsector(gx, gy)->sector;
+
+      R_FakeFlat(sector, &tmpsec, &floorlightlevel, &ceilinglightlevel, 0);
+
+      lightlevel += floorlightlevel + ceilinglightlevel;
+    }
+
+    lightnum = ((lightlevel / 9) >> (LIGHTSEGSHIFT+1)) + extralight;
+  }
+  else
+  {
+    R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
+               &floorlightlevel, &ceilinglightlevel, 0);
+    lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
+      + extralight;
+  }
 
   if (lightnum < 0)
     spritelights = scalelight[0];

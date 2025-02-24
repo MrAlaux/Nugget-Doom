@@ -9,6 +9,7 @@
 
 ## Changes
 
+- **Applied _Hitbox Thing Lighting_ to weapon sprites**
 - **When dying with freelook enabled, the camera is now pitched towards the killer**
   - Consequently, freelook can't be controlled manually while dead anymore
 - **Tweaked _Bloodier Gibbing_ effect**
