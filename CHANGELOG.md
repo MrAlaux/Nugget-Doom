@@ -17,6 +17,7 @@
 ## Bug Fixes
 
 - **Rare crash involving PNG graphics and weapon inertia** [thanks @rfomin]
+- **Automap zoom being reset when enabling automap with overlay disabled from a NUGHUD**
 - **Direct vertical aiming for melee provoking hit effect without actually hitting an entity**
 - **Specific bug with weapon toggles with switch interruption enabled**
 - **Freecam interpolation issues**

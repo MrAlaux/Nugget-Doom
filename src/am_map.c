@@ -371,8 +371,6 @@ static int mm_x = 8,
 
 static boolean mm_under_messages = true;
 
-static int mm_update_tic = 0;
-
 void AM_UpdateMinimap(
   const int x, const int y, const int ws,
   const int w, const int h,
@@ -385,8 +383,6 @@ void AM_UpdateMinimap(
   mm_w = w;
   mm_h = h;
   mm_under_messages = under_messages;
-
-  mm_update_tic = gametic;
 
   if (automapactive == AM_MINI) { AM_Start(); }
 }
@@ -849,8 +845,7 @@ void AM_Start()
 
   static int last_automap = -1,
              last_messages = -1,
-             last_layout = -1,
-             last_mm_update_tic = -1;
+             last_layout = -1;
 
   const int messages_height = ST_GetNumMessageLines();
   const boolean layout = ST_GetLayout();
@@ -862,7 +857,7 @@ void AM_Start()
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode
       || last_automap != automapactive || last_messages != messages_height
-      || last_layout != layout || last_mm_update_tic != mm_update_tic)
+      || last_layout != layout)
   {
     AM_LevelInit();
 
@@ -874,7 +869,6 @@ void AM_Start()
     last_automap = automapactive;
     last_messages = messages_height;
     last_layout = layout;
-    last_mm_update_tic = mm_update_tic;
   }
   else
   {

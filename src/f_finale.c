@@ -821,6 +821,7 @@ static boolean F_CastResponder(event_t* ev)
     castskip = +1;
     return false;
   }
+
   // [crispy] ... and finally turn them into gibbs
   if (M_InputActivated(input_speed))
   {
