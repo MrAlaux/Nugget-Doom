@@ -23,6 +23,10 @@
 // [Nugget]
 #include "doomtype.h"
 
+// [Nugget] CVARs
+extern boolean alt_interpic;
+extern boolean inter_ratio_stats;
+
 struct wbstartstruct_s;
 
 // States for the intermission
@@ -50,10 +54,7 @@ void WI_checkForAccelerate(void);      // killough 11/98
 
 void WI_slamBackground(void);          // killough 11/98
 
-// [Nugget] Alt. intermission background -------------------------------------
-
-extern boolean alt_interpic;
-
+// [Nugget] Alt. intermission background
 extern boolean WI_UsingAltInterpic(void);
 extern void WI_DisableAltInterpic(void);
 

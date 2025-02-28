@@ -73,6 +73,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - _Diminishing lighting_ refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
+- **Intermission ratio stats** setting, to use ratios for the stats on the intermission screen (CFG-only: `inter_ratio_stats`) [i.b. Heretic]
 - **Color settings** [p.f. International Doom]
   - _Contrast_ by [@pvictress](https://github.com/pvictress)
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible

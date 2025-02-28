@@ -2778,6 +2778,11 @@ void D_BindMiscVariables(void)
              false, ss_gen, wad_yes,
              "Alternative intermission background (spinning camera view)");
 
+  // (CFG-only)
+  M_BindBool("inter_ratio_stats", &inter_ratio_stats, NULL,
+             false, ss_none, wad_yes,
+             "Use ratios for stats in intermission screen");
+
   BIND_NUM_GENERAL(no_page_ticking,
                    0, 0, 2,
                    "Play internal demos (0 = Always; 1 = Not in menus; 2 = Never)");

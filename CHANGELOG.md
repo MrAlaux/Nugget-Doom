@@ -4,6 +4,7 @@
 - **_'IDDET'_ cheat**, to find exits in the automap
 - **Number of _Bloodier Gibbing_ splats** setting
 - Setting to **show only the powerup names/icons for powerup timers**
+- **Intermission ratio stats** setting
 - **Number of total message lines** setting, to let the message review show more messages
 - **Support for slow-motion toggling sounds**
 
