@@ -164,6 +164,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
     to highlight its activator line(s), and vice versa
 - Button to **_Teleport to Automap pointer_**
 - **_Show Thing Hitboxes_** setting
+- **Keys now flash when flashing of keyed doors is enabled**
 - **Color for trigger lines**, used with IDDT (CFG-only: `mapcolor_trig`)
 
 ### Enemies

@@ -2633,6 +2633,10 @@ static void AM_drawThings
       //jff 1/5/98 case over doomednum of thing being drawn
       if (mapcolor_rkey || mapcolor_ykey || mapcolor_bkey)
       {
+        // [Nugget] Make keys flash too
+        const boolean key_flash = (map_keyed_door == MAP_KEYED_DOOR_FLASH)
+                                  && (leveltime & 16);
+
         switch(t->info->doomednum)
         {
           //jff 1/5/98 treat keys special
@@ -2643,7 +2647,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              mapcolor_rkey!=-1? mapcolor_rkey : mapcolor_sprt,
+              key_flash ? mapcolor_grid : (mapcolor_rkey != -1 ? mapcolor_rkey : mapcolor_sprt),
               pt.x,
               pt.y
             );
@@ -2656,7 +2660,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              mapcolor_ykey!=-1? mapcolor_ykey : mapcolor_sprt,
+              key_flash ? mapcolor_grid : (mapcolor_ykey != -1 ? mapcolor_ykey : mapcolor_sprt),
               pt.x,
               pt.y
             );
@@ -2669,7 +2673,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              mapcolor_bkey!=-1? mapcolor_bkey : mapcolor_sprt,
+              key_flash ? mapcolor_grid : (mapcolor_bkey != -1 ? mapcolor_bkey : mapcolor_sprt),
               pt.x,
               pt.y
             );
@@ -2949,7 +2953,7 @@ void AM_BindAutomapVariables(void)
   // [Nugget]
   M_BindBool("map_hitboxes", &map_hitboxes, NULL,
              false, ss_auto, wad_no,
-             "Show thing hitboxes in automap");
+             "Show thing hitboxes on automap");
 
   M_BindNum("mapcolor_preset", &mapcolor_preset, NULL, AM_PRESET_BOOM,
             AM_PRESET_VANILLA, AM_PRESET_ZDOOM, ss_auto, wad_no,
