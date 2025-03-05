@@ -3129,6 +3129,23 @@ static hudfont_t LoadNughudHUDFont(
     }
   }
 
+  if (use_lowercase)
+  {
+    // All lowercase characters are present; now check if they were loaded
+    // after the uppercase ones to guess if they're from the same set
+
+    char namebuf[16];
+    int upper_lumpnum = 0, lower_lumpnum = 0;
+
+    M_snprintf(namebuf, sizeof(namebuf), "%s065", stem);
+    upper_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+
+    M_snprintf(namebuf, sizeof(namebuf), "%s097", stem);
+    lower_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+
+    use_lowercase = upper_lumpnum < lower_lumpnum;
+  }
+
   if (!use_lowercase)
   {
     for (int i = 'a' - HU_FONTSTART;  i <= 'z' - HU_FONTSTART;  i++)
