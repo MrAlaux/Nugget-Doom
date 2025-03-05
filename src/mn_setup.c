@@ -504,6 +504,8 @@ static void BlinkingArrowRight(setup_menu_t *s)
 #define M_TAB_Y      22
 #define M_TAB_OFFSET 7 // [Nugget] Decreased to 7
 
+static boolean getpixelwidth_force_upper = false; // [Nugget]
+
 static void DrawTabs(void)
 {
     setup_tab_t *tabs = current_tabs;
@@ -520,7 +522,10 @@ static void DrawTabs(void)
         mrect_t *rect = &tabs[i].rect;
         if (!rect->w)
         {
+            getpixelwidth_force_upper = true;
             rect->w = MN_GetPixelWidth(tabs[i].text);
+            getpixelwidth_force_upper = false;
+
             rect->y = M_TAB_Y;
             rect->h = M_SPC;
         }
@@ -4565,7 +4570,18 @@ int MN_GetPixelWidth(const char *ch)
             continue;
         }
 
-        c = ST_ToUpper(c) - HU_FONTSTART;
+        // [Nugget]
+        if (getpixelwidth_force_upper)
+        {
+          c = M_ToUpper(c);
+        }
+        else
+        {
+          c = ST_ToUpper(c);
+        }
+
+        c -= HU_FONTSTART;
+
         if (c < 0 || c >= HU_FONTSIZE || hu_font[c] == NULL)
         {
             len += SPACEWIDTH; // space
