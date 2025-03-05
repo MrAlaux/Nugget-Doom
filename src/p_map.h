@@ -49,7 +49,7 @@ extern boolean comp_lsamnesia;
 #define CROSSHAIR_AIM 1
 
 // killough 3/15/98: add fourth argument to P_TryMove
-boolean P_TryMove(struct mobj_s *thing, fixed_t x, fixed_t y, boolean dropoff);
+boolean P_TryMove(struct mobj_s *thing, fixed_t x, fixed_t y, int dropoff);
 
 // killough 8/9/98: extra argument for telefragging
 boolean P_TeleportMove(struct mobj_s *thing, fixed_t x, fixed_t y, boolean boss);
@@ -106,7 +106,13 @@ extern fixed_t attackrange;
 
 // [Nugget] ==================================================================
 
+// CVARs
+extern boolean smart_autoaim;
+
 fixed_t P_PitchToSlope(const fixed_t pitch);
+fixed_t P_SlopeToPitch(const fixed_t slope);
+fixed_t P_GetLinetargetTopSlope(void);
+fixed_t P_GetLinetargetBottomSlope(void);
 
 void P_PositionChasecam(fixed_t z, fixed_t dist, fixed_t slope); // Chasecam
 
@@ -115,6 +121,14 @@ boolean P_IsBFGTracer(void);
 void P_SetIsBFGTracer(const boolean value); 
 
 void P_SetIsBoomShot(const boolean value); // Explosive hitscan cheat
+
+extern boolean riotmode;
+
+// Smart autoaim -------------------------------------------------------------
+
+void P_ClearProjectileInfo(void);
+void P_SetProjectileInfo(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t height);
+void P_SetProjectileOffsets(fixed_t x, fixed_t y, fixed_t z);
 
 // Hitscan trails ------------------------------------------------------------
 

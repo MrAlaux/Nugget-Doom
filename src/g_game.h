@@ -45,7 +45,7 @@ boolean G_CheckDemoStatus(void);
 void G_DeathMatchSpawnPlayer(int playernum);
 void G_InitNew(skill_t skill, int episode, int map);
 void G_DeferedInitNew(skill_t skill, int episode, int map);
-void G_DeferedPlayDemo(char *demo);
+void G_DeferedPlayDemo(const char *demo);
 void G_LoadAutoSave(char *name, boolean is_command);
 void G_LoadGame(char *name, int slot, boolean is_command); // killough 5/15/98
 void G_ForcedLoadAutoSave(void);
@@ -54,7 +54,7 @@ void G_SaveAutoSave(char *description);
 void G_SaveGame(int slot, char *description); // Called by M_Responder.
 boolean G_AutoSaveEnabled(void);
 boolean G_LoadAutoSaveDeathUse(void);
-void G_RecordDemo(char *name);              // Only called by startup code.
+void G_RecordDemo(const char *name);              // Only called by startup code.
 void G_BeginRecording(void);
 void G_PlayDemo(char *name);
 void G_ExitLevel(void);
@@ -74,8 +74,6 @@ byte *G_ReadOptionsMBF21(byte *demo_p);
 byte *G_WriteOptions(byte *demo_p);        // killough 3/1/98
 void G_PlayerReborn(int player);
 void G_DoVictory(void);
-
-int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap);
 
 void G_EnableWarp(boolean warp);
 void G_SetTimeScale(void);
@@ -138,9 +136,12 @@ extern boolean secretexit;
 
 // [Nugget] ==================================================================
 
+extern boolean doom_weapon_toggles; // Global
+
 // CVARs ---------------------------------------------------------------------
 
 extern boolean one_key_saveload;
+extern boolean improved_weapon_toggles;
 extern boolean skip_ammoless_weapons;
 
 enum {
@@ -171,13 +172,19 @@ boolean G_KeyFrameRW(void);
 
 // Slow Motion ---------------------------------------------------------------
 
-#define SLOWMO_FACTOR_TARGET 0.33f
-#define SLOWMO_FACTOR_NORMAL 1.0f
+#define SLOWMO_FACTOR_NORMAL 100000
+#define SLOWMO_FACTOR_TARGET (SLOWMO_FACTOR_NORMAL * 33/100)
+#define MIN_SLOWMO_STEP      (SLOWMO_FACTOR_NORMAL / 40)
 
 boolean G_GetSlowMotion(void);
 void G_SetSlowMotion(const boolean value);
 void G_ResetSlowMotion(void);
-float G_GetSlowMotionFactor(void);
+int G_GetSlowMotionFactor(void);
+
+// Improved weapon toggles ---------------------------------------------------
+
+boolean G_ToggleFistChainsaw(const player_t *const player, boolean vanilla);
+boolean G_ToggleShotgunSSG(const player_t *const player, boolean vanilla);
 
 // Skill ---------------------------------------------------------------------
 

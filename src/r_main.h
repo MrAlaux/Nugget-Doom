@@ -123,10 +123,21 @@ void R_SetViewSize(int blocks);              // Called by M_Responder.
 
 // [Nugget] /=================================================================
 
+typedef enum thinglighting_s {
+  THINGLIGHTING_ORIGIN,
+  THINGLIGHTING_HITBOX,
+  THINGLIGHTING_PERCOLUMN,
+
+  NUM_THINGLIGHTING
+} thinglighting_t;
+
+extern boolean vertical_lockon;
+
+extern thinglighting_t thing_lighting_mode;
 extern boolean flip_levels;
 extern boolean nightvision_visor;
 extern int fake_contrast;
-extern boolean diminished_lighting;
+extern boolean diminishing_lighting;
 extern boolean a11y_weapon_pspr;
 extern boolean a11y_invul_colormap;
 extern int pspr_translucency_pct;
@@ -134,6 +145,9 @@ extern int zoom_fov;
 extern boolean comp_powerrunout;
 
 extern boolean have_crouch_sprites;
+
+fixed_t R_GetNughudViewPitch(void);
+int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y);
 
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
@@ -174,6 +188,8 @@ enum {
   CHASECAMMODE_OFF,
   CHASECAMMODE_BACK,
   CHASECAMMODE_FRONT,
+
+  NUM_CHASECAMMODES
 }; extern int chasecam_mode;
 extern boolean chasecam_crosshair;
 
@@ -196,6 +212,7 @@ extern void          R_SetFreecamOn(const boolean value);
 extern freecammode_t R_GetFreecamMode(void);
 extern freecammode_t R_CycleFreecamMode(void);
 extern angle_t       R_GetFreecamAngle(void);
+extern boolean       R_FreecamTurningOverride(void);
 extern void          R_ResetFreecam(const boolean newmap);
 extern void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
 
@@ -203,7 +220,7 @@ extern void                 R_UpdateFreecamMobj(struct mobj_s *const mobj);
 extern const struct mobj_s *R_GetFreecamMobj(void);
 
 extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
-                            fixed_t pitch, boolean center, boolean lock);
+                            angle_t ticangle, fixed_t pitch, boolean center, boolean lock);
 
 // [Nugget] =================================================================/
 

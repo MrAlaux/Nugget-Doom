@@ -173,7 +173,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
       {
         if (!fixedcolormap)      // calculate lighting
           {                             // killough 11/98:
-            const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
                               ? 0 : R_GetLightIndex(spryscale);
 
             // [crispy] brightmaps for two sided mid-textures
@@ -383,7 +383,7 @@ static void R_RenderSegLoop (void)
       // texturecolumn and lighting are independent of wall tiers
       if (segtextured)
         {
-          const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+          const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
                             ? 0 : R_GetLightIndex(rw_scale);
 
           // calculate texture offset

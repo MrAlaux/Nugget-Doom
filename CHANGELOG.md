@@ -1,17 +1,28 @@
 ## New Features
 
-- **_Message Fadeout_** setting
-- **_[Color] Contrast_** setting [by @pvictress]
+- **Recoil-pitch scale percent** setting
+- **_'IDDET'_ cheat**, to find exits in the automap
+- **Number of _Bloodier Gibbing_ splats** setting
+- Setting to **show only the powerup names/icons for powerup timers**
+- **Intermission ratio stats** setting
+- **Number of total message lines** setting, to let the message review show more messages
+- **Support for slow-motion toggling sounds**
 
 ## Changes
 
-- Nugget's translucency features now use translucency maps from a shared pool,
-  potentially improving program startup time in exchange for stutters
-  when enabling said features for the first time since launch
+- **Applied _Hitbox Thing Lighting_ to weapon sprites**
+- **When dying with freelook enabled, the camera is now pitched towards the killer**
+  - Consequently, freelook can't be controlled manually while dead anymore
+- **Keys now flash on the automap when flashing of keyed doors is enabled**
+- **Tweaked _Bloodier Gibbing_ effect**
 
 ## Bug Fixes
 
-- Broken movement in systems assuming `char`s to be unsigned
-- `comp_lsamnesia` inversely affecting collision with entities (i.e. lost souls would remember their target)
-- Message grouping only checking as many characters as the last message had,
-  causing incorrect grouping (e.g. new message "TEST" being grouped with last message "TES")
+- **Rare crash involving PNG graphics and weapon inertia** [thanks @rfomin]
+- **Automap zoom being reset when enabling automap with overlay disabled from a NUGHUD**
+- **Direct vertical aiming for melee provoking hit effect without actually hitting an entity**
+- **Specific bug with weapon toggles with switch interruption enabled**
+- **Freecam interpolation issues**
+- **Message review overriding message durations even when the new one were shorter**
+- **Message review ignoring the forced-duration setting**
+- **`DSMNUBAK` being unused**

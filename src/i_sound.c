@@ -756,7 +756,9 @@ void I_BindSoundVariables(void)
     BIND_BOOL_SFX(full_sounds, false, "Play sounds in full length (prevents cutoffs)");
 
     // [Nugget]
-    BIND_BOOL_GENERAL(s_clipping_dist_x2, false, "Double sound-clipping distance");
+    M_BindBool("s_clipping_dist_x2", &s_clipping_dist_x2, NULL,
+               false, ss_gen, wad_yes,
+               "Double sound-clipping distance");
 
     BIND_NUM_SFX(snd_channels, MAX_CHANNELS, 1, MAX_CHANNELS,
         "Maximum number of simultaneous sound effects");

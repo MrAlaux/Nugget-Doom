@@ -16,6 +16,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "d_iwad.h"
 #include "doomdef.h"
@@ -282,6 +283,7 @@ static void UpdateSkillButton(void)
     switch(iwad->mission)
     {
         case pack_chex:
+        case pack_chex3v:
             skillbutton->values = chex_skills;
             break;
         case pack_hacx:

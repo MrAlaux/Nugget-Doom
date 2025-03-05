@@ -772,7 +772,6 @@ static boolean P_NuggetForceGibbing(
 )
 {
   extern boolean gibbers; // GIBBERS cheat
-  extern void A_BFGSpray(), A_Punch(), A_Saw(), A_FireShotgun2();
 
   if (!casual_play) { return false; }
 
@@ -830,17 +829,18 @@ static boolean P_NuggetForceGibbing(
 // Bloodier Gibbing ----------------------------------------------------------
 
 boolean bloodier_gibbing;
+int bloodier_gibbing_splats;
 
 void P_NuggetGib(mobj_t *mo, const boolean crushed)
 {
-  int quantity;
   extern boolean idgaf;
 
   if (!casual_play || !bloodier_gibbing) { return; }
-  
-  quantity = crushed ? (4 + (Woof_Random() % 5)) : (20 + (Woof_Random() % 21));
 
-  for (int i = 0; i < quantity; i++)
+  const int num_splats = bloodier_gibbing_splats / (crushed ? 10 : 2);
+  const int quantity = num_splats + (Woof_Random() % (num_splats + 1));
+
+  for (int i = 0;  i < quantity;  i++)
   {
     const fixed_t height = !crushed ? (mo->height * 3/2) : 0;
 
@@ -863,11 +863,18 @@ void P_NuggetGib(mobj_t *mo, const boolean crushed)
       splat->bloodcolor = V_BloodColor(mo->info->bloodcolor);
     }
 
-    splat->momx = (Woof_Random() - Woof_Random()) << (12 - crushed);
-    splat->momy = (Woof_Random() - Woof_Random()) << (12 - crushed);
+    #define MOM_SCALE (FRACUNIT / 16)
+
+    const fixed_t momentum = Woof_Random() * (MOM_SCALE / (crushed ? 2 : 1));
+    const int fineangle = (FINEANGLES - 1) * Woof_Random() / 255;
+
+    splat->momx = FixedMul(momentum, finecosine[fineangle]);
+    splat->momy = FixedMul(momentum,   finesine[fineangle]);
 
     if (crushed) { splat->height = FRACUNIT; }
-    else         { splat->momz = Woof_Random() << 12; }
+    else         { splat->momz = Woof_Random() * MOM_SCALE; }
+
+    #undef MOM_SCALE
 
     // Physics differ between versions (complevels),
     // so this is done to get rather-decent behavior in vanilla
@@ -1194,10 +1201,13 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
         const int dmg = MAX(0, damage) / 2;
         int pitch;
 
-        if (inflictor) { // Hitscan, melee, projectile, explosion
-          pitch = -(dmg+1) * finecosine[(R_PointToAngle2(inflictor->x, inflictor->y,
-                                                            target->x,    target->y)
-                                         - player->mo->angle) >> ANGLETOFINESHIFT] / FRACUNIT;
+        if (inflictor) // Hitscan, melee, projectile, explosion
+        {
+          pitch = -(dmg+1)
+                * finecosine[
+                    (R_PointToAngle2(inflictor->x, inflictor->y, target->x, target->y)
+                     - player->mo->angle) >> ANGLETOFINESHIFT
+                  ] / FRACUNIT;
         }
         else { pitch = dmg * ((Woof_Random() % 2) ? -1 : 1); }
 

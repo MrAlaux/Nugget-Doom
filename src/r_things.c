@@ -143,6 +143,11 @@ void R_InitSpritesRes(void)
 static void R_InstallSpriteLump(int lump, unsigned frame,
                                 unsigned rotation, boolean flipped)
 {
+  if (frame == '^' - 'A')
+  {
+    frame = '\\' - 'A';
+  }
+
   if (frame >= MAX_SPRITE_FRAMES || rotation > 8)
     I_Error("R_InstallSpriteLump: Bad frame characters in lump %i", lump);
 
@@ -361,6 +366,69 @@ vissprite_t *R_NewVisSprite(void)
  return vissprites + num_vissprite++;
 }
 
+// [Nugget] Actual sprite height (without padding) /--------------------------
+
+static actualspriteheight_t *actual_sprite_heights = NULL;
+
+static const actualspriteheight_t *CalculateActualSpriteHeight(const int lump)
+{
+  patch_t *const patch = V_CachePatchNum(lump, PU_CACHE);
+  const short width = SHORT(patch->width);
+
+  short actualheight = 0, toppadding = SHRT_MAX;
+
+  for (int i = 0;  i < width;  i++)
+  {
+    const post_t *post = (post_t *) ((byte *) patch + LONG(patch->columnofs[i]));
+
+    if (post->topdelta == 0xFF) { continue; }
+
+    short columnpadding = post->topdelta,
+          columnheight,
+          topdelta = 0;
+
+    do {
+      // [FG] support for tall sprites in DeePsea format
+      if (post->topdelta <= topdelta)
+      {
+        topdelta += post->topdelta;
+      }
+      else { topdelta = post->topdelta; }
+
+      columnheight = topdelta + SHORT(post->length);
+
+      post = (post_t *) ((byte *) post + 4 + post->length); // 4 = sizeof(topdelta) + sizeof(length)
+    } while (post->topdelta != 0xFF);
+
+    toppadding = MIN(toppadding, columnpadding);
+    actualheight = MAX(actualheight, columnheight);
+  }
+
+  actualheight -= toppadding;
+
+  array_push(
+    actual_sprite_heights,
+    ((actualspriteheight_t) { lump, actualheight, toppadding })
+  );
+
+  return &actual_sprite_heights[array_size(actual_sprite_heights) - 1];
+}
+
+const actualspriteheight_t *R_GetActualSpriteHeight(int sprite, int frame)
+{
+  const int lump = firstspritelump + sprites[sprite].spriteframes[frame].lump[0];
+
+  for (int i = 0;  i < array_size(actual_sprite_heights);  i++)
+  {
+    if (actual_sprite_heights[i].lump == lump)
+    { return &actual_sprite_heights[i]; }
+  }
+
+  return CalculateActualSpriteHeight(lump);
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 //
 // R_DrawMaskedColumn
 // Used for sprites and masked mid textures.
@@ -474,6 +542,32 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   spryscale = vis->scale;
   sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
 
+  // [Nugget] Thing lighting /------------------------------------------------
+
+  boolean percolumn_lighting;
+
+  fixed_t pcl_patchoffset = 0;
+  fixed_t pcl_cosine = 0, pcl_sine = 0;
+  int pcl_lightindex = 0;
+
+  if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
+      && !vis->fullbright && dc_colormap[0] && !fixedcolormap)
+  {
+    percolumn_lighting = true;
+
+    pcl_patchoffset = SHORT(patch->leftoffset) << FRACBITS;
+
+    const int angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
+
+    pcl_cosine = finecosine[angle];
+    pcl_sine   =   finesine[angle];
+
+    pcl_lightindex = STRICTMODE(!diminishing_lighting) ? 0 : R_GetLightIndex(spryscale);
+  }
+  else { percolumn_lighting = false; }
+
+  // [Nugget] ---------------------------------------------------------------/
+
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
       texturecolumn = frac>>FRACBITS;
@@ -482,6 +576,22 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         continue;
       else if (texturecolumn >= SHORT(patch->width))
         break;
+
+      // [Nugget] Thing lighting
+      if (percolumn_lighting)
+      {
+        fixed_t offset = frac - pcl_patchoffset;
+
+        if (vis->flipped) { offset = -offset; }
+
+        const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
+                      gy = vis->gy + FixedMul(offset, pcl_sine);
+
+        int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
+                     + extralight;
+
+        dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][pcl_lightindex];
+      }
 
       column = (column_t *)((byte *) patch +
                             LONG(patch->columnofs[texturecolumn]));
@@ -694,6 +804,10 @@ static void R_ProjectSprite (mobj_t* thing)
   iscale = FixedDiv(FRACUNIT, xscale);
   vis->color = thing->bloodcolor;
 
+  // [Nugget]
+  vis->fullbright = false;
+  vis->flipped = flip;
+
   if (flip)
     {
       vis->startfrac = spritewidth[lump]-1;
@@ -715,11 +829,32 @@ static void R_ProjectSprite (mobj_t* thing)
   else if (fixedcolormap)
     vis->colormap[0] = vis->colormap[1] = fixedcolormap;      // fixed map
   else if (frame & FF_FULLBRIGHT)
+  {
     vis->colormap[0] = vis->colormap[1] = fullcolormap;       // full bright  // killough 3/20/98
+    vis->fullbright = true; // [Nugget]
+  }
   else
     {      // diminished light
-      const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+      const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
                         ? 0 : R_GetLightIndex(xscale);
+
+      // [Nugget] Thing lighting
+      if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
+      {
+        int lightlevel = 0;
+
+        for (int i = 0;  i < 9;  i++)
+        {
+          const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
+                        gy = vis->gy + (thing->radius * ((i / 3) - 1));
+
+          lightlevel += R_GetLightLevelInPoint(gx, gy);
+        }
+
+        int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
+
+        spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+      }
 
       vis->colormap[0] = spritelights[index];
       vis->colormap[1] = fullcolormap;
@@ -831,11 +966,11 @@ void R_NearbySprites (void)
   array_clear(nearby_sprites);
 }
 
+static int queued_weapon_voxels = 0; // [Nugget] Weapon voxels
+
 //
 // R_DrawPSprite
 //
-
-boolean pspr_interp = true; // weapon bobbing interpolation
 
 void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent flashes
 {
@@ -847,6 +982,15 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   boolean       flip;
   vissprite_t   *vis;
   vissprite_t   avis;
+
+  // [Nugget] Weapon voxels
+  if (VX_ProjectWeaponVoxel(psp, translucent))
+  {
+    queued_weapon_voxels++;
+    return;
+  }
+  // If any are queued, don't draw sprites
+  else if (queued_weapon_voxels) { return; }
 
   // decide which patch to use
 
@@ -869,12 +1013,33 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   lump = sprframe->lump[0];
   flip = (boolean) sprframe->flip[0];
 
+  fixed_t sx2, sy2;
+
+  fixed_t wix, wiy; // [Nugget]
+
+  if (uncapped && oldleveltime < leveltime)
+  {
+    sx2 = LerpFixed(psp->oldsx2, psp->sx2);
+    sy2 = LerpFixed(psp->oldsy2, psp->sy2);
+
+    wix = LerpFixed(psp->oldwix, psp->wix);
+    wiy = LerpFixed(psp->oldwiy, psp->wiy);
+  }
+  else
+  {
+    sx2 = psp->sx2;
+    sy2 = psp->sy2;
+
+    wix = psp->wix;
+    wiy = psp->wiy;
+  }
+
   // calculate edges of the shape
-  tx = psp->sx2-160*FRACUNIT; // [FG] centered weapon sprite
+  tx = sx2 - 160*FRACUNIT; // [FG] centered weapon sprite
 
   // [Nugget] Weapon inertia | Flip levels
   if (STRICTMODE(weapon_inertia))
-  { tx += flip_levels ? -psp->wix : psp->wix; }
+  { tx += flip_levels ? -wix : wix; }
 
   tx -= spriteoffset[lump];
   x1 = (centerxfrac + FixedMul (tx,pspritescale))>>FRACBITS;
@@ -897,14 +1062,19 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // killough 12/98: fix psprite positioning problem
   vis->texturemid = (BASEYCENTER<<FRACBITS) /* + FRACUNIT/2 */ -
-                    (psp->sy2-spritetopoffset[lump]) // [FG] centered weapon sprite
-                    // [Nugget]
-                    - (STRICTMODE(weapon_inertia) ? psp->wiy : 0) // Weapon inertia
-                    + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
+                    (sy2 - spritetopoffset[lump]); // [FG] centered weapon sprite
+
+  // [Nugget]
+  vis->texturemid += (STRICTMODE(weapon_inertia) ? -wiy : 0) // Weapon inertia
+                   + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
   vis->scale = pspritescale;
+
+  // [Nugget]
+  vis->fullbright = true; // Thing lighting: set true to make per-column lighting not apply to psprites
+  vis->flipped = flip;
 
   if (flip)
     {
@@ -929,11 +1099,14 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   else if (fixedcolormap)
     vis->colormap[0] = vis->colormap[1] = fixedcolormap;           // fixed color
   else if (psp->state->frame & FF_FULLBRIGHT)
+  {
     vis->colormap[0] = vis->colormap[1] = fullcolormap;            // full bright // killough 3/20/98
+    vis->fullbright = true; // [Nugget]
+  }
   else
   {
     // [Nugget]
-    const int index = (STRICTMODE(!diminished_lighting)) ? 0 : MAXLIGHTSCALE-1;
+    const int index = (STRICTMODE(!diminishing_lighting)) ? 0 : MAXLIGHTSCALE-1;
 
     vis->colormap[0] = spritelights[index];  // local light
     vis->colormap[1] = fullcolormap;
@@ -943,45 +1116,12 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   // [Nugget] Translucent flashes
   vis->tranmap = translucent ? R_GetGenericTranMap(pspr_translucency_pct) : NULL;
 
-  // interpolation for weapon bobbing
-  if (uncapped)
-  {
-    static int     oldx1, x1_saved;
-    static fixed_t oldtexturemid, texturemid_saved;
-    static int     oldlump = -1;
-    static int     oldgametic = -1;
-
-    if (oldgametic < gametic)
-    {
-      oldx1 = x1_saved;
-      oldtexturemid = texturemid_saved;
-      oldgametic = gametic;
-    }
-
-    x1_saved = vis->x1;
-    texturemid_saved = vis->texturemid;
-
-    if (lump == oldlump && pspr_interp)
-    {
-      int deltax = x2 - vis->x1;
-      vis->x1 = LerpFixed(oldx1, vis->x1);
-      vis->x2 = vis->x1 + deltax;
-      if (vis->x2 >= viewwidth)
-        vis->x2 = viewwidth - 1;
-      vis->texturemid = LerpFixed(oldtexturemid, vis->texturemid);
-    }
-    else
-    {
-      oldx1 = vis->x1;
-      oldtexturemid = vis->texturemid;
-      oldlump = lump;
-      pspr_interp = true;
-    }
-  }
-
   // [crispy] free look
-  vis->texturemid += (centery - viewheight/2) * pspriteiscale
-                   - (STRICTMODE(ST_GetNughudOn()) ? nughud.weapheight*FRACUNIT : 0); // [Nugget] NUGHUD
+  vis->texturemid += (centery - viewheight/2) * pspriteiscale;
+
+  // [Nugget] NUGHUD
+  if (STRICTMODE(ST_GetNughudOn()))
+  { vis->texturemid -= nughud.weapheight*FRACUNIT; }
 
   if (STRICTMODE(hide_weapon)
       // [Nugget]
@@ -1008,10 +1148,32 @@ void R_DrawPlayerSprites(void)
   // killough 9/18/98: compute lightlevel from floor and ceiling lightlevels
   // (see r_bsp.c for similar calculations for non-player sprites)
 
-  R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
-             &floorlightlevel, &ceilinglightlevel, 0);
-  lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
-    + extralight;
+  // [Nugget] Thing lighting
+  if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
+  {
+    int lightlevel = 0;
+
+    for (int i = 0;  i < 9;  i++)
+    {
+      const fixed_t gx = viewx + (viewplayer->mo->radius * ((i % 3) - 1)),
+                    gy = viewy + (viewplayer->mo->radius * ((i / 3) - 1));
+
+      sector_t *const sector = R_PointInSubsector(gx, gy)->sector;
+
+      R_FakeFlat(sector, &tmpsec, &floorlightlevel, &ceilinglightlevel, 0);
+
+      lightlevel += floorlightlevel + ceilinglightlevel;
+    }
+
+    lightnum = ((lightlevel / 9) >> (LIGHTSEGSHIFT+1)) + extralight;
+  }
+  else
+  {
+    R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
+               &floorlightlevel, &ceilinglightlevel, 0);
+    lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
+      + extralight;
+  }
 
   if (lightnum < 0)
     spritelights = scalelight[0];
@@ -1024,26 +1186,11 @@ void R_DrawPlayerSprites(void)
   mfloorclip = screenheightarray;
   mceilingclip = negonearray;
 
-  // [Nugget] Flip levels
-  if (STRICTMODE(flip_levels))
-  {
-    for (int y = 0;  y < viewheight;  y++)
-    {
-      for (int x = 0;  x < viewwidth/2;  x++)
-      {
-        pixel_t *left = &I_VideoBuffer[(viewwindowy + y) * video.pitch + viewwindowx + x],
-                *right = left + viewwidth - 1 - x*2,
-                temp = *left;
-
-        *left = *right;
-        *right = temp;
-      }
-    }
-  }
-
   // display crosshair
   if (hud_crosshair_on) // [Nugget] Use crosshair toggle
     HU_DrawCrosshair();
+
+  queued_weapon_voxels = 0; // [Nugget] Weapon voxels
 
   // add all active psprites
   for (i=0, psp=viewplayer->psprites;
@@ -1052,6 +1199,22 @@ void R_DrawPlayerSprites(void)
        i++,psp++)
     if (psp->state)
       R_DrawPSprite (psp, i == ps_flash && STRICTMODE(pspr_translucency_pct != 100)); // [Nugget] Translucent flashes
+
+  // [Nugget] Weapon voxels
+  if (queued_weapon_voxels)
+  {
+    const fixed_t old_centeryfrac = centeryfrac;
+
+    // Hack to make weapon voxels be unaffected by view pitch
+    if (default_vertical_aiming != VERTAIM_AUTO)
+    { centeryfrac = (viewheight / 2 + (R_GetNughudViewPitch() >> FRACBITS)) << FRACBITS; }
+
+    // Drawn in reverse order
+    for (i = 0;  i < queued_weapon_voxels;  i++)
+    { VX_DrawVoxel(&vissprites[num_vissprite - (1 + i)]); }
+
+    centeryfrac = old_centeryfrac;
+  }
 }
 
 //
@@ -1372,6 +1535,23 @@ void R_DrawMasked(void)
   for (ds=ds_p ; ds-- > drawsegs ; )  // new -- killough
     if (ds->maskedtexturecol)
       R_RenderMaskedSegRange(ds, ds->x1, ds->x2);
+
+  // [Nugget] Flip levels
+  if (STRICTMODE(flip_levels))
+  {
+    for (int y = 0;  y < viewheight;  y++)
+    {
+      for (int x = 0;  x < viewwidth/2;  x++)
+      {
+        pixel_t *left = &I_VideoBuffer[(viewwindowy + y) * video.pitch + viewwindowx + x],
+                *right = left + viewwidth - 1 - x*2,
+                temp = *left;
+
+        *left = *right;
+        *right = temp;
+      }
+    }
+  }
 
   // draw the psprites on top of everything
   //  but does not draw on side views

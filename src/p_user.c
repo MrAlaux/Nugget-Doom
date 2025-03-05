@@ -42,7 +42,9 @@
 #include "st_widgets.h"
 
 // [Nugget]
+#include "d_items.h"
 #include "m_input.h"
+#include "p_maputl.h"
 #include "s_sound.h"
 #include "sounds.h"
 
@@ -574,17 +576,49 @@ void P_DeathThink (player_t* player)
           player->mo->angle += ANG5;
         else
           player->mo->angle -= ANG5;
+
+      // [Nugget] Look at killer vertically
+      if ((mouselook || padlook))
+      {
+        player->centering = false;
+
+        fixed_t pitch;
+
+        if (!R_GetChasecamOn())
+        {
+          const fixed_t slope =
+            FixedDiv(
+              (player->attacker->z + player->attacker->height/2) - (player->mo->z + player->viewheight),
+              P_AproxDistance(
+                player->mo->x - player->attacker->x,
+                player->mo->y - player->attacker->y
+              )
+            );
+
+          pitch = P_SlopeToPitch(slope);
+
+          pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, pitch);
+        }
+        else { pitch = 0; }
+
+        if (player->pitch > pitch)
+        {
+          player->pitch = MAX(pitch, player->pitch - ANG1/2);
+        }
+        else if (player->pitch < pitch)
+        {
+          player->pitch = MIN(pitch, player->pitch + ANG1/2);
+        }
+
+        player->slope = PlayerSlope(player);
+      }
     }
   else
+  {
     if (player->damagecount)
       player->damagecount--;
 
-  // [Nugget] Allow some freelook while dead
-  if ((player->viewheight == 6*FRACUNIT) && !menuactive && !demoplayback)
-  {
-    player->pitch += player->cmd.pitch;
-    player->pitch = BETWEEN(-MAX_PITCH_ANGLE/2, MAX_PITCH_ANGLE/2, player->pitch);
-    player->slope = PlayerSlope(player);
+    player->centering = true; // [Nugget] Byproduct of looking at killer vertically
   }
 
   if (player->cmd.buttons & BT_USE)
@@ -671,6 +705,9 @@ void P_PlayerThink (player_t* player)
       player->mo->flags &= ~MF_JUSTATTACKED;
     }
 
+  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  { player->centering = false; }
+
   // [crispy] center view
   #define CENTERING_VIEW_ANGLE (4 * ANG1)
 
@@ -700,13 +737,15 @@ void P_PlayerThink (player_t* player)
   // [crispy] weapon recoil pitch
   if (player->recoilpitch)
   {
+    // [Nugget] Capped the values;
+    // the old code assumed that `recoilpitch` was always a multiple of `ANG1`
     if (player->recoilpitch > 0)
     {
-      player->recoilpitch -= ANG1;
+      player->recoilpitch = MAX(0, player->recoilpitch - ANG1);
     }
     else if (player->recoilpitch < 0)
     {
-      player->recoilpitch += ANG1;
+      player->recoilpitch = MIN(0, player->recoilpitch + ANG1);
     }
   }
 
@@ -738,6 +777,83 @@ void P_PlayerThink (player_t* player)
       return;
     }
 
+  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  {
+    if (player != &players[displayplayer])
+    {
+      player->pitch = 0;
+    }
+    else {
+      static int oldtic = -1;
+      static int lock_time = 0;
+
+      if (gametic - oldtic > 1) { lock_time = 0; }
+
+      {
+        const angle_t an = player->mo->angle;
+        const ammotype_t ammo = weaponinfo[player->readyweapon].ammo;
+        const fixed_t range = (ammo == am_noammo
+                               && !(player->readyweapon == wp_fist
+                                    && player->cheats & CF_SAITAMA))
+                              ? MELEERANGE
+                              : 16 * 64 * FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1);
+
+        const boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
+        overflow[emu_intercepts].enabled = false;
+
+        int mask = (demo_version >= DV_MBF) ? MF_FRIEND : 0;
+
+        do {
+          P_AimLineAttack(player->mo, an, range, mask);
+
+          if (!vertical_aiming && (!no_hor_autoaim || ammo == am_clip || ammo == am_shell))
+          {
+              if (!linetarget)
+              { P_AimLineAttack(player->mo, an + (1 << 26), range, mask); }
+
+              if (!linetarget)
+              { P_AimLineAttack(player->mo, an - (1 << 26), range, mask); }
+          }
+        } while (mask && (mask = 0, !linetarget));
+
+        overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
+      }
+
+      if (linetarget) { lock_time = 21; } // 0.6s
+
+      fixed_t target_pitch = 0;
+
+      if (lock_time)
+      {
+        if (linetarget)
+        {
+          fixed_t slope = FixedDiv(linetarget->z - player->mo->z,
+                                   P_AproxDistance(player->mo->x - linetarget->x,
+                                                   player->mo->y - linetarget->y));
+
+          slope = BETWEEN(P_GetLinetargetBottomSlope(),
+                          P_GetLinetargetTopSlope(),
+                          slope);
+
+          target_pitch = P_SlopeToPitch(slope);
+          target_pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, target_pitch);
+        }
+        else { target_pitch = player->pitch; }
+      }
+
+      const fixed_t step = MAX(ANG1, abs(player->pitch - target_pitch) / 4);
+
+      if (player->pitch < target_pitch)
+      { player->pitch = MIN(target_pitch, player->pitch + step); }
+      else
+      { player->pitch = MAX(target_pitch, player->pitch - step); }
+
+      if (lock_time) { lock_time--; }
+
+      oldtic = gametic;
+    }
+  }
+
   // [Nugget] Slow Motion /---------------------------------------------------
 
   static boolean slowMoKeyDown = false;
@@ -750,7 +866,8 @@ void P_PlayerThink (player_t* player)
   {
     slowMoKeyDown = true;
 
-    if (!G_GetSlowMotion()) { S_StartSoundPitch(NULL, sfx_getpow, PITCH_NONE); }
+    if (G_GetSlowMotion()) { S_StartSoundPitchOptional(NULL, sfx_ngslof,         -1, PITCH_NONE); }
+    else                   { S_StartSoundPitchOptional(NULL, sfx_ngslon, sfx_getpow, PITCH_NONE); }
 
     G_SetSlowMotion(!G_GetSlowMotion());
   }
@@ -810,13 +927,12 @@ void P_PlayerThink (player_t* player)
 	{ // compatibility mode -- required for old demos -- killough
 	  newweapon = (cmd->buttons & BT_WEAPONMASK_OLD) >> BT_WEAPONSHIFT;
 	  if (newweapon == wp_fist && player->weaponowned[wp_chainsaw] &&
-	      (player->readyweapon != wp_chainsaw ||
-	       !player->powers[pw_strength]))
+	      G_ToggleFistChainsaw(player, true)) // [Nugget] Improved weapon toggles
 	    newweapon = wp_chainsaw;
 	  if (ALLOW_SSG &&
 	      newweapon == wp_shotgun &&
 	      player->weaponowned[wp_supershotgun] &&
-	      player->readyweapon != wp_supershotgun)
+	      G_ToggleShotgunSSG(player, true)) // [Nugget] Improved weapon toggles
 	    newweapon = wp_supershotgun;
 	}
 

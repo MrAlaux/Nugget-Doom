@@ -54,6 +54,10 @@ typedef struct {
   } d;
 } intercept_t;
 
+// [Nugget]
+void P_SaveIntercepts(void);
+void P_RestoreIntercepts(void);
+
 typedef boolean (*traverser_t)(intercept_t *in);
 
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);

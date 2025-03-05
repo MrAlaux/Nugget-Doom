@@ -26,6 +26,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
+#include "g_umapinfo.h"
 #include "g_game.h"
 #include "i_printf.h"
 #include "m_misc.h"
@@ -37,7 +38,6 @@
 #include "st_sbardef.h"
 #include "st_stuff.h"
 #include "sounds.h"
-#include "u_mapinfo.h"
 #include "v_fmt.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -47,6 +47,10 @@
 
 // [Nugget]
 #include "r_main.h"
+
+// [Nugget] CVARs
+boolean alt_interpic;
+boolean inter_ratio_stats;
 
 #define LARGENUMBER 1994
 
@@ -323,6 +327,8 @@ static int    cnt_par;
 static int    cnt_pause;
 static int    cnt_total_time;
 
+static int    cnt2_kills, cnt2_items, cnt2_secret; // [Nugget] Ratio stats
+
 // # of commercial levels
 static int    NUMCMAPS;
 
@@ -418,8 +424,6 @@ static wi_animation_t *animation;
 
 // [Nugget] Alt. intermission background /------------------------------------
 
-boolean alt_interpic;
-
 static boolean alt_interpic_on = false, old_alt_interpic_on = false;
 
 boolean WI_UsingAltInterpic(void)
@@ -485,7 +489,7 @@ static boolean CheckConditions(interlevelcond_t *conditions,
                 break;
 
             case AnimCondition_MapNotSecret:
-                conditionsmet &= !U_IsSecretMap(episode, map);
+                conditionsmet &= !G_IsSecretMap(episode, map);
                 break;
 
             case AnimCondition_SecretVisited:
@@ -717,26 +721,38 @@ static boolean SetupMusic(boolean enteringcondition)
 //
 void WI_slamBackground(void)
 {
-  char  name[32];
+    // [Nugget] Alt. intermission background
+    if (alt_interpic_on)
+    {
+        R_RenderPlayerView(&players[displayplayer]);
+        V_ShadeScreen(17);
+        return;
+    }
 
-  // [Nugget] Alt. intermission background
-  if (alt_interpic_on) {
-    R_RenderPlayerView(&players[displayplayer]);
-    V_ShadeScreen(17);
-    return;
-  }
+    const char *name;
 
-  if (state != StatCount && enterpic)
-    strcpy(name, enterpic);
-  else if (exitpic)
-    strcpy(name, exitpic);
-  // with UMAPINFO it is possible that wbs->epsd > 3
-  else if (gamemode == commercial || wbs->epsd >= 3)
-    strcpy(name, "INTERPIC");
-  else
-    M_snprintf(name, sizeof(name), "WIMAP%d", wbs->epsd);
+    char lump[9] = {0};
 
-  V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
+    if (state != StatCount && enterpic)
+    {
+        name = enterpic;
+    }
+    else if (exitpic)
+    {
+        name = exitpic;
+    }
+    // with UMAPINFO it is possible that wbs->epsd > 3
+    else if (gamemode == commercial || wbs->epsd >= 3)
+    {
+        name = "INTERPIC";
+    }
+    else
+    {
+        M_snprintf(lump, sizeof(lump), "WIMAP%d", wbs->epsd);
+        name = lump;
+    }
+
+    V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
 }
 
 // ====================================================================
@@ -766,50 +782,45 @@ static void WI_DrawString(int y, const char* str)
 //
 static void WI_drawLF(void)
 {
-  int y = WI_TITLEY;
+    int y = WI_TITLEY;
 
-  // The level defines a new name but no texture for the name.
-  if (wbs->lastmapinfo && wbs->lastmapinfo->levelname && wbs->lastmapinfo->levelpic[0] == 0)
-  {
-    WI_DrawString(y, wbs->lastmapinfo->levelname);
+    const mapentry_t *mapinfo = wbs->lastmapinfo;
 
-    y += (5 * SHORT(hu_font['A' - HU_FONTSTART]->height) / 4);
-
-    if (wbs->lastmapinfo->author)
+    // The level defines a new name but no texture for the name.
+    if (mapinfo && mapinfo->levelname && !mapinfo->levelpic[0])
     {
-      WI_DrawString(y, wbs->lastmapinfo->author);
+        WI_DrawString(y, mapinfo->levelname);
 
-      y += (5 * SHORT(hu_font['A' - HU_FONTSTART]->height) / 4);
+        y += (5 * SHORT(hu_font['A' - HU_FONTSTART]->height) / 4);
+
+        if (mapinfo->author)
+        {
+            WI_DrawString(y, mapinfo->author);
+
+            y += (5 * SHORT(hu_font['A' - HU_FONTSTART]->height) / 4);
+        }
     }
-  }
-  else if (wbs->lastmapinfo && wbs->lastmapinfo->levelpic[0])
-  {
-    patch_t* lpic = V_CachePatchName(wbs->lastmapinfo->levelpic, PU_CACHE);
+    else if (mapinfo && mapinfo->levelpic[0])
+    {
+        patch_t *patch = V_CachePatchName(mapinfo->levelpic, PU_CACHE);
 
-     // [Nugget] HUD/menu shadows
-    V_DrawPatchSH((SCREENWIDTH - SHORT(lpic->width))/2,
-                  y, lpic);
+        V_DrawPatchSH((SCREENWIDTH - SHORT(patch->width)) / 2, y, patch);
 
-    y += (5 * SHORT(lpic->height)) / 4;
-  }
-  else
-  // [FG] prevent crashes for levels without name graphics
-  if (wbs->last >= 0 && wbs->last < num_lnames && lnames[wbs->last] != NULL )
-  {
-  // draw <LevelName> 
-  // [Nugget] HUD/menu shadows
-  V_DrawPatchSH((SCREENWIDTH - SHORT(lnames[wbs->last]->width))/2,
-                y, lnames[wbs->last]);
+        y += (5 * SHORT(patch->height)) / 4;
+    }
+    // [FG] prevent crashes for levels without name graphics
+    else if (wbs->last >= 0 && wbs->last < num_lnames && lnames[wbs->last])
+    {
+        // draw <LevelName>
+        V_DrawPatchSH((SCREENWIDTH - SHORT(lnames[wbs->last]->width)) / 2, y,
+                    lnames[wbs->last]);
 
-  // draw "Finished!"
-  y += (5*SHORT(lnames[wbs->last]->height))/4;
-  }
- 
-  // [Nugget] HUD/menu shadows
-  V_DrawPatchSH((SCREENWIDTH - SHORT(finished->width))/2,
-                y, finished);
+        // draw "Finished!"
+        y += (5 * SHORT(lnames[wbs->last]->height)) / 4;
+    }
+
+    V_DrawPatchSH((SCREENWIDTH - SHORT(finished->width)) / 2, y, finished);
 }
-
 
 // ====================================================================
 // WI_drawEL
@@ -819,51 +830,52 @@ static void WI_drawLF(void)
 //
 static void WI_drawEL(void)
 {
-  int y = WI_TITLEY;
+    int y = WI_TITLEY;
 
-  // draw "Entering"
-  // [Nugget] HUD/menu shadows
-  V_DrawPatchSH((SCREENWIDTH - SHORT(entering->width))/2,
-                y, entering);
+    // draw "Entering"
+    V_DrawPatchSH((SCREENWIDTH - SHORT(entering->width)) / 2, y, entering);
 
-  // The level defines a new name but no texture for the name
-  if (wbs->nextmapinfo && wbs->nextmapinfo->levelname && wbs->nextmapinfo->levelpic[0] == 0)
-  {
-    y += (5 * SHORT(entering->height)) / 4;
+    const mapentry_t *mapinfo = wbs->nextmapinfo;
 
-    WI_DrawString(y, wbs->nextmapinfo->levelname);
-
-    if (wbs->nextmapinfo->author)
+    // The level defines a new name but no texture for the name
+    if (mapinfo && mapinfo->levelname && !mapinfo->levelpic[0])
     {
-      y += (5 * SHORT(hu_font['A' - HU_FONTSTART]->height) / 4);
+        y += (5 * SHORT(entering->height)) / 4;
 
-      WI_DrawString(y, wbs->nextmapinfo->author);
+        WI_DrawString(y, mapinfo->levelname);
+
+        if (mapinfo->author)
+        {
+            y += (5 * SHORT(hu_font['A' - HU_FONTSTART]->height) / 4);
+
+            WI_DrawString(y, mapinfo->author);
+        }
     }
-  }
-  else if (wbs->nextmapinfo && wbs->nextmapinfo->levelpic[0])
-  {
-    patch_t* lpic = V_CachePatchName(wbs->nextmapinfo->levelpic, PU_CACHE);
+    else if (mapinfo && mapinfo->levelpic[0])
+    {
+        patch_t *patch = V_CachePatchName(mapinfo->levelpic, PU_CACHE);
 
-    if (SHORT(lpic->height) < SCREENHEIGHT)
-      y += (5 * SHORT(lpic->height)) / 4;
+        if (SHORT(patch->height) < SCREENHEIGHT)
+        {
+            y += (5 * SHORT(patch->height)) / 4;
+        }
 
-    // [Nugget] HUD/menu shadows
-    V_DrawPatchSH((SCREENWIDTH - SHORT(lpic->width))/2, y, lpic);
-  }
-  // [FG] prevent crashes for levels without name graphics
-  else if (wbs->next >= 0 && wbs->next < num_lnames && lnames[wbs->next] != NULL)
-  {
-  // draw level
-  // haleyjd: corrected to use height of entering, not map name
-  if (SHORT(lnames[wbs->next]->height) < SCREENHEIGHT)
-    y += (5 * SHORT(entering->height)) / 4;
+        V_DrawPatchSH((SCREENWIDTH - SHORT(patch->width)) / 2, y, patch);
+    }
+    // [FG] prevent crashes for levels without name graphics
+    else if (wbs->next >= 0 && wbs->next < num_lnames && lnames[wbs->next])
+    {
+        // draw level
+        // haleyjd: corrected to use height of entering, not map name
+        if (SHORT(lnames[wbs->next]->height) < SCREENHEIGHT)
+        {
+            y += (5 * SHORT(entering->height)) / 4;
+        }
 
-  // [Nugget] HUD/menu shadows
-  V_DrawPatchSH((SCREENWIDTH - SHORT(lnames[wbs->next]->width))/2,
-                y, lnames[wbs->next]);
-  }
+        V_DrawPatchSH((SCREENWIDTH - SHORT(lnames[wbs->next]->width)) / 2, y,
+                    lnames[wbs->next]);
+    }
 }
-
 
 // ====================================================================
 // WI_drawOnLnode
@@ -934,9 +946,13 @@ static void WI_initAnimatedBack(boolean firstcall)
   }
 
   if (exitpic)
-    return;
-  if (enterpic && entering)
-    return;
+  {
+      return;
+  }
+  if (enterpic && state != StatCount)
+  {
+      return;
+  }
 
   if (gamemode == commercial)  // no animation for DOOM2
     return;
@@ -985,9 +1001,13 @@ static void WI_updateAnimatedBack(void)
   }
 
   if (exitpic)
-    return;
+  {
+      return;
+  }
   if (enterpic && state != StatCount)
-    return;
+  {
+      return;
+  }
 
   if (gamemode == commercial)
     return;
@@ -1054,9 +1074,13 @@ static void WI_drawAnimatedBack(void)
   }
 
   if (exitpic)
-    return;
+  {
+      return;
+  }
   if (enterpic && state != StatCount)
-    return;
+  {
+      return;
+  }
 
   if (gamemode==commercial) //jff 4/25/98 Someone forgot commercial an enum
     return;
@@ -1352,22 +1376,23 @@ static void WI_initShowNextLoc(void)
 
   if (gamemapinfo)
   {
-    if (gamemapinfo->endpic[0])
-    {
-      G_WorldDone();
-      return;
-    }
-    state = ShowNextLoc;
+      if (gamemapinfo->flags & MapInfo_EndGame)
+      {
+          G_WorldDone();
+          return;
+      }
 
-    // episode change
-    if (wbs->epsd != wbs->nextep)
-    {
-      void WI_loadData(void);
+      state = ShowNextLoc;
 
-      wbs->epsd = wbs->nextep;
-      wbs->last = wbs->next - 1;
-      WI_loadData();
-    }
+      // episode change
+      if (wbs->epsd != wbs->nextep)
+      {
+          void WI_loadData(void);
+
+          wbs->epsd = wbs->nextep;
+          wbs->last = wbs->next - 1;
+          WI_loadData();
+      }
   }
 
   state = ShowNextLoc;
@@ -1406,9 +1431,9 @@ static void WI_drawShowNextLoc(void)
   int   i;
   int   last;
 
-  if (gamemapinfo && U_CheckField(gamemapinfo->endpic))
+  if (gamemapinfo && gamemapinfo->flags & MapInfo_EndGame)
   {
-    return;
+      return;
   }
 
   WI_slamBackground();
@@ -2042,6 +2067,8 @@ static void WI_initStats(void)
   cnt_time = cnt_par = cnt_total_time = -1;
   cnt_pause = TICRATE;
 
+  cnt2_kills = cnt2_items = cnt2_secret = -1; // [Nugget] Ratio stats
+
   WI_initAnimatedBack(true);
 }
 
@@ -2065,6 +2092,11 @@ static void WI_updateStats(void)
       cnt_secret[0] = (wbs->maxsecret ?
                        (plrs[me].ssecret * 100) / wbs->maxsecret : 100);
 
+      // [Nugget] Ratio stats
+      cnt2_kills  = plrs[me].skills;
+      cnt2_items  = plrs[me].sitems;
+      cnt2_secret = plrs[me].ssecret;
+
       cnt_total_time = wbs->totaltimes / TICRATE;
       cnt_time = plrs[me].stime / TICRATE;
       cnt_par = wbs->partime / TICRATE;
@@ -2076,12 +2108,18 @@ static void WI_updateStats(void)
     {
       cnt_kills[0] += 2;
 
+      // [Nugget] Ratio stats
+      cnt2_kills = plrs[me].skills
+                 * cnt_kills[0]
+                 / MAX(1, plrs[me].skills * 100 / MAX(1, totalkills));
+
       if (!(bcnt&3))
         S_StartSoundOptional(0, sfx_inttic, sfx_pistol); // [Nugget]: [NS] Optional inter sounds.
 
       if (cnt_kills[0] >= (plrs[me].skills * 100) / wbs->maxkills)
         {
           cnt_kills[0] = (plrs[me].skills * 100) / wbs->maxkills;
+          cnt2_kills = plrs[me].skills; // [Nugget] Ratio stats
           S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
           sp_state++;
         }
@@ -2091,12 +2129,18 @@ static void WI_updateStats(void)
       {
         cnt_items[0] += 2;
 
+        // [Nugget] Ratio stats
+        cnt2_items = plrs[me].sitems
+                   * cnt_items[0]
+                   / MAX(1, plrs[me].sitems * 100 / MAX(1, totalitems));
+
         if (!(bcnt&3))
           S_StartSoundOptional(0, sfx_inttic, sfx_pistol); // [Nugget]: [NS] Optional inter sounds.
 
         if (cnt_items[0] >= (plrs[me].sitems * 100) / wbs->maxitems)
           {
             cnt_items[0] = (plrs[me].sitems * 100) / wbs->maxitems;
+            cnt2_items = plrs[me].sitems; // [Nugget] Ratio stats
             S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
             sp_state++;
           }
@@ -2105,6 +2149,11 @@ static void WI_updateStats(void)
       if (sp_state == 6)
         {
           cnt_secret[0] += 2;
+
+          // [Nugget] Ratio stats
+          cnt2_secret = plrs[me].ssecret
+                      * cnt_secret[0]
+                      / MAX(1, plrs[me].ssecret * 100 / MAX(1, totalsecret));
 
           if (!(bcnt&3))
             S_StartSoundOptional(0, sfx_inttic, sfx_pistol); // [Nugget]: [NS] Optional inter sounds.
@@ -2118,6 +2167,7 @@ static void WI_updateStats(void)
             {
               cnt_secret[0] = (wbs->maxsecret ?
                                (plrs[me].ssecret * 100) / wbs->maxsecret : 100);
+              cnt2_secret = plrs[me].ssecret; // [Nugget] Ratio stats
               S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
               sp_state++;
             }
@@ -2182,6 +2232,101 @@ static void WI_updateStats(void)
               }
 }
 
+// [Nugget] Ratio stats /-----------------------------------------------------
+
+static int NumWidth(int n)
+{
+  if (n == LARGENUMBER) { return 0; }
+
+  int width = 0;
+
+  if (n < 0)
+  {
+    n = -n;
+    width += SHORT(wiminus->width);
+  }
+
+  int digits;
+
+  if (n) {
+    digits = 0;
+
+    do { digits++; } while (n /= 10);
+  }
+  else { digits = 1; }
+
+  width += SHORT(num[0]->width) * digits;
+
+  return width;
+}
+
+static void DrawStat(int x, int y, int stat)
+{
+  patch_t *title;
+  int cnt, cnt2, cnt2f, max;
+
+  switch (stat)
+  {
+    case 0:
+      title = kills;
+      cnt   = cnt_kills[0];
+      cnt2  = cnt2_kills;
+      cnt2f = plrs[0].skills;
+      max   = totalkills;
+      break;
+
+    case 1:
+      title = items;
+      cnt   = cnt_items[0];
+      cnt2  = cnt2_items;
+      cnt2f = plrs[0].sitems;
+      max   = totalitems;
+      break;
+
+    case 2:
+      title = sp_secret;
+      cnt   = cnt_secret[0];
+      cnt2  = cnt2_secret;
+      cnt2f = plrs[0].ssecret;
+      max   = totalsecret;
+      break;
+
+    default: return;
+  }
+
+  V_DrawPatchSH(x, y, title);
+
+  int numx = SCREENWIDTH - x;
+
+  if (inter_ratio_stats && cnt2 > -1)
+  {
+    const int width = NumWidth(cnt2f) + NumWidth(max) + SHORT(colon->width) + 2;
+
+    if (x + SHORT(title->width) + SHORT(num[0]->width) < numx - width)
+    {
+      int numx2 = numx;
+
+      numx = WI_drawNum(numx, y, max, -1);
+      SHADOW_REDRAW(numx2 = WI_drawNum(numx2, y, max, -1)) // HUD/menu shadows
+
+      numx -= SHORT(colon->width) + 1;
+      V_DrawPatchSH(numx, y, colon);
+      numx -= 1;
+
+      numx2 = numx;
+
+      numx = WI_drawNum(numx, y, cnt2, -1);
+      SHADOW_REDRAW(numx2 = WI_drawNum(numx2, y, cnt2, -1)) // HUD/menu shadows
+
+      return;
+    }
+  }
+
+  WI_drawPercent(numx, y, cnt);
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 // ====================================================================
 // WI_drawStats
 // Purpose: Put the solo stats on the screen
@@ -2203,38 +2348,37 @@ static void WI_drawStats(void)
 
   WI_drawLF();
 
-  V_DrawPatchSH(SP_STATSX, SP_STATSY, kills);
-  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
+  // [Nugget] Ratio stats: factored out
+  DrawStat(SP_STATSX, SP_STATSY,          0);
+  DrawStat(SP_STATSX, SP_STATSY + lh,     1);
+  DrawStat(SP_STATSX, SP_STATSY + lh * 2, 2);
 
-  V_DrawPatchSH(SP_STATSX, SP_STATSY+lh, items);
-  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
-
-  V_DrawPatchSH(SP_STATSX, SP_STATSY+2*lh, sp_secret);
-  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
+  const boolean draw_partime = (W_IsIWADLump(maplump) || deh_pars || um_pars) &&
+                               (wbs->epsd < 3 || um_pars);
+  // [FG] choose x-position depending on width of time string
+  const boolean wide_total = (wbs->totaltimes / TICRATE > 61*59) ||
+                             (SP_TIMEX + SHORT(total->width) >= SCREENWIDTH/4);
+  const boolean wide_time = (wide_total && !draw_partime);
 
   V_DrawPatchSH(SP_TIMEX, SP_TIMEY, witime);
-  WI_drawTime(SCREENWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time, true);
+  WI_drawTime((wide_time ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX,
+              SP_TIMEY, cnt_time, true);
 
   // Ty 04/11/98: redid logic: should skip only if with pwad but
   // without deh patch
   // killough 2/22/98: skip drawing par times on pwads
   // Ty 03/17/98: unless pars changed with deh patch
 
-  if (W_IsIWADLump(maplump) || deh_pars || um_pars)
-    if (wbs->epsd < 3 || um_pars)
-      {
-	V_DrawPatchSH(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
-	WI_drawTime(SCREENWIDTH - SP_TIMEX, SP_TIMEY, cnt_par, true);
-      }
+  if (draw_partime)
+  {
+    V_DrawPatchSH(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
+    WI_drawTime(SCREENWIDTH - SP_TIMEX, SP_TIMEY, cnt_par, true);
+  }
 
   // [FG] draw total time alongside level time and par time
-  {
-    const boolean wide = (wbs->totaltimes / TICRATE > 61*59) || (SP_TIMEX + SHORT(total->width) >= SCREENWIDTH/4);
-
-    V_DrawPatchSH(SP_TIMEX, SP_TIMEY + 16, total);
-    // [FG] choose x-position depending on width of time string
-    WI_drawTime((wide ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX, SP_TIMEY + 16, cnt_total_time, false);
-  }
+  V_DrawPatchSH(SP_TIMEX, SP_TIMEY + 16, total);
+  WI_drawTime((wide_total ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX,
+              SP_TIMEY + 16, cnt_total_time, false);
 }
 
 // ====================================================================

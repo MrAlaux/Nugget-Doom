@@ -720,7 +720,7 @@ boolean I_OAL_StartSound(int channel, sfxinfo_t *sfx, float pitch)
 
     // [Nugget] Slow Motion
     if (!menuactive && G_GetSlowMotionFactor() != SLOWMO_FACTOR_NORMAL)
-    { pitch *= (4.0f + G_GetSlowMotionFactor()) / 5.0f; }
+    { pitch *= (float) (SLOWMO_FACTOR_NORMAL*4 + G_GetSlowMotionFactor()) / (SLOWMO_FACTOR_NORMAL*5); }
 
     alSourcef(oal->sources[channel], AL_PITCH, pitch);
 

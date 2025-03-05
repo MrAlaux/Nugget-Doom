@@ -30,7 +30,6 @@ struct player_s;
 struct sector_s;
 
 // [Nugget] CVARs
-extern boolean comp_blazing2;
 extern boolean comp_manualdoor;
 extern boolean comp_switchsource;
 extern boolean comp_keynoway;
@@ -541,6 +540,8 @@ typedef struct
   int   btimer;
   struct mobj_s *soundorg;
 } button_t;
+
+void P_StartButton(struct line_s *line, bwhere_e w, int texture, int time);
 
 // p_lights
 

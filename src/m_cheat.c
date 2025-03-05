@@ -30,8 +30,10 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "g_game.h"
+#include "g_umapinfo.h"
 #include "info.h"
 #include "m_cheat.h"
+#include "m_array.h"
 #include "m_fixed.h"
 #include "m_input.h"
 #include "m_misc.h"
@@ -50,7 +52,6 @@
 #include "sounds.h"
 #include "st_widgets.h"
 #include "tables.h"
-#include "u_mapinfo.h"
 #include "w_wad.h"
 #include "ws_stuff.h"
 
@@ -65,10 +66,17 @@
 //#define NUGMAGIC
 
 #ifdef NUGMAGIC
-static void cheat_magic()
+
+static void cheat_magic(void)
 {
   
 }
+
+static void cheat_magic2(void)
+{
+  
+}
+
 #endif
 
 // [Nugget] --------------------------/
@@ -80,99 +88,101 @@ static void cheat_magic()
 //-----------------------------------------------------------------------------
 
 static void cheat_mus(char *buf);
-static void cheat_choppers();
-static void cheat_god();
-static void cheat_fa();
-static void cheat_k();
-static void cheat_kfa();
-static void cheat_noclip();
+static void cheat_choppers(void);
+static void cheat_god(void);
+static void cheat_fa(void);
+static void cheat_k(void);
+static void cheat_kfa(void);
+static void cheat_noclip(void);
 static void cheat_pw(int pw);
-static void cheat_behold();
+static void cheat_behold(void);
 static void cheat_clev(char *buf);
-static void cheat_clev0();
-static void cheat_mypos();
+static void cheat_clev0(void);
+static void cheat_mypos(void);
 static void cheat_comp(char *buf);
-static void cheat_comp0();
+static void cheat_comp0(void);
 static void cheat_skill(char *buf);
-static void cheat_skill0();
-static void cheat_friction();
-static void cheat_pushers();
-static void cheat_tran();
-static void cheat_massacre();
-static void cheat_ddt();
-static void cheat_hom();
-static void cheat_fast();
-static void cheat_key();
-static void cheat_keyx();
+static void cheat_skill0(void);
+static void cheat_friction(void);
+static void cheat_pushers(void);
+static void cheat_tran(void);
+static void cheat_massacre(void);
+static void cheat_ddt(void);
+static void cheat_hom(void);
+static void cheat_fast(void);
+static void cheat_key(void);
+static void cheat_keyx(void);
 static void cheat_keyxx(int key);
-static void cheat_weap();
+static void cheat_weap(void);
 static void cheat_weapx(char *buf);
-static void cheat_ammo();
+static void cheat_ammo(void);
 static void cheat_ammox(char *buf);
-static void cheat_smart();
-static void cheat_pitch();
-static void cheat_nuke();
-static void cheat_rate();
-static void cheat_buddha();
-static void cheat_spechits();
-static void cheat_notarget();
-static void cheat_freeze();
-static void cheat_health();
-static void cheat_megaarmour();
-static void cheat_reveal_secret();
-static void cheat_reveal_kill();
-static void cheat_reveal_item();
+static void cheat_smart(void);
+static void cheat_pitch(void);
+static void cheat_nuke(void);
+static void cheat_rate(void);
+static void cheat_buddha(void);
+static void cheat_spechits(void);
+static void cheat_notarget(void);
+static void cheat_freeze(void);
+static void cheat_health(void);
+static void cheat_megaarmour(void);
+static void cheat_reveal_secret(void);
+static void cheat_reveal_kill(void);
+static void cheat_reveal_item(void);
 
-static void cheat_autoaim();      // killough 7/19/98
-static void cheat_tst();
-static void cheat_showfps(); // [FG] FPS counter widget
-static void cheat_speed();
+static void cheat_autoaim(void);      // killough 7/19/98
+static void cheat_tst(void);
+static void cheat_showfps(void); // [FG] FPS counter widget
+static void cheat_speed(void);
 
 // [Nugget] /-----------------------------------------------------------------
 
-static void cheat_nomomentum();
-static void cheat_fauxdemo();   // Emulates demo/net play state, for debugging
-static void cheat_infammo();    // Infinite ammo cheat
-static void cheat_fastweaps();  // Fast weapons cheat
-static void cheat_bobbers();    // Shortcut to the two cheats above
+static void cheat_nomomentum(void);
+static void cheat_fauxdemo(void);   // Emulates demo/net play state, for debugging
+static void cheat_infammo(void);    // Infinite ammo cheat
+static void cheat_fastweaps(void);  // Fast weapons cheat
+static void cheat_bobbers(void);    // Shortcut to the two cheats above
 
 boolean gibbers;                // Used for 'GIBBERS'
-static void cheat_gibbers();    // Everything gibs
+static void cheat_gibbers(void);    // Everything gibs
 
-static void cheat_resurrect();
-static void cheat_fly();
-static void cheat_normalexit(); // Emulate normal level exit
-static void cheat_secretexit(); // Emulate secret level exit
+static void cheat_riotmode(void);
+static void cheat_resurrect(void);
+static void cheat_fly(void);
+static void cheat_normalexit(void); // Emulate normal level exit
+static void cheat_secretexit(void); // Emulate secret level exit
 static void cheat_turbo(char *buf);
 
 // Summon a mobj
-static void cheat_summon();
+static void cheat_summon(void);
 // Enemy
-static void cheat_summone0();
+static void cheat_summone0(void);
 static void cheat_summone(char *buf);
 // Friend
-static void cheat_summonf0();
+static void cheat_summonf0(void);
 static void cheat_summonf(char *buf);
 // Repeat last
-static void cheat_summonr();
+static void cheat_summonr(void);
 static int spawneetype = -1;
 static boolean spawneefriend;
 
-static void cheat_reveal_key();
-static void cheat_reveal_keyx();
+static void cheat_reveal_key(void);
+static void cheat_reveal_keyx(void);
 static void cheat_reveal_keyxx(int key);
 
-static void cheat_linetarget(); // Give info on the current linetarget
-static void cheat_trails();     // Show hitscan trails
-static void cheat_mdk();        // Inspired by ZDoom's console command
-static void cheat_saitama();    // MDK Fist
+static void cheat_reveal_exit(void);
+static void cheat_linetarget(void); // Give info on the current linetarget
+static void cheat_trails(void);     // Show hitscan trails
+static void cheat_mdk(void);        // Inspired by ZDoom's console command
+static void cheat_saitama(void);    // MDK Fist
 
-static void cheat_boomcan();    // Explosive hitscan
+static void cheat_boomcan(void);    // Explosive hitscan
 
-static void cheat_cheese();
+static void cheat_cheese(void);
 
 boolean idgaf;
-static void cheat_idgaf();
+static void cheat_idgaf(void);
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -199,248 +209,254 @@ static void cheat_idgaf();
 
 struct cheat_s cheat[] = {
   {"idmus",      "Change music",      always,
-   {cheat_mus}, -2 },
+   {.s = cheat_mus}, -2 },
 
   {"idchoppers", "Chainsaw",          not_net | not_demo,
-   {cheat_choppers} },
+   {.v = cheat_choppers} },
 
   {"iddqd",      "God mode",          not_net | not_demo,
-   {cheat_god} },
+   {.v = cheat_god} },
 
   {"buddha",     "Buddha mode",       not_net | not_demo,
-   {cheat_buddha} },
+   {.v = cheat_buddha} },
 
   {"idk",        NULL,                not_net | not_demo | not_deh,
-   {cheat_k} }, // The most controversial cheat code in Doom history!!!
+   {.v = cheat_k} }, // The most controversial cheat code in Doom history!!!
 
   {"idkfa",      "Ammo & Keys",       not_net | not_demo,
-   {cheat_kfa} },
+   {.v = cheat_kfa} },
 
   {"idfa",       "Ammo",              not_net | not_demo,
-   {cheat_fa} },
+   {.v = cheat_fa} },
 
   {"idspispopd", "No Clipping 1",     not_net | not_demo,
-   {cheat_noclip} },
+   {.v = cheat_noclip} },
 
   {"idclip",     "No Clipping 2",     not_net | not_demo,
-   {cheat_noclip} },
+   {.v = cheat_noclip} },
 
   {"idbeholdo",  NULL,                not_net | not_demo | not_deh,
-   {cheat_pw}, NUMPOWERS }, // [FG] disable all powerups at once
+   {.i = cheat_pw}, NUMPOWERS }, // [FG] disable all powerups at once
 
   {"idbeholdh",  "Health",            not_net | not_demo,
-   {cheat_health} },
+   {.v = cheat_health} },
 
   {"idbeholdm",  "Mega Armor",        not_net | not_demo,
-   {cheat_megaarmour} },
+   {.v = cheat_megaarmour} },
 
   {"idbeholdv",  "Invincibility",     not_net | not_demo,
-   {cheat_pw}, pw_invulnerability },
+   {.i = cheat_pw}, pw_invulnerability },
 
   {"idbeholds",  "Berserk",           not_net | not_demo,
-   {cheat_pw}, pw_strength },
+   {.i = cheat_pw}, pw_strength },
 
-  {"idbeholdi",  "Invisibility",      not_net | not_demo,
-   {cheat_pw}, pw_invisibility },
+  {"idbeholdi",  "Invisibility",      not_net | not_demo,  
+   {.i = cheat_pw}, pw_invisibility },
 
   {"idbeholdr",  "Radiation Suit",    not_net | not_demo,
-   {cheat_pw}, pw_ironfeet },
+   {.i = cheat_pw}, pw_ironfeet },
 
   {"idbeholda",  "Auto-map",          not_dm,
-   {cheat_pw}, pw_allmap },
+   {.i = cheat_pw}, pw_allmap },
 
   {"idbeholdl",  "Lite-Amp Goggles",  not_dm,
-   {cheat_pw}, pw_infrared },
+   {.i = cheat_pw}, pw_infrared },
 
   {"idbehold",   "BEHOLD menu",       not_net | not_demo,
-   {cheat_behold} },
+   {.v = cheat_behold} },
 
   {"idclev",     "Level Warp",        not_net | not_demo | not_menu,
-   {cheat_clev}, -2 },
+   {.s = cheat_clev}, -2 },
 
   {"idclev",     "Level Warp",        not_net | not_demo | not_menu,
-   {cheat_clev0} },
+   {.v = cheat_clev0} },
 
   {"idmypos",    "Player Position",   not_dm, // [FG] not_net | not_demo,
-   {cheat_mypos} },
+   {.v = cheat_mypos} },
 
   {"comp",    NULL,                   not_net | not_demo | not_menu,
-   {cheat_comp}, -2 },
+   {.s = cheat_comp}, -2 },
 
   {"comp",    NULL,                   not_net | not_demo | not_menu,
-   {cheat_comp0} },
+   {.v = cheat_comp0} },
 
   {"skill",    NULL,                  not_net | not_demo | not_menu,
-   {cheat_skill}, -1 },
+   {.s = cheat_skill}, -1 },
 
   {"skill",    NULL,                  not_net | not_demo | not_menu,
-   {cheat_skill0} },
+   {.v = cheat_skill0} },
 
   {"killem",     NULL,                not_net | not_demo,
-   {cheat_massacre} },   // jff 2/01/98 kill all monsters
+   {.v = cheat_massacre} },   // jff 2/01/98 kill all monsters
 
   {"tntem",     NULL,                not_net | not_demo,
    {cheat_massacre} },     // [Nugget] 'KILLEM' alternative
 
   {"spechits",     NULL,              not_net | not_demo,
-   {cheat_spechits} },
+   {.v = cheat_spechits} },
 
   {"notarget",   "Notarget mode",     not_net | not_demo,
-   {cheat_notarget} },
+   {.v = cheat_notarget} },
 
   {"freeze",     "Freeze",            not_net | not_demo,
-   {cheat_freeze} },
+   {.v = cheat_freeze} },
 
   {"iddt",       "Map cheat",         not_dm,
-   {cheat_ddt} },        // killough 2/07/98: moved from am_map.c
+   {.v = cheat_ddt} },        // killough 2/07/98: moved from am_map.c
 
   {"iddst",      NULL,                not_dm,
-   {cheat_reveal_secret} },
+   {.v = cheat_reveal_secret} },
 
   {"iddkt",      NULL,                not_dm,
-   {cheat_reveal_kill} },
+   {.v = cheat_reveal_kill} },
 
   {"iddit",      NULL,                not_dm,
-   {cheat_reveal_item} },
+   {.v = cheat_reveal_item} },
 
   {"hom",     NULL,                   always,
-   {cheat_hom} },        // killough 2/07/98: HOM autodetector
+   {.v = cheat_hom} },        // killough 2/07/98: HOM autodetector
 
-  {"key",     NULL,                   not_net | not_demo,
-   {cheat_key} },     // killough 2/16/98: generalized key cheats
+  {"key",     NULL,                   not_net | not_demo, 
+   {.v = cheat_key} },     // killough 2/16/98: generalized key cheats
 
   {"keyr",    NULL,                   not_net | not_demo,
-   {cheat_keyx} },
+   {.v = cheat_keyx} },
 
   {"keyy",    NULL,                   not_net | not_demo,
-   {cheat_keyx} },
+   {.v = cheat_keyx} },
 
   {"keyb",    NULL,                   not_net | not_demo,
-   {cheat_keyx} },
+   {.v = cheat_keyx} },
 
-  {"keyrc",   NULL,                   not_net | not_demo,
-   {cheat_keyxx}, it_redcard },
+  {"keyrc",   NULL,                   not_net | not_demo, 
+   {.i = cheat_keyxx}, it_redcard },
 
   {"keyyc",   NULL,                   not_net | not_demo,
-   {cheat_keyxx}, it_yellowcard },
+   {.i = cheat_keyxx}, it_yellowcard },
 
-  {"keybc",   NULL,                   not_net | not_demo,
-   {cheat_keyxx}, it_bluecard },
+  {"keybc",   NULL,                   not_net | not_demo, 
+   {.i = cheat_keyxx}, it_bluecard },
 
   {"keyrs",   NULL,                   not_net | not_demo,
-   {cheat_keyxx}, it_redskull },
+   {.i = cheat_keyxx}, it_redskull },
 
   {"keyys",   NULL,                   not_net | not_demo,
-   {cheat_keyxx}, it_yellowskull },
+   {.i = cheat_keyxx}, it_yellowskull },
 
   {"keybs",   NULL,                   not_net | not_demo,
-   {cheat_keyxx}, it_blueskull }, // killough 2/16/98: end generalized keys
+   {.i = cheat_keyxx}, it_blueskull }, // killough 2/16/98: end generalized keys
 
   {"weap",    NULL,                   not_net | not_demo,
-   {cheat_weap} },    // killough 2/16/98: generalized weapon cheats
+   {.v = cheat_weap} },    // killough 2/16/98: generalized weapon cheats
 
   {"weap",    NULL,                   not_net | not_demo,
-   {cheat_weapx}, -1 },
+   {.s = cheat_weapx}, -1 },
 
   {"ammo",    NULL,                   not_net | not_demo,
-   {cheat_ammo} },
+   {.v = cheat_ammo} },
 
   {"ammo",    NULL,                   not_net | not_demo,
-   {cheat_ammox}, -1 }, // killough 2/16/98: end generalized weapons
+   {.s = cheat_ammox}, -1 }, // killough 2/16/98: end generalized weapons
 
   {"tran",    NULL,                   always,
-   {cheat_tran} },    // invoke translucency         // phares
+   {.v = cheat_tran} },    // invoke translucency         // phares
 
   {"smart",   NULL,                   not_net | not_demo,
-   {cheat_smart} },      // killough 2/21/98: smart monster toggle
+   {.v = cheat_smart} },      // killough 2/21/98: smart monster toggle
 
   {"pitch",   NULL,                   always,
-   {cheat_pitch} },      // killough 2/21/98: pitched sound toggle
+   {.v = cheat_pitch} },      // killough 2/21/98: pitched sound toggle
 
   // killough 2/21/98: reduce RSI injury by adding simpler alias sequences:
-  {"mbfran",     NULL,                always,
-   {cheat_tran} },    // killough 2/21/98: same as mbftran
+  {"mbfran",     NULL,                always, 
+   {.v = cheat_tran} },    // killough 2/21/98: same as mbftran
 
   {"fast",    NULL,                   not_net | not_demo,
-   {cheat_fast} },       // killough 3/6/98: -fast toggle
+   {.v = cheat_fast} },       // killough 3/6/98: -fast toggle
 
   {"ice",     NULL,                   not_net | not_demo,
-   {cheat_friction} },   // phares 3/10/98: toggle variable friction effects
+   {.v = cheat_friction} },   // phares 3/10/98: toggle variable friction effects
 
-  {"push",    NULL,                   not_net | not_demo,
-   {cheat_pushers} },    // phares 3/10/98: toggle pushers
+  {"push",    NULL,                   not_net | not_demo, 
+   {.v = cheat_pushers} },    // phares 3/10/98: toggle pushers
 
   {"nuke",    NULL,                   not_net | not_demo,
-   {cheat_nuke} },       // killough 12/98: disable nukage damage
+   {.v = cheat_nuke} },       // killough 12/98: disable nukage damage
 
   {"rate",    NULL,                   always,
-   {cheat_rate} },
+   {.v = cheat_rate} },
 
   {"aim",        NULL,                not_net | not_demo | beta_only,
-   {cheat_autoaim} },
+   {.v = cheat_autoaim} },
 
   {"eek",        NULL,                not_dm  | not_demo | beta_only,
-   {cheat_ddt} },        // killough 2/07/98: moved from am_map.c
+   {.v = cheat_ddt} },        // killough 2/07/98: moved from am_map.c
 
   {"amo",        NULL,                not_net | not_demo | beta_only,
-   {cheat_kfa} },
+   {.v = cheat_kfa} },
 
   {"tst",        NULL,                not_net | not_demo | beta_only,
-   {cheat_tst} },
+   {.v = cheat_tst} },
 
   {"nc",         NULL,                not_net | not_demo | beta_only,
-   {cheat_noclip} },
+   {.v = cheat_noclip} },
 
-  // [Nugget] Change to just "fps"
-  {"fps",        NULL,                always,
-   {cheat_showfps} },
+// [FG] FPS counter widget
+// [Nugget] Change to just "fps"
+  {"fps",    NULL,                always,
+   {.v = cheat_showfps} },
 
   {"speed",      NULL,                not_dm,
-   {cheat_speed} },
+   {.v = cheat_speed} },
 
   // [Nugget] /---------------------------------------------------------------
 
-  {"nomomentum", NULL, not_net | not_demo, {cheat_nomomentum}     },
-  {"fauxdemo",   NULL, not_net | not_demo, {cheat_fauxdemo}       }, // Emulates demo/net play state, for debugging
-  {"fullclip",   NULL, not_net | not_demo, {cheat_infammo}        }, // Infinite ammo cheat
-  {"valiant",    NULL, not_net | not_demo, {cheat_fastweaps}      }, // Fast weapons cheat
-  {"bobbers",    NULL, not_net | not_demo, {cheat_bobbers}        }, // Shortcut for the two above cheats
-  {"gibbers",    NULL, not_net | not_demo, {cheat_gibbers}        }, // Everything gibs
-  {"resurrect",  NULL, not_net | not_demo, {cheat_resurrect}      },
-  {"idres",      NULL, not_net | not_demo, {cheat_resurrect}      }, // 'RESURRECT' alternative
-  {"idfly",      NULL, not_net | not_demo, {cheat_fly}            },
-  {"nextmap",    NULL, not_net | not_demo, {cheat_normalexit}     },
-  {"nextsecret", NULL, not_net | not_demo, {cheat_secretexit}     },
-  {"turbo",      NULL, not_net | not_demo, {cheat_turbo},      -3 },
+  {"nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum}     },
+  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo}       }, // Emulates demo/net play state, for debugging
+  {"fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo}        }, // Infinite ammo cheat
+  {"valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps}      }, // Fast weapons cheat
+  {"bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers}        }, // Shortcut for the two above cheats
+  {"gibbers",    NULL, not_net | not_demo, {.v = cheat_gibbers}        }, // Everything gibs
+  {"riotmode",   NULL, not_net | not_demo, {.v = cheat_riotmode}       },
+  {"resurrect",  NULL, not_net | not_demo, {.v = cheat_resurrect}      },
+  {"idres",      NULL, not_net | not_demo, {.v = cheat_resurrect}      }, // 'RESURRECT' alternative
+  {"idfly",      NULL, not_net | not_demo, {.v = cheat_fly}            },
+  {"nextmap",    NULL, not_net | not_demo, {.v = cheat_normalexit}     },
+  {"nextsecret", NULL, not_net | not_demo, {.v = cheat_secretexit}     },
+  {"turbo",      NULL, not_net | not_demo, {.s = cheat_turbo},      -3 },
 
-  {"summon",  NULL, not_net | not_demo, {cheat_summon}      }, // Summon "Menu"
-  {"summone", NULL, not_net | not_demo, {cheat_summone0}    }, // Summon Enemy "Menu"
-  {"summone", NULL, not_net | not_demo, {cheat_summone}, -3 }, // Summon a hostile mobj
-  {"summonf", NULL, not_net | not_demo, {cheat_summonf0}    }, // Summon Friend "Menu"
-  {"summonf", NULL, not_net | not_demo, {cheat_summonf}, -3 }, // Summon a friendly mobj
-  {"summonr", NULL, not_net | not_demo, {cheat_summonr}     }, // Repeat last summon
+  {"summon",  NULL, not_net | not_demo, {.v = cheat_summon}      }, // Summon "Menu"
+  {"summone", NULL, not_net | not_demo, {.v = cheat_summone0}    }, // Summon Enemy "Menu"
+  {"summone", NULL, not_net | not_demo, {.s = cheat_summone}, -3 }, // Summon a hostile mobj
+  {"summonf", NULL, not_net | not_demo, {.v = cheat_summonf0}    }, // Summon Friend "Menu"
+  {"summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // Summon a friendly mobj
+  {"summonr", NULL, not_net | not_demo, {.v = cheat_summonr}     }, // Repeat last summon
 
-  {"iddf",   NULL, not_net | not_demo, {cheat_reveal_key}      },
-  {"iddfb",  NULL, not_net | not_demo, {cheat_reveal_keyx}     },
-  {"iddfy",  NULL, not_net | not_demo, {cheat_reveal_keyx}     },
-  {"iddfr",  NULL, not_net | not_demo, {cheat_reveal_keyx}     },
-  {"iddfbc", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 0 },
-  {"iddfyc", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 2 },
-  {"iddfrc", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 1 },
-  {"iddfbs", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 5 },
-  {"iddfys", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 3 },
-  {"iddfrs", NULL, not_net | not_demo, {cheat_reveal_keyxx}, 4 },
+  {"iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key}      },
+  {"iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
+  {"iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
+  {"iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
+  {"iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0 },
+  {"iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2 },
+  {"iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1 },
+  {"iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5 },
+  {"iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3 },
+  {"iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4 },
 
-  {"linetarget", NULL, not_net | not_demo, {cheat_linetarget} }, // Give info on the current linetarget
-  {"trails",     NULL, not_net | not_demo, {cheat_trails}     }, // Show hitscan trails
-  {"mdk",        NULL, not_net | not_demo, {cheat_mdk}        },
-  {"saitama",    NULL, not_net | not_demo, {cheat_saitama}    }, // MDK Fist
-  {"boomcan",    NULL, not_net | not_demo, {cheat_boomcan}    }, // Explosive hitscan
-  {"cheese",     NULL, not_net | not_demo, {cheat_cheese}     },
-  {"idgaf",      NULL, not_net | not_demo, {cheat_idgaf}      },
+  {"iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit} }, // Exit finder
+  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget}  }, // Give info on the current linetarget
+  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}      }, // Show hitscan trails
+  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}         },
+  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}     }, // MDK Fist
+  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}     }, // Explosive hitscan
+  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese}      },
+  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}       },
 
   #ifdef NUGMAGIC
-  {"ggg", NULL, 0, {cheat_magic}},
+
+  {"ggg", NULL, 0, {.v = cheat_magic}},
+  {"hhh", NULL, 0, {.v = cheat_magic2}},
+
   #endif
 
   // [Nugget] ---------------------------------------------------------------/
@@ -452,14 +468,14 @@ struct cheat_s cheat[] = {
 
 // [Nugget] /=================================================================
 
-static void cheat_nomomentum()
+static void cheat_nomomentum(void)
 {
   plyr->cheats ^= CF_NOMOMENTUM;
   displaymsg("No Momentum Mode %s", (plyr->cheats & CF_NOMOMENTUM) ? "ON" : "OFF");
 }
 
 // Emulates demo and/or net play state, for debugging
-static void cheat_fauxdemo()
+static void cheat_fauxdemo(void)
 {
   extern void D_UpdateCasualPlay(void);
 
@@ -471,21 +487,21 @@ static void cheat_fauxdemo()
 }
 
 // Infinite ammo
-static void cheat_infammo()
+static void cheat_infammo(void)
 {
   plyr->cheats ^= CF_INFAMMO;
   displaymsg("Infinite Ammo %s", (plyr->cheats & CF_INFAMMO) ? "ON" : "OFF");
 }
 
 // Fast weapons
-static void cheat_fastweaps()
+static void cheat_fastweaps(void)
 {
   plyr->cheats ^= CF_FASTWEAPS;
   displaymsg("Fast Weapons %s", (plyr->cheats & CF_FASTWEAPS) ? "ON" : "OFF");
 }
 
 // Shortcut for the two above cheats
-static void cheat_bobbers()
+static void cheat_bobbers(void)
 {
   if (!(plyr->cheats & CF_INFAMMO) || !(plyr->cheats & CF_FASTWEAPS))
   {
@@ -502,7 +518,7 @@ static void cheat_bobbers()
 }
 
 // Everything gibs
-static void cheat_gibbers()
+static void cheat_gibbers(void)
 {
   gibbers = !gibbers;
   displaymsg("%s", gibbers ? "Ludicrous Gibs!" : "Ludicrous Gibs no more.");
@@ -542,7 +558,7 @@ static void DoResurrect(void)
 }
 
 // Resurrection cheat adapted from Crispy's IDDQD
-static void cheat_resurrect()
+static void cheat_resurrect(void)
 {
   // [crispy] dead players are first respawned at the current position
   if (plyr->playerstate == PST_DEAD)
@@ -557,7 +573,7 @@ static void cheat_resurrect()
 
 // ---------------------------------------------------------------------------
 
-static void cheat_fly()
+static void cheat_fly(void)
 {
   plyr->cheats ^= CF_FLY;
 
@@ -567,12 +583,12 @@ static void cheat_fly()
   displaymsg("Fly Mode %s", (plyr->cheats & CF_FLY) ? "ON" : "OFF");
 }
 
-static void cheat_normalexit()
+static void cheat_normalexit(void)
 {
   G_ExitLevel();
 }
 
-static void cheat_secretexit()
+static void cheat_secretexit(void)
 {
   G_SecretExitLevel();
 }
@@ -602,7 +618,7 @@ static void cheat_turbo(char *buf)
 
 // Summoning -----------------------------------------------------------------
 
-static void cheat_summon()
+static void cheat_summon(void)
 {
   if (spawneetype == -1)
   { displaymsg("Summon: Enemy or Friend?"); }
@@ -693,7 +709,7 @@ static void SummonMobj(boolean friendly)
              spawneefriend ? "Friend" : "Enemy", spawneetype);
 }
 
-static void cheat_summone0()
+static void cheat_summone0(void)
 {
   displaymsg("Summon Enemy: Enter mobj index");
 }
@@ -704,7 +720,7 @@ static void cheat_summone(char *buf)
   if (GetMobjType(buf)) { SummonMobj(false); }
 }
 
-static void cheat_summonf0()
+static void cheat_summonf0(void)
 {
   displaymsg("Summon Friend: Enter mobj index");
 }
@@ -716,21 +732,21 @@ static void cheat_summonf(char *buf)
 }
 
 // Summon the last summoned mobj
-static void cheat_summonr()
+static void cheat_summonr(void)
 {
   SummonMobj(spawneefriend);
 }
 
 // Key finder ----------------------------------------------------------------
 
-static void cheat_reveal_key()
+static void cheat_reveal_key(void)
 {
   if (automapactive != AM_FULL) { return; }
 
   displaymsg("Key Finder: Red, Yellow or Blue?");
 }
 
-static void cheat_reveal_keyx()
+static void cheat_reveal_keyx(void)
 {
   if (automapactive != AM_FULL) { return; }
 
@@ -783,15 +799,77 @@ static void cheat_reveal_keyxx(int key)
 
 // ---------------------------------------------------------------------------
 
+// Exit finder
+static void cheat_reveal_exit(void)
+{
+  if (automapactive != AM_FULL) { return; }
+
+  static int last_exit_line = -1;
+  int i, start_i;
+
+  i = last_exit_line + 1;
+
+  if (i >= numlines) { i = 0; }
+
+  start_i = i;
+
+  // (found_exit & 1) == normal
+  // (found_exit & 2) == secret
+  // Can be both
+  int found_exit = 0;
+
+  do {
+    const line_t *const line = &lines[i];
+    const short special = line->special;
+
+    if (   special ==  11 || special ==  51 || special ==  52
+        || special == 124 || special == 197 || special == 198)
+    {
+      found_exit |= 1 + (special == 51 || special == 124 || special == 198);
+    }
+
+    for (int j = 0;  j < 2;  j++)
+    {
+      sector_t *const sector = j ? line->backsector : line->frontsector;
+
+      if (sector && P_IsDeathExit(sector))
+      {
+        found_exit |= 1 + (   (sector->special & DEATH_MASK)
+                           && (sector->special & DAMAGE_MASK) == DAMAGE_MASK);
+      }
+    }
+
+    if (found_exit)
+    {
+      followplayer = false;
+      AM_SetMapCenter(line->v1->x, line->v1->y);
+
+      displaymsg(
+        "Exit Finder: found %s",
+          (found_exit == 3) ? "normal and secret exits"
+        : (found_exit == 2) ? "secret exit"
+        :                     "normal exit"
+      );
+
+      last_exit_line = i;
+      break;
+    }
+
+    if (++i >= numlines) { i = 0; }
+  } while (i != start_i);
+
+  if (!found_exit) { displaymsg("Exit Finder: no exits found"); }
+}
+
 // Give info on the current `linetarget`
-static void cheat_linetarget()
+static void cheat_linetarget(void)
 {
   plyr->cheats ^= CF_LINETARGET;
   displaymsg("Linetarget Query %s", (plyr->cheats & CF_LINETARGET) ? "ON" : "OFF");
 }
 
 // Show hitscan trails
-static void cheat_trails()
+static void cheat_trails(void)
 {
   const int value = P_CycleShowHitscanTrails();
 
@@ -804,7 +882,7 @@ static void cheat_trails()
 }
 
 // 1-million-damage hitscan attack
-static void cheat_mdk()
+static void cheat_mdk(void)
 {
   fixed_t slope;
 
@@ -829,26 +907,31 @@ static void cheat_mdk()
 }
 
 // MDK Fist
-static void cheat_saitama()
+static void cheat_saitama(void)
 {
   plyr->cheats ^= CF_SAITAMA;
   displaymsg("MDK Fist %s", (plyr->cheats & CF_SAITAMA) ? "ON" : "OFF");
 }
 
 // Explosive hitscan
-static void cheat_boomcan()
+static void cheat_boomcan(void)
 {
   plyr->cheats ^= CF_BOOMCAN;
   displaymsg("Explosive Hitscan %s", (plyr->cheats & CF_BOOMCAN) ? "ON" : "OFF");
 }
 
-static void cheat_cheese()
+static void cheat_riotmode(void)
+{
+  displaymsg("Riot Mode %s", (riotmode = !riotmode) ? "ON" : "OFF");
+}
+
+static void cheat_cheese(void)
 {
   cheese = !cheese;
   displaymsg("%s", cheese ? "cheese :)" : "no cheese :(");
 }
 
-static void cheat_idgaf()
+static void cheat_idgaf(void)
 {
   idgaf = !idgaf;
   displaymsg("I %s.", idgaf ? "don't" : "do");
@@ -857,18 +940,18 @@ static void cheat_idgaf()
 // [Nugget] =================================================================/
 
 // [FG] FPS counter widget
-static void cheat_showfps()
+static void cheat_showfps(void)
 {
   plyr->cheats ^= CF_SHOWFPS;
 }
 
-static void cheat_speed()
+static void cheat_speed(void)
 {
   speedometer = (speedometer + 1) % 4;
 }
 
 // killough 7/19/98: Autoaiming optional in beta emulation mode
-static void cheat_autoaim()
+static void cheat_autoaim(void)
 {
   displaymsg((autoaim=!autoaim) ?
     "Projectile autoaiming on" : 
@@ -939,20 +1022,21 @@ static void cheat_mus(char *buf)
 boolean comp_choppers; // [Nugget]
 
 // 'choppers' invulnerability & chainsaw
-static void cheat_choppers()
+static void cheat_choppers(void)
 {
   plyr->weaponowned[wp_chainsaw] = true;
-  
+
   // [Nugget]
   if (casual_play && comp_choppers)
     P_GivePower(plyr, pw_invulnerability);
   else
     plyr->powers[pw_invulnerability] = true;
-  
+
+  plyr->bonuscount += 2; // trigger evil grin now
   displaymsg("%s", s_STSTR_CHOPPERS); // Ty 03/27/98 - externalized
 }
 
-static void cheat_god()
+static void cheat_god(void)
 {                                    // 'dqd' cheat for toggleable god mode
   // [crispy] dead players are first respawned at the current position
   if (plyr->playerstate == PST_DEAD)
@@ -973,7 +1057,7 @@ static void cheat_god()
     displaymsg("%s", s_STSTR_DQDOFF); // Ty 03/27/98 - externalized
 }
 
-static void cheat_buddha()
+static void cheat_buddha(void)
 {
   plyr->cheats ^= CF_BUDDHA;
   if (plyr->cheats & CF_BUDDHA)
@@ -982,7 +1066,7 @@ static void cheat_buddha()
     displaymsg("Buddha Mode OFF");
 }
 
-static void cheat_notarget()
+static void cheat_notarget(void)
 {
   plyr->cheats ^= CF_NOTARGET;
 
@@ -1013,7 +1097,7 @@ static void cheat_notarget()
 
 boolean frozen_mode;
 
-static void cheat_freeze()
+static void cheat_freeze(void)
 {
   frozen_mode = !frozen_mode;
   if (frozen_mode)
@@ -1022,7 +1106,7 @@ static void cheat_freeze()
     displaymsg("Freeze OFF");
 }
 
-static void cheat_avj()
+static void cheat_avj(void)
 {
   void A_VileJump(mobj_t *mo);
 
@@ -1031,7 +1115,7 @@ static void cheat_avj()
 }
 
 // CPhipps - new health and armour cheat codes
-static void cheat_health()
+static void cheat_health(void)
 {
   if (!(plyr->cheats & CF_GODMODE))
   {
@@ -1042,20 +1126,20 @@ static void cheat_health()
   }
 }
 
-static void cheat_megaarmour()
+static void cheat_megaarmour(void)
 {
   plyr->armorpoints = idfa_armor;      // Ty 03/09/98 - deh
   plyr->armortype = idfa_armor_class;  // Ty 03/09/98 - deh
   displaymsg("%s", s_STSTR_BEHOLDX); // Ty 03/27/98 - externalized
 }
 
-static void cheat_tst()
+static void cheat_tst(void)
 { // killough 10/98: same as iddqd except for message
   cheat_god();
   displaymsg(plyr->cheats & CF_GODMODE ? "God Mode On" : "God Mode Off");
 }
 
-static void cheat_fa()
+static void cheat_fa(void)
 {
   int i;
 
@@ -1079,10 +1163,11 @@ static void cheat_fa()
     if (i!=am_cell || gamemode!=shareware)
       plyr->ammo[i] = plyr->maxammo[i];
 
+  plyr->bonuscount += 2; // trigger evil grin now
   displaymsg("%s", s_STSTR_FAADDED);
 }
 
-static void cheat_k()
+static void cheat_k(void)
 {
   int i;
   for (i=0;i<NUMCARDS;i++)
@@ -1093,14 +1178,14 @@ static void cheat_k()
       }
 }
 
-static void cheat_kfa()
+static void cheat_kfa(void)
 {
   cheat_k();
   cheat_fa();
   displaymsg("%s", s_STSTR_KFAADDED);
 }
 
-static void cheat_noclip()
+static void cheat_noclip(void)
 {
   // Simplified, accepting both "noclip" and "idspispopd".
   // no clipping mode cheat
@@ -1137,13 +1222,13 @@ static void cheat_pw(int pw)
 }
 
 // 'behold' power-up menu
-static void cheat_behold()
+static void cheat_behold(void)
 {
   displaymsg("%s", s_STSTR_BEHOLD); // Ty 03/27/98 - externalized
 }
 
 // 'clev' change-level cheat
-static void cheat_clev0()
+static void cheat_clev0(void)
 {
   int epsd, map;
   char *cur, *next;
@@ -1223,14 +1308,14 @@ static void cheat_clev(char *buf)
 
 // 'mypos' for player position
 // killough 2/7/98: simplified using dprintf and made output more user-friendly
-static void cheat_mypos()
+static void cheat_mypos(void)
 {
   plyr->cheats ^= CF_MAPCOORDS;
   if ((plyr->cheats & CF_MAPCOORDS) == 0)
     plyr->message = "";
 }
 
-void cheat_mypos_print()
+void cheat_mypos_print(void)
 {
   displaymsg("X=%.10f Y=%.10f A=%-.0f",
           (double)players[consoleplayer].mo->x / FRACUNIT,
@@ -1240,7 +1325,7 @@ void cheat_mypos_print()
 
 // compatibility cheat
 
-static void cheat_comp0()
+static void cheat_comp0(void)
 {
   displaymsg("Complevel: %s", G_GetCurrentComplevelName());
 }
@@ -1265,14 +1350,14 @@ static void cheat_comp(char *buf)
 }
 
 // variable friction cheat
-static void cheat_friction()
+static void cheat_friction(void)
 {
   displaymsg(            // Ty 03/27/98 - *not* externalized
     (variable_friction = !variable_friction) ? "Variable Friction enabled" : 
                                                "Variable Friction disabled");
 }
 
-static void cheat_skill0()
+static void cheat_skill0(void)
 {
   displaymsg("Skill: %s", default_skill_strings[gameskill + 1]);
 }
@@ -1292,20 +1377,20 @@ static void cheat_skill(char *buf)
 
 // Pusher cheat
 // phares 3/10/98
-static void cheat_pushers()
+static void cheat_pushers(void)
 {
   displaymsg(           // Ty 03/27/98 - *not* externalized
     (allow_pushers = !allow_pushers) ? "Pushers enabled" : "Pushers disabled");
 }
 
 // translucency cheat
-static void cheat_tran()
+static void cheat_tran(void)
 {
   displaymsg(            // Ty 03/27/98 - *not* externalized
     (translucency = !translucency) ? "Translucency enabled" : "Translucency disabled");
 }
 
-static void cheat_massacre()    // jff 2/01/98 kill all monsters
+static void cheat_massacre(void)    // jff 2/01/98 kill all monsters
 {
   // jff 02/01/98 'em' cheat - kill all monsters
   // partially taken from Chi's .46 port
@@ -1357,7 +1442,7 @@ static void cheat_massacre()    // jff 2/01/98 kill all monsters
   bloodier_gibbing = oldgibbing; // [Nugget]
 }
 
-static void cheat_spechits()
+static void cheat_spechits(void)
 {
   int i, speciallines = 0;
   boolean origcards[NUMCARDS];
@@ -1426,7 +1511,7 @@ static void cheat_spechits()
     plyr->cards[i] = origcards[i];
   }
 
-  if (gamemapinfo && gamemapinfo->numbossactions > 0)
+  if (gamemapinfo && array_size(gamemapinfo->bossactions))
   {
     thinker_t *th;
 
@@ -1436,13 +1521,14 @@ static void cheat_spechits()
       {
         mobj_t *mo = (mobj_t *) th;
 
-        for (i = 0; i < gamemapinfo->numbossactions; i++)
+        bossaction_t *bossaction;
+        array_foreach(bossaction, gamemapinfo->bossactions)
         {
-          if (gamemapinfo->bossactions[i].type == mo->type)
+          if (bossaction->type == mo->type)
           {
             dummy = *lines;
-            dummy.special = (short)gamemapinfo->bossactions[i].special;
-            dummy.tag = (short)gamemapinfo->bossactions[i].tag;
+            dummy.special = (short)bossaction->special;
+            dummy.tag = (short)bossaction->tag;
             // use special semantics for line activation to block problem types.
             if (!P_UseSpecialLine(mo, &dummy, 0, true))
               P_CrossSpecialLine(&dummy, 0, mo, true);
@@ -1516,13 +1602,13 @@ static void cheat_spechits()
 
 // killough 2/7/98: move iddt cheat from am_map.c to here
 // killough 3/26/98: emulate Doom better
-static void cheat_ddt()
+static void cheat_ddt(void)
 {
   if (automapactive)
     ddt_cheating = (ddt_cheating+1) % 3;
 }
 
-static void cheat_reveal_secret()
+static void cheat_reveal_secret(void)
 {
   static int last_secret = -1;
 
@@ -1598,7 +1684,7 @@ static void cheat_cycle_mobj(mobj_t **last_mobj, int *last_count,
   } while (th != start_th);
 }
 
-static void cheat_reveal_kill()
+static void cheat_reveal_kill(void)
 {
   if (automapactive == AM_FULL)
   {
@@ -1609,7 +1695,7 @@ static void cheat_reveal_kill()
   }
 }
 
-static void cheat_reveal_item()
+static void cheat_reveal_item(void)
 {
   if (automapactive == AM_FULL)
   {
@@ -1621,14 +1707,14 @@ static void cheat_reveal_item()
 }
 
 // killough 2/7/98: HOM autodetection
-static void cheat_hom()
+static void cheat_hom(void)
 {
   displaymsg((autodetect_hom = !autodetect_hom) ? "HOM Detection On" :
     "HOM Detection Off");
 }
 
 // killough 3/6/98: -fast parameter toggle
-static void cheat_fast()
+static void cheat_fast(void)
 {
   // [Nugget] Custom Skill
   if (gameskill == sk_custom)
@@ -1646,12 +1732,12 @@ static void cheat_fast()
 }
 
 // killough 2/16/98: keycard/skullkey cheat functions
-static void cheat_key()
+static void cheat_key(void)
 {
   displaymsg("Red, Yellow, Blue");  // Ty 03/27/98 - *not* externalized
 }
 
-static void cheat_keyx()
+static void cheat_keyx(void)
 {
   displaymsg("Card, Skull");        // Ty 03/27/98 - *not* externalized
 }
@@ -1664,7 +1750,7 @@ static void cheat_keyxx(int key)
 
 // killough 2/16/98: generalized weapon cheats
 
-static void cheat_weap()
+static void cheat_weap(void)
 {                                   // Ty 03/27/98 - *not* externalized
   displaymsg(ALLOW_SSG ? // killough 2/28/98
     "Weapon number 1-9" : "Weapon number 1-8");
@@ -1684,7 +1770,10 @@ static void cheat_weapx(char *buf)
     if (w >= 0 && w < NUMWEAPONS)
     {
       if ((plyr->weaponowned[w] = !plyr->weaponowned[w]))
+      {
+        plyr->bonuscount += 2; // trigger evil grin now
         displaymsg("Weapon Added");  // Ty 03/27/98 - *not* externalized
+      }
       else 
         {
           displaymsg("Weapon Removed"); // Ty 03/27/98 - *not* externalized
@@ -1695,7 +1784,7 @@ static void cheat_weapx(char *buf)
 }
 
 // killough 2/16/98: generalized ammo cheats
-static void cheat_ammo()
+static void cheat_ammo(void)
 {
   displaymsg("Ammo 1-4, Backpack");  // Ty 03/27/98 - *not* externalized
 }
@@ -1727,25 +1816,25 @@ static void cheat_ammox(char *buf)
       }
 }
 
-static void cheat_smart()
+static void cheat_smart(void)
 {
   displaymsg((monsters_remember = !monsters_remember) ? 
     "Smart Monsters Enabled" : "Smart Monsters Disabled");
 }
 
-static void cheat_pitch()
+static void cheat_pitch(void)
 {
   displaymsg((pitched_sounds = !pitched_sounds) ? "Pitch Effects Enabled" :
     "Pitch Effects Disabled");
 }
 
-static void cheat_nuke()
+static void cheat_nuke(void)
 {
   displaymsg((disable_nuke = !disable_nuke) ? "Nukage Disabled" :
     "Nukage Enabled");
 }
 
-static void cheat_rate()
+static void cheat_rate(void)
 {
   plyr->cheats ^= CF_RENDERSTATS;
 }
@@ -1846,32 +1935,34 @@ static const struct {
   const cheatf_t func;
   const int arg;
 } cheat_input[] = {
-  { input_iddqd,     not_net|not_demo, {cheat_god},      0 },
-  { input_idkfa,     not_net|not_demo, {cheat_kfa},      0 },
-  { input_idfa,      not_net|not_demo, {cheat_fa},       0 },
-  { input_idclip,    not_net|not_demo, {cheat_noclip},   0 },
-  { input_idbeholdh, not_net|not_demo, {cheat_health},   0 },
-  { input_idbeholdm, not_net|not_demo, {cheat_megaarmour}, 0 },
-  { input_idbeholdv, not_net|not_demo, {cheat_pw},       pw_invulnerability },
-  { input_idbeholds, not_net|not_demo, {cheat_pw},       pw_strength },
-  { input_idbeholdi, not_net|not_demo, {cheat_pw},       pw_invisibility },
-  { input_idbeholdr, not_net|not_demo, {cheat_pw},       pw_ironfeet },
-  { input_idbeholdl, not_dm,           {cheat_pw},       pw_infrared },
-  { input_iddt,      not_dm,           {cheat_ddt},      0 },
-  { input_notarget,  not_net|not_demo, {cheat_notarget}, 0 },
-  { input_freeze,    not_net|not_demo, {cheat_freeze},   0 },
-  { input_avj,       not_net|not_demo, {cheat_avj},      0 },
+  { input_iddqd,     not_net|not_demo, {.v = cheat_god},      0 },
+  { input_idkfa,     not_net|not_demo, {.v = cheat_kfa},      0 },
+  { input_idfa,      not_net|not_demo, {.v = cheat_fa},       0 },
+  { input_idclip,    not_net|not_demo, {.v = cheat_noclip},   0 },
+  { input_idbeholdh, not_net|not_demo, {.v = cheat_health},   0 },
+  { input_idbeholdm, not_net|not_demo, {.v = cheat_megaarmour}, 0 },
+  { input_idbeholdv, not_net|not_demo, {.i = cheat_pw},       pw_invulnerability },
+  { input_idbeholds, not_net|not_demo, {.i = cheat_pw},       pw_strength },
+  { input_idbeholdi, not_net|not_demo, {.i = cheat_pw},       pw_invisibility },
+  { input_idbeholdr, not_net|not_demo, {.i = cheat_pw},       pw_ironfeet },
+  { input_idbeholdl, not_dm,           {.i = cheat_pw},       pw_infrared },
+  { input_iddt,      not_dm,           {.v = cheat_ddt},      0 },
+  { input_notarget,  not_net|not_demo, {.v = cheat_notarget}, 0 },
+  { input_freeze,    not_net|not_demo, {.v = cheat_freeze},   0 },
+  { input_avj,       not_net|not_demo, {.v = cheat_avj},      0 },
+
   // [Nugget] ----------------------------------------------------------------
-  { input_idbeholda,  not_net|not_demo, {cheat_pw},         pw_allmap },
-  { input_infammo,    not_net|not_demo, {cheat_infammo},    0 },
-  { input_fastweaps,  not_net|not_demo, {cheat_fastweaps},  0 },
-  { input_resurrect,  not_net|not_demo, {cheat_resurrect},  0 },
-  { input_fly,        not_net|not_demo, {cheat_fly},        0 },
-  { input_summonr,    not_net|not_demo, {cheat_summonr},    0 },
-  { input_linetarget, not_net|not_demo, {cheat_linetarget}, 0 },
-  { input_mdk,        not_net|not_demo, {cheat_mdk},        0 },
-  { input_saitama,    not_net|not_demo, {cheat_saitama},    0 },
-  { input_boomcan,    not_net|not_demo, {cheat_boomcan},    0 },
+
+  { input_idbeholda,  not_net|not_demo, {.i = cheat_pw},         pw_allmap },
+  { input_infammo,    not_net|not_demo, {.v = cheat_infammo},    0 },
+  { input_fastweaps,  not_net|not_demo, {.v = cheat_fastweaps},  0 },
+  { input_resurrect,  not_net|not_demo, {.v = cheat_resurrect},  0 },
+  { input_fly,        not_net|not_demo, {.v = cheat_fly},        0 },
+  { input_summonr,    not_net|not_demo, {.v = cheat_summonr},    0 },
+  { input_linetarget, not_net|not_demo, {.v = cheat_linetarget}, 0 },
+  { input_mdk,        not_net|not_demo, {.v = cheat_mdk},        0 },
+  { input_saitama,    not_net|not_demo, {.v = cheat_saitama},    0 },
+  { input_boomcan,    not_net|not_demo, {.v = cheat_boomcan},    0 },
 };
 
 boolean M_CheatResponder(event_t *ev)

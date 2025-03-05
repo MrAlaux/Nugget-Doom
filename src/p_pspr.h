@@ -38,12 +38,9 @@
 
 struct player_s;
 
-// [Nugget] CVARs /-----------------------------------------------------------
+// [Nugget] /=================================================================
 
-extern boolean weapswitch_interruption;
-extern boolean always_bob;
-
-enum {
+typedef enum bobstyle_s {
   BOBSTYLE_VANILLA,
   BOBSTYLE_INVVANILLA,
   BOBSTYLE_ALPHA,
@@ -51,14 +48,34 @@ enum {
   BOBSTYLE_SMOOTH,
   BOBSTYLE_INVSMOOTH,
   BOBSTYLE_QUAKE,
-}; extern int bobbing_style;
 
+  NUM_BOBSTYLES
+} bobstyle_t;
+
+// CVARs ---------------------------------------------------------------------
+
+extern int weapon_recoilpitch_scale_pct;
+extern boolean weapswitch_interruption;
+extern boolean always_bob;
+extern bobstyle_t bobbing_style;
+extern int weapon_bobbing_speed_pct;
+extern boolean switch_bob;
+extern boolean weapon_inertia;
+extern int weapon_inertia_scale_pct;
+extern boolean weapon_inertia_fire;
 extern boolean weaponsquat;
 extern boolean sx_fix;
 extern boolean comp_nomeleesnap;
 extern boolean comp_cgundblsnd;
 
-// [Nugget] -----------------------------------------------------------------/
+// [ceski] Weapon Inertia ----------------------------------------------------
+
+#define ORIG_WEAPON_INERTIA_SCALE 60000
+extern fixed_t weapon_inertia_scale;
+
+void P_NuggetResetWeaponInertia(void);
+
+// [Nugget] =================================================================/
 
 //
 // Overlay psprites are scaled shapes
@@ -79,14 +96,20 @@ typedef struct pspdef_s
   int     tics;
   fixed_t sx;
   fixed_t sy;
-  // [Nugget]: [crispy] squat down weapon sprite
-  fixed_t	dy;
   // [FG] centered weapon sprite
   fixed_t sx2;
   fixed_t sy2;
-  // [Nugget] Offsets for weapon inertia.
-  fixed_t wix;
-  fixed_t wiy;
+  fixed_t oldsx2;
+  fixed_t oldsy2;
+
+  // [Nugget] ----------------------------------------------------------------
+
+  // [crispy] squat down weapon sprite
+  fixed_t dy;
+
+  // [ceski] Offsets for weapon inertia.
+  fixed_t wix, oldwix;
+  fixed_t wiy, oldwiy;
 } pspdef_t;
 
 extern int weapon_preferences[2][NUMWEAPONS+1];      // killough 5/2/98
@@ -106,18 +129,6 @@ void P_DropWeapon(struct player_s *player);
 void P_SubtractAmmo(struct player_s *player, int compat_amt);
 void P_SetPspritePtr(struct player_s *player, pspdef_t *psp, statenum_t stnum);
 void A_Recoil(struct player_s* player);
-
-// [Nugget- ceski] Weapon Inertia /-------------------------------------------
-
-extern boolean weapon_inertia;
-extern int weapon_inertia_scale_pct;
-
-#define ORIG_WEAPON_INERTIA_SCALE 60000
-extern fixed_t weapon_inertia_scale;
-
-void P_NuggetResetWeaponInertia(void);
-
-// [Nugget] -----------------------------------------------------------------/
 
 #endif
 

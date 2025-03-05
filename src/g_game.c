@@ -42,6 +42,7 @@
 #include "f_finale.h"
 #include "g_game.h"
 #include "g_nextweapon.h"
+#include "g_umapinfo.h"
 #include "hu_command.h"
 #include "hu_obituary.h"
 #include "i_gamepad.h"
@@ -88,7 +89,6 @@
 #include "st_widgets.h"
 #include "statdump.h" // [FG] StatCopy()
 #include "tables.h"
-#include "u_mapinfo.h"
 #include "v_video.h"
 #include "version.h"
 #include "w_wad.h"
@@ -101,24 +101,12 @@
 #include "m_cheat.h"
 #include "p_spec.h"
 
-#define SAVEGAMESIZE  0x20000
-#define SAVESTRINGSIZE  24
-
-static size_t   savegamesize = SAVEGAMESIZE; // killough
-static char     *demoname = NULL;
-// [crispy] the name originally chosen for the demo, i.e. without "-00000"
-static char     *orig_demoname = NULL;
-static boolean  netdemo;
-static byte     *demobuffer;   // made some static -- killough
-static size_t   maxdemosize;
-static byte     *demo_p;
-static byte     consistancy[MAXPLAYERS][BACKUPTICS];
-
 // [Nugget] /=================================================================
 
 // CVARs ---------------------------------------------------------------------
 
 boolean one_key_saveload;
+boolean improved_weapon_toggles;
 boolean skip_ammoless_weapons;
 boolean comp_longautoaim;
 
@@ -127,6 +115,29 @@ boolean comp_longautoaim;
 boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
 
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
+
+static float mouse_h_modifier = 1.0f,
+             mouse_v_modifier = 1.0f;
+
+static void UpdateMouseModifiers(void)
+{
+  mouse_h_modifier = mouse_v_modifier = 1.0f;
+
+  if (strictmode) { return; }
+
+  // Decrease the intensity of some movements if zoomed in -------------------
+
+  const int zoom = R_GetFOVFX(FOVFX_ZOOM);
+
+  if (zoom)
+  { mouse_h_modifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
+
+  mouse_v_modifier = mouse_h_modifier;
+
+  // Flip levels -------------------------------------------------------------
+
+  if (STRICTMODE(flip_levels)) { mouse_h_modifier = -mouse_h_modifier; }
+}
 
 // Periodic auto save --------------------------------------------------------
 
@@ -170,7 +181,7 @@ static int keyframe_index = -1;
 // Slow Motion ---------------------------------------------------------------
 
 static boolean slow_motion = false;
-static float slow_motion_factor = SLOWMO_FACTOR_NORMAL;
+static int slow_motion_factor = SLOWMO_FACTOR_NORMAL;
 
 boolean G_GetSlowMotion(void)
 {
@@ -192,9 +203,116 @@ void G_ResetSlowMotion(void)
   if (reset_scale) { G_SetTimeScale(); }
 }
 
-float G_GetSlowMotionFactor(void)
+int G_GetSlowMotionFactor(void)
 {
   return slow_motion_factor;
+}
+
+// Improved weapon toggles ---------------------------------------------------
+
+boolean G_ToggleFistChainsaw(const player_t *const player, boolean vanilla)
+{
+  const boolean berserk = player->powers[pw_strength];
+  const boolean saw_preferred = vanilla || P_WeaponPreferred(wp_chainsaw, wp_fist) || !berserk;
+  const weapontype_t pendingweapon = player->pendingweapon,
+                       readyweapon = player->readyweapon;
+
+  if (CASUALPLAY(weapswitch_interruption)
+      && pendingweapon != wp_nochange
+      && !(   pendingweapon == wp_fist
+           || pendingweapon == wp_chainsaw))
+  {
+    if (readyweapon == wp_fist || readyweapon == wp_chainsaw)
+    {
+      return readyweapon == wp_chainsaw;
+    }
+    else
+    {
+      return saw_preferred;
+    }
+  }
+  else if (CASUALPLAY(improved_weapon_toggles))
+  {
+    if (readyweapon == wp_fist
+        || pendingweapon == wp_fist
+        || pendingweapon == wp_chainsaw)
+    {
+      return pendingweapon != wp_chainsaw || (vanilla && !berserk);
+    }
+    else if (readyweapon == wp_chainsaw)
+    {
+      return pendingweapon == wp_fist || (vanilla && !berserk);
+    }
+    else
+    {
+      return saw_preferred;
+    }
+  }
+  else
+  {
+    if (vanilla)
+    {
+      return readyweapon != wp_chainsaw || !berserk;
+    }
+    else
+    {
+      return readyweapon != wp_chainsaw
+             && (readyweapon == wp_fist
+                 || saw_preferred);
+    }
+  }
+}
+
+boolean G_ToggleShotgunSSG(const player_t *const player, boolean vanilla)
+{
+  const boolean ssg_preferred = vanilla || P_WeaponPreferred(wp_supershotgun, wp_shotgun);
+  const weapontype_t pendingweapon = player->pendingweapon,
+                       readyweapon = player->readyweapon;
+
+  if (CASUALPLAY(weapswitch_interruption)
+      && pendingweapon != wp_nochange
+      && !(   pendingweapon == wp_shotgun
+           || pendingweapon == wp_supershotgun))
+  {
+    if (readyweapon == wp_shotgun || readyweapon == wp_supershotgun)
+    {
+      return readyweapon == wp_supershotgun;
+    }
+    else
+    {
+      return ssg_preferred;
+    }
+  }
+  else if (CASUALPLAY(improved_weapon_toggles))
+  {
+    if (readyweapon == wp_shotgun
+        || pendingweapon == wp_shotgun
+        || pendingweapon == wp_supershotgun)
+    {
+      return pendingweapon != wp_supershotgun;
+    }
+    else if (readyweapon == wp_supershotgun)
+    {
+      return pendingweapon == wp_shotgun;
+    }
+    else
+    {
+      return ssg_preferred;
+    }
+  }
+  else
+  {
+    if (vanilla)
+    {
+      return readyweapon != wp_supershotgun;
+    }
+    else
+    {
+      return readyweapon == wp_shotgun
+             || (readyweapon != wp_supershotgun
+                 && ssg_preferred);
+    }
+  }
 }
 
 // Custom Skill --------------------------------------------------------------
@@ -314,6 +432,19 @@ static void G_UpdateInitialLoadout(void)
 
 // [Nugget] =================================================================/
 
+#define SAVEGAMESIZE  0x20000
+#define SAVESTRINGSIZE  24
+
+static size_t   savegamesize = SAVEGAMESIZE; // killough
+static char     *demoname = NULL;
+// the original name of the demo, without "-00000" and file extension
+static char *demoname_orig = NULL;
+static boolean  netdemo;
+static byte     *demobuffer;   // made some static -- killough
+static size_t   maxdemosize;
+static byte     *demo_p;
+static byte     consistancy[MAXPLAYERS][BACKUPTICS];
+
 static int G_GameOptionSize(void);
 
 gameaction_t    gameaction;
@@ -371,7 +502,7 @@ boolean         mouselook = false;
 boolean         padlook = false;
 // killough 4/13/98: Make clock rate adjustable by scale factor
 int             realtic_clock_rate = 100;
-static boolean  doom_weapon_toggles;
+boolean         doom_weapon_toggles; // [Nugget] Global
 
 complevel_t     force_complevel, default_complevel;
 
@@ -562,7 +693,7 @@ void G_SetTimeScale(void)
 
     // [Nugget] Slow Motion
     if (casual_play && !menuactive && slow_motion_factor != SLOWMO_FACTOR_NORMAL)
-    { time_scale *= slow_motion_factor; }
+    { time_scale = time_scale * slow_motion_factor / SLOWMO_FACTOR_NORMAL; }
 
     I_SetTimeScale(time_scale);
 
@@ -682,38 +813,18 @@ static void ApplyQuickstartCache(ticcmd_t *cmd, boolean strafe)
 
 void G_PrepMouseTiccmd(void)
 {
-  // [Nugget] /===============================================================
-
-  float hmodifier = 1.0f;
-
-  // Decrease the intensity of some movements if zoomed in -------------------
-
-  if (!strictmode)
-  {
-    const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-    if (zoom)
-    { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
-  }
-
-  float vmodifier = hmodifier;
-
-  // Flip levels ------------------------------------------------------------
-
-  if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
-
-  // [Nugget] ===============================================================/
+  UpdateMouseModifiers(); // [Nugget]
 
   if (mousex && !M_InputGameActive(input_strafe))
   {
-    localview.rawangle -= G_CalcMouseAngle(mousex) / hmodifier;
+    localview.rawangle -= G_CalcMouseAngle(mousex) / mouse_h_modifier;
     basecmd.angleturn = G_CarryAngle(localview.rawangle);
     mousex = 0;
   }
 
   if (mousey && mouselook)
   {
-    localview.rawpitch += G_CalcMousePitch(mousey) / vmodifier;
+    localview.rawpitch += G_CalcMousePitch(mousey) / mouse_v_modifier;
     basecmd.pitch = G_CarryPitch(localview.rawpitch);
     mousey = 0;
   }
@@ -723,27 +834,7 @@ void G_PrepGamepadTiccmd(void)
 {
   if (I_UseGamepad())
   {
-    // [Nugget] /=============================================================
-
-    float hmodifier = 1.0f;
-
-    // Decrease the intensity of some movements if zoomed in -----------------
-
-    if (!strictmode)
-    {
-      const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-      if (zoom)
-      { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
-    }
-
-    float vmodifier = hmodifier;
-
-    // Flip levels ----------------------------------------------------------
-
-    if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
-
-    // [Nugget] =============================================================/
+    UpdateMouseModifiers(); // [Nugget]
 
     const boolean strafe = M_InputGameActive(input_strafe);
 
@@ -752,14 +843,14 @@ void G_PrepGamepadTiccmd(void)
 
     if (axes[AXIS_TURN] && !strafe)
     {
-      localview.rawangle -= G_CalcGamepadAngle() / hmodifier;
+      localview.rawangle -= G_CalcGamepadAngle() / mouse_h_modifier;
       basecmd.angleturn = G_CarryAngle(localview.rawangle);
       axes[AXIS_TURN] = 0.0f;
     }
 
     if (axes[AXIS_LOOK] && padlook)
     {
-      localview.rawpitch -= G_CalcGamepadPitch() / vmodifier;
+      localview.rawpitch -= G_CalcGamepadPitch() / mouse_v_modifier;
       basecmd.pitch = G_CarryPitch(localview.rawpitch);
       axes[AXIS_LOOK] = 0.0f;
     }
@@ -770,41 +861,21 @@ void G_PrepGyroTiccmd(void)
 {
   if (I_UseGamepad())
   {
-    // [Nugget] /=============================================================
-
-    float hmodifier = 1.0f;
-
-    // Decrease the intensity of some movements if zoomed in -----------------
-
-    if (!strictmode)
-    {
-      const int zoom = R_GetFOVFX(FOVFX_ZOOM);
-
-      if (zoom)
-      { hmodifier = MAX(1.0f, (float) custom_fov / MAX(1, custom_fov + zoom)); }
-    }
-
-    float vmodifier = hmodifier;
-
-    // Flip levels ----------------------------------------------------------
-
-    if (STRICTMODE(flip_levels)) { hmodifier = -hmodifier; }
-
-    // [Nugget] =============================================================/
+    UpdateMouseModifiers(); // [Nugget]
 
     I_CalcGyroAxes(M_InputGameActive(input_strafe));
     gyro_turn_tic = gyro_axes[GYRO_TURN];
 
     if (gyro_axes[GYRO_TURN])
     {
-      localview.rawangle += gyro_axes[GYRO_TURN] / hmodifier;
+      localview.rawangle += gyro_axes[GYRO_TURN] / mouse_h_modifier;
       basecmd.angleturn = G_CarryAngle(localview.rawangle);
       gyro_axes[GYRO_TURN] = 0.0f;
     }
 
     if (gyro_axes[GYRO_LOOK])
     {
-      localview.rawpitch += gyro_axes[GYRO_LOOK] / vmodifier;
+      localview.rawpitch += gyro_axes[GYRO_LOOK] / mouse_v_modifier;
       basecmd.pitch = G_CarryPitch(localview.rawpitch);
       gyro_axes[GYRO_LOOK] = 0.0f;
     }
@@ -836,10 +907,7 @@ static void AdjustWeaponSelection(int *newweapon)
 
     if (*newweapon == wp_fist
         && player->weaponowned[wp_chainsaw]
-        && player->readyweapon != wp_chainsaw
-        && (player->readyweapon == wp_fist
-            || !player->powers[pw_strength]
-            || P_WeaponPreferred(wp_chainsaw, wp_fist)))
+        && G_ToggleFistChainsaw(player, false)) // [Nugget] Improved weapon toggles
     {
         *newweapon = wp_chainsaw;
     }
@@ -852,9 +920,7 @@ static void AdjustWeaponSelection(int *newweapon)
     if (*newweapon == wp_shotgun && ALLOW_SSG
         && player->weaponowned[wp_supershotgun]
         && (!player->weaponowned[wp_shotgun]
-            || player->readyweapon == wp_shotgun
-            || (player->readyweapon != wp_supershotgun
-                && P_WeaponPreferred(wp_supershotgun, wp_shotgun))))
+            || G_ToggleShotgunSSG(player, false))) // [Nugget] Improved weapon toggles
     {
         *newweapon = wp_supershotgun;
     }
@@ -1079,7 +1145,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
 
   boolean ilw_active = false;
 
-  if (CASUALPLAY(weapswitch_interruption))
+  if (CASUALPLAY(improved_weapon_toggles || weapswitch_interruption))
   {
     static boolean ilw_down = false;
 
@@ -1127,7 +1193,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
 
       boolean iw_active[9] = {false};
 
-      if (CASUALPLAY(weapswitch_interruption))
+      if (CASUALPLAY(improved_weapon_toggles || weapswitch_interruption))
       {
         static boolean iw_down[9] = {false};
 
@@ -1443,7 +1509,7 @@ static void G_ReloadLevel(void)
   {
     ddt_cheating = 0;
     G_CheckDemoStatus();
-    G_RecordDemo(orig_demoname);
+    G_RecordDemo(demoname_orig);
   }
 
   G_InitNew(gameskill, gameepisode, gamemap);
@@ -1481,7 +1547,7 @@ int G_GotoNextLevel(int *pEpi, int *pMap)
       next = gamemapinfo->nextsecret;
     else if (gamemapinfo->nextmap[0])
       next = gamemapinfo->nextmap;
-    else if (U_CheckField(gamemapinfo->endpic))
+    else if (gamemapinfo->flags & MapInfo_EndGame)
     {
       epsd = 1;
       map = 1;
@@ -1836,7 +1902,7 @@ static void CheckPlayersInNetGame(void)
 
 int playback_tic = 0, playback_totaltics = 0;
 
-static char *defdemoname;
+static const char *defdemoname;
 
 #define DEMOMARKER    0x80
 
@@ -1847,7 +1913,7 @@ static void G_JoinDemo(void)
   if (netgame)
     CheckPlayersInNetGame();
 
-  if (!orig_demoname)
+  if (!demoname_orig)
   {
     byte *actualbuffer = demobuffer;
     size_t actualsize = maxdemosize;
@@ -1996,7 +2062,7 @@ static void G_PlayerFinishLevel(int player)
 
 // [crispy] format time for level statistics
 #define TIMESTRSIZE 16
-static void G_FormatLevelStatTime(char *str, int tics, boolean total)
+static void FormatLevelStatTime(char *str, int tics, boolean total)
 {
     int exitHours, exitMinutes;
     float exitTime, exitSeconds;
@@ -2027,31 +2093,39 @@ static void G_FormatLevelStatTime(char *str, int tics, boolean total)
 // [crispy] Write level statistics upon exit
 static void G_WriteLevelStat(void)
 {
-    static FILE *fstream = NULL;
+    int playerKills = 0, playerItems = 0, playerSecrets = 0;
 
-    int i, playerKills = 0, playerItems = 0, playerSecrets = 0;
+    char levelString[9] = {0};
+    char levelTimeString[TIMESTRSIZE] = {0};
+    char totalTimeString[TIMESTRSIZE] = {0};
 
-    char levelString[8];
-    char levelTimeString[TIMESTRSIZE];
-    char totalTimeString[TIMESTRSIZE];
+    static boolean firsttime = true;
+
+    FILE *fstream = NULL;
+
+    if (firsttime)
+    {
+        firsttime = false;
+        fstream = M_fopen("levelstat.txt", "w");
+    }
+    else
+    {
+        fstream = M_fopen("levelstat.txt", "a");
+    }
 
     if (fstream == NULL)
     {
-        fstream = M_fopen("levelstat.txt", "w");
-
-        if (fstream == NULL)
-        {
-            I_Printf(VB_ERROR, "G_WriteLevelStat: Unable to open levelstat.txt for writing!");
-            return;
-        }
+        I_Printf(VB_ERROR,
+            "G_WriteLevelStat: Unable to open levelstat.txt for writing!");
+        return;
     }
 
     strcpy(levelString, MapName(gameepisode, gamemap));
 
-    G_FormatLevelStatTime(levelTimeString, leveltime, false);
-    G_FormatLevelStatTime(totalTimeString, totalleveltimes + leveltime, true);
+    FormatLevelStatTime(levelTimeString, leveltime, false);
+    FormatLevelStatTime(totalTimeString, totalleveltimes + leveltime, true);
 
-    for (i = 0; i < MAXPLAYERS; i++)
+    for (int i = 0; i < MAXPLAYERS; i++)
     {
         if (playeringame[i])
         {
@@ -2065,6 +2139,8 @@ static void G_WriteLevelStat(void)
             levelString, (secretexit ? "s" : ""),
             levelTimeString, totalTimeString, playerKills, totalkills,
             playerItems, totalitems, playerSecrets, totalsecret);
+
+    fclose(fstream);
 }
 
 // [Nugget] Custom Skill
@@ -2152,9 +2228,9 @@ static void G_DoCompleted(void)
     const char *next = NULL;
     boolean intermission = false;
 
-    if (U_CheckField(gamemapinfo->endpic))
+    if (gamemapinfo->flags & MapInfo_EndGame)
     {
-      if (gamemapinfo->nointermission)
+      if (gamemapinfo->flags & MapInfo_NoIntermission)
       {
         gameaction = ga_victory;
         return;
@@ -3011,6 +3087,8 @@ static void DoSaveGame(char *name)
 
   length = save_p - savebuffer;
 
+  M_MakeDirectory(basesavegame);
+
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
   else if (show_save_messages && !is_periodic_autosave) // [Nugget]
@@ -3340,6 +3418,8 @@ static boolean DoLoadGame(boolean do_load_autosave)
     else       // Loading games from menu isn't allowed during demo recordings,
       if (demorecording) // So this can only possibly be a -recordfrom command.
 	G_BeginRecording();// Start the -recordfrom, since the game was loaded.
+
+  ST_Start();
 
   return true;
 }
@@ -3761,6 +3841,8 @@ static void G_DoRewind(void)
   // This is called before the countdown decrement in `G_Ticker()`,
   // so add 1 to keep it aligned
   G_SetRewindCountdown((rewind_interval * TICRATE) + 1);
+
+  ST_Start();
 }
 
 void G_EnableRewind(void)
@@ -4086,13 +4168,13 @@ void G_Ticker(void)
 
   if (slow_motion && slow_motion_factor != SLOWMO_FACTOR_TARGET)
   {
-    slow_motion_factor -= MAX(0.025f, (slow_motion_factor - SLOWMO_FACTOR_TARGET) / 4);
+    slow_motion_factor -= MAX(MIN_SLOWMO_STEP, (slow_motion_factor - SLOWMO_FACTOR_TARGET) / 4);
     slow_motion_factor  = MAX(SLOWMO_FACTOR_TARGET, slow_motion_factor);
     change = true;
   }
   else if (!slow_motion && slow_motion_factor != SLOWMO_FACTOR_NORMAL)
   {
-    slow_motion_factor += MAX(0.025f, (SLOWMO_FACTOR_NORMAL - slow_motion_factor) / 4);
+    slow_motion_factor += MAX(MIN_SLOWMO_STEP, (SLOWMO_FACTOR_NORMAL - slow_motion_factor) / 4);
     slow_motion_factor  = MIN(SLOWMO_FACTOR_NORMAL, slow_motion_factor);
     change = true;
   }
@@ -4136,7 +4218,8 @@ void G_Ticker(void)
     fixed_t x = 0,
             y = 0,
             z = 0;
-    angle_t angle = 0;
+    angle_t angle = 0,
+            ticangle = 0;
     fixed_t pitch = 0;
     boolean center = false,
             lock = false;
@@ -4163,8 +4246,11 @@ void G_Ticker(void)
         lock = true;
       }
       else {
-        if (!R_GetFreecamMobj() || R_GetChasecamOn())
-        { angle = cmd->angleturn << 16; }
+        if (R_FreecamTurningOverride())
+        {
+          angle = cmd->angleturn << 16;
+          ticangle = cmd->ticangleturn << FRACBITS;
+        }
 
         if (!R_GetFreecamMobj())
         {
@@ -4222,7 +4308,7 @@ void G_Ticker(void)
       #undef INPUT
     }
 
-    R_UpdateFreecam(x, y, z, angle, pitch, center, lock);
+    R_UpdateFreecam(x, y, z, angle, ticangle, pitch, center, lock);
   }
 }
 
@@ -4531,25 +4617,44 @@ void G_WorldDone(void)
 
   if (gamemapinfo)
   {
-    if (gamemapinfo->intertextsecret && secretexit)
-    {
-      if (U_CheckField(gamemapinfo->intertextsecret)) // if the intermission was not cleared
-        F_StartFinale();
-      return;
-    }
-    else if (gamemapinfo->intertext && !secretexit)
-    {
-      if (U_CheckField(gamemapinfo->intertext)) // if the intermission was not cleared
-        F_StartFinale();
-      return;
-    }
-    else if (U_CheckField(gamemapinfo->endpic) && !secretexit)
-    {
-      // game ends without a status screen.
-      gameaction = ga_victory;
-      return;
-    }
-    // if nothing applied, use the defaults.
+      if (gamemapinfo->flags & MapInfo_InterTextClear
+          && gamemapinfo->flags & MapInfo_EndGame)
+      {
+          I_Printf(VB_DEBUG,
+              "UMAPINFO: 'intertext = clear' with one of the end game keys.");
+      }
+
+      if (secretexit)
+      {
+          if (gamemapinfo->flags & MapInfo_InterTextSecretClear)
+          {
+              return;
+          }
+          if (gamemapinfo->intertextsecret)
+          {
+              F_StartFinale();
+              return;
+          }
+      }
+      else
+      {
+          if (gamemapinfo->flags & MapInfo_EndGame)
+          {
+              // game ends without a status screen.
+              gameaction = ga_victory;
+              return;
+          }
+          else if (gamemapinfo->flags & MapInfo_InterTextClear)
+          {
+              return;
+          }
+          else if (gamemapinfo->intertext)
+          {
+              F_StartFinale();
+              return;
+          }
+      }
+      // if nothing applied, use the defaults.
   }
 
   if (gamemode == commercial)
@@ -4586,7 +4691,7 @@ void G_DeferedInitNew(skill_t skill, int episode, int map)
   {
     ddt_cheating = 0;
     G_CheckDemoStatus();
-    G_RecordDemo(orig_demoname);
+    G_RecordDemo(demoname_orig);
   }
 }
 
@@ -5067,65 +5172,6 @@ void G_SetFastParms(int fast_pending)
   }
 }
 
-mapentry_t *G_LookupMapinfo(int episode, int map)
-{
-  int i;
-  char lumpname[9];
-
-  strcpy(lumpname, MapName(episode, map));
-
-  for (i = 0; i < U_mapinfo.mapcount; i++)
-  {
-    if (!strcasecmp(lumpname, U_mapinfo.maps[i].mapname))
-      return &U_mapinfo.maps[i];
-  }
-
-  for (i = 0; i < default_mapinfo.mapcount; i++)
-  {
-    if (!strcasecmp(lumpname, default_mapinfo.maps[i].mapname))
-      return &default_mapinfo.maps[i];
-  }
-
-  return NULL;
-}
-
-// Check if the given map name can be expressed as a gameepisode/gamemap pair
-// and be reconstructed from it.
-int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap)
-{
-  char lumpname[9], mapuname[9];
-  int epi = -1, map = -1;
-
-  if (strlen(mapname) > 8)
-    return 0;
-  strncpy(mapuname, mapname, 8);
-  mapuname[8] = 0;
-  M_StringToUpper(mapuname);
-
-  if (gamemode != commercial)
-  {
-    if (sscanf(mapuname, "E%dM%d", &epi, &map) != 2)
-      return 0;
-    strcpy(lumpname, MapName(epi, map));
-  }
-  else
-  {
-    if (sscanf(mapuname, "MAP%d", &map) != 1)
-      return 0;
-    strcpy(lumpname, MapName(epi = 1, map));
-  }
-
-  if (epi > 4)
-    EpiCustom = true;
-
-  if (pEpi)
-    *pEpi = epi;
-  if (pMap)
-    *pMap = map;
-
-  return !strcmp(mapuname, lumpname);
-}
-
 //
 // G_InitNew
 // Can be called by the startup code or the menu task,
@@ -5219,33 +5265,33 @@ void G_InitNew(skill_t skill, int episode, int map)
 // G_RecordDemo
 //
 
-void G_RecordDemo(char *name)
+void G_RecordDemo(const char *name)
 {
   int i;
-  size_t demoname_size;
-  // [crispy] demo file name suffix counter
-  static int j = 0;
 
-  // [crispy] the name originally chosen for the demo, i.e. without "-00000"
-  if (!orig_demoname)
+  // the original name of the demo, without "-00000" and file extension
+  if (!demoname_orig)
   {
-    orig_demoname = name;
+    demoname_orig = M_StringDuplicate(name);
+    if (M_StringCaseEndsWith(demoname_orig, ".lmp"))
+    {
+      demoname_orig[strlen(demoname_orig) - 4] = '\0';
+    }
   }
 
   demo_insurance = 0;
-
   usergame = false;
-  demoname_size = strlen(name) + 5 + 6; // [crispy] + 6 for "-00000"
-  demoname = I_Realloc(demoname, demoname_size);
-  AddDefaultExtension(strcpy(demoname, name), ".lmp");  // 1/18/98 killough
 
-  for(; j <= 99999 && !M_access(demoname, F_OK); ++j)
+  // + 11 for "-00000.lmp\0"
+  size_t demoname_size = strlen(demoname_orig) + 11;
+  demoname = I_Realloc(demoname, demoname_size);
+  M_snprintf(demoname, demoname_size, "%s.lmp", demoname_orig);
+
+  // demo file name suffix counter
+  static int j;
+  while (M_access(demoname, F_OK) == 0)
   {
-    char *str = M_StringDuplicate(name);
-    if (M_StringCaseEndsWith(str, ".lmp"))
-      str[strlen(str) - 4] = '\0';
-    M_snprintf(demoname, demoname_size, "%s-%05d.lmp", str, j);
-    free(str);
+    M_snprintf(demoname, demoname_size, "%s-%05d.lmp", demoname_orig, j++);
   }
 
   //!
@@ -5667,7 +5713,7 @@ void G_BeginRecording(void)
 
 void D_CheckNetPlaybackSkip(void);
 
-void G_DeferedPlayDemo(char* name)
+void G_DeferedPlayDemo(const char* name)
 {
   defdemoname = name;
   gameaction = ga_playdemo;
@@ -5760,10 +5806,10 @@ static size_t WriteCmdLineLump(MEMFILE *stream)
   return mem_ftell(stream) - pos;
 }
 
-static void WriteFileInfo(const char *name, size_t size, MEMFILE *stream)
+static long WriteFileInfo(const char *name, size_t size, long filepos,
+                          MEMFILE *stream)
 {
   filelump_t fileinfo = { 0 };
-  static long filepos = sizeof(wadinfo_t);
 
   fileinfo.filepos = LONG(filepos);
   fileinfo.size = LONG(size);
@@ -5774,6 +5820,7 @@ static void WriteFileInfo(const char *name, size_t size, MEMFILE *stream)
   mem_fwrite(&fileinfo, 1, sizeof(fileinfo), stream);
 
   filepos += size;
+  return filepos;
 }
 
 static void G_AddDemoFooter(void)
@@ -5797,10 +5844,11 @@ static void G_AddDemoFooter(void)
   mem_fwrite(&header, 1, sizeof(header), stream);
   mem_fseek(stream, 0, MEM_SEEK_END);
 
-  WriteFileInfo("PORTNAME", strlen(PROJECT_STRING), stream);
-  WriteFileInfo(NULL, strlen(DEMO_FOOTER_SEPARATOR), stream);
-  WriteFileInfo("CMDLINE", size, stream);
-  WriteFileInfo(NULL, strlen(DEMO_FOOTER_SEPARATOR), stream);
+  long filepos = sizeof(wadinfo_t);
+  filepos = WriteFileInfo("PORTNAME", strlen(PROJECT_STRING), filepos, stream);
+  filepos = WriteFileInfo(NULL, strlen(DEMO_FOOTER_SEPARATOR), filepos, stream);
+  filepos = WriteFileInfo("CMDLINE", size, filepos, stream);
+  WriteFileInfo(NULL, strlen(DEMO_FOOTER_SEPARATOR), filepos, stream);
 
   mem_get_buf(stream, (void **)&data, &size);
 
@@ -5957,35 +6005,45 @@ void G_BindGameVariables(void)
 
   // [Nugget] Custom Skill /--------------------------------------------------
 
-  M_BindNum("custom_skill_things", &custom_skill_things, NULL, 2, 0, 2, ss_skill, wad_yes, 
-    "Custom Skill: thing spawns (0 = Easy; 1 = Normal; 2 = Hard)");
+  M_BindNum("custom_skill_things", &custom_skill_things, NULL,
+            2, 0, 2, ss_skill, wad_yes,
+            "Custom Skill: thing spawns (0 = Easy; 1 = Normal; 2 = Hard)");
 
-  M_BindBool("custom_skill_coopspawns", &custom_skill_coopspawns, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: spawn multiplayer things");
+  M_BindBool("custom_skill_coopspawns", &custom_skill_coopspawns, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: spawn multiplayer things");
 
-  M_BindBool("custom_skill_nomonsters", &custom_skill_nomonsters, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: don't spawn monsters");
+  M_BindBool("custom_skill_nomonsters", &custom_skill_nomonsters, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: don't spawn monsters");
 
-  M_BindBool("custom_skill_doubleammo", &custom_skill_doubleammo, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: receive double ammo from pickups");
+  M_BindBool("custom_skill_doubleammo", &custom_skill_doubleammo, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: receive double ammo from pickups");
 
-  M_BindBool("custom_skill_halfdamage", &custom_skill_halfdamage, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: player takes half the damage");
+  M_BindBool("custom_skill_halfdamage", &custom_skill_halfdamage, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: player takes half the damage");
 
-  M_BindBool("custom_skill_slowbrain", &custom_skill_slowbrain, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: Icon of Sin shoots cubes half the time");
+  M_BindBool("custom_skill_slowbrain", &custom_skill_slowbrain, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: Icon of Sin shoots cubes half the time");
 
-  M_BindBool("custom_skill_fast", &custom_skill_fast, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: fast monsters");
+  M_BindBool("custom_skill_fast", &custom_skill_fast, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: fast monsters");
 
-  M_BindBool("custom_skill_respawn", &custom_skill_respawn, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: respawning monsters");
+  M_BindBool("custom_skill_respawn", &custom_skill_respawn, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: respawning monsters");
 
-  M_BindBool("custom_skill_aggressive", &custom_skill_aggressive, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: aggressive monsters (instant reaction time; continuous attacks)");
+  M_BindBool("custom_skill_aggressive", &custom_skill_aggressive, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: aggressive monsters (instant reaction time; continuous attacks)");
 
-  M_BindBool("custom_skill_x2monsters", &custom_skill_x2monsters, NULL, 0, ss_skill, wad_yes,
-    "Custom Skill: duplicate monster spawns");
+  M_BindBool("custom_skill_x2monsters", &custom_skill_x2monsters, NULL,
+            0, ss_skill, wad_yes,
+            "Custom Skill: duplicate monster spawns");
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -6001,19 +6059,23 @@ void G_BindGameVariables(void)
 
   // [Nugget] ----------------------------------------------------------------
 
-  M_BindNum("autosave_interval", &autosave_interval, NULL, 0, 0, 600, ss_gen, wad_no,
-    "Interval between periodic auto saves, in seconds (0 = Off)");
+  M_BindNum("autosave_interval", &autosave_interval, NULL,
+            0, 0, 600, ss_gen, wad_no,
+            "Interval between periodic auto saves, in seconds (0 = Off)");
 
   BIND_BOOL_GENERAL(one_key_saveload, false, "One-key quick-saving/loading");
 
-  BIND_NUM_GENERAL(rewind_interval, 1, 1, 600,
-    "Interval between rewind key-frames, in seconds");
+  BIND_NUM_GENERAL(rewind_interval,
+                   1, 1, 600,
+                   "Interval between rewind key-frames, in seconds");
 
-  BIND_NUM_GENERAL(rewind_depth, 60, 0, 3000,
-    "Number of rewind key-frames to be stored (0 = No rewinding)");
+  BIND_NUM_GENERAL(rewind_depth,
+                   60, 0, 3000,
+                   "Number of rewind key-frames to be stored (0 = No rewinding)");
 
-  BIND_NUM_GENERAL(rewind_timeout, 10, 0, 25,
-    "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
+  BIND_NUM_GENERAL(rewind_timeout,
+                   10, 0, 25,
+                   "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
 }
 
 void G_BindEnemVariables(void)
@@ -6050,33 +6112,46 @@ void G_BindEnemVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindBool("extra_gibbing", &extra_gibbing_on, NULL,
-             false, ss_enem, wad_yes, "Enable extra gibbing in general (affected by CVARs below)");
+             false, ss_enem, wad_yes,
+             "Enable extra gibbing in general (affected by CVARs below)");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_fist", &extra_gibbing[EXGIB_FIST], NULL,
-             true, ss_none, wad_yes, "Extra gibbing for Berserk Fist");
+             true, ss_none, wad_yes,
+             "Extra gibbing for Berserk Fist");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_csaw", &extra_gibbing[EXGIB_CSAW], NULL,
-             true, ss_none, wad_yes, "Extra gibbing for Chainsaw");
+             true, ss_none, wad_yes,
+             "Extra gibbing for Chainsaw");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_ssg", &extra_gibbing[EXGIB_SSG], NULL,
-             true, ss_none, wad_yes, "Extra gibbing for SSG");
+             true, ss_none, wad_yes,
+             "Extra gibbing for SSG");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_bfg", &extra_gibbing[EXGIB_BFG], NULL,
-             true, ss_none, wad_yes, "Extra gibbing for BFG tracers");
+             true, ss_none, wad_yes,
+             "Extra gibbing for BFG tracers");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_proj", &extra_gibbing[EXGIB_PROJ], NULL,
-             true, ss_none, wad_yes, "Extra gibbing for projectiles dealing 20+ base damage");
+             true, ss_none, wad_yes,
+             "Extra gibbing for projectiles dealing 20+ base damage");
 
   M_BindBool("bloodier_gibbing", &bloodier_gibbing, NULL,
-             false, ss_enem, wad_yes, "Bloodier gibbing");
+             false, ss_enem, wad_yes,
+             "Bloodier gibbing");
+
+  // (CFG-only)
+  M_BindNum("bloodier_gibbing_splats", &bloodier_gibbing_splats, &bloodier_gibbing_splats,
+            40, 10, 256, ss_none, wad_yes,
+            "Max. number of bloodier-gibbing splats");
 
   M_BindBool("tossdrop", &tossdrop, NULL,
-             false, ss_enem, wad_yes, "Enemies toss their items dropped upon death");
+             false, ss_enem, wad_yes,
+             "Enemies toss their items dropped upon death");
 }
 
 void G_BindCompVariables(void)
@@ -6093,10 +6168,12 @@ void G_BindCompVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
-  M_BindNum("over_under", &over_under, NULL, 0, 0, 2, ss_gen, wad_yes,
-            "Allow movement over/under things (1 = Player only; 2 = All things)");
+  M_BindNum("over_under", &over_under, NULL,
+            0, 0, 2, ss_gen, wad_yes,
+            "Allow movement over/under things (0 = Off; 1 = Player only; 2 = All things)");
 
-  M_BindBool("jump_crouch", &jump_crouch, NULL, false, ss_gen, wad_yes,
+  M_BindBool("jump_crouch", &jump_crouch, NULL,
+             false, ss_gen, wad_yes,
              "Jumping/crouching");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -6128,7 +6205,7 @@ void G_BindCompVariables(void)
   BIND_COMP(comp_vile,      0, "Arch-viles can create ghost monsters");
   BIND_COMP(comp_pain,      0, "Pain elementals are limited to 20 lost souls");
   BIND_COMP(comp_skull,     0, "Lost souls can spawn past impassable lines");
-  BIND_COMP(comp_blazing,   0, "Blazing doors make double closing sounds");
+  BIND_COMP(comp_blazing,   0, "Incorrect sound behavior for blazing doors");
   BIND_COMP(comp_doorlight, 0, "Door lighting changes are immediate");
   BIND_COMP(comp_god,       0, "God mode isn't absolute");
   BIND_COMP(comp_skymap,    0, "Don't apply invulnerability palette to skies");
@@ -6154,39 +6231,41 @@ void G_BindCompVariables(void)
 
   // [Nugget] (CFG-only) -----------------------------------------------------
 
-  M_BindBool("comp_bruistarget",  &comp_bruistarget,  NULL, true,  ss_none, wad_yes, "Bruiser attack doesn't face target");
-  M_BindBool("comp_nomeleesnap",  &comp_nomeleesnap,  NULL, false, ss_none, wad_yes, "Disable snapping to target when using melee");
-  M_BindBool("comp_longautoaim",  &comp_longautoaim,  NULL, false, ss_none, wad_yes, "Double autoaim range");
-  M_BindBool("comp_lscollision",  &comp_lscollision,  NULL, false, ss_none, wad_yes, "Fix Lost Souls colliding with items");
-  M_BindBool("comp_lsamnesia",    &comp_lsamnesia,    NULL, true,  ss_none, wad_yes, "Lost Souls forget target upon impact");
-  M_BindBool("comp_fuzzyblood",   &comp_fuzzyblood,   NULL, false, ss_none, wad_yes, "Fuzzy things bleed fuzzy blood");
-  M_BindBool("comp_faceshadow",   &comp_faceshadow,   NULL, false, ss_none, wad_yes, "Attackers face fuzzy targets straight");
-  M_BindBool("comp_nonbleeders",  &comp_nonbleeders,  NULL, false, ss_none, wad_yes, "Non-bleeders don't bleed when crushed");
-  M_BindBool("comp_iosdeath",     &comp_iosdeath,     NULL, false, ss_none, wad_yes, "Fix lopsided Icon of Sin explosions");
-  M_BindBool("comp_choppers",     &comp_choppers,     NULL, false, ss_none, wad_yes, "Permanent IDCHOPPERS invulnerability");
-  M_BindBool("comp_blazing2",     &comp_blazing2,     NULL, true,  ss_none, wad_yes, "Blazing doors reopen with wrong sound");
-  M_BindBool("comp_manualdoor",   &comp_manualdoor,   NULL, true,  ss_none, wad_yes, "Manually toggled moving doors are silent");
-  M_BindBool("comp_switchsource", &comp_switchsource, NULL, false, ss_none, wad_yes, "Corrected switch sound source");
-  M_BindBool("comp_cgundblsnd",   &comp_cgundblsnd,   NULL, true,  ss_none, wad_yes, "Chaingun makes two sounds with one bullet");
-  M_BindBool("comp_cgunnersfx",   &comp_cgunnersfx,   NULL, false, ss_none, wad_yes, "Chaingunner uses pistol/chaingun sound");
-  M_BindBool("comp_flamst",       &comp_flamst,       NULL, false, ss_none, wad_yes, "Arch-Vile fire plays flame-start sound");
-  M_BindBool("comp_keynoway",     &comp_keynoway,     NULL, false, ss_none, wad_yes, "Play DSNOWAY instead of DSOOF when failing to use key-locked triggers");
-  M_BindBool("comp_godface",      &comp_godface,      NULL, false, ss_none, wad_yes, "Higher god-mode face priority");
-  M_BindBool("comp_deadoof",      &comp_deadoof,      NULL, true,  ss_none, wad_yes, "Dead players can still play oof sound");
-  M_BindBool("comp_powerrunout",  &comp_powerrunout,  NULL, false, ss_none, wad_yes, "Use improved powerup run-out effect");
-  M_BindBool("comp_unusedpals",   &comp_unusedpals,   NULL, false, ss_none, wad_yes, "Use unused pain/bonus palettes");
-  M_BindBool("comp_keypal",       &comp_keypal,       NULL, true,  ss_none, wad_yes, "Key pickup resets palette");
+  #define BIND_COMP_NUG(name, v, help) \
+    M_BindBool(#name, &name, NULL, (v), ss_none, wad_yes, help)
+
+  BIND_COMP_NUG(comp_bruistarget,  true,  "Bruiser attack doesn't face target");
+  BIND_COMP_NUG(comp_nomeleesnap,  false, "Disable snapping to target when using melee");
+  BIND_COMP_NUG(comp_longautoaim,  false, "Double autoaim range");
+  BIND_COMP_NUG(comp_lscollision,  false, "Fix Lost Souls colliding with items");
+  BIND_COMP_NUG(comp_lsamnesia,    true,  "Lost Souls forget target upon impact");
+  BIND_COMP_NUG(comp_fuzzyblood,   false, "Fuzzy things bleed fuzzy blood");
+  BIND_COMP_NUG(comp_faceshadow,   false, "Attackers face fuzzy targets straight");
+  BIND_COMP_NUG(comp_nonbleeders,  false, "Non-bleeders don't bleed when crushed");
+  BIND_COMP_NUG(comp_iosdeath,     false, "Fix lopsided Icon of Sin explosions");
+  BIND_COMP_NUG(comp_choppers,     false, "Permanent IDCHOPPERS invulnerability");
+  BIND_COMP_NUG(comp_manualdoor,   true,  "Manually toggled moving doors are silent");
+  BIND_COMP_NUG(comp_switchsource, false, "Corrected switch sound source");
+  BIND_COMP_NUG(comp_cgundblsnd,   true,  "Chaingun makes two sounds with one bullet");
+  BIND_COMP_NUG(comp_cgunnersfx,   false, "Chaingunner uses pistol/chaingun sound");
+  BIND_COMP_NUG(comp_flamst,       false, "Arch-Vile fire plays flame-start sound");
+  BIND_COMP_NUG(comp_keynoway,     false, "Play DSNOWAY instead of DSOOF when failing to use key-locked triggers");
+  BIND_COMP_NUG(comp_godface,      false, "Higher god-mode face priority");
+  BIND_COMP_NUG(comp_deadoof,      true,  "Dead players can still play oof sound");
+  BIND_COMP_NUG(comp_powerrunout,  false, "Use improved powerup run-out effect");
+  BIND_COMP_NUG(comp_unusedpals,   false, "Use unused pain/bonus palettes");
+  BIND_COMP_NUG(comp_keypal,       true,  "Key pickup resets palette");
 }
 
 void G_BindWeapVariables(void)
 {
-  // [Nugget] Extended
+  // [Nugget] Extended, tweaked descriptions
   M_BindNum("view_bobbing_pct", &view_bobbing_pct, NULL,
             100, 0, 100, ss_weap, wad_no,
-            "Player view bobbing percent");
+            "Player view bobbing amplitude percent");
   M_BindNum("weapon_bobbing_pct", &weapon_bobbing_pct, NULL,
             100, 0, 100, ss_weap, wad_no,
-            "Player weapon bobbing percent");
+            "Player weapon bobbing amplitude percent");
 
   M_BindBool("hide_weapon", &hide_weapon, NULL, false, ss_weap, wad_no,
              "Disable rendering of weapon sprites");
@@ -6198,6 +6277,11 @@ void G_BindWeapVariables(void)
   M_BindBool("weapon_recoilpitch", &weapon_recoilpitch, NULL,
              false, ss_weap, wad_no,
              "Recoil pitch from weapon fire");
+
+  // [Nugget] (CFG-only)
+  M_BindNum("weapon_recoilpitch_scale_pct", &weapon_recoilpitch_scale_pct, NULL,
+            100, 10, 100, ss_none, wad_no,
+            "Recoil-pitch scale percent");
 
   M_BindBool("weapon_recoil", &default_weapon_recoil, &weapon_recoil,
              false, ss_weap, wad_yes, // [Nugget] Restored menu item
@@ -6212,35 +6296,63 @@ void G_BindWeapVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
+  M_BindBool("smart_autoaim", &smart_autoaim, NULL,
+             false, ss_weap, wad_yes,
+             "Smart projectile autoaim (checks if projectile will hit a living entity)");
+
   M_BindBool("no_hor_autoaim", &no_hor_autoaim, NULL,
-             false, ss_weap, wad_yes, "Disable horizontal projectile autoaim");
+             false, ss_weap, wad_yes,
+             "Disable horizontal projectile autoaim");
 
   M_BindBool("switch_on_pickup", &switch_on_pickup, NULL,
-             true, ss_weap, wad_no, "Switch weapons when acquiring new ones or ammo for them");
+             true, ss_weap, wad_no,
+             "Switch weapons when acquiring new ones or ammo for them");
+
+  M_BindBool("improved_weapon_toggles", &improved_weapon_toggles, NULL,
+             false, ss_weap, wad_no,
+             "Improved Fist/Chainsaw and Shotgun/SSG toggles");
 
   M_BindBool("weapswitch_interruption", &weapswitch_interruption, NULL,
-             false, ss_weap, wad_no, "Allow interruption of weapon switches");
+             false, ss_weap, wad_yes,
+             "Allow interruption of weapon switches");
 
   M_BindBool("skip_ammoless_weapons", &skip_ammoless_weapons, NULL,
-             false, ss_weap, wad_no, "Previous/next-weapon buttons skip weapons with insufficient ammo");
+             false, ss_weap, wad_no,
+             "Previous/next-weapon buttons skip weapons with insufficient ammo");
 
   // (CFG-only)
   M_BindBool("always_bob", &always_bob, NULL,
-             true, ss_none, wad_no, "Bob weapon every tic (fixes choppy Chainsaw bobbing)");
+             true, ss_none, wad_yes,
+             "Bob weapon every tic (fixes choppy Chainsaw bobbing)");
 
   M_BindNum("bobbing_style", &bobbing_style, NULL,
-            0, 0, 6, ss_weap, wad_yes,
+            BOBSTYLE_VANILLA, BOBSTYLE_VANILLA, NUM_BOBSTYLES-1, ss_weap, wad_yes,
             "Weapon bobbing style");
 
+  M_BindNum("weapon_bobbing_speed_pct", &weapon_bobbing_speed_pct, NULL,
+            100, 50, 300, ss_weap, wad_yes,
+            "Player weapon bobbing speed percent");
+
+  M_BindBool("switch_bob", &switch_bob, NULL,
+             false, ss_weap, wad_yes,
+             "Bob weapon while switching it");
+
   M_BindBool("weapon_inertia", &weapon_inertia, NULL,
-             false, ss_weap, wad_yes, "Weapon inertia");
+             false, ss_weap, wad_yes,
+             "Weapon inertia");
 
   M_BindNum("weapon_inertia_scale_pct", &weapon_inertia_scale_pct, NULL,
-            100, 50, 200, ss_weap, wad_yes,
+            100, -200, 200, ss_weap, wad_yes,
             "Weapon-inertia scale percent");
 
+  // (CFG-only)
+  M_BindBool("weapon_inertia_fire", &weapon_inertia_fire, NULL,
+             true, ss_none, wad_yes,
+             "Apply weapon inertia while firing");
+
   M_BindBool("weaponsquat", &weaponsquat, NULL,
-             false, ss_weap, wad_yes, "Squat weapon down on impact");
+             false, ss_weap, wad_yes,
+             "Squat weapon down upon landing/jumping");
 
   M_BindNum("pspr_translucency_pct", &pspr_translucency_pct, NULL,
             100, 0, 100, ss_weap, wad_yes,
@@ -6248,7 +6360,8 @@ void G_BindWeapVariables(void)
 
   // (CFG-only)
   M_BindBool("sx_fix", &sx_fix, NULL,
-             false, ss_none, wad_yes, "Correct centering of first-person sprites");
+             false, ss_none, wad_yes,
+             "Correct centering of first-person sprites");
 
   // (CFG-only)
   M_BindNum("hitscan_trail_interval", &hitscan_trail_interval, NULL,

@@ -121,6 +121,12 @@ Shortcut to toggle the two cheats mentioned above, and IDFA.
 `GIBBERS`  
 Force gibbing on dying enemies, independently of damage dealt.
 
+`RIOTMODE`  
+Make enemies alerted by the player attack all sentient entities (including other enemies),
+and allow entities to damage their same species.
+
+Note that when both the no-target cheat and this one are enabled, enemies will still be alerted normally, but they won't target the player.
+
 `IDFLY`  
 Toggle Fly Mode (uses jumping/crouching keys).
 
@@ -133,12 +139,15 @@ Spawn an actor based on its mobj type index, where:
 For example, to spawn a hostile Shotgun Guy (whose index is 2), the full cheat would be `SUMMONE002`.
 
 Actors are always spawned facing the same direction as the player.
-If the Automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
+If the automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
 Otherwise, they will be spawned in front of the player.
 
 `IDDF[C][T]`  
-Find a key on the Automap.
+Find a key in the automap.
 This cheat functions similarly to the `KEY` cheat, with `C` and `T` specifying the key color and type respectively.
+
+`IDDET`  
+Find exits in the automap.
 
 `RESURRECT` / `IDRES`  
 Resurrect the player without toggling IDDQD.

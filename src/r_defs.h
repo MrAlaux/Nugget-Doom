@@ -390,6 +390,8 @@ typedef struct vissprite_s
 
   // [Nugget]
   byte *tranmap;
+  boolean fullbright;
+  boolean flipped;
 } vissprite_t;
 
 //

@@ -155,7 +155,7 @@ sfxinfo_t original_S_sfx[NUMSFX] = {
   SOUND("stnmov", sg_none,  119),
   SOUND("swtchn", sg_none,   78),
   SOUND("swtchx", sg_none,   78),
-  SOUND("plpain", sg_none,   96),
+  SOUND("plpain", sg_oof,    96),
   SOUND("dmpain", sg_none,   96),
   SOUND("popain", sg_none,   96),
   SOUND("vipain", sg_none,   96),
@@ -284,6 +284,10 @@ sfxinfo_t original_S_sfx[NUMSFX] = {
   SOUND("ppai50", sg_none,   96),
   SOUND("ppai75", sg_none,   96),
   SOUND("ppa100", sg_none,   96),
+
+  // Slow Motion
+  SOUND("ngslon", sg_none, 60),
+  SOUND("ngslof", sg_none, 60),
 
   // [Nugget] ---------------------------------------------------------------/
 

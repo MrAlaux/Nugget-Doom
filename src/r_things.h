@@ -24,6 +24,18 @@
 #include "m_fixed.h"
 #include "r_defs.h"
 
+// [Nugget] /=================================================================
+
+typedef struct actualspriteheight_s
+{
+  int lump;
+  short height, toppadding;
+} actualspriteheight_t;
+
+const actualspriteheight_t *R_GetActualSpriteHeight(int sprite, int frame);
+
+// [Nugget] =================================================================/
+
 // Constant arrays used for psprite clipping and initializing clipping.
 
 // [FG] 32-bit integer math
@@ -39,7 +51,6 @@ extern int64_t sprtopscreen; // [FG] 64-bit integer math
 extern fixed_t pspritescale;
 extern fixed_t pspriteiscale;
 
-extern boolean pspr_interp; // weapon bobbing interpolation
 extern boolean flipcorpses;
 
 extern lighttable_t **spritelights;

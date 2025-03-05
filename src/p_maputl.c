@@ -22,6 +22,7 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h> // [Nugget]
 
 #include "doomdata.h"
 #include "doomstat.h"
@@ -548,10 +549,38 @@ boolean P_BlockThingsIterator(int x, int y, boolean func(mobj_t*),
 // 1/11/98 killough: Intercept limit removed
 static intercept_t *intercepts, *intercept_p;
 
+static size_t num_intercepts; // [Nugget] Extracted from function below
+
+// [Nugget] /-----------------------------------------------------------------
+
+static intercept_t *saved_intercepts;
+static size_t num_saved_intercepts, saved_intercepts_index;
+
+void P_SaveIntercepts(void)
+{
+  if (num_saved_intercepts < num_intercepts)
+  {
+    num_saved_intercepts = num_intercepts;
+    saved_intercepts = Z_Realloc(saved_intercepts,
+                                 sizeof(*saved_intercepts) * num_saved_intercepts,
+                                 PU_STATIC, 0);
+  }
+
+  memcpy(saved_intercepts, intercepts, sizeof(*intercepts) * num_intercepts);
+  saved_intercepts_index = intercept_p - intercepts;
+}
+
+void P_RestoreIntercepts(void)
+{
+  memcpy(intercepts, saved_intercepts, sizeof(*saved_intercepts) * num_saved_intercepts);
+  intercept_p = intercepts + saved_intercepts_index;
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 // Check for limit and double size if necessary -- killough
 static void check_intercept(void)
 {
-  static size_t num_intercepts;
   size_t offset = intercept_p - intercepts;
   if (offset >= num_intercepts)
     {

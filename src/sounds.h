@@ -345,6 +345,10 @@ typedef enum {
   sfx_ppai75,
   sfx_ppa100,
 
+  // Slow Motion
+  sfx_ngslon,
+  sfx_ngslof,
+
   NUG_SFX_END,
 
   // [Nugget] ---------------------------------------------------------------/

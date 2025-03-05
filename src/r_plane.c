@@ -39,6 +39,7 @@
 #include "doomstat.h"
 #include "doomtype.h"
 #include "i_system.h"
+#include "i_video.h"
 #include "m_fixed.h"
 #include "r_bmaps.h" // [crispy] R_BrightmapForTexName()
 #include "r_data.h"
@@ -215,7 +216,7 @@ static void R_MapPlane(int y, int x1, int x2)
       if (index >= MAXLIGHTZ )
         index = MAXLIGHTZ-1;
 
-      if (STRICTMODE(!diminished_lighting)) { index = MAXLIGHTZ-1; } // [Nugget]
+      if (STRICTMODE(!diminishing_lighting)) { index = MAXLIGHTZ-1; } // [Nugget]
 
       ds_colormap[0] = planezlight[index];
       ds_colormap[1] = fullcolormap;
@@ -388,8 +389,6 @@ static void R_MakeSpans(int x, unsigned int t1, unsigned int b1, unsigned int t2
 
 static void DrawSkyFire(visplane_t *pl, fire_t *fire)
 {
-    dc_colormap[0] = dc_colormap[1] = fullcolormap;
-
     dc_texturemid = -28 * FRACUNIT;
     dc_iscale = skyiscale;
     dc_texheight = FIRE_HEIGHT;
@@ -413,15 +412,25 @@ static void DrawSkyTex(visplane_t *pl, skytex_t *skytex)
 {
     int texture = R_TextureNumForName(skytex->name);
 
-    dc_colormap[0] = dc_colormap[1] = fullcolormap;
-
     dc_texturemid = skytex->mid * FRACUNIT;
     dc_texheight = textureheight[texture] >> FRACBITS;
     dc_iscale = FixedMul(skyiscale, skytex->scaley);
 
-    dc_texturemid += skytex->curry;
+    fixed_t deltax, deltay;
+    if (uncapped && leveltime > oldleveltime)
+    {
+        deltax = LerpFixed(skytex->prevx, skytex->currx);
+        deltay = LerpFixed(skytex->prevy, skytex->curry);
+    }
+    else
+    {
+        deltax = skytex->currx;
+        deltay = skytex->curry;
+    }
 
-    angle_t an = viewangle + FixedToAngle(skytex->currx);
+    dc_texturemid += deltay;
+
+    angle_t an = viewangle + (deltax << (ANGLETOSKYSHIFT - FRACBITS));
 
     for (int x = pl->minx; x <= pl->maxx; x++)
     {
@@ -440,6 +449,17 @@ static void DrawSkyTex(visplane_t *pl, skytex_t *skytex)
 
 static void DrawSkyDef(visplane_t *pl)
 {
+    // Sky is always drawn full bright, i.e. colormaps[0] is used.
+    // Because of this hack, sky is not affected by INVUL inverse mapping.
+    //
+    // killough 7/19/98: fix hack to be more realistic:
+
+    if (STRICTMODE_COMP(comp_skymap)
+        || !(dc_colormap[0] = dc_colormap[1] = fixedcolormap))
+    {
+        dc_colormap[0] = dc_colormap[1] = fullcolormap; // killough 3/20/98
+    }
+
     if (sky->type == SkyType_Fire)
     {
         DrawSkyFire(pl, &sky->fire);

@@ -24,8 +24,14 @@
 
 struct event_s;
 
-// [Nugget]
+// [Nugget] /-----------------------------------------------------------------
+
+// CVARs
 extern boolean quick_quitgame;
+
+void MN_UpdateImprovedWeaponTogglesItem(void);
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // MENUS
@@ -59,6 +65,9 @@ void M_Init(void);
 // does nothing if menu is already up.
 
 void MN_StartControlPanel(void);
+
+void MN_AddEpisode(const char *map, const char *gfx, const char *txt, char key);
+void MN_ClearEpisodes(void);
 
 void MN_ForcedLoadAutoSave(const char *msg);
 void MN_ForcedLoadGame(const char *msg); // killough 5/15/98: forced loadgames

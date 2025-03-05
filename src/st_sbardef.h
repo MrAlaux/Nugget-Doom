@@ -14,6 +14,7 @@
 #ifndef ST_SBARDEF_H
 #define ST_SBARDEF_H
 
+#include "doomdef.h"
 #include "doomtype.h"
 #include "r_defs.h"
 #include "v_video.h"
@@ -209,6 +210,9 @@ typedef struct
     int faceindex;
     int facecount;
     int oldhealth;
+
+    // used for evil grin
+    boolean oldweaponsowned[NUMWEAPONS];
 } sbe_face_t;
 
 typedef struct
@@ -234,8 +238,9 @@ typedef struct sbe_widget_s
     int duration;
     int duration_left;
 
+    boolean vertical;
+
     // [Nugget]
-    int vertical_layout;
     boolean under_messages;
 } sbe_widget_t;
 

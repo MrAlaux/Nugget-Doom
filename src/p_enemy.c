@@ -29,10 +29,12 @@
 #include "doomstat.h"
 #include "doomtype.h"
 #include "g_game.h"
+#include "g_umapinfo.h"
 #include "hu_obituary.h"
 #include "i_printf.h"
 #include "i_system.h"
 #include "info.h"
+#include "m_array.h"
 #include "m_bbox.h"
 #include "m_fixed.h"
 #include "m_random.h"
@@ -52,7 +54,6 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "tables.h"
-#include "u_mapinfo.h"
 #include "z_zone.h"
 
 // [Nugget]
@@ -135,7 +136,8 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks,
 void P_NoiseAlert(mobj_t *target, mobj_t *emitter)
 {
   // [crispy] monsters are deaf with NOTARGET cheat
-  if (target && target->player && (target->player->cheats & CF_NOTARGET))
+  if (target && target->player && (target->player->cheats & CF_NOTARGET)
+      && !riotmode) // [Nugget]
     return;
 
   validcount++;
@@ -347,7 +349,7 @@ static int P_IsUnderDamage(mobj_t *actor)
 static fixed_t xspeed[8] = {FRACUNIT,47000,0,-47000,-FRACUNIT,-47000,0,47000};
 static fixed_t yspeed[8] = {0,47000,FRACUNIT,47000,0,-47000,-FRACUNIT,-47000};
 
-static boolean P_Move(mobj_t *actor, boolean dropoff) // killough 9/12/98
+static boolean P_Move(mobj_t *actor, int dropoff) // killough 9/12/98
 {
   fixed_t tryx, tryy, deltax, deltay;
   boolean try_ok;
@@ -544,7 +546,7 @@ static boolean P_SmartMove(mobj_t *actor)
       P_Random(pr_dropoff) < 235)
     dropoff = 2;
 
-  if (!P_Move(actor, !!dropoff))
+  if (!P_Move(actor, dropoff))
     return false;
 
   // killough 9/9/98: avoid crushing ceilings or other damaging areas
@@ -1046,6 +1048,57 @@ static boolean P_LookForMonsters(mobj_t *actor, boolean allaround)
   return false;  // No monster found
 }
 
+// [Nugget]
+static boolean P_LookForAnyTargets(mobj_t *const actor, const boolean force)
+{
+  // Only perform the search if this actor was alerted by the player,
+  // through sound (represented by `force`) or sight
+  if (!force && !P_CheckSight(players[0].mo, actor))
+  { return false; }
+
+  thinker_t *currentthinker = &thinkercap;
+
+  mobj_t *closest = NULL;
+  fixed_t closest_dist = 0;
+  boolean closest_visible = false;
+
+  while ((currentthinker = currentthinker->next) != &thinkercap)
+  {
+    if (currentthinker->function.p1 == (actionf_p1) P_MobjThinker)
+    {
+      mobj_t *const mo = (mobj_t *) currentthinker;
+
+      if (
+        mo->health > 0
+        && (   mo->flags & MF_COUNTKILL
+            || mo->type == MT_SKULL
+            || (mo->player && mo->player->mo == mo && !(mo->player->cheats & CF_NOTARGET)))
+        && mo != actor
+      ) {
+        const fixed_t dist = P_AproxDistance(mo->x - actor->x, mo->y - actor->y);
+        boolean visible = false;
+
+        // If we found a visible mobj, don't bother checking whether this one
+        // is visible unless it's closer than the visible one
+        if (dist < closest_dist || !closest_visible)
+        { visible = P_CheckSight(actor, mo); }
+
+        // Prefer visible targets regardless of distance
+        if (dist < closest_dist || (visible && !closest_visible) || !closest)
+        {
+          closest = mo;
+          closest_dist = dist;
+          closest_visible = visible;
+        }
+      }
+    }
+  }
+
+  P_SetTarget(&actor->target, closest);
+
+  return actor->target != NULL;
+}
+
 //
 // P_LookForTargets
 //
@@ -1054,6 +1107,10 @@ static boolean P_LookForMonsters(mobj_t *actor, boolean allaround)
 
 static boolean P_LookForTargets(mobj_t *actor, int allaround)
 {
+  // [Nugget]
+  if (riotmode && !(actor->flags & MF_FRIEND))
+  { return P_LookForAnyTargets(actor, false); }
+
   return actor->flags & MF_FRIEND ?
     P_LookForMonsters(actor, allaround) || P_LookForPlayers (actor, allaround):
     P_LookForPlayers (actor, allaround) || P_LookForMonsters(actor, allaround);
@@ -1115,7 +1172,8 @@ void A_Look(mobj_t *actor)
   targ = actor->subsector->sector->soundtarget;
 
   // [crispy] monsters don't look for players with NOTARGET cheat
-  if (targ && targ->player && (targ->player->cheats & CF_NOTARGET))
+  if (targ && targ->player && (targ->player->cheats & CF_NOTARGET)
+      && !riotmode) // [Nugget]
     return;
 
   // killough 7/18/98:
@@ -1124,6 +1182,14 @@ void A_Look(mobj_t *actor)
   // cannot find any targets. A marine's best friend :)
 
   actor->threshold = actor->pursuecount = 0;
+
+  // [Nugget]
+  if (riotmode && !(actor->flags & MF_FRIEND) && targ)
+  {
+    P_LookForAnyTargets(actor, true);
+  }
+  else
+
   if (!(actor->flags & MF_FRIEND && P_LookForTargets(actor, false)) &&
       !(targ &&
 	targ->flags & MF_SHOOTABLE &&
@@ -1770,6 +1836,9 @@ static void WatchResurrection(mobj_t* target, mobj_t* raiser)
 
 static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfxenum_t healsound)
 {
+  // [Nugget]
+  if (riotmode && !(actor->flags & MF_FRIEND)) { return false; }
+
   int xl, xh;
   int yl, yh;
   int bx, by;
@@ -2358,52 +2427,70 @@ void A_BossDeath(mobj_t *mo)
   line_t    junk;
   int       i;
 
-  // numbossactions == 0 means to use the defaults.
-  // numbossactions == -1 means to do nothing.
-  // positive values mean to check the list of boss actions and run all that apply.
-  if (gamemapinfo && gamemapinfo->numbossactions != 0)
+  if (gamemapinfo && gamemapinfo->flags & MapInfo_BossActionClear)
   {
-    if (gamemapinfo->numbossactions < 0) return;
+      return;
+  }
 
-    // make sure there is a player alive for victory
-    for (i=0; i<MAXPLAYERS; i++)
-      if (playeringame[i] && players[i].health > 0)
-        break;
-
-    if (i==MAXPLAYERS)
-      return;     // no one left alive, so do not end game
-
-    for (i = 0; i < gamemapinfo->numbossactions; i++)
+  if (gamemapinfo && array_size(gamemapinfo->bossactions))
+  {
+      // make sure there is a player alive for victory
+      for (i = 0; i < MAXPLAYERS; i++)
       {
-        if (gamemapinfo->bossactions[i].type == mo->type)
-          break;
-      }
-    if (i >= gamemapinfo->numbossactions)
-      return;  // no matches found
-
-    // scan the remaining thinkers to see
-    // if all bosses are dead
-    for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
-      if (th->function.p1 == (actionf_p1)P_MobjThinker)
-        {
-          mobj_t *mo2 = (mobj_t *) th;
-          if (mo2 != mo && mo2->type == mo->type && mo2->health > 0)
-            return;         // other boss not dead
-        }
-    for (i = 0; i < gamemapinfo->numbossactions; i++)
-      {
-        if (gamemapinfo->bossactions[i].type == mo->type)
+          if (playeringame[i] && players[i].health > 0)
           {
-            junk = *lines;
-            junk.special = (short)gamemapinfo->bossactions[i].special;
-            junk.tag = (short)gamemapinfo->bossactions[i].tag;
-            // use special semantics for line activation to block problem types.
-            if (!P_UseSpecialLine(mo, &junk, 0, true))
-              P_CrossSpecialLine(&junk, 0, mo, true);
+              break;
+          }
+      }
+      if (i == MAXPLAYERS)
+      {
+          return; // no one left alive, so do not end game
+      }
+
+      bossaction_t *bossaction;
+      array_foreach(bossaction, gamemapinfo->bossactions)
+      {
+          if (bossaction->type == mo->type)
+          {
+              break;
+          }
+      }
+      if (bossaction == array_end(gamemapinfo->bossactions))
+      {
+          return; // no matches found
+      }
+
+      // scan the remaining thinkers to see
+      // if all bosses are dead
+      for (th = thinkercap.next; th != &thinkercap; th = th->next)
+      {
+          if (th->function.p1 == (actionf_p1)P_MobjThinker)
+          {
+              mobj_t *mo2 = (mobj_t *)th;
+              if (mo2 != mo && mo2->type == mo->type && mo2->health > 0)
+              {
+                  return; // other boss not dead
+              }
           }
       }
 
-    return;
+      array_foreach(bossaction, gamemapinfo->bossactions)
+      {
+          if (bossaction->type == mo->type)
+          {
+              junk = *lines;
+              junk.special = (short)bossaction->special;
+              junk.tag = (short)bossaction->tag;
+              // use special semantics for line activation to block problem
+              // types.
+              if (!P_UseSpecialLine(mo, &junk, 0, true))
+              {
+                  P_CrossSpecialLine(&junk, 0, mo, true);
+              }
+          }
+      }
+
+      return;
   }
 
   if (gamemode == commercial)

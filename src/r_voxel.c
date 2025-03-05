@@ -37,6 +37,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "r_bsp.h"
+#include "wi_stuff.h"
+
 static boolean voxels_found;
 boolean voxels_rendering, default_voxels_rendering;
 
@@ -683,6 +687,10 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	vis->x1 = x1;
 	vis->x2 = x2;
 
+	// [Nugget]
+	vis->fullbright = false;
+	vis->flipped = false;
+
 	// get light level...
 
 	if (vis->mobjflags & MF_SHADOW)
@@ -696,12 +704,31 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	else if (thing->frame & FF_FULLBRIGHT)
 	{
 		vis->colormap[0] = vis->colormap[1] = fullcolormap;
+		vis->fullbright = true; // [Nugget]
 	}
 	else
 	{
 		// diminished light
-    const int index = STRICTMODE(!diminished_lighting) // [Nugget]
-                      ? 0 : R_GetLightIndex(xscale);
+		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+											? 0 : R_GetLightIndex(xscale);
+
+		// [Nugget] Thing lighting
+		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
+		{
+			int lightlevel = 0;
+
+			for (int i = 0;  i < 9;  i++)
+			{
+				const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
+											gy = vis->gy + (thing->radius * ((i / 3) - 1));
+
+				lightlevel += R_GetLightLevelInPoint(gx, gy);
+			}
+
+			int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
+
+			spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+		}
 
 		vis->colormap[0] = spritelights[index];
 		vis->colormap[1] = fullcolormap;
@@ -834,6 +861,36 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 	int linesize = video.pitch;
 	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
+	// [Nugget] Thing lighting /------------------------------------------------
+
+	const byte *colormap[2];
+	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
+
+	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
+			&& !spr->fullbright && spr->colormap[0] && !fixedcolormap)
+	{
+		const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
+									yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
+
+		const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
+
+		const fixed_t cosine = finecosine[angle],
+										sine =   finesine[angle];
+
+		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
+									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
+
+		int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
+								 + extralight;
+
+		const int lightindex = STRICTMODE(!diminishing_lighting)
+													 ? 0 : R_GetLightIndex(B_xscale);
+
+		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+	}
+
+	// [Nugget] ---------------------------------------------------------------/
+
 	// iterate over screen columns
 	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
 
@@ -874,13 +931,14 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 			fixed_t uy0 = uy1;
 
 			// clip the slab vertically
-			if (uy1 >= clip_y2) break;
-			if (uy2 <= clip_y1) continue;
+			if (uy1 >= clip_y2) uy1 = clip_y2;
+			if (uy2 <= clip_y1) uy2 = clip_y1;
 
 			if (uy1 < clip_y1) uy1 = clip_y1;
 			if (uy2 > clip_y2) uy2 = clip_y2;
 
-			boolean has_side = ((face & (ux > Bx ? B_face : A_face)) != 0);
+			boolean has_side = ((face & (ux > Bx ? B_face : A_face)) != 0
+                          && uy1 < clip_y2 && uy2 > clip_y1);
 
 			// handle the fuzz effect for Spectres
 			if (shadow)
@@ -923,7 +981,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 					uy = clip_y1;
 
 				byte src = slab[0];
-				byte pix = spr->colormap[spr->brightmap[src]][src];
+				byte pix = colormap[spr->brightmap[src]][src];
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
@@ -938,7 +996,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 					uy = clip_y2;
 
 				byte src = slab[len - 1];
-				byte pix = spr->colormap[spr->brightmap[src]][src];
+				byte pix = colormap[spr->brightmap[src]][src];
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
@@ -958,7 +1016,7 @@ static void VX_DrawColumn (vissprite_t * spr, int x, int y)
 					if (i >= len) i = len - 1;
 
 					byte src = slab[i];
-					byte pix = spr->colormap[spr->brightmap[src]][src];
+					byte pix = colormap[spr->brightmap[src]][src];
 
 					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
 				}
@@ -1081,4 +1139,71 @@ void VX_DrawVoxel (vissprite_t * spr)
 	vx_eye_y = v->y_pivot + FixedMul (delta_x, s) - FixedMul (delta_y, c);
 
 	VX_RecursiveDraw (spr, 0, 0, v->x_size, v->y_size);
+}
+
+// [Nugget] Weapon voxels
+boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
+                              const boolean translucent)
+{
+  if (STRICTMODE(hide_weapon)
+      || R_GetChasecamOn() // Chasecam
+      || R_GetFreecamOn() // Freecam
+      || (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))) // Alt. intermission background
+  {
+    return false;
+  }
+
+  mobj_t thing = {0};
+
+  fixed_t sx2, sy2, wix, wiy;
+
+  if (uncapped && oldleveltime < leveltime)
+  {
+    sx2 = LerpFixed(psp->oldsx2, psp->sx2);
+    sy2 = LerpFixed(psp->oldsy2, psp->sy2);
+    wix = LerpFixed(psp->oldwix, psp->wix);
+    wiy = LerpFixed(psp->oldwiy, psp->wiy);
+  }
+  else {
+    sx2 = psp->sx2;
+    sy2 = psp->sy2;
+    wix = psp->wix;
+    wiy = psp->wiy;
+  }
+
+  fixed_t x = sx2,
+          y = sy2 - 32*FRACUNIT;
+
+  if (STRICTMODE(weapon_inertia))
+  {
+    x += wix / 2;
+
+    if (default_vertical_aiming != VERTAIM_AUTO)
+    { y += wiy / 2; }
+  }
+
+  x /= 5;
+  y /= 5;
+
+  thing.x = thing.oldx = viewx + FixedMul(x,   finesine[viewangle >> ANGLETOFINESHIFT]);
+  thing.y = thing.oldy = viewy - FixedMul(x, finecosine[viewangle >> ANGLETOFINESHIFT]);
+  thing.z = thing.oldz = viewz - y;
+
+  thing.angle = thing.oldangle = viewangle - ANG90;
+
+  thing.sprite = psp->state->sprite;
+  thing.frame  = psp->state->frame;
+
+  if (translucent)
+  { thing.flags |= MF_TRANSLUCENT; }
+
+  if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
+  { thing.flags |= MF_SHADOW; }
+
+  // Albeit unused, `R_ProjectVoxel()` accesses `heightsec`
+  sector_t sector = {0};
+  subsector_t sub = { .sector = &sector };
+  thing.subsector = &sub;
+
+  return VX_ProjectVoxel(&thing);
 }

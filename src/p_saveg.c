@@ -850,12 +850,21 @@ static void saveg_read_pspdef_t(pspdef_t *str)
         str->sy2 = str->sy;
     }
 
-    // [Nugget]
-    if (saveg_compat > saveg_woof600) {
+    str->oldsx2 = str->sx2;
+    str->oldsy2 = str->sy2;
+
+    // [Nugget] --------------------------------------------------------------
+
+    if (saveg_compat > saveg_woof600)
+    {
       str->dy  = saveg_read32(); // fixed_t dy;
       str->wix = saveg_read32(); // fixed_t wix;
       str->wiy = saveg_read32(); // fixed_t wiy;
-    } else { str->dy = str->wix = str->wiy = 0; }
+    }
+    else { str->dy = str->wix = str->wiy = 0; }
+
+    str->oldwix = str->wix;
+    str->oldwiy = str->wiy;
 }
 
 static void saveg_write_pspdef_t(pspdef_t *str)
@@ -2113,6 +2122,41 @@ static void saveg_write_rng_t(rng_t *str)
 }
 
 //
+// button_t
+//
+
+static void saveg_read_button_t(button_t *str)
+{
+    // line_t *line
+    int line = saveg_read32();
+    str->line = &lines[line];
+
+    // bwhere_e where
+    str->where = (bwhere_e)saveg_read32();
+
+    // int btexture
+    str->btexture = saveg_read32();
+
+    // int btimer
+    str->btimer = saveg_read32();
+}
+
+static void saveg_write_button_t(button_t *str)
+{
+    // line_t *line
+    saveg_write32(str->line - lines);
+
+    // bwhere_e where
+    saveg_write32((int)str->where);
+
+    // int btexture
+    saveg_write32(str->btexture);
+
+    // int btimer
+    saveg_write32(str->btimer);
+}
+
+//
 // P_ArchivePlayers
 //
 void P_ArchivePlayers (void)
@@ -2583,7 +2627,8 @@ enum {
   tc_pusher,      // phares 3/22/98:  new push/pull effect thinker
   tc_flicker,     // killough 10/4/98
   tc_endspecials,
-  tc_friction     // store friction for complevel Boom
+  tc_friction,    // store friction for complevel Boom
+  tc_button,
 } specials_e;
 
 //
@@ -2773,6 +2818,18 @@ void P_ArchiveSpecials (void)
         }
     }
 
+  CheckSaveGame(MAXBUTTONS * sizeof(button_t));
+
+  for (int i = 0; i < MAXBUTTONS; i++)
+  {
+    if (buttonlist[i].btimer != 0)
+    {
+      saveg_write8(tc_button);
+      saveg_write_pad();
+      saveg_write_button_t(&buttonlist[i]);
+    }
+  }
+
   // add a terminating marker
   saveg_write8(tc_endspecials);
 }
@@ -2930,6 +2987,13 @@ void P_UnArchiveSpecials (void)
           P_AddThinker(&friction->thinker);
           break;
         }
+
+      case tc_button:
+        saveg_read_pad();
+        button_t button;
+        saveg_read_button_t(&button);
+        P_StartButton(button.line, button.where, button.btexture, button.btimer);
+        break;
 
       default:
         I_Error ("P_UnarchiveSpecials:Unknown tclass %i "

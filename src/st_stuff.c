@@ -20,6 +20,7 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "am_map.h"
@@ -59,10 +60,14 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "mn_internal.h"
 #include "m_nughud.h"
 #include "sounds.h"
 
 // [Nugget] /=================================================================
+
+static sbardef_t *normal_sbardef = NULL,
+                 *nughud_sbardef = NULL;  // NUGHUD
 
 static patch_t *stbersrk;
 static int lu_berserk;
@@ -85,14 +90,7 @@ boolean no_radsuit_tint;
 boolean comp_godface;
 boolean comp_unusedpals;
 
-typedef enum hudtype_s
-{
-  HUDTYPE_SBARDEF,
-  HUDTYPE_NUGHUD
-} hudtype_t;
-
-static hudtype_t hud_type;
-
+static boolean use_nughud;
 static boolean hud_blink_keys;
 static boolean sts_show_berserk;
 int force_carousel;
@@ -150,7 +148,11 @@ boolean ST_GetNughudOn(void)
 
 static void UpdateNughudOn(void)
 {
-  st_nughud = screenblocks == 11 && hud_type == HUDTYPE_NUGHUD && automap_off;
+  // If we have no proper status bars (e.g. SBARDEF is empty),
+  // use NUGHUD when `screenblocks == 11`
+  st_nughud = automap_off
+              && (   ( normal_sbardef && screenblocks == maxscreenblocks - 1 && use_nughud)
+                  || (!normal_sbardef && screenblocks == 11));
 }
 
 static sbarelem_t *nughud_health_elem = NULL,
@@ -259,9 +261,6 @@ static int armor_green;   // armor amount above is blue, below is green
 static boolean hud_armor_type; // color of armor depends on type
 
 static boolean weapon_carousel;
-
-// used for evil grin
-static boolean  oldweaponsowned[NUMWEAPONS];
 
 static sbardef_t *sbardef;
 
@@ -755,10 +754,13 @@ static void UpdateFace(sbe_face_t *face, player_t *player)
 
             for (int i = 0; i < NUMWEAPONS; ++i)
             {
-                if (oldweaponsowned[i] != player->weaponowned[i])
+                if (face->oldweaponsowned[i] != player->weaponowned[i])
                 {
-                    doevilgrin = true;
-                    oldweaponsowned[i] = player->weaponowned[i];
+                    if (face->oldweaponsowned[i] < player->weaponowned[i])
+                    {
+                        doevilgrin = true;
+                    }
+                    face->oldweaponsowned[i] = player->weaponowned[i];
                 }
             }
 
@@ -1198,12 +1200,22 @@ static void UpdateStatusBar(player_t *player)
 
     int barindex = MAX(screenblocks - 10, 0);
 
+    // [Nugget] NUGHUD
+    if (st_nughud)
+    {
+        barindex = -2;
+    }
+    else
+
+    if (barindex >= array_size(sbardef->statusbars))
+    {
+        barindex = array_size(sbardef->statusbars) - 1;
+    }
+
     if (automapactive == AM_FULL && automapoverlay == AM_OVERLAY_OFF)
     {
         barindex = 0;
     }
-
-    if (st_nughud) { barindex = 3; } // [Nugget] NUGHUD
 
     if (oldbarindex != barindex)
     {
@@ -1321,7 +1333,7 @@ static void UpdateStatusBar(player_t *player)
     oldbarindex = barindex;
 }
 
-static void ResetElem(sbarelem_t *elem)
+static void ResetElem(sbarelem_t *elem, player_t *player)
 {
     switch (elem->type)
     {
@@ -1338,6 +1350,10 @@ static void ResetElem(sbarelem_t *elem)
                 face->faceindex = 0;
                 face->facecount = 0;
                 face->oldhealth = -1;
+                for (int i = 0; i < NUMWEAPONS; i++)
+                {
+                    face->oldweaponsowned[i] = player->weaponowned[i];
+                }
             }
             break;
 
@@ -1370,19 +1386,21 @@ static void ResetElem(sbarelem_t *elem)
     sbarelem_t *child;
     array_foreach(child, elem->children)
     {
-        ResetElem(child);
+        ResetElem(child, player);
     }
 }
 
 static void ResetStatusBar(void)
 {
+    player_t *player = &players[displayplayer];
+
     statusbar_t *local_statusbar;
     array_foreach(local_statusbar, sbardef->statusbars)
     {
         sbarelem_t *child;
         array_foreach(child, local_statusbar->children)
         {
-            ResetElem(child);
+            ResetElem(child, player);
         }
     }
 
@@ -1625,6 +1643,9 @@ static void DrawLines(int x, int y, sbarelem_t *elem)
 
     int cr = elem->cr;
 
+    // [Nugget]
+    const boolean isnt_digits_font = !!strcmp(widget->font->name, "Digits");
+
     widgetline_t *line;
     array_foreach(line, widget->lines)
     {
@@ -1672,7 +1693,7 @@ static void DrawLines(int x, int y, sbarelem_t *elem)
             else
             {
                 glyph = font->characters[ch];
-                draw_shadow &= !!strcmp(widget->font->name, "Digits"); // Don't draw for digits
+                draw_shadow &= isnt_digits_font; // Don't draw for digits
             }
             DrawGlyphLine(x, y, elem, line, glyph);
 
@@ -2195,7 +2216,7 @@ void ST_Ticker(void)
 
     UpdateNughudStacks();
 
-    if (hud_crosshair)
+    if (hud_crosshair_on) // [Nugget] Crosshair toggle
     {
         HU_UpdateCrosshair();
     }
@@ -2214,11 +2235,6 @@ void ST_Drawer(void)
     }
 
     DrawStatusBar();
-
-    if (hud_crosshair_on) // [Nugget] Crosshair toggle
-    {
-        HU_DrawCrosshair();
-    }
 }
 
 void ST_Start(void)
@@ -2247,13 +2263,12 @@ void ST_Init(void)
 
     static boolean firsttime = true;
 
-    static sbardef_t *normal_sbardef = NULL, *nughud_sbardef = NULL;
-
     if (firsttime)
     {
         normal_sbardef = ST_ParseSbarDef();
         nughud_sbardef = CreateNughudSbarDef();
 
+        ST_StatusbarList(); // Calculate `maxscreenblocks`
         UpdateNughudOn();
     }
 
@@ -2383,6 +2398,44 @@ void ST_InitRes(void)
   // [Nugget] Status-Bar chunks
   // More than necessary (we only use the section visible in 4:3), but so be it
   st_bar = Z_Malloc((video.pitch * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+}
+
+const char **ST_StatusbarList(void)
+{
+    // [Nugget] Use `normal_sbardef`; calculate `maxscreenblocks` here
+
+    if (!normal_sbardef)
+    {
+        maxscreenblocks = 11; // [Nugget] NUGHUD
+        return NULL;
+    }
+
+    maxscreenblocks = 10;
+
+    static const char **strings;
+
+    if (array_size(strings))
+    {
+        maxscreenblocks += array_size(strings) - 1;
+        return strings;
+    }
+
+    statusbar_t *item;
+    array_foreach(item, normal_sbardef->statusbars)
+    {
+        if (item->fullscreenrender)
+        {
+            array_push(strings, "Fullscreen");
+        }
+        else
+        {
+            array_push(strings, "Status Bar");
+        }
+    }
+
+    maxscreenblocks += array_size(strings) - 1;
+
+    return strings;
 }
 
 void ST_ResetPalette(void)
@@ -3059,7 +3112,7 @@ static hudfont_t LoadNughudHUDFont(
   for (int i = 0;  i < HU_FONTSIZE;  i++)
   {
     char namebuf[16];
-    int lumpnum;
+    int lumpnum = 0;
 
     M_snprintf(namebuf, sizeof(namebuf), "%s%03d", stem, i + HU_FONTSTART);
 
@@ -3178,7 +3231,7 @@ static sbardef_t *CreateNughudSbarDef(void)
 
   char namebuf[16];
 
-  // Fonts ===================================================================
+  // Number fonts ============================================================
 
   int lumpnum;
   int maxwidth, maxheight;
@@ -3352,7 +3405,7 @@ end_amnum:
   amnum.monowidth = SHORT(amnum.numbers[0]->width);
   amnum.maxheight = maxheight;
 
-  // -------------------------------------------------------------------------
+  // HUD fonts ===============================================================
 
   // Console font
   static hudfont_t cfn = {0};
@@ -3595,7 +3648,7 @@ end_amnum:
   {
     sbarelem_t elem = CreateNughudWidget(nughud.sts, sbw_monsec, &dig);
 
-    elem.subtype.widget->vertical_layout = MAX(0, nughud.sts_ml);
+    elem.subtype.widget->vertical = nughud.sts_ml;
 
     array_push(sb.children, elem);
   }
@@ -3605,7 +3658,7 @@ end_amnum:
   {
     sbarelem_t elem = CreateNughudWidget(nughud.coord, sbw_coord, &dig);
 
-    elem.subtype.widget->vertical_layout = MAX(0, nughud.coord_ml);
+    elem.subtype.widget->vertical = nughud.coord_ml;
 
     array_push(sb.children, elem);
   }
@@ -3707,16 +3760,16 @@ end_amnum:
 void ST_BindSTSVariables(void)
 {
   // [Nugget] NUGHUD
-  M_BindNum("fullscreen_hud_type", &hud_type, NULL,
-            HUDTYPE_SBARDEF, HUDTYPE_SBARDEF, HUDTYPE_NUGHUD,
-            ss_stat, wad_no, "Fullscreen HUD type (0 = SBARDEF; 1 = NUGHUD)");
+  M_BindBool("use_nughud", &use_nughud, NULL,
+             true, ss_stat, wad_yes,
+             "Replace second-to-last HUD with NUGHUD");
 
   M_BindNum("st_layout", &st_layout, NULL,  st_wide, st_original, st_wide,
              ss_stat, wad_no, "HUD layout");
   M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
              false, ss_stat, wad_yes, "Colored numbers on the status bar");
   M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,
-             false, ss_stat, wad_yes,
+             false, ss_none, wad_yes,
              "Percent signs on the status bar are always gray");
   M_BindBool("st_solidbackground", &st_solidbackground, NULL,
              false, ss_stat, wad_no,
@@ -3728,10 +3781,12 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
-  M_BindBool("sts_show_berserk", &sts_show_berserk, NULL, true, ss_stat, wad_yes,
-             "Show Berserk pack on the status bar when using the Fist, if available");
+  M_BindBool("sts_show_berserk", &sts_show_berserk, NULL,
+             true, ss_stat, wad_yes,
+             "Show Berserk on the status bar when using the Fist, if available");
 
-  M_BindBool("hud_blink_keys", &hud_blink_keys, NULL, false, ss_stat, wad_yes,
+  M_BindBool("hud_blink_keys", &hud_blink_keys, NULL,
+             false, ss_stat, wad_yes,
              "Make missing keys blink when trying to trigger linedef actions");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -3755,7 +3810,8 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] Crosshair toggle
   M_BindBool("hud_crosshair_on", &hud_crosshair_on, NULL,
-             false, ss_stat, wad_no, "Crosshair");
+             false, ss_stat, wad_no,
+             "Crosshair");
 
   // [Nugget] Crosshair type
   M_BindNum("hud_crosshair", &hud_crosshair, NULL, 1, 1, 10 - 1, ss_stat, wad_no,
@@ -3774,15 +3830,18 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] Vertical-only option
   M_BindNum("hud_crosshair_lockon", &hud_crosshair_lockon, NULL,
-            0, 0, 2, ss_stat, wad_no, "Lock crosshair on target (1 = Vertically only; 2 = Fully)");
+            0, 0, 2, ss_stat, wad_no,
+            "Lock crosshair on target (1 = Vertically only; 2 = Fully)");
 
   // [Nugget] Horizontal autoaim indicators
   M_BindBool("hud_crosshair_indicators", &hud_crosshair_indicators, NULL,
-             false, ss_stat, wad_no, "Horizontal-autoaim indicators for crosshair");
+             false, ss_stat, wad_no,
+             "Horizontal-autoaim indicators for crosshair");
 
   // [Nugget]
   M_BindBool("hud_crosshair_fuzzy", &hud_crosshair_fuzzy, NULL,
-             false, ss_stat, wad_no, "Account for fuzzy targets when coloring and/or locking-on");
+             false, ss_stat, wad_no,
+             "Account for fuzzy targets when coloring and/or locking-on");
 
   M_BindNum("hud_crosshair_color", &hud_crosshair_color, NULL,
             CR_GRAY, CR_BRICK, CR_NONE, ss_stat, wad_no,
@@ -3796,7 +3855,8 @@ void ST_BindSTSVariables(void)
 
   // [Nugget]
   M_BindNum("force_carousel", &force_carousel, NULL,
-            1, 0, 2, ss_weap, wad_no, "Force display of weapon carousel (1 = Off player; 2 = Always)");
+            1, 0, 2, ss_weap, wad_no,
+            "Force display of weapon carousel (0 = Off; 1 = Off player; 2 = Always)");
 }
 
 //----------------------------------------------------------------------------

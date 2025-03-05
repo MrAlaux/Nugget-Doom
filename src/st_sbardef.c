@@ -216,6 +216,16 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
                         widget->duration =
                             JS_GetNumberValue(json, "duration") * TICRATE;
                         break;
+                    case sbw_monsec:
+                    case sbw_coord:
+                        {
+                            json_t *vertical = JS_GetObject(json, "vertical");
+                            if (JS_IsBoolean(vertical))
+                            {
+                                widget->vertical = JS_GetBoolean(vertical);
+                            }
+                        }
+                        break;
 
                     // [Nugget]
                     case sbw_chat:
@@ -225,9 +235,6 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
                     default:
                         break;
                 }
-
-                // [Nugget]
-                widget->vertical_layout = JS_GetNumberValue(json, "vertical_layout");
 
                 out->subtype.widget = widget;
             }
@@ -522,7 +529,7 @@ sbardef_t *ST_ParseSbarDef(void)
 
     boolean load_nugget_defaults = false;
 
-    const int max_nugver = 1;
+    const int max_nugver = 2;
     int nugver = 0;
 
     json_t *const js_nugver = JS_GetObject(json, "nugget_version");
@@ -601,6 +608,7 @@ sbardef_t *ST_ParseSbarDef(void)
     json = JS_Open("SBHUDDEF", "hud", (version_t){1, 0, 0});
     if (json == NULL)
     {
+        free(out);
         return NULL;
     }
 
