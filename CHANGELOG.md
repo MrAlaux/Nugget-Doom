@@ -23,6 +23,7 @@
 - **Direct vertical aiming for melee provoking hit effect without actually hitting an entity**
 - **Specific bug with weapon toggles with switch interruption enabled**
 - **Freecam interpolation issues**
+- **Freecam not being forcefully disabled when enabling strict mode**
 - **Message review overriding message durations even when the new one were shorter**
 - **Message review ignoring the forced-duration setting**
 - **`DSMNUBAK` being unused**
