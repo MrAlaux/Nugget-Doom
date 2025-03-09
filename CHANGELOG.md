@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Hitbox-based Hitscan Collision_** setting
 - **_Bounded Voxel Rendering_** setting
 - **Recoil-pitch scale percent** setting
 - **_'IDDET'_ cheat**, to find exits in the automap
