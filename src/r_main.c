@@ -1894,6 +1894,12 @@ void R_BindRenderVariables(void)
 
   M_BindBool("voxels_rendering", &default_voxels_rendering, &voxels_rendering,
              true, ss_none, wad_no, "Allow voxel models");
+
+  // [Nugget] Voxel rendering mode
+  M_BindBool("bounded_voxels_rendering", &bounded_voxels_rendering, NULL,
+             false, ss_gen, wad_yes,
+             "Bounded voxel rendering (draw each voxel as a rectangular sprite)");
+
   BIND_BOOL_GENERAL(brightmaps, false,
     "Brightmaps for textures and sprites");
   BIND_NUM_GENERAL(invul_mode, INVUL_MBF, INVUL_VANILLA, INVUL_GRAY,

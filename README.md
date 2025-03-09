@@ -28,6 +28,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
+- **_Bounded Voxel Rendering_** setting, to draw each voxel as a rectangular sprite
 - **FOV-based sky stretching** setting (CFG-only: `fov_stretchsky`)
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**

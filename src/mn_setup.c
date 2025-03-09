@@ -3664,6 +3664,9 @@ void MN_DrawGyro(void)
     DrawGyroCalibration();
 }
 
+// [Nugget] Voxel rendering mode
+static void UpdateVoxelRenderingModeItem(void);
+
 static void SmoothLight(void)
 {
     setsmoothlight = true;
@@ -3694,7 +3697,12 @@ static setup_menu_t gen_settings5[] = {
 
     MI_GAP,
 
-    {"Voxels", S_ONOFF | S_STRICT, OFF_CNTR_X, M_SPC, {"voxels_rendering"}},
+    {"Voxels", S_ONOFF | S_STRICT, OFF_CNTR_X, M_SPC, {"voxels_rendering"},
+     .action = UpdateVoxelRenderingModeItem}, // [Nugget] Voxel rendering mode
+
+    // [Nugget] Voxel rendering mode
+    {"Bounded Voxel Rendering", S_ONOFF|S_STRICT, OFF_CNTR_X, M_SPC,
+     {"bounded_voxels_rendering"}, .action = VX_SetVoxelRenderingMode},
 
     {"Brightmaps", S_ONOFF | S_STRICT, OFF_CNTR_X, M_SPC, {"brightmaps"},
      .action = R_InitDrawFunctions},
@@ -4038,6 +4046,14 @@ void MN_UpdateFpsLimitItem(void)
 void MN_DisableVoxelsRenderingItem(void)
 {
     DisableItem(true, gen_settings5, "voxels_rendering");
+
+    UpdateVoxelRenderingModeItem(); // [Nugget] Voxel rendering mode
+}
+
+// [Nugget] Voxel rendering mode
+static void UpdateVoxelRenderingModeItem(void)
+{
+    DisableItem(!voxels_rendering, gen_settings5, "bounded_voxels_rendering");
 }
 
 // [Nugget]

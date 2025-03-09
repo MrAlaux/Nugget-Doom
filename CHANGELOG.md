@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Bounded Voxel Rendering_** setting
 - **Recoil-pitch scale percent** setting
 - **_'IDDET'_ cheat**, to find exits in the automap
 - **Number of _Bloodier Gibbing_ splats** setting
