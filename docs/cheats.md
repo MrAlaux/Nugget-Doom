@@ -139,15 +139,15 @@ Spawn an actor based on its mobj type index, where:
 For example, to spawn a hostile Shotgun Guy (whose index is 2), the full cheat would be `SUMMONE002`.
 
 Actors are always spawned facing the same direction as the player.
-If the Automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
+If the automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
 Otherwise, they will be spawned in front of the player.
 
 `IDDF[C][T]`  
-Find a key in the Automap.
+Find a key in the automap.
 This cheat functions similarly to the `KEY` cheat, with `C` and `T` specifying the key color and type respectively.
 
 `IDDET`  
-Find exits in the Automap.
+Find exits in the automap.
 
 `RESURRECT` / `IDRES`  
 Resurrect the player without toggling IDDQD.

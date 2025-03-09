@@ -371,8 +371,6 @@ static int mm_x = 8,
 
 static boolean mm_under_messages = true;
 
-static int mm_update_tic = 0;
-
 void AM_UpdateMinimap(
   const int x, const int y, const int ws,
   const int w, const int h,
@@ -385,8 +383,6 @@ void AM_UpdateMinimap(
   mm_w = w;
   mm_h = h;
   mm_under_messages = under_messages;
-
-  mm_update_tic = gametic;
 
   if (automapactive == AM_MINI) { AM_Start(); }
 }
@@ -849,8 +845,7 @@ void AM_Start()
 
   static int last_automap = -1,
              last_messages = -1,
-             last_layout = -1,
-             last_mm_update_tic = -1;
+             last_layout = -1;
 
   const int messages_height = ST_GetNumMessageLines();
   const boolean layout = ST_GetLayout();
@@ -862,7 +857,7 @@ void AM_Start()
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode
       || last_automap != automapactive || last_messages != messages_height
-      || last_layout != layout || last_mm_update_tic != mm_update_tic)
+      || last_layout != layout)
   {
     AM_LevelInit();
 
@@ -874,7 +869,6 @@ void AM_Start()
     last_automap = automapactive;
     last_messages = messages_height;
     last_layout = layout;
-    last_mm_update_tic = mm_update_tic;
   }
   else
   {
@@ -2639,6 +2633,10 @@ static void AM_drawThings
       //jff 1/5/98 case over doomednum of thing being drawn
       if (mapcolor_rkey || mapcolor_ykey || mapcolor_bkey)
       {
+        // [Nugget] Make keys flash too
+        const boolean key_flash = (map_keyed_door == MAP_KEYED_DOOR_FLASH)
+                                  && (leveltime & 16);
+
         switch(t->info->doomednum)
         {
           //jff 1/5/98 treat keys special
@@ -2649,7 +2647,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              mapcolor_rkey!=-1? mapcolor_rkey : mapcolor_sprt,
+              key_flash ? mapcolor_grid : (mapcolor_rkey != -1 ? mapcolor_rkey : mapcolor_sprt),
               pt.x,
               pt.y
             );
@@ -2662,7 +2660,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              mapcolor_ykey!=-1? mapcolor_ykey : mapcolor_sprt,
+              key_flash ? mapcolor_grid : (mapcolor_ykey != -1 ? mapcolor_ykey : mapcolor_sprt),
               pt.x,
               pt.y
             );
@@ -2675,7 +2673,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              mapcolor_bkey!=-1? mapcolor_bkey : mapcolor_sprt,
+              key_flash ? mapcolor_grid : (mapcolor_bkey != -1 ? mapcolor_bkey : mapcolor_sprt),
               pt.x,
               pt.y
             );
@@ -2955,7 +2953,7 @@ void AM_BindAutomapVariables(void)
   // [Nugget]
   M_BindBool("map_hitboxes", &map_hitboxes, NULL,
              false, ss_auto, wad_no,
-             "Show thing hitboxes in automap");
+             "Show thing hitboxes on automap");
 
   M_BindNum("mapcolor_preset", &mapcolor_preset, NULL, AM_PRESET_BOOM,
             AM_PRESET_VANILLA, AM_PRESET_ZDOOM, ss_auto, wad_no,

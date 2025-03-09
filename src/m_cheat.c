@@ -67,10 +67,14 @@
 
 #ifdef NUGMAGIC
 
+int nugmagic = 0;
+
 static void cheat_magic(void)
 {
   
 }
+
+int nugmagic2 = 0;
 
 static void cheat_magic2(void)
 {
