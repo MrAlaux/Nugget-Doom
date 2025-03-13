@@ -47,6 +47,7 @@
 #include "g_game.h" // [crispy] key_*
 #include "m_input.h"
 #include "m_random.h" // [crispy] Crispy_Random()
+#include "p_enemy.h"
 #include "p_mobj.h"
 
 // Stage of animation:
@@ -609,17 +610,16 @@ static const actionsound_t actionsounds[] = {
 static int F_SoundForState (int st)
 {
   void *const castaction = (void *) caststate->action.p2;
-  void *const nextaction = (void *) (&states[caststate->nextstate])->action.p2;
 
   // [crispy] fix Doomguy in casting sequence
-  if (castaction == NULL) {
-    if (st == S_PLAY_ATK2) { return sfx_dshtgn; }
-    else                   { return 0; }
+  if (castaction == NULL)
+  {
+    return (st == S_PLAY_ATK2) ? sfx_dshtgn : 0;
   }
   else {
-    int i;
+    void *const nextaction = (void *) (&states[caststate->nextstate])->action.p2;
 
-    for (i = 0; i < arrlen(actionsounds); i++)
+    for (int i = 0; i < arrlen(actionsounds); i++)
     {
       const actionsound_t *const as = &actionsounds[i];
 
@@ -630,6 +630,7 @@ static int F_SoundForState (int st)
       }
     }
   }
+
   return 0;
 }
 
@@ -672,12 +673,308 @@ static void F_StartCast(void)
   S_ChangeMusic(mus_evil, true);
 }
 
+// [Nugget] Fancy cast /------------------------------------------------------
+
+static boolean fc_enabled = false;
+
+static enum {
+  FCSTATE_SPAWN,
+  FCSTATE_SEE,
+  FCSTATE_MELEE,
+  FCSTATE_MISSILE,
+  FCSTATE_PAIN,
+  FCSTATE_DEATH,
+  FCSTATE_XDEATH,
+  FCSTATE_RAISE,
+
+  NUM_FCSTATES
+} fc_state;
+
+static boolean fc_showname = true;
+static int fc_spriteoffset = 0;
+
+static sfxenum_t F_SoundForAction(const mobjinfo_t *const info, const state_t *const state)
+{
+  void *const action = (void *) state->action.p2;
+
+  if (action == A_Chase || action == A_HealChase || action == A_VileChase)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_None;
+  }
+  else if (action == A_BabyMetal)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_bspwlk;
+  }
+  else if (action == A_BrainAwake)
+  {
+    return sfx_bossit;
+  }
+  else if (action == A_BrainExplode)
+  {
+    return mobjinfo[MT_ROCKET].deathsound;
+  }
+  else if (action == A_BrainPain)
+  {
+    return sfx_bospn;
+  }
+  else if (action == A_BrainScream)
+  {
+    return sfx_bosdth;
+  }
+  else if (action == A_BrainSpit)
+  {
+    return sfx_bospit;
+  }
+  else if (action == A_BruisAttack)
+  {
+    return (Woof_Random() & 1) ? sfx_claw : mobjinfo[MT_BRUISERSHOT].seesound;
+  }
+  else if (action == A_BspiAttack)
+  {
+    return mobjinfo[MT_ARACHPLAZ].seesound;
+  }
+  else if (action == A_CPosAttack)
+  {
+    return sfx_pistol;
+  }
+  else if (action == A_CyberAttack)
+  {
+    return mobjinfo[MT_ROCKET].seesound;
+  }
+  else if (action == A_FatAttack1 || action == A_FatAttack2 || action == A_FatAttack3)
+  {
+    return mobjinfo[MT_FATSHOT].seesound;
+  }
+  else if (action == A_FatRaise)
+  {
+    return sfx_manatk;
+  }
+  else if (action == A_FireCrackle)
+  {
+    return sfx_flame;
+  }
+  else if (action == A_HeadAttack)
+  {
+    return (Woof_Random() & 1) ? sfx_None : mobjinfo[MT_HEADSHOT].seesound;
+  }
+  else if (action == A_Hoof)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_hoof;
+  }
+  else if (action == A_Metal)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_metal;
+  }
+  else if (action == A_MonsterBulletAttack)
+  {
+    return info->attacksound;
+  }
+  else if (action == A_MonsterMeleeAttack)
+  {
+    return state->args[2];
+  }
+  else if (action == A_MonsterProjectile)
+  {
+    return mobjinfo[state->args[0] - 1].seesound;
+  }
+  else if (action == A_Mushroom)
+  {
+    return mobjinfo[MT_FATSHOT].seesound;
+  }
+  else if (action == A_Pain)
+  {
+    return info->painsound;
+  }
+  else if (action == A_PainAttack)
+  {
+    return sfx_sklatk;
+  }
+  else if (action == A_PainDie)
+  {
+    return sfx_sklatk;
+  }
+  else if (action == A_PlayerScream)
+  {
+    return (!(Woof_Random() & 3)) ? sfx_pdiehi : sfx_pldeth;
+  }
+  else if (action == A_PlaySound)
+  {
+    return state->misc1;
+  }
+  else if (action == A_PosAttack)
+  {
+    return sfx_pistol;
+  }
+  else if (action == A_Scratch)
+  {
+    return state->misc2;
+  }
+  else if (action == A_Scream)
+  {
+    return info->deathsound;
+  }
+  else if (action == A_SkelFist)
+  {
+    return sfx_skepch;
+  }
+  else if (action == A_SkelMissile)
+  {
+    return mobjinfo[MT_TRACER].seesound;
+  }
+  else if (action == A_SkelWhoosh)
+  {
+    return sfx_skeswg;
+  }
+  else if (action == A_SkullAttack || action == A_BetaSkullAttack)
+  {
+    return info->attacksound;
+  }
+  else if (action == A_SpawnSound)
+  {
+    return sfx_boscub;
+  }
+  else if (action == A_SPosAttack)
+  {
+    return sfx_shotgn;
+  }
+  else if (action == A_StartFire)
+  {
+    return sfx_flamst;
+  }
+  else if (action == A_TroopAttack)
+  {
+    return (Woof_Random() & 1) ? sfx_claw : mobjinfo[MT_TROOPSHOT].seesound;
+  }
+  else if (action == A_VileAttack)
+  {
+    return sfx_barexp;
+  }
+  else if (action == A_VileStart)
+  {
+    return sfx_vilatk;
+  }
+  else if (action == A_VileTarget)
+  {
+    return (STRICTMODE(comp_flamst)) ? sfx_flamst : sfx_None;
+  }
+  else if (action == A_XScream)
+  {
+    return sfx_slop;
+  }
+
+  return sfx_None;
+}
+
+static void F_FancyCastTicker(void)
+{
+  if (castskip)
+  {
+    castnum += castskip;
+    castskip = 0;
+
+    if (castorder[castnum].name == NULL) { castnum = 0; }
+
+    fc_state = FCSTATE_SPAWN;
+  }
+
+  const mobjinfo_t *const info = &mobjinfo[castorder[castnum].type];
+
+  if (fc_state != -1)
+  {
+    statenum_t state = S_NULL;
+    sfxenum_t statesound = sfx_None;
+
+    switch (fc_state)
+    {
+      case FCSTATE_SPAWN:    state = info->spawnstate;                                     break;
+      case FCSTATE_SEE:      state = info->seestate;      statesound = info->seesound;     break;
+      case FCSTATE_MELEE:    state = info->meleestate;    statesound = info->attacksound;  break;
+      case FCSTATE_MISSILE:  state = info->missilestate;                                   break;
+      case FCSTATE_PAIN:     state = info->painstate;                                      break;
+      case FCSTATE_DEATH:    state = info->deathstate;                                     break;
+      case FCSTATE_XDEATH:   state = info->xdeathstate;                                    break;
+      case FCSTATE_RAISE:    state = info->raisestate;    statesound = sfx_slop;           break;
+      default: break;
+    }
+
+    if (state)
+    {
+      if (state == info->missilestate && state == S_PLAY_ATK1 && (Woof_Random() & 3))
+      {
+        caststate = &states[S_PLAY_ATK2];
+        statesound = sfx_dshtgn;
+      }
+      else { caststate = &states[state]; }
+
+      casttics = caststate->tics;
+      castflip = flipcorpses && state == info->deathstate
+                 && (info->flags2 & MF2_FLIPPABLE)
+                 && (Woof_Random() & 1);
+
+      sfxenum_t actionsound = F_SoundForAction(info, caststate);
+
+      if (actionsound)
+      {
+        S_StartSound(NULL, F_RandomizeSound(actionsound));
+      }
+      else if (statesound)
+      {
+        S_StartSound(NULL, F_RandomizeSound(statesound));
+      }
+    }
+
+    fc_state = -1;
+  }
+  else if (casttics != -1 && !--casttics)
+  {
+    caststate = &states[caststate->nextstate];
+    casttics = caststate->tics;
+  }
+
+  static const state_t *oldstate = NULL;
+
+  while (oldstate != caststate)
+  {
+    oldstate = caststate;
+
+    if (caststate->action.p1 == (actionf_p1) A_RandomJump)
+    {
+      if (Woof_Random() < caststate->misc2)
+      {
+        caststate = &states[caststate->misc1];
+        casttics = caststate->tics;
+
+        continue;
+      }
+    }
+    else {
+      const sfxenum_t actionsound = F_SoundForAction(info, caststate);
+
+      if (actionsound) { S_StartSound(NULL, F_RandomizeSound(actionsound)); }
+    }
+
+    if (!casttics)
+    {
+      caststate = &states[caststate->nextstate];
+      casttics = caststate->tics;
+    }
+  }
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // F_CastTicker
 //
 static void F_CastTicker(void)
 {
+  // [Nugget] Fancy cast
+  if (fc_enabled)
+  {
+    F_FancyCastTicker();
+    return;
+  }
+
   int st;
   int sfx;
       
@@ -822,10 +1119,65 @@ static boolean F_CastResponder(event_t* ev)
     return false;
   }
 
-  // [crispy] ... and finally turn them into gibbs
-  if (M_InputActivated(input_speed))
+  // Fancy cast
+  if (M_InputActivated(input_fc_toggle))
   {
-    xdeath = true;
+    fc_enabled = !fc_enabled;
+
+    if (fc_enabled)
+    {
+      fc_state = FCSTATE_SPAWN;
+    }
+    else {
+      caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+      casttics = caststate->tics;
+      castdeath = false;
+      castframes = 0;
+      castonmelee = 0;
+      castattacking = false;
+    }
+
+    return false;
+  }
+
+  if (!fc_enabled)
+  {
+    // [crispy] ... and finally turn them into gibbs
+    if (M_InputActivated(input_speed))
+    {
+      xdeath = true;
+    }
+  }
+  else {
+    if (M_InputActivated(input_fc_help))
+    {
+      return false;
+    }
+    else if (M_InputActivated(input_fc_name))
+    {
+      fc_showname = !fc_showname;
+      return false;
+    }
+    else if (M_InputActivated(input_fc_moveup))
+    {
+      fc_spriteoffset = MIN(48, fc_spriteoffset + 1);
+      return false;
+    }
+    else if (M_InputActivated(input_fc_movedown))
+    {
+      fc_spriteoffset = MAX(-16, fc_spriteoffset - 1);
+      return false;
+    }
+    else for (int i = 0;  i < 8;  i++)
+    {
+      if (M_InputActivated(input_fc_spawn + i))
+      {
+        fc_state = i;
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // [Nugget] ---------------------------------------------------------------/
@@ -941,7 +1293,9 @@ static void F_CastDrawer(void)
   // erase the entire screen to a background
   V_DrawPatchFullScreen (V_CachePatchName (bgcastcall, PU_CACHE)); // Ty 03/30/98 bg texture extern
 
-  F_CastPrint (castorder[castnum].name);
+  // [Nugget] Fancy cast
+  if (!fc_enabled || fc_showname)
+    F_CastPrint (castorder[castnum].name);
     
   // draw the current frame in the middle of the screen
   sprdef = &sprites[caststate->sprite];
@@ -955,10 +1309,14 @@ static void F_CastDrawer(void)
   flip = (boolean)sprframe->flip[castangle] ^ castflip; // [Nugget]: [crispy] turnable cast, flippable death sequence
                         
   patch = V_CachePatchNum (lump+firstspritelump, PU_CACHE);
+
+  // [Nugget] Fancy cast
+  const int y = 170 - (fc_enabled ? fc_spriteoffset : 0);
+
   if (flip)
-    V_DrawPatchFlippedSH (160, 170, patch); // [Nugget] HUD/menu shadows
+    V_DrawPatchFlippedSH (160, y, patch); // [Nugget] HUD/menu shadows
   else
-    V_DrawPatchSH (160, 170, patch); // [Nugget] HUD/menu shadows
+    V_DrawPatchSH (160, y, patch); // [Nugget] HUD/menu shadows
 }
 
 //
