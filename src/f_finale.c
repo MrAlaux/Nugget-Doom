@@ -1109,23 +1109,23 @@ static boolean F_CastResponder(event_t* ev)
   if (M_InputActivated(input_turnleft))
   {
     if (++castangle > 7) { castangle = 0; }
-    return false;
+    return true;
   }
   else if (M_InputActivated(input_turnright))
   {
     if (--castangle < 0) { castangle = 7; }
-    return false;
+    return true;
   }
   // [crispy] ... and allow to skip through them ..
   else if (M_InputActivated(input_strafeleft))
   {
     castskip = castnum ? -1 : arrlen(castorder)-2;
-    return false;
+    return true;
   }
   else if (M_InputActivated(input_straferight))
   {
     castskip = +1;
-    return false;
+    return true;
   }
 
   // Fancy cast
@@ -1149,7 +1149,7 @@ static boolean F_CastResponder(event_t* ev)
       castattacking = false;
     }
 
-    return false;
+    return true;
   }
 
   if (!fc_enabled)
@@ -1164,39 +1164,39 @@ static boolean F_CastResponder(event_t* ev)
     if (M_InputActivated(input_fc_help))
     {
       fc_showhelp = !fc_showhelp;
-      return false;
+      return true;
     }
     else if (M_InputActivated(input_fc_pause))
     {
       fc_paused = !fc_paused;
-      return false;
+      return true;
     }
     else if (M_InputActivated(input_fc_background))
     {
       fc_background = !fc_background;
-      return false;
+      return true;
     }
     else if (M_InputActivated(input_fc_name))
     {
       fc_showname = !fc_showname;
-      return false;
+      return true;
     }
     else if (M_InputActivated(input_fc_moveup))
     {
       fc_spriteoffset = MIN(48, fc_spriteoffset + 1);
-      return false;
+      return true;
     }
     else if (M_InputActivated(input_fc_movedown))
     {
       fc_spriteoffset = MAX(-30, fc_spriteoffset - 1);
-      return false;
+      return true;
     }
     else for (int i = 0;  i < 8;  i++)
     {
       if (M_InputActivated(input_fc_spawn + i))
       {
         fc_state = i;
-        return false;
+        return true;
       }
     }
 
