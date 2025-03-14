@@ -690,6 +690,10 @@ static enum {
   NUM_FCSTATES
 } fc_state;
 
+static int fc_titletimer;
+static boolean fc_showhelp = false;
+static boolean fc_paused = false;
+static boolean fc_background = true;
 static boolean fc_showname = true;
 static int fc_spriteoffset = 0;
 
@@ -867,6 +871,8 @@ static sfxenum_t F_SoundForAction(const mobjinfo_t *const info, const state_t *c
 
 static void F_FancyCastTicker(void)
 {
+  if (fc_titletimer > 0) { fc_titletimer--; }
+
   if (castskip)
   {
     castnum += castskip;
@@ -925,10 +931,13 @@ static void F_FancyCastTicker(void)
 
     fc_state = -1;
   }
-  else if (casttics != -1 && !--casttics)
+  else if (casttics != -1 && !fc_paused)
   {
-    caststate = &states[caststate->nextstate];
-    casttics = caststate->tics;
+    if (!--casttics)
+    {
+      caststate = &states[caststate->nextstate];
+      casttics = caststate->tics;
+    }
   }
 
   static const state_t *oldstate = NULL;
@@ -1124,9 +1133,12 @@ static boolean F_CastResponder(event_t* ev)
   {
     fc_enabled = !fc_enabled;
 
+    S_StartSound(NULL, sfx_tink);
+
     if (fc_enabled)
     {
       fc_state = FCSTATE_SPAWN;
+      fc_titletimer = 105;
     }
     else {
       caststate = &states[mobjinfo[castorder[castnum].type].seestate];
@@ -1151,6 +1163,17 @@ static boolean F_CastResponder(event_t* ev)
   else {
     if (M_InputActivated(input_fc_help))
     {
+      fc_showhelp = !fc_showhelp;
+      return false;
+    }
+    else if (M_InputActivated(input_fc_pause))
+    {
+      fc_paused = !fc_paused;
+      return false;
+    }
+    else if (M_InputActivated(input_fc_background))
+    {
+      fc_background = !fc_background;
       return false;
     }
     else if (M_InputActivated(input_fc_name))
@@ -1165,7 +1188,7 @@ static boolean F_CastResponder(event_t* ev)
     }
     else if (M_InputActivated(input_fc_movedown))
     {
-      fc_spriteoffset = MAX(-16, fc_spriteoffset - 1);
+      fc_spriteoffset = MAX(-30, fc_spriteoffset - 1);
       return false;
     }
     else for (int i = 0;  i < 8;  i++)
@@ -1228,7 +1251,7 @@ static boolean F_CastResponder(event_t* ev)
 }
 
 
-static void F_CastPrint(char* text)
+static void F_CastPrint(char* text, int y) // [Nugget] Y parameter
 {
   char*       ch;
   int         c;
@@ -1272,7 +1295,7 @@ static void F_CastPrint(char* text)
     }
               
     w = SHORT (hu_font[c]->width);
-    V_DrawPatchSH(cx, 180, hu_font[c]); // [Nugget] HUD/menu shadows
+    V_DrawPatchSH(cx, y, hu_font[c]); // [Nugget] HUD/menu shadows
     cx+=w;
   }
 }
@@ -1291,18 +1314,29 @@ static void F_CastDrawer(void)
   patch_t*            patch;
     
   // erase the entire screen to a background
-  V_DrawPatchFullScreen (V_CachePatchName (bgcastcall, PU_CACHE)); // Ty 03/30/98 bg texture extern
+
+  // [Nugget] Fancy cast /----------------------------------------------------
+
+  static int fc_bg_lumpnum = -1;
+
+  if (fc_bg_lumpnum == -1) { fc_bg_lumpnum = W_CheckNumForName("NGCASTBG"); }
+
+  if (fc_enabled && fc_background && fc_bg_lumpnum > -1)
+  {
+    V_DrawPatchFullScreen(V_CachePatchNum(fc_bg_lumpnum, PU_CACHE));
+  }
+  else
+
+  // [Nugget] ---------------------------------------------------------------/
+
+    V_DrawPatchFullScreen (V_CachePatchName (bgcastcall, PU_CACHE)); // Ty 03/30/98 bg texture extern
 
   // [Nugget] Fancy cast
   if (!fc_enabled || fc_showname)
-    F_CastPrint (castorder[castnum].name);
+    F_CastPrint (castorder[castnum].name, 180);
     
   // draw the current frame in the middle of the screen
   sprdef = &sprites[caststate->sprite];
-
-  // [Nugget]: [crispy] the TNT1 sprite is not supposed to be rendered anyway
-  if (!sprdef->numframes && caststate->sprite == SPR_TNT1)
-  { return; }
 
   sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
   lump = sprframe->lump[castangle]; // [Nugget]: [crispy] turnable cast
@@ -1313,10 +1347,48 @@ static void F_CastDrawer(void)
   // [Nugget] Fancy cast
   const int y = 170 - (fc_enabled ? fc_spriteoffset : 0);
 
-  if (flip)
-    V_DrawPatchFlippedSH (160, y, patch); // [Nugget] HUD/menu shadows
-  else
-    V_DrawPatchSH (160, y, patch); // [Nugget] HUD/menu shadows
+  // [Nugget] Fancy cast: don't draw the null state
+  if (caststate != &states[S_NULL])
+  {
+    if (flip)
+      V_DrawPatchFlippedSH (160, y, patch); // [Nugget] HUD/menu shadows
+    else
+      V_DrawPatchSH (160, y, patch); // [Nugget] HUD/menu shadows
+  }
+
+  // [Nugget] Fancy cast -----------------------------------------------------
+
+  if (fc_enabled)
+  {
+    const int font_height = SHORT(hu_font['A' - HU_FONTSTART]->height) + 1;
+
+    if (fc_titletimer > 0)
+    {
+      F_CastPrint("Fancy Cast enabled", 4);
+      F_CastPrint("Press [H] for help", 4 + font_height);
+    }
+
+    if (fc_showhelp)
+    {
+      static char *const helpstrings[] = {
+        "[0] to toggle Fancy Cast",
+        "[1] through [8] to cycle through states",
+        "[Space] to pause and resume animation",
+        "[B] to toggle custom background",
+        "[N] to toggle name display",
+        "[W] to move sprite upwards",
+        "[S] to move sprite downwards",
+        "[H] to hide help"
+      };
+
+      const int base_y = (SCREENHEIGHT / 2) - ((font_height * arrlen(helpstrings)) / 2);
+
+      V_ShadowRect(0, base_y - 2, video.width, (font_height * arrlen(helpstrings)) + 3);
+
+      for (int i = 0;  i < arrlen(helpstrings);  i++)
+      { F_CastPrint(helpstrings[i], base_y + (font_height * i)); }
+    }
+  }
 }
 
 //

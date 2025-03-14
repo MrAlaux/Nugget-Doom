@@ -177,10 +177,12 @@ enum
     input_fc_death,
     input_fc_xdeath,
     input_fc_raise,
+    input_fc_pause,
+    input_fc_background,
     input_fc_name,
     input_fc_moveup,
     input_fc_movedown,
-    input_fc_end = input_fc_movedown + 1,
+    input_fc_end,
 
     // [Nugget] -------------------------------------------------------------/
 
