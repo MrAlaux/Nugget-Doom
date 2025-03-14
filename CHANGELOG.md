@@ -2,6 +2,7 @@
 
 - **_Hitbox-based Hitscan Collision_** setting
 - **_Bounded Voxel Rendering_** setting
+- **Fancy mode for character cast**
 - **Recoil-pitch scale percent** setting
 - **_'IDDET'_ cheat**, to find exits in the automap
 - **Number of _Bloodier Gibbing_ splats** setting
