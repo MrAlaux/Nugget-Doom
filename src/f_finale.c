@@ -44,7 +44,6 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include "g_game.h" // [crispy] key_*
 #include "m_input.h"
 #include "m_random.h" // [crispy] Crispy_Random()
 #include "p_enemy.h"
@@ -678,6 +677,7 @@ static void F_StartCast(void)
 static boolean fc_enabled = false;
 
 static enum {
+  FCSTATE_NONE = -1,
   FCSTATE_SPAWN,
   FCSTATE_SEE,
   FCSTATE_MELEE,
@@ -885,7 +885,7 @@ static void F_FancyCastTicker(void)
 
   const mobjinfo_t *const info = &mobjinfo[castorder[castnum].type];
 
-  if (fc_state != -1)
+  if (fc_state != FCSTATE_NONE)
   {
     statenum_t state = S_NULL;
     sfxenum_t statesound = sfx_None;
@@ -929,7 +929,7 @@ static void F_FancyCastTicker(void)
       }
     }
 
-    fc_state = -1;
+    fc_state = FCSTATE_NONE;
   }
   else if (casttics != -1 && !fc_paused)
   {
