@@ -671,6 +671,23 @@ static input_t default_inputs[NUM_INPUT_ID][NUM_INPUTS] =
     [input_jump]        = { {INPUT_KEY, KEY_RALT} },
     [input_crouch]      = { {INPUT_KEY, 'c'} },
     [input_map_blink]   = { {INPUT_KEY, 'b'} },
+
+    // Fancy cast
+    [input_fc_toggle]     = { {INPUT_KEY, '0'} },
+    [input_fc_help]       = { {INPUT_KEY, 'h'} },
+    [input_fc_spawn]      = { {INPUT_KEY, '1'} },
+    [input_fc_see]        = { {INPUT_KEY, '2'} },
+    [input_fc_melee]      = { {INPUT_KEY, '3'} },
+    [input_fc_missile]    = { {INPUT_KEY, '4'} },
+    [input_fc_pain]       = { {INPUT_KEY, '5'} },
+    [input_fc_death]      = { {INPUT_KEY, '6'} },
+    [input_fc_xdeath]     = { {INPUT_KEY, '7'} },
+    [input_fc_raise]      = { {INPUT_KEY, '8'} },
+    [input_fc_pause]      = { {INPUT_KEY, ' '} },
+    [input_fc_background] = { {INPUT_KEY, 'b'} },
+    [input_fc_name]       = { {INPUT_KEY, 'n'} },
+    [input_fc_moveup]     = { {INPUT_KEY, 'w'} },
+    [input_fc_movedown]   = { {INPUT_KEY, 's'} },
 };
 
 void M_InputSetDefault(int id)
@@ -836,4 +853,8 @@ void M_BindInputVariables(void)
     BIND_INPUT(input_mdk,        "MDK attack");
     BIND_INPUT(input_saitama,    "MDK Fist");
     BIND_INPUT(input_boomcan,    "Explosive hitscan attacks");
+
+    // [Nugget] Fancy cast
+    for (int i = 0;  i < input_fc_end - input_fc_start;  i++)
+    { M_InputSetDefault(input_fc_start + i); }
 }

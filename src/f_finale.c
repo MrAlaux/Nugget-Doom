@@ -44,9 +44,9 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include "g_game.h" // [crispy] key_*
 #include "m_input.h"
 #include "m_random.h" // [crispy] Crispy_Random()
+#include "p_enemy.h"
 #include "p_mobj.h"
 
 // Stage of animation:
@@ -609,17 +609,16 @@ static const actionsound_t actionsounds[] = {
 static int F_SoundForState (int st)
 {
   void *const castaction = (void *) caststate->action.p2;
-  void *const nextaction = (void *) (&states[caststate->nextstate])->action.p2;
 
   // [crispy] fix Doomguy in casting sequence
-  if (castaction == NULL) {
-    if (st == S_PLAY_ATK2) { return sfx_dshtgn; }
-    else                   { return 0; }
+  if (castaction == NULL)
+  {
+    return (st == S_PLAY_ATK2) ? sfx_dshtgn : 0;
   }
   else {
-    int i;
+    void *const nextaction = (void *) (&states[caststate->nextstate])->action.p2;
 
-    for (i = 0; i < arrlen(actionsounds); i++)
+    for (int i = 0; i < arrlen(actionsounds); i++)
     {
       const actionsound_t *const as = &actionsounds[i];
 
@@ -630,6 +629,7 @@ static int F_SoundForState (int st)
       }
     }
   }
+
   return 0;
 }
 
@@ -672,12 +672,318 @@ static void F_StartCast(void)
   S_ChangeMusic(mus_evil, true);
 }
 
+// [Nugget] Fancy cast /------------------------------------------------------
+
+static boolean fc_enabled = false;
+
+static enum {
+  FCSTATE_NONE = -1,
+  FCSTATE_SPAWN,
+  FCSTATE_SEE,
+  FCSTATE_MELEE,
+  FCSTATE_MISSILE,
+  FCSTATE_PAIN,
+  FCSTATE_DEATH,
+  FCSTATE_XDEATH,
+  FCSTATE_RAISE,
+
+  NUM_FCSTATES
+} fc_state;
+
+static int fc_titletimer;
+static boolean fc_showhelp = false;
+static boolean fc_paused = false;
+static boolean fc_background = true;
+static boolean fc_showname = true;
+static int fc_spriteoffset = 0;
+
+static sfxenum_t F_SoundForAction(const mobjinfo_t *const info, const state_t *const state)
+{
+  void *const action = (void *) state->action.p2;
+
+  if (action == A_Chase || action == A_HealChase || action == A_VileChase)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_None;
+  }
+  else if (action == A_BabyMetal)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_bspwlk;
+  }
+  else if (action == A_BrainAwake)
+  {
+    return sfx_bossit;
+  }
+  else if (action == A_BrainExplode)
+  {
+    return mobjinfo[MT_ROCKET].deathsound;
+  }
+  else if (action == A_BrainPain)
+  {
+    return sfx_bospn;
+  }
+  else if (action == A_BrainScream)
+  {
+    return sfx_bosdth;
+  }
+  else if (action == A_BrainSpit)
+  {
+    return sfx_bospit;
+  }
+  else if (action == A_BruisAttack)
+  {
+    return (Woof_Random() & 1) ? sfx_claw : mobjinfo[MT_BRUISERSHOT].seesound;
+  }
+  else if (action == A_BspiAttack)
+  {
+    return mobjinfo[MT_ARACHPLAZ].seesound;
+  }
+  else if (action == A_CPosAttack)
+  {
+    return sfx_pistol;
+  }
+  else if (action == A_CyberAttack)
+  {
+    return mobjinfo[MT_ROCKET].seesound;
+  }
+  else if (action == A_FatAttack1 || action == A_FatAttack2 || action == A_FatAttack3)
+  {
+    return mobjinfo[MT_FATSHOT].seesound;
+  }
+  else if (action == A_FatRaise)
+  {
+    return sfx_manatk;
+  }
+  else if (action == A_FireCrackle)
+  {
+    return sfx_flame;
+  }
+  else if (action == A_HeadAttack)
+  {
+    return (Woof_Random() & 1) ? sfx_None : mobjinfo[MT_HEADSHOT].seesound;
+  }
+  else if (action == A_Hoof)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_hoof;
+  }
+  else if (action == A_Metal)
+  {
+    return (Woof_Random() < 3) ? info->activesound : sfx_metal;
+  }
+  else if (action == A_MonsterBulletAttack)
+  {
+    return info->attacksound;
+  }
+  else if (action == A_MonsterMeleeAttack)
+  {
+    return state->args[2];
+  }
+  else if (action == A_MonsterProjectile)
+  {
+    return mobjinfo[state->args[0] - 1].seesound;
+  }
+  else if (action == A_Mushroom)
+  {
+    return mobjinfo[MT_FATSHOT].seesound;
+  }
+  else if (action == A_Pain)
+  {
+    return info->painsound;
+  }
+  else if (action == A_PainAttack)
+  {
+    return sfx_sklatk;
+  }
+  else if (action == A_PainDie)
+  {
+    return sfx_sklatk;
+  }
+  else if (action == A_PlayerScream)
+  {
+    return (!(Woof_Random() & 3)) ? sfx_pdiehi : sfx_pldeth;
+  }
+  else if (action == A_PlaySound)
+  {
+    return state->misc1;
+  }
+  else if (action == A_PosAttack)
+  {
+    return sfx_pistol;
+  }
+  else if (action == A_Scratch)
+  {
+    return state->misc2;
+  }
+  else if (action == A_Scream)
+  {
+    return info->deathsound;
+  }
+  else if (action == A_SkelFist)
+  {
+    return sfx_skepch;
+  }
+  else if (action == A_SkelMissile)
+  {
+    return mobjinfo[MT_TRACER].seesound;
+  }
+  else if (action == A_SkelWhoosh)
+  {
+    return sfx_skeswg;
+  }
+  else if (action == A_SkullAttack || action == A_BetaSkullAttack)
+  {
+    return info->attacksound;
+  }
+  else if (action == A_SpawnSound)
+  {
+    return sfx_boscub;
+  }
+  else if (action == A_SPosAttack)
+  {
+    return sfx_shotgn;
+  }
+  else if (action == A_StartFire)
+  {
+    return sfx_flamst;
+  }
+  else if (action == A_TroopAttack)
+  {
+    return (Woof_Random() & 1) ? sfx_claw : mobjinfo[MT_TROOPSHOT].seesound;
+  }
+  else if (action == A_VileAttack)
+  {
+    return sfx_barexp;
+  }
+  else if (action == A_VileStart)
+  {
+    return sfx_vilatk;
+  }
+  else if (action == A_VileTarget)
+  {
+    return (STRICTMODE(comp_flamst)) ? sfx_flamst : sfx_None;
+  }
+  else if (action == A_XScream)
+  {
+    return sfx_slop;
+  }
+
+  return sfx_None;
+}
+
+static void F_FancyCastTicker(void)
+{
+  if (fc_titletimer > 0) { fc_titletimer--; }
+
+  if (castskip)
+  {
+    castnum += castskip;
+    castskip = 0;
+
+    if (castorder[castnum].name == NULL) { castnum = 0; }
+
+    fc_state = FCSTATE_SPAWN;
+  }
+
+  const mobjinfo_t *const info = &mobjinfo[castorder[castnum].type];
+
+  if (fc_state != FCSTATE_NONE)
+  {
+    statenum_t state = S_NULL;
+    sfxenum_t statesound = sfx_None;
+
+    switch (fc_state)
+    {
+      case FCSTATE_SPAWN:    state = info->spawnstate;                                     break;
+      case FCSTATE_SEE:      state = info->seestate;      statesound = info->seesound;     break;
+      case FCSTATE_MELEE:    state = info->meleestate;    statesound = info->attacksound;  break;
+      case FCSTATE_MISSILE:  state = info->missilestate;                                   break;
+      case FCSTATE_PAIN:     state = info->painstate;                                      break;
+      case FCSTATE_DEATH:    state = info->deathstate;                                     break;
+      case FCSTATE_XDEATH:   state = info->xdeathstate;                                    break;
+      case FCSTATE_RAISE:    state = info->raisestate;    statesound = sfx_slop;           break;
+      default: break;
+    }
+
+    if (state)
+    {
+      if (state == info->missilestate && state == S_PLAY_ATK1 && (Woof_Random() & 3))
+      {
+        caststate = &states[S_PLAY_ATK2];
+        statesound = sfx_dshtgn;
+      }
+      else { caststate = &states[state]; }
+
+      casttics = caststate->tics;
+      castflip = flipcorpses && state == info->deathstate
+                 && (info->flags2 & MF2_FLIPPABLE)
+                 && (Woof_Random() & 1);
+
+      sfxenum_t actionsound = F_SoundForAction(info, caststate);
+
+      if (actionsound)
+      {
+        S_StartSound(NULL, F_RandomizeSound(actionsound));
+      }
+      else if (statesound)
+      {
+        S_StartSound(NULL, F_RandomizeSound(statesound));
+      }
+    }
+
+    fc_state = FCSTATE_NONE;
+  }
+  else if (casttics != -1 && !fc_paused)
+  {
+    if (!--casttics)
+    {
+      caststate = &states[caststate->nextstate];
+      casttics = caststate->tics;
+    }
+  }
+
+  static const state_t *oldstate = NULL;
+
+  while (oldstate != caststate)
+  {
+    oldstate = caststate;
+
+    if (caststate->action.p1 == (actionf_p1) A_RandomJump)
+    {
+      if (Woof_Random() < caststate->misc2)
+      {
+        caststate = &states[caststate->misc1];
+        casttics = caststate->tics;
+
+        continue;
+      }
+    }
+    else {
+      const sfxenum_t actionsound = F_SoundForAction(info, caststate);
+
+      if (actionsound) { S_StartSound(NULL, F_RandomizeSound(actionsound)); }
+    }
+
+    if (!casttics)
+    {
+      caststate = &states[caststate->nextstate];
+      casttics = caststate->tics;
+    }
+  }
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // F_CastTicker
 //
 static void F_CastTicker(void)
 {
+  // [Nugget] Fancy cast
+  if (fc_enabled)
+  {
+    F_FancyCastTicker();
+    return;
+  }
+
   int st;
   int sfx;
       
@@ -803,29 +1109,98 @@ static boolean F_CastResponder(event_t* ev)
   if (M_InputActivated(input_turnleft))
   {
     if (++castangle > 7) { castangle = 0; }
-    return false;
+    return true;
   }
   else if (M_InputActivated(input_turnright))
   {
     if (--castangle < 0) { castangle = 7; }
-    return false;
+    return true;
   }
   // [crispy] ... and allow to skip through them ..
   else if (M_InputActivated(input_strafeleft))
   {
     castskip = castnum ? -1 : arrlen(castorder)-2;
-    return false;
+    return true;
   }
   else if (M_InputActivated(input_straferight))
   {
     castskip = +1;
-    return false;
+    return true;
   }
 
-  // [crispy] ... and finally turn them into gibbs
-  if (M_InputActivated(input_speed))
+  // Fancy cast
+  if (M_InputActivated(input_fc_toggle))
   {
-    xdeath = true;
+    fc_enabled = !fc_enabled;
+
+    S_StartSound(NULL, sfx_tink);
+
+    if (fc_enabled)
+    {
+      fc_state = FCSTATE_SPAWN;
+      fc_titletimer = 105;
+    }
+    else {
+      caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+      casttics = caststate->tics;
+      castdeath = false;
+      castframes = 0;
+      castonmelee = 0;
+      castattacking = false;
+    }
+
+    return true;
+  }
+
+  if (!fc_enabled)
+  {
+    // [crispy] ... and finally turn them into gibbs
+    if (M_InputActivated(input_speed))
+    {
+      xdeath = true;
+    }
+  }
+  else {
+    if (M_InputActivated(input_fc_help))
+    {
+      fc_showhelp = !fc_showhelp;
+      return true;
+    }
+    else if (M_InputActivated(input_fc_pause))
+    {
+      fc_paused = !fc_paused;
+      return true;
+    }
+    else if (M_InputActivated(input_fc_background))
+    {
+      fc_background = !fc_background;
+      return true;
+    }
+    else if (M_InputActivated(input_fc_name))
+    {
+      fc_showname = !fc_showname;
+      return true;
+    }
+    else if (M_InputActivated(input_fc_moveup))
+    {
+      fc_spriteoffset = MIN(48, fc_spriteoffset + 1);
+      return true;
+    }
+    else if (M_InputActivated(input_fc_movedown))
+    {
+      fc_spriteoffset = MAX(-30, fc_spriteoffset - 1);
+      return true;
+    }
+    else for (int i = 0;  i < 8;  i++)
+    {
+      if (M_InputActivated(input_fc_spawn + i))
+      {
+        fc_state = i;
+        return true;
+      }
+    }
+
+    return true;
   }
 
   // [Nugget] ---------------------------------------------------------------/
@@ -876,7 +1251,7 @@ static boolean F_CastResponder(event_t* ev)
 }
 
 
-static void F_CastPrint(char* text)
+static void F_CastPrint(char* text, int y) // [Nugget] Y parameter
 {
   char*       ch;
   int         c;
@@ -920,7 +1295,7 @@ static void F_CastPrint(char* text)
     }
               
     w = SHORT (hu_font[c]->width);
-    V_DrawPatchSH(cx, 180, hu_font[c]); // [Nugget] HUD/menu shadows
+    V_DrawPatchSH(cx, y, hu_font[c]); // [Nugget] HUD/menu shadows
     cx+=w;
   }
 }
@@ -939,26 +1314,81 @@ static void F_CastDrawer(void)
   patch_t*            patch;
     
   // erase the entire screen to a background
-  V_DrawPatchFullScreen (V_CachePatchName (bgcastcall, PU_CACHE)); // Ty 03/30/98 bg texture extern
 
-  F_CastPrint (castorder[castnum].name);
+  // [Nugget] Fancy cast /----------------------------------------------------
+
+  static int fc_bg_lumpnum = -1;
+
+  if (fc_bg_lumpnum == -1) { fc_bg_lumpnum = W_CheckNumForName("NGCASTBG"); }
+
+  if (fc_enabled && fc_background && fc_bg_lumpnum > -1)
+  {
+    V_DrawPatchFullScreen(V_CachePatchNum(fc_bg_lumpnum, PU_CACHE));
+  }
+  else
+
+  // [Nugget] ---------------------------------------------------------------/
+
+    V_DrawPatchFullScreen (V_CachePatchName (bgcastcall, PU_CACHE)); // Ty 03/30/98 bg texture extern
+
+  // [Nugget] Fancy cast
+  if (!fc_enabled || fc_showname)
+    F_CastPrint (castorder[castnum].name, 180);
     
   // draw the current frame in the middle of the screen
   sprdef = &sprites[caststate->sprite];
-
-  // [Nugget]: [crispy] the TNT1 sprite is not supposed to be rendered anyway
-  if (!sprdef->numframes && caststate->sprite == SPR_TNT1)
-  { return; }
 
   sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
   lump = sprframe->lump[castangle]; // [Nugget]: [crispy] turnable cast
   flip = (boolean)sprframe->flip[castangle] ^ castflip; // [Nugget]: [crispy] turnable cast, flippable death sequence
                         
   patch = V_CachePatchNum (lump+firstspritelump, PU_CACHE);
-  if (flip)
-    V_DrawPatchFlippedSH (160, 170, patch); // [Nugget] HUD/menu shadows
-  else
-    V_DrawPatchSH (160, 170, patch); // [Nugget] HUD/menu shadows
+
+  // [Nugget] Fancy cast
+  const int y = 170 - (fc_enabled ? fc_spriteoffset : 0);
+
+  // [Nugget] Fancy cast: don't draw the null state
+  if (caststate != &states[S_NULL])
+  {
+    if (flip)
+      V_DrawPatchFlippedSH (160, y, patch); // [Nugget] HUD/menu shadows
+    else
+      V_DrawPatchSH (160, y, patch); // [Nugget] HUD/menu shadows
+  }
+
+  // [Nugget] Fancy cast -----------------------------------------------------
+
+  if (fc_enabled)
+  {
+    const int font_height = SHORT(hu_font['A' - HU_FONTSTART]->height) + 1;
+
+    if (fc_titletimer > 0)
+    {
+      F_CastPrint("Fancy Cast enabled", 4);
+      F_CastPrint("Press [H] for help", 4 + font_height);
+    }
+
+    if (fc_showhelp)
+    {
+      static char *const helpstrings[] = {
+        "[0] to toggle Fancy Cast",
+        "[1] through [8] to cycle through states",
+        "[Space] to pause and resume animation",
+        "[B] to toggle custom background",
+        "[N] to toggle name display",
+        "[W] to move sprite upwards",
+        "[S] to move sprite downwards",
+        "[H] to hide help"
+      };
+
+      const int base_y = (SCREENHEIGHT / 2) - ((font_height * arrlen(helpstrings)) / 2);
+
+      V_ShadowRect(0, base_y - 2, video.width, (font_height * arrlen(helpstrings)) + 3);
+
+      for (int i = 0;  i < arrlen(helpstrings);  i++)
+      { F_CastPrint(helpstrings[i], base_y + (font_height * i)); }
+    }
+  }
 }
 
 //
