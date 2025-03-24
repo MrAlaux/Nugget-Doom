@@ -143,13 +143,12 @@ static void cheat_speed(void);
 // [Nugget] /-----------------------------------------------------------------
 
 static void cheat_nomomentum(void);
-static void cheat_fauxdemo(void);   // Emulates demo/net play state, for debugging
 static void cheat_infammo(void);    // Infinite ammo cheat
 static void cheat_fastweaps(void);  // Fast weapons cheat
 static void cheat_bobbers(void);    // Shortcut to the two cheats above
 
-boolean gibbers;                // Used for 'GIBBERS'
-static void cheat_gibbers(void);    // Everything gibs
+boolean gibbers;                 // Used for 'GIBBERS'
+static void cheat_gibbers(void); // Everything gibs
 
 static void cheat_riotmode(void);
 static void cheat_resurrect(void);
@@ -176,12 +175,14 @@ static void cheat_reveal_keyx(void);
 static void cheat_reveal_keyxx(int key);
 
 static void cheat_reveal_exit(void);
-static void cheat_linetarget(void); // Give info on the current linetarget
-static void cheat_trails(void);     // Show hitscan trails
-static void cheat_mdk(void);        // Inspired by ZDoom's console command
-static void cheat_saitama(void);    // MDK Fist
+static void cheat_linetarget(void);  // Give info on the current linetarget
+static void cheat_trails(void);      // Show hitscan trails
+static void cheat_mdk(void);         // Inspired by ZDoom's console command
+static void cheat_saitama(void);     // MDK Fist
+static void cheat_boomcan(void);     // Explosive hitscan
 
-static void cheat_boomcan(void);    // Explosive hitscan
+static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
+static void cheat_dimlight(void);
 
 static void cheat_cheese(void);
 
@@ -416,7 +417,6 @@ struct cheat_s cheat[] = {
   // [Nugget] /---------------------------------------------------------------
 
   {"nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum}     },
-  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo}       }, // Emulates demo/net play state, for debugging
   {"fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo}        }, // Infinite ammo cheat
   {"valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps}      }, // Fast weapons cheat
   {"bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers}        }, // Shortcut for the two above cheats
@@ -453,8 +453,12 @@ struct cheat_s cheat[] = {
   {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}         },
   {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}     }, // MDK Fist
   {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}     }, // Explosive hitscan
-  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese}      },
-  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}       },
+
+  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
+  {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
+
+  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
+  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}  },
 
   #ifdef NUGMAGIC
 
@@ -476,18 +480,6 @@ static void cheat_nomomentum(void)
 {
   plyr->cheats ^= CF_NOMOMENTUM;
   displaymsg("No Momentum Mode %s", (plyr->cheats & CF_NOMOMENTUM) ? "ON" : "OFF");
-}
-
-// Emulates demo and/or net play state, for debugging
-static void cheat_fauxdemo(void)
-{
-  extern void D_UpdateCasualPlay(void);
-
-  fauxdemo = !fauxdemo;
-  D_UpdateCasualPlay();
-
-  S_StartSound(plyr->mo, sfx_tink);
-  displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
 }
 
 // Infinite ammo
@@ -526,6 +518,11 @@ static void cheat_gibbers(void)
 {
   gibbers = !gibbers;
   displaymsg("%s", gibbers ? "Ludicrous Gibs!" : "Ludicrous Gibs no more.");
+}
+
+static void cheat_riotmode(void)
+{
+  displaymsg("Riot Mode %s", (riotmode = !riotmode) ? "ON" : "OFF");
 }
 
 // Resurrection --------------------------------------------------------------
@@ -924,10 +921,31 @@ static void cheat_boomcan(void)
   displaymsg("Explosive Hitscan %s", (plyr->cheats & CF_BOOMCAN) ? "ON" : "OFF");
 }
 
-static void cheat_riotmode(void)
+// Developer cheats ----------------------------------------------------------
+
+// Emulates demo/net-play state, for debugging
+static void cheat_fauxdemo(void)
 {
-  displaymsg("Riot Mode %s", (riotmode = !riotmode) ? "ON" : "OFF");
+  if (!nugget_devmode) { return; }
+
+  extern void D_UpdateCasualPlay(void);
+
+  fauxdemo = !fauxdemo;
+  D_UpdateCasualPlay();
+
+  S_StartSound(plyr->mo, sfx_tink);
+  displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
 }
+
+static void cheat_dimlight(void)
+{
+  if (!nugget_devmode) { return; }
+
+  diminishing_lighting = !diminishing_lighting;
+  displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
+}
+
+// ---------------------------------------------------------------------------
 
 static void cheat_cheese(void)
 {

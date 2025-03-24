@@ -229,7 +229,7 @@ All of these are CFG-only, so their CVAR names are included.
 - **Key-binding for Computer Area Map cheat**
 - Reenabled **_'NOMOMENTUM'_** cheat [p.f. Crispy Doom]
 
-For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
+For a complete list with more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 
 ### Miscellaneous
 
@@ -262,6 +262,7 @@ For more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 - Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter
 - Decreased minimum window size to 200p (240p with aspect-ratio correction)
+- Setting to enable developer features (CFG-only: `nugget_devmode`)
 
 # Releases
 

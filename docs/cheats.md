@@ -179,6 +179,14 @@ Change the player speed in-game.
 `NOMOMENTUM`  
 Toggle no-momentum mode (re-enabled debugging cheat).
 
+The following cheats in this section are developer-only: the `nugget_devmode` CVAR must be enabled for them to take effect.
+
+`FAUXDEMO`  
+Toggle faux-demo mode, which emulates the condition of demo/net play (disables some features).
+
+`DIMLIGHT`  
+Toggle diminishing lighting.
+
 ## Beta cheats
 
 These cheats only work in MBF `-beta` emulation mode.

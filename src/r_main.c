@@ -174,7 +174,7 @@ boolean flip_levels;
 static int lowres_pixel_width;
 static int lowres_pixel_height;
 boolean nightvision_visor;
-int fake_contrast;
+fakecontrast_t fake_contrast;
 boolean diminishing_lighting;
 static boolean a11y_weapon_flash;
 boolean a11y_weapon_pspr;
@@ -1878,7 +1878,7 @@ void R_BindRenderVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("fake_contrast", &fake_contrast, NULL,
-            1, 0, 2, ss_gen, wad_yes,
+            FAKECONTRAST_SMOOTH, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_gen, wad_yes,
             "Fake contrast for walls (0 = Off; 1 = Smooth; 2 = Vanilla)");
 
   // (CFG-only)

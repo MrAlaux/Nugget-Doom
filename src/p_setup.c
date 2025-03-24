@@ -1525,17 +1525,37 @@ void P_SegLengths(boolean contrast_only)
             }
         }
 
+        // [Nugget] Fake contrast
+        const fakecontrast_t fakecontrast = BETWEEN(strictmode, FAKECONTRAST_VANILLA, fake_contrast);
+
         // [crispy] smoother fake contrast
-        if (!dy)
-            li->fakecontrast = -LIGHTBRIGHT;
-        else if (abs(finesine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
-            li->fakecontrast = -(LIGHTBRIGHT >> 1);
-        else if (!dx)
-            li->fakecontrast = LIGHTBRIGHT;
-        else if (abs(finecosine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
-            li->fakecontrast = LIGHTBRIGHT >> 1;
-        else
-            li->fakecontrast = 0;
+        if (fakecontrast == FAKECONTRAST_SMOOTH) // [Nugget]
+        {
+            if (!dy)
+                li->fakecontrast = -LIGHTBRIGHT;
+            else if (abs(finesine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
+                li->fakecontrast = -(LIGHTBRIGHT >> 1);
+            else if (!dx)
+                li->fakecontrast = LIGHTBRIGHT;
+            else if (abs(finecosine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
+                li->fakecontrast = LIGHTBRIGHT >> 1;
+            else
+                li->fakecontrast = 0;
+        }
+        // [Nugget]
+        else if (fakecontrast == FAKECONTRAST_VANILLA)
+        {
+            if (li->v1->y == li->v2->y)
+            {
+                li->fakecontrast = -LIGHTBRIGHT;
+            }
+            else if (li->v1->x == li->v2->x)
+            {
+                li->fakecontrast = LIGHTBRIGHT;
+            }
+            else { li->fakecontrast = 0; }
+        }
+        else { li->fakecontrast = 0; }
     }
 }
 

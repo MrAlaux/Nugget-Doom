@@ -69,6 +69,7 @@
 
 // [Nugget]
 #include "p_inter.h"
+#include "p_setup.h"
 #include "st_stuff.h"
 
 static int M_GetKeyString(int c, int offset);
@@ -3870,6 +3871,11 @@ static void ShadowTrans(void)
   R_GetGenericTranMap(hud_menu_shadows_filter_pct);
 }
 
+static void RecalculateFakeContrast(void)
+{
+  P_SegLengths(true);
+}
+
 static const char *thing_lighting_strings[] = {
   "Origin", "Hitbox", "Per-column", NULL
 };
@@ -3894,7 +3900,7 @@ setup_menu_t gen_settings8[] = {
     {"Night-Vision Visor Effect",    S_ONOFF |S_STRICT,       N_X, M_SPC, {"nightvision_visor"}},
     {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
     {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
-    {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast},
+    {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
     {"Screen Wipe Speed Percentage", S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
     {"Alt. Intermission Background", S_ONOFF |S_STRICT,       N_X, M_SPC, {"alt_interpic"}},
     {"Color Options",                S_FUNC,                  N_X, M_SPC, .action = MN_Color},

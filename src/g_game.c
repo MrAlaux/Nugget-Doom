@@ -110,6 +110,8 @@ boolean improved_weapon_toggles;
 boolean skip_ammoless_weapons;
 boolean comp_longautoaim;
 
+boolean nugget_devmode;
+
 // ---------------------------------------------------------------------------
 
 boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
@@ -3893,7 +3895,7 @@ boolean G_KeyFrameRW(void)
 
 boolean clean_screenshot;
 
-int screenshot_palette; // [Nugget]
+screenshotpalette_t screenshot_palette; // [Nugget]
 
 void G_CleanScreenshot(void)
 {
@@ -5039,6 +5041,21 @@ void G_ReloadDefaults(boolean keep_demover)
     strictmode = true;
     force_strictmode = true;
   }
+
+  // [Nugget] /---------------------------------------------------------------
+
+  static int old_strictmode = -1;
+
+  if (old_strictmode == -1) { old_strictmode = strictmode; }
+
+  if (old_strictmode != strictmode)
+  {
+    P_SegLengths(true); // Fake contrast
+
+    old_strictmode = strictmode;
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   G_UpdateSideMove();
 

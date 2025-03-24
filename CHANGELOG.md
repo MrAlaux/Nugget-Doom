@@ -10,6 +10,8 @@
 - **Intermission ratio stats** setting
 - **Number of total message lines** setting, to let the message review show more messages
 - **Support for slow-motion toggling sounds**
+- Setting to enable developer features
+- _`DIMLIGHT`_ developer cheat to toggle diminishing lighting
 
 ## Changes
 
@@ -18,13 +20,15 @@
   - Consequently, freelook can't be controlled manually while dead anymore
 - **Keys now flash on the automap when flashing of keyed doors is enabled**
 - **Tweaked _Bloodier Gibbing_ effect**
+- Made _`FAUXDEMO`_ a developer cheat
 
 ## Bug Fixes
 
 - **Rare crash involving PNG graphics and weapon inertia** [thanks @rfomin]
 - **Automap zoom being reset when enabling automap with overlay disabled from a NUGHUD**
 - **Direct vertical aiming for melee provoking hit effect without actually hitting an entity**
-- **Specific bug with weapon toggles with switch interruption enabled**
+- **Specific switching bug with weapon toggles with switch interruption enabled**
+- **Incorrect vanilla fake contrast with smooth diminishing lighting enabled**
 - **Freecam interpolation issues**
 - **Freecam not being forcefully disabled when enabling strict mode**
 - **Message review overriding message durations even when the new one were shorter**

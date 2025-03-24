@@ -123,6 +123,8 @@ void R_SetViewSize(int blocks);              // Called by M_Responder.
 
 // [Nugget] /=================================================================
 
+// CVARs ---------------------------------------------------------------------
+
 typedef enum thinglighting_s {
   THINGLIGHTING_ORIGIN,
   THINGLIGHTING_HITBOX,
@@ -131,18 +133,28 @@ typedef enum thinglighting_s {
   NUM_THINGLIGHTING
 } thinglighting_t;
 
+typedef enum fakecontrast_s {
+  FAKECONTRAST_OFF,
+  FAKECONTRAST_SMOOTH,
+  FAKECONTRAST_VANILLA,
+
+  NUM_FAKECONTRAST
+} fakecontrast_t;
+
 extern boolean vertical_lockon;
 
 extern thinglighting_t thing_lighting_mode;
 extern boolean flip_levels;
 extern boolean nightvision_visor;
-extern int fake_contrast;
+extern fakecontrast_t fake_contrast;
 extern boolean diminishing_lighting;
 extern boolean a11y_weapon_pspr;
 extern boolean a11y_invul_colormap;
 extern int pspr_translucency_pct;
 extern int zoom_fov;
 extern boolean comp_powerrunout;
+
+// ---------------------------------------------------------------------------
 
 extern boolean have_crouch_sprites;
 
