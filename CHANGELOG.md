@@ -31,6 +31,7 @@
 - **Incorrect vanilla fake contrast with smooth diminishing lighting enabled**
 - **Freecam interpolation issues**
 - **Freecam not being forcefully disabled when enabling strict mode**
+- **Potential desyncs by `comp_fuzzyblood` and `comp_nonbleeders`**
 - **Message review overriding message durations even when the new one were shorter**
 - **Message review ignoring the forced-duration setting**
 - **`DSMNUBAK` being unused**

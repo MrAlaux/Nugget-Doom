@@ -1607,7 +1607,7 @@ void P_SpawnBlood(fixed_t x,fixed_t y,fixed_t z,int damage,mobj_t *bleeder)
   th->tics -= P_Random(pr_spawnblood)&3;
 
   // [Nugget] Fuzzy blood for fuzzy things
-  if (comp_fuzzyblood && bleeder->flags & MF_SHADOW)
+  if (CASUALPLAY(comp_fuzzyblood) && bleeder->flags & MF_SHADOW)
   { th->flags |= MF_SHADOW; }
 
   if (bleeder->info->bloodcolor || idgaf)

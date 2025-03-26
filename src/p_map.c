@@ -2664,10 +2664,7 @@ boolean PIT_ChangeSector(mobj_t *thing)
 
       // No gibs if the thing doesn't bleed to begin with
       if (STRICTMODE(comp_nonbleeders) && thing->flags & MF_NOBLOOD)
-      {
-        thing->sprite = SPR_TNT1;
-        thing->frame = 0;
-      }
+      { thing->intflags |= MIF_DONTRENDER; }
 
       // Bloodier crushing
       if (CASUALPLAY(bloodier_gibbing))
@@ -2714,11 +2711,11 @@ boolean PIT_ChangeSector(mobj_t *thing)
 			thing->y,
 			thing->z + thing->height/2,
 			// [Nugget]
-			(STRICTMODE(comp_nonbleeders) && thing->flags & MF_NOBLOOD)
+			(CASUALPLAY(comp_nonbleeders) && thing->flags & MF_NOBLOOD)
 			? MT_PUFF : MT_BLOOD);
 
       // [Nugget] Fuzzy blood if applicable
-      if (comp_fuzzyblood && thing->flags & MF_SHADOW)
+      if (CASUALPLAY(comp_fuzzyblood) && thing->flags & MF_SHADOW)
       { mo->flags |= MF_SHADOW; }
 
       if (thing->info->bloodcolor || idgaf)

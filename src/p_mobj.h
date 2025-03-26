@@ -240,6 +240,7 @@ enum {
   // [Nugget] ----------------------------------------------------------------
 
   MIF_CROUCHING    = 0x00010000,  // Mobj (player) is crouching
+  MIF_DONTRENDER   = 0x00020000,
 };
 
 // Map Object definition.

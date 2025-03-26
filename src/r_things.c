@@ -626,6 +626,9 @@ static void R_ProjectSprite (mobj_t* thing)
   fixed_t tr_x, tr_y, gxt, gyt, tz;
   fixed_t interpx, interpy, interpz, interpangle;
 
+  // [Nugget]
+  if (thing->intflags & MIF_DONTRENDER) { return; }
+
   // [Nugget] Freecam
   if (thing == R_GetFreecamMobj() && !R_GetChasecamOn())
   { return; }
