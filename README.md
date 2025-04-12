@@ -342,17 +342,18 @@ The homepage for Nugget Doom is <https://github.com/MrAlaux/Nugget-Doom>.
 
 Please report any bugs, glitches or crashes that you encounter to the GitHub [Issue Tracker](https://github.com/MrAlaux/Nugget-Doom/issues).
 
-## Acknowledgement
+## Acknowledgements
 
 Help was provided by:
 
-- [_atsb_ (a.k.a. _Gibbon_)](https://github.com/atsb);
-- [_Brad Harding_](https://github.com/bradharding);
-- [_ceski_](https://github.com/ceski-1);
-- [_Fabian Greffrath_](https://github.com/fabiangreffrath);
-- [_melak47_](https://github.com/melak47);
-- [_Roman Fomin_ (a.k.a. _rfomin_)](https://github.com/rfomin);
-- [_Ryan Krafnick_ (a.k.a. _kraflab_)](https://github.com/kraflab).
+- [_atsb_ (a.k.a. _Gibbon_)](https://github.com/atsb)
+- _Ayba_
+- [_Brad Harding_](https://github.com/bradharding)
+- [_ceski_](https://github.com/ceski-1)
+- [_Fabian Greffrath_](https://github.com/fabiangreffrath)
+- [_melak47_](https://github.com/melak47)
+- [_Roman Fomin_ (a.k.a. _rfomin_)](https://github.com/rfomin)
+- [_Ryan Krafnick_ (a.k.a. _kraflab_)](https://github.com/kraflab)
 
 Thanks to all of you!
 
