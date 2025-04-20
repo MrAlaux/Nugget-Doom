@@ -1991,9 +1991,8 @@ static boolean PTR_ShootTraverse(intercept_t *in)
       distance_travelled = P_AproxDistance(x - trace.x, y - trace.y); // [Nugget] Hitscan trails
 
       // [Nugget] Explosive hitscan cheat
-      if (is_boomshot)
+      if (is_boomshot && (is_boomshot = false, distance_travelled > (144 + 4)*FRACUNIT))
       {
-        is_boomshot = false;
         P_SpawnExplosion(x, y, z);
       }
       else
@@ -2041,9 +2040,8 @@ static boolean PTR_ShootTraverse(intercept_t *in)
   distance_travelled = P_AproxDistance(x - trace.x, y - trace.y); // [Nugget] Hitscan trails
 
   // [Nugget] Explosive hitscan cheat
-  if (is_boomshot)
+  if (is_boomshot && (is_boomshot = false, distance_travelled > (144 + 10)*FRACUNIT))
   {
-    is_boomshot = false;
     P_SpawnExplosion(x, y, z);
   }
   else

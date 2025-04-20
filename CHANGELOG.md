@@ -19,6 +19,7 @@
 - **When dying with freelook enabled, the camera is now pitched towards the killer**
   - Consequently, freelook can't be controlled manually while dead anymore
 - **Keys now flash on the automap when flashing of keyed doors is enabled**
+- **Added rough distance checks to explosive-hitscan cheat**
 - **Tweaked _Bloodier Gibbing_ effect**
 - Made _`FAUXDEMO`_ a developer cheat
 
