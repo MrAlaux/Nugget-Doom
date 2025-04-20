@@ -352,6 +352,7 @@ Help was provided by:
 - [_ceski_](https://github.com/ceski-1)
 - [_Fabian Greffrath_](https://github.com/fabiangreffrath)
 - [_melak47_](https://github.com/melak47)
+- [_Mikolah_](https://github.com/mykola-ambar)
 - [_Roman Fomin_ (a.k.a. _rfomin_)](https://github.com/rfomin)
 - [_Ryan Krafnick_ (a.k.a. _kraflab_)](https://github.com/kraflab)
 

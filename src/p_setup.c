@@ -1784,7 +1784,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   // set up world state
   P_SpawnSpecials();
 
-  // [Nugget]
+  // [Nugget] Thanks Mikolah!
   if (allow_flakes)
   {
     P_ClearFlakers();
