@@ -185,6 +185,7 @@ static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
 static void cheat_dimlight(void);
 
 static void cheat_cheese(void);
+static void cheat_flakes(void);
 
 boolean idgaf;
 static void cheat_idgaf(void);
@@ -458,6 +459,7 @@ struct cheat_s cheat[] = {
   {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
 
   {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
+  {"flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
   {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}  },
 
   #ifdef NUGMAGIC
@@ -951,6 +953,13 @@ static void cheat_cheese(void)
 {
   cheese = !cheese;
   displaymsg("%s", cheese ? "cheese :)" : "no cheese :(");
+}
+
+static void cheat_flakes(void)
+{
+  if (!allow_flakes) { return; }
+
+  flakes = !flakes;
 }
 
 static void cheat_idgaf(void)

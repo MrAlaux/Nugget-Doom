@@ -314,6 +314,9 @@ void P_Ticker (void)
   P_RunThinkers();
   P_UpdateSpecials();
   P_RespawnSpecials();
+
+  P_RunFlakers(); // [Nugget]
+
   P_MapEnd();
   }
 

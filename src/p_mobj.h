@@ -241,6 +241,7 @@ enum {
 
   MIF_CROUCHING    = 0x00010000,  // Mobj (player) is crouching
   MIF_DONTRENDER   = 0x00020000,
+  MIF_FLAKE        = 0x00040000,
 };
 
 // Map Object definition.
@@ -469,7 +470,7 @@ int     P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta);
 
 // [Nugget] ==================================================================
 
-extern boolean cheese, frights;
+extern boolean cheese, frights, flakes, allow_flakes;
 
 enum {
   FLINCH_OFF,
@@ -493,6 +494,15 @@ void P_ToggleDuplicateSpawns(const boolean state);
 void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum); // Alt. states
 
 mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenum);
+
+#define FLAKER_DIST (32 * FRACUNIT)
+#define FLAKER_DIST_MASK (FLAKER_DIST - 1)
+
+struct sector_s;
+
+void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const struct sector_s *sector);
+void P_ClearFlakers(void);
+void P_RunFlakers(void);
 
 #endif
 

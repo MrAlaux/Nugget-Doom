@@ -409,8 +409,7 @@ static int tanzc = 0;
 static int tanzd = 0;
 #define NUMTANZERFL 14
 #define NUMTANZERF  125
-static mline_t tanzer[NUMTANZERF][NUMTANZERFL] = {0};
-static void InitTanzer(void);
+static mline_t *GetTanzerF(int f);
 
 // [Nugget] =================================================================/
 
@@ -662,8 +661,6 @@ void AM_initVariables(void)
   highlight_color[1] = I_GetNearestColor(playpal, low, low, 255); // Blue
   highlight_color[2] = I_GetNearestColor(playpal, 255, 255, low); // Yellow
   highlight_color[3] = I_GetNearestColor(playpal, 255, 255, 255); // Any (white)
-
-  InitTanzer();
 }
 
 //
@@ -2911,10 +2908,10 @@ void AM_Drawer (void)
   if (tanzen)
   {
     AM_drawLineCharacter(
-      tanzer[tanzf],
+      GetTanzerF(tanzf),
       NUMTANZERFL,
       scale_ftom * current_video_height / SCREENHEIGHT,
-      automaprotate ? (FOLLOW ? viewangle - ANG90 : -mapangle) : 0,
+      automaprotate ? (FOLLOW ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
       v_lightest_color,
       (m_x + m_x2) / 2,
       (m_y + m_y2) / 2
@@ -3080,10 +3077,8 @@ void AM_BindAutomapVariables(void)
   BIND_CR(mapcolor_hitbox, 96, "Color used for thing hitboxes");
 }
 
-static void InitTanzer(void)
+static mline_t *GetTanzerF(int f)
 {
-  if (tanzer[0][0].a.x) { return; }
-
   #define R (FRACUNIT*96)
   #define RX(x) (R * ((x) - 48) / 64)
   #define RY(y) (R * (64 - (y)) / 64)
@@ -3097,7 +3092,7 @@ static void InitTanzer(void)
       RL(armx, army, arbx, arby), RL( tbx,  tby, llmx, llmy), RL(llmx, llmy, llbx, llby), RL( tbx,  tby, lrmx, lrmy), RL(lrmx, lrmy, lrbx, lrby), }
 
   // Thanks Ayba!
-  static mline_t t[NUMTANZERF][NUMTANZERFL] =
+  static mline_t tanzer[NUMTANZERF][NUMTANZERFL] =
   {
     // hl,       ht,       hr,       tu,       tb,       au,       alm,      alb,      arm,      arb,      llm,      llb,      lrm,      lrb
     RF( 41,  31,  47,  26,  52,  31,  47,  38,  47,  63,  47,  41,  47,  41,  39,  69,  50,  55,  54,  69,  47,  63,  44, 103,  47,  63,  54, 104),
@@ -3233,7 +3228,7 @@ static void InitTanzer(void)
   #undef RX
   #undef R
 
-  memcpy(tanzer, t, sizeof(t));
+  return tanzer[f];
 }
 
 //----------------------------------------------------------------------------

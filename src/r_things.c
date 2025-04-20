@@ -672,6 +672,9 @@ static void R_ProjectSprite (mobj_t* thing)
   if (tz < MINZ || tz > MAXZ)
     return;
 
+  // [Nugget]
+  if (thing->intflags & MIF_FLAKE && tz > 1024*FRACUNIT) { return; }
+
   gxt = -FixedMul(tr_x,viewsin);
   gyt = FixedMul(tr_y,viewcos);
   tx = -(gyt+gxt);
