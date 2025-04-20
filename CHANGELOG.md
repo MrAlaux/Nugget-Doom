@@ -8,6 +8,7 @@
 - **Number of _Bloodier Gibbing_ splats** setting
 - Setting to **show only the powerup names/icons for powerup timers**
 - **Intermission ratio stats** setting
+- **_IWAD only_ setting for _Alt. Intermission Background_** [1]
 - **Number of total message lines** setting, to let the message review show more messages
 - **Support for slow-motion toggling sounds**
 - Setting to enable developer features
@@ -36,3 +37,5 @@
 - **Message review overriding message durations even when the new one were shorter**
 - **Message review ignoring the forced-duration setting**
 - **`DSMNUBAK` being unused**
+
+**[1].** This might affect existing config files.

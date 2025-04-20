@@ -23,9 +23,26 @@
 // [Nugget]
 #include "doomtype.h"
 
-// [Nugget] CVARs
-extern boolean alt_interpic;
+// [Nugget] /=================================================================
+
+typedef enum altinterpic_s {
+  ALTINTERPIC_OFF,
+  ALTINTERPIC_IWAD,
+  ALTINTERPIC_ALWAYS,
+
+  NUM_ALTINTERPIC
+} altinterpic_t;
+
+// CVARs
+extern altinterpic_t alt_interpic;
 extern boolean inter_ratio_stats;
+
+// Alt. intermission background ----------------------------------------------
+
+extern boolean WI_UsingAltInterpic(void);
+extern void WI_DisableAltInterpic(void);
+
+// [Nugget] =================================================================/
 
 struct wbstartstruct_s;
 
@@ -53,10 +70,6 @@ void WI_Start(struct wbstartstruct_s *wbstartstruct);
 void WI_checkForAccelerate(void);      // killough 11/98
 
 void WI_slamBackground(void);          // killough 11/98
-
-// [Nugget] Alt. intermission background
-extern boolean WI_UsingAltInterpic(void);
-extern void WI_DisableAltInterpic(void);
 
 #endif
 

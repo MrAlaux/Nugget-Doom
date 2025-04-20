@@ -49,7 +49,7 @@
 #include "r_main.h"
 
 // [Nugget] CVARs
-boolean alt_interpic;
+altinterpic_t alt_interpic;
 boolean inter_ratio_stats;
 
 #define LARGENUMBER 1994
@@ -713,6 +713,30 @@ static boolean SetupMusic(boolean enteringcondition)
     return false;
 }
 
+// [Nugget] Factored out from `WI_slamBackground()`
+static const char *WI_getBackgroundName(void)
+{
+    if (state != StatCount && enterpic)
+    {
+        return enterpic;
+    }
+    else if (exitpic)
+    {
+        return exitpic;
+    }
+    // with UMAPINFO it is possible that wbs->epsd > 3
+    else if (gamemode == commercial || wbs->epsd >= 3)
+    {
+        return "INTERPIC";
+    }
+    else
+    {
+        static char lump[9] = {0};
+        M_snprintf(lump, sizeof(lump), "WIMAP%d", wbs->epsd);
+        return lump;
+    }
+}
+
 // ====================================================================
 // WI_slamBackground
 // Purpose: Put the full-screen background up prior to patches
@@ -729,28 +753,7 @@ void WI_slamBackground(void)
         return;
     }
 
-    const char *name;
-
-    char lump[9] = {0};
-
-    if (state != StatCount && enterpic)
-    {
-        name = enterpic;
-    }
-    else if (exitpic)
-    {
-        name = exitpic;
-    }
-    // with UMAPINFO it is possible that wbs->epsd > 3
-    else if (gamemode == commercial || wbs->epsd >= 3)
-    {
-        name = "INTERPIC";
-    }
-    else
-    {
-        M_snprintf(lump, sizeof(lump), "WIMAP%d", wbs->epsd);
-        name = lump;
-    }
+    const char *name = WI_getBackgroundName(); // [Nugget] Factored out
 
     V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
 }
@@ -2462,41 +2465,45 @@ void WI_Ticker(void)
       break;
     }
 
-  { // [Nugget] Alt. intermission background
-    static boolean big_last = false;
-    boolean big;
+  // [Nugget] Alt. intermission background ---------------------------------
 
-    {
-      int level = (state == StatCount) ? wbs->last : wbs->next;
-      patch_t *patch = (0 <= level && level < num_lnames) ? lnames[level] : NULL;
+  static boolean big_last = false;
+  boolean big_title;
 
-      if (patch) {
-        big =    ((SCREENWIDTH  / 2) < SHORT(patch->width))
-              && ((SCREENHEIGHT / 2) < SHORT(patch->height));
-      }
-      else { big = false; }
-    }
+  const int levelnum = (state == StatCount) ? wbs->last : wbs->next;
 
-    // Don't use the alt. interpic if the last-level title is big,
-    // regardless of the next-level title's size
-    if (state == StatCount) { big_last = big; }
+  const patch_t *const titlepatch = (0 <= levelnum && levelnum < num_lnames)
+                                  ? lnames[levelnum] : NULL;
 
-    if (STRICTMODE(alt_interpic) && !big_last && !big)
-    {
-      alt_interpic_on = true;
-    }
-    else { alt_interpic_on = false; }
-
-    if (old_alt_interpic_on != alt_interpic_on)
-    {
-      old_alt_interpic_on = alt_interpic_on;
-
-      if (!alt_interpic_on)
-      { R_SetViewSize(screenblocks); }
-
-      R_ExecuteSetViewSize();
-    }
+  if (titlepatch)
+  {
+    big_title = ((SCREENWIDTH  / 2) < SHORT(titlepatch->width))
+              & ((SCREENHEIGHT / 2) < SHORT(titlepatch->height));
   }
+  else { big_title = false; }
+
+  // Don't use the alt. interpic if the last-level title is big,
+  // regardless of the next-level title's size
+  if (state == StatCount) { big_last = big_title; }
+
+  // Likewise, don't use it if the last level's background is from a PWAD
+  // and we only use the feature for IWAD backgrounds
+  const boolean iwad_background = (exitpic ? W_IsIWADLump(W_CheckNumForName(exitpic)) : true)
+                                & W_IsIWADLump(W_CheckNumForName(WI_getBackgroundName()));
+
+  alt_interpic_on = STRICTMODE(alt_interpic) && !big_last && !big_title
+                    && (iwad_background || alt_interpic == ALTINTERPIC_ALWAYS);
+
+  if (old_alt_interpic_on != alt_interpic_on)
+  {
+    old_alt_interpic_on = alt_interpic_on;
+
+    if (!alt_interpic_on)
+    { R_SetViewSize(screenblocks); }
+
+    R_ExecuteSetViewSize();
+  }
+
 }
 
 // ====================================================================

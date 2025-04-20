@@ -382,6 +382,7 @@ enum
     str_chasecam,
     str_thing_lighting,
     str_fake_contrast,
+    str_alt_interpic,
     str_s_clipping_dist,
     str_page_ticking,
     str_thing_spawns,
@@ -3884,6 +3885,10 @@ static const char *fake_contrast_strings[] = {
   "Off", "Smooth", "Vanilla", NULL
 };
 
+static const char *alt_interpic_strings[] = {
+  "Off", "IWAD only", "Always", NULL
+};
+
 static void MN_Color(void);
 
 setup_menu_t gen_settings8[] = {
@@ -3902,7 +3907,7 @@ setup_menu_t gen_settings8[] = {
     {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
     {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
     {"Screen Wipe Speed Percentage", S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
-    {"Alt. Intermission Background", S_ONOFF |S_STRICT,       N_X, M_SPC, {"alt_interpic"}},
+    {"Alt. Intermission Background", S_CHOICE|S_STRICT,       N_X, M_SPC, {"alt_interpic"}, .strings_id = str_alt_interpic},
     {"Color Options",                S_FUNC,                  N_X, M_SPC, .action = MN_Color},
 
   MI_END
@@ -5670,6 +5675,7 @@ static const char **selectstrings[] = {
     chasecam_strings,
     thing_lighting_strings,
     fake_contrast_strings,
+    alt_interpic_strings,
     s_clipping_dist_strings,
     page_ticking_strings,
     thing_spawns_strings,

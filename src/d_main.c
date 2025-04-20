@@ -2777,9 +2777,9 @@ void D_BindMiscVariables(void)
                    100, 50, 200,
                    "Screen-wipe speed percent");
 
-  M_BindBool("alt_interpic", &alt_interpic, NULL,
-             false, ss_gen, wad_yes,
-             "Alternative intermission background (spinning camera view)");
+  M_BindNum("alt_interpic", &alt_interpic, NULL,
+            ALTINTERPIC_OFF, ALTINTERPIC_OFF, NUM_ALTINTERPIC-1, ss_gen, wad_yes,
+            "Alternative intermission background (0 = Off; 1 = IWAD backgrounds only; 2 = Always)");
 
   // (CFG-only)
   M_BindBool("inter_ratio_stats", &inter_ratio_stats, NULL,
