@@ -3,11 +3,11 @@
 - **_Hitbox-based Hitscan Collision_** setting
 - **_Bounded Voxel Rendering_** setting
 - **Fancy mode for character cast**
+- **Intermission ratio stats** setting
 - **Recoil-pitch scale percent** setting
 - **_'IDDET'_ cheat**, to find exits in the automap
 - **Number of _Bloodier Gibbing_ splats** setting
 - Setting to **show only the powerup names/icons for powerup timers**
-- **Intermission ratio stats** setting
 - **_IWAD only_ setting for _Alt. Intermission Background_** [1]
 - **Number of total message lines** setting, to let the message review show more messages
 - **Support for slow-motion toggling sounds**
