@@ -57,6 +57,7 @@
 
 // [Nugget]
 #include "am_map.h"
+#include "f_finale.h"
 #include "r_main.h"
 
 #define plyr (players+consoleplayer)     /* the console player */
@@ -183,6 +184,7 @@ static void cheat_boomcan(void);     // Explosive hitscan
 
 static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
 static void cheat_dimlight(void);
+static void cheat_castcall(void);
 
 static void cheat_cheese(void);
 static void cheat_flakes(void);
@@ -457,6 +459,7 @@ struct cheat_s cheat[] = {
 
   {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
   {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
+  {"castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
 
   {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
   {"flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
@@ -945,6 +948,14 @@ static void cheat_dimlight(void)
 
   diminishing_lighting = !diminishing_lighting;
   displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
+}
+
+static void cheat_castcall(void)
+{
+  if (!nugget_devmode) { return; }
+
+  F_StartFinale();
+  F_StartCast();
 }
 
 // ---------------------------------------------------------------------------

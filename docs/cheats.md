@@ -187,6 +187,9 @@ Toggle faux-demo mode, which emulates the condition of demo/net play (disables s
 `DIMLIGHT`  
 Toggle diminishing lighting.
 
+`CASTCALL`  
+Enter the character cast call.
+
 ## Beta cheats
 
 These cheats only work in MBF `-beta` emulation mode.

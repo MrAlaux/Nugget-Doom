@@ -73,7 +73,7 @@ static int finalecount;
 static const char *finaletext;
 static const char *finaleflat;
 
-static void F_StartCast(void);
+void F_StartCast(void); // [Nugget] Global
 static void F_CastTicker(void);
 static boolean F_CastResponder(event_t *ev);
 static void F_CastDrawer(void);
@@ -638,7 +638,7 @@ static int F_SoundForState (int st)
 //
 // F_StartCast
 //
-static void F_StartCast(void)
+void F_StartCast(void) // [Nugget] Global
 {
   // Ty 03/23/98 - clumsy but time is of the essence
   castorder[0].name = s_CC_ZOMBIE,  castorder[0].type = MT_POSSESSED;
@@ -1143,10 +1143,8 @@ static boolean F_CastResponder(event_t* ev)
     else {
       caststate = &states[mobjinfo[castorder[castnum].type].seestate];
       casttics = caststate->tics;
-      castdeath = false;
-      castframes = 0;
-      castonmelee = 0;
-      castattacking = false;
+      castattacking = castdeath = castflip = false;
+      castframes = castonmelee = 0;
     }
 
     return true;
