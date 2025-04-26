@@ -4,7 +4,7 @@
 
 ## Changes
 
-None.
+- **Improved randomization for _Bloodier Gibbing_ and _Toss Items Upon Death_**
 
 ## Bug Fixes
 

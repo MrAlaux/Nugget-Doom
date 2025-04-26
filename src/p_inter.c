@@ -866,7 +866,7 @@ void P_NuggetGib(mobj_t *mo, const boolean crushed)
     #define MOM_SCALE (FRACUNIT / 16)
 
     const fixed_t momentum = Woof_Random() * (MOM_SCALE / (crushed ? 2 : 1));
-    const int fineangle = (FINEANGLES - 1) * Woof_Random() / 255;
+    const int fineangle = (FINEANGLES - 1) * Woof2_Random() / 255;
 
     splat->momx = FixedMul(momentum, finecosine[fineangle]);
     splat->momy = FixedMul(momentum,   finesine[fineangle]);
@@ -880,7 +880,7 @@ void P_NuggetGib(mobj_t *mo, const boolean crushed)
     // so this is done to get rather-decent behavior in vanilla
     if (demo_version < DV_BOOM200) { splat->flags |= MF_NOCLIP; }
 
-    splat->tics += (Woof_Random() & 3) - (Woof_Random() & 3);
+    splat->tics += (Woof2_Random() % 7) - 3;
     splat->tics = MAX(1, splat->tics);
   }
 }
@@ -1058,9 +1058,14 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
   if (casual_play && tossdrop)
   {
     mo->z += target->height * 5/4;
-    mo->momx = (Woof_Random() - Woof_Random()) << 7;
-    mo->momy = (Woof_Random() - Woof_Random()) << 7;
-    mo->momz = (4*FRACUNIT) + ((Woof_Random() % 9) * FRACUNIT/8);
+
+    const fixed_t momentum = Woof_Random() * FRACUNIT/512;
+    const int fineangle = (FINEANGLES - 1) * Woof2_Random() / 255;
+
+    mo->momx = FixedMul(momentum, finecosine[fineangle]);
+    mo->momy = FixedMul(momentum,   finesine[fineangle]);
+
+    mo->momz = 4*FRACUNIT + (Woof_Random() * FRACUNIT/256);
   }
 }
 

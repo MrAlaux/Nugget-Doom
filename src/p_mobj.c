@@ -1999,7 +1999,7 @@ void P_RunFlakers(void)
 
   if (nodrawers || leveltime <= 1) { return; } // View positions are presumably uninitialized
 
-  flaker_t *flaker;
+  const flaker_t *flaker;
   array_foreach(flaker, flakers)
   {
     const fixed_t dist = P_AproxDistance(viewx - flaker->x, viewy - flaker->y);

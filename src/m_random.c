@@ -61,7 +61,7 @@ rng_t rng;     // the random number state
 
 unsigned long rngseed = 1993;   // killough 3/26/98: The seed
 
-int wrndindex = 0;
+int wrndindex = 0, w2rndindex = 0; // [Nugget] Second random function
 
 int P_Random(pr_class_t pr_class)
 {
@@ -124,7 +124,7 @@ void M_ClearRandom (void)
   for (i=0; i<NUMPRCLASS; i++)         // go through each pr_class and set
     rng.seed[i] = seed *= 69069ul;     // each starting seed differently
   rng.prndindex = rng.rndindex = 0;    // clear two compatibility indices
-  wrndindex = 0;
+  wrndindex = w2rndindex = 0; // [Nugget] Second random function
 }
 
 // [crispy] our own private random function
@@ -132,6 +132,13 @@ int Woof_Random(void)
 {
   wrndindex = (wrndindex+1)&0xff;
   return rndtable[wrndindex];
+}
+
+// [Nugget] Second random function
+int Woof2_Random(void)
+{
+  w2rndindex = (w2rndindex+1)&0xff;
+  return rndtable[w2rndindex];
 }
 
 // mbf21: [XA] Common random formulas used by codepointers
