@@ -6135,7 +6135,7 @@ void G_BindEnemVariables(void)
   // (CFG-only)
   M_BindBool("extra_gibbing_fist", &extra_gibbing[EXGIB_FIST], NULL,
              true, ss_none, wad_yes,
-             "Extra gibbing for Berserk Fist");
+             "Extra gibbing for Berserk Fist and similar MBF21 attacks");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_csaw", &extra_gibbing[EXGIB_CSAW], NULL,
@@ -6145,7 +6145,7 @@ void G_BindEnemVariables(void)
   // (CFG-only)
   M_BindBool("extra_gibbing_ssg", &extra_gibbing[EXGIB_SSG], NULL,
              true, ss_none, wad_yes,
-             "Extra gibbing for SSG");
+             "Extra gibbing for SSG and similar MBF21 attacks");
 
   // (CFG-only)
   M_BindBool("extra_gibbing_bfg", &extra_gibbing[EXGIB_BFG], NULL,

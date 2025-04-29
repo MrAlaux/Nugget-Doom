@@ -790,36 +790,79 @@ static boolean P_NuggetForceGibbing(
 
   if (extra_gibbing[EXGIB_BFG] && P_IsBFGTracer()
       && (P_AproxDistance(target->x - source->x, target->y - source->y)
-          < ((128*FRACUNIT) + target->info->radius)))
+          < (128*FRACUNIT + target->info->radius)))
   {
     return true;
   }
 
   if (source->player)
   {
-    if (extra_gibbing[EXGIB_FIST]
-        && source->player->psprites->state->action.p2 == (actionf_p2) A_Punch
-        && source->player->powers[pw_strength]
-        && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < ((64*FRACUNIT) + target->info->radius)))
+    const state_t *const state = source->player->psprites->state;
+
+    if (extra_gibbing[EXGIB_FIST])
     {
-      return true;
+      if (state->action.p2 == (actionf_p2) A_Punch
+          && source->player->powers[pw_strength]
+          && (P_AproxDistance(target->x - source->x, target->y - source->y)
+              < (64*FRACUNIT + target->info->radius)))
+      {
+        return true;
+      }
+
+      if (state->action.p2 == (actionf_p2) A_WeaponMeleeAttack)
+      {
+        const unsigned damagebase = state->args[0],
+                       damagemod  = state->args[1];
+
+        const fixed_t zerkfactor = source->player->powers[pw_strength]
+                                 ? state->args[2] : FRACUNIT;
+
+        const fixed_t range = state->args[4] ? state->args[4] : source->info->meleerange;
+
+        const int average_damage = ((int) (damagebase * ((damagemod + 1) / 2.0f))
+                                    * zerkfactor) >> FRACBITS;
+
+        if (average_damage >= 100 // Just below theoretical avg. damage of berserk fist
+            && (P_AproxDistance(target->x - source->x, target->y - source->y)
+                < (range + target->info->radius)))
+        {
+          return true;
+        }
+      }
     }
 
     if (extra_gibbing[EXGIB_CSAW]
-        && source->player->psprites->state->action.p2 == (actionf_p2) A_Saw
+        && state->action.p2 == (actionf_p2) A_Saw
         && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < ((65*FRACUNIT) + target->info->radius)))
+            < (65*FRACUNIT + target->info->radius)))
     {
       return true;
     }
 
-    if (extra_gibbing[EXGIB_SSG]
-        && source->player->psprites->state->action.p2 == (actionf_p2) A_FireShotgun2
-        && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < ((128*FRACUNIT) + target->info->radius)))
+    if (extra_gibbing[EXGIB_SSG])
     {
-      return true;
+      if (state->action.p2 == (actionf_p2) A_FireShotgun2
+          && (P_AproxDistance(target->x - source->x, target->y - source->y)
+              < (128*FRACUNIT + target->info->radius)))
+      {
+        return true;
+      }
+
+      if (state->action.p2 == (actionf_p2) A_WeaponBulletAttack)
+      {
+        const unsigned numbullets = state->args[2],
+                       damagebase = state->args[3],
+                       damagemod  = state->args[4];
+
+        const int average_damage = damagebase * ((damagemod + 1) / 2.0f) * numbullets;
+
+        if (average_damage >= 200 // Theoretical avg. damage of SSG
+            && (P_AproxDistance(target->x - source->x, target->y - source->y)
+                < (128*FRACUNIT + target->info->radius)))
+        {
+          return true;
+        }
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Extra Gibbing_ for MBF21 hitscan-weapon functions**
 - *`CASTCALL`* developer cheat
 
 ## Changes
