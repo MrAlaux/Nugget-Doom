@@ -24,6 +24,18 @@
 #include "m_fixed.h"
 #include "r_defs.h"
 
+// [Nugget] /=================================================================
+
+typedef struct actualspriteheight_s
+{
+  int lump;
+  short height, toppadding;
+} actualspriteheight_t;
+
+const actualspriteheight_t *R_GetActualSpriteHeight(int sprite, int frame);
+
+// [Nugget] =================================================================/
+
 // Constant arrays used for psprite clipping and initializing clipping.
 
 // [FG] 32-bit integer math

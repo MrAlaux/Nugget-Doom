@@ -48,6 +48,10 @@
 // [Nugget]
 #include "r_main.h"
 
+// [Nugget] CVARs
+altinterpic_t alt_interpic;
+boolean inter_ratio_stats;
+
 #define LARGENUMBER 1994
 
 //
@@ -323,6 +327,8 @@ static int    cnt_par;
 static int    cnt_pause;
 static int    cnt_total_time;
 
+static int    cnt2_kills, cnt2_items, cnt2_secret; // [Nugget] Ratio stats
+
 // # of commercial levels
 static int    NUMCMAPS;
 
@@ -417,8 +423,6 @@ typedef struct
 static wi_animation_t *animation;
 
 // [Nugget] Alt. intermission background /------------------------------------
-
-boolean alt_interpic;
 
 static boolean alt_interpic_on = false, old_alt_interpic_on = false;
 
@@ -709,6 +713,30 @@ static boolean SetupMusic(boolean enteringcondition)
     return false;
 }
 
+// [Nugget] Factored out from `WI_slamBackground()`
+static const char *WI_getBackgroundName(void)
+{
+    if (state != StatCount && enterpic)
+    {
+        return enterpic;
+    }
+    else if (exitpic)
+    {
+        return exitpic;
+    }
+    // with UMAPINFO it is possible that wbs->epsd > 3
+    else if (gamemode == commercial || wbs->epsd >= 3)
+    {
+        return "INTERPIC";
+    }
+    else
+    {
+        static char lump[9] = {0};
+        M_snprintf(lump, sizeof(lump), "WIMAP%d", wbs->epsd);
+        return lump;
+    }
+}
+
 // ====================================================================
 // WI_slamBackground
 // Purpose: Put the full-screen background up prior to patches
@@ -725,28 +753,7 @@ void WI_slamBackground(void)
         return;
     }
 
-    const char *name;
-
-    char lump[9] = {0};
-
-    if (state != StatCount && enterpic)
-    {
-        name = enterpic;
-    }
-    else if (exitpic)
-    {
-        name = exitpic;
-    }
-    // with UMAPINFO it is possible that wbs->epsd > 3
-    else if (gamemode == commercial || wbs->epsd >= 3)
-    {
-        name = "INTERPIC";
-    }
-    else
-    {
-        M_snprintf(lump, sizeof(lump), "WIMAP%d", wbs->epsd);
-        name = lump;
-    }
+    const char *name = WI_getBackgroundName(); // [Nugget] Factored out
 
     V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
 }
@@ -2063,6 +2070,8 @@ static void WI_initStats(void)
   cnt_time = cnt_par = cnt_total_time = -1;
   cnt_pause = TICRATE;
 
+  cnt2_kills = cnt2_items = cnt2_secret = -1; // [Nugget] Ratio stats
+
   WI_initAnimatedBack(true);
 }
 
@@ -2086,6 +2095,11 @@ static void WI_updateStats(void)
       cnt_secret[0] = (wbs->maxsecret ?
                        (plrs[me].ssecret * 100) / wbs->maxsecret : 100);
 
+      // [Nugget] Ratio stats
+      cnt2_kills  = plrs[me].skills;
+      cnt2_items  = plrs[me].sitems;
+      cnt2_secret = plrs[me].ssecret;
+
       cnt_total_time = wbs->totaltimes / TICRATE;
       cnt_time = plrs[me].stime / TICRATE;
       cnt_par = wbs->partime / TICRATE;
@@ -2097,12 +2111,18 @@ static void WI_updateStats(void)
     {
       cnt_kills[0] += 2;
 
+      // [Nugget] Ratio stats
+      cnt2_kills = plrs[me].skills
+                 * cnt_kills[0]
+                 / MAX(1, plrs[me].skills * 100 / MAX(1, totalkills));
+
       if (!(bcnt&3))
         S_StartSoundOptional(0, sfx_inttic, sfx_pistol); // [Nugget]: [NS] Optional inter sounds.
 
       if (cnt_kills[0] >= (plrs[me].skills * 100) / wbs->maxkills)
         {
           cnt_kills[0] = (plrs[me].skills * 100) / wbs->maxkills;
+          cnt2_kills = plrs[me].skills; // [Nugget] Ratio stats
           S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
           sp_state++;
         }
@@ -2112,12 +2132,18 @@ static void WI_updateStats(void)
       {
         cnt_items[0] += 2;
 
+        // [Nugget] Ratio stats
+        cnt2_items = plrs[me].sitems
+                   * cnt_items[0]
+                   / MAX(1, plrs[me].sitems * 100 / MAX(1, totalitems));
+
         if (!(bcnt&3))
           S_StartSoundOptional(0, sfx_inttic, sfx_pistol); // [Nugget]: [NS] Optional inter sounds.
 
         if (cnt_items[0] >= (plrs[me].sitems * 100) / wbs->maxitems)
           {
             cnt_items[0] = (plrs[me].sitems * 100) / wbs->maxitems;
+            cnt2_items = plrs[me].sitems; // [Nugget] Ratio stats
             S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
             sp_state++;
           }
@@ -2126,6 +2152,11 @@ static void WI_updateStats(void)
       if (sp_state == 6)
         {
           cnt_secret[0] += 2;
+
+          // [Nugget] Ratio stats
+          cnt2_secret = plrs[me].ssecret
+                      * cnt_secret[0]
+                      / MAX(1, plrs[me].ssecret * 100 / MAX(1, totalsecret));
 
           if (!(bcnt&3))
             S_StartSoundOptional(0, sfx_inttic, sfx_pistol); // [Nugget]: [NS] Optional inter sounds.
@@ -2139,6 +2170,7 @@ static void WI_updateStats(void)
             {
               cnt_secret[0] = (wbs->maxsecret ?
                                (plrs[me].ssecret * 100) / wbs->maxsecret : 100);
+              cnt2_secret = plrs[me].ssecret; // [Nugget] Ratio stats
               S_StartSoundOptional(0, sfx_inttot, sfx_barexp); // [Nugget]: [NS] Optional inter sounds.
               sp_state++;
             }
@@ -2203,6 +2235,101 @@ static void WI_updateStats(void)
               }
 }
 
+// [Nugget] Ratio stats /-----------------------------------------------------
+
+static int NumWidth(int n)
+{
+  if (n == LARGENUMBER) { return 0; }
+
+  int width = 0;
+
+  if (n < 0)
+  {
+    n = -n;
+    width += SHORT(wiminus->width);
+  }
+
+  int digits;
+
+  if (n) {
+    digits = 0;
+
+    do { digits++; } while (n /= 10);
+  }
+  else { digits = 1; }
+
+  width += SHORT(num[0]->width) * digits;
+
+  return width;
+}
+
+static void DrawStat(int x, int y, int stat)
+{
+  patch_t *title;
+  int cnt, cnt2, cnt2f, max;
+
+  switch (stat)
+  {
+    case 0:
+      title = kills;
+      cnt   = cnt_kills[0];
+      cnt2  = cnt2_kills;
+      cnt2f = plrs[0].skills;
+      max   = totalkills;
+      break;
+
+    case 1:
+      title = items;
+      cnt   = cnt_items[0];
+      cnt2  = cnt2_items;
+      cnt2f = plrs[0].sitems;
+      max   = totalitems;
+      break;
+
+    case 2:
+      title = sp_secret;
+      cnt   = cnt_secret[0];
+      cnt2  = cnt2_secret;
+      cnt2f = plrs[0].ssecret;
+      max   = totalsecret;
+      break;
+
+    default: return;
+  }
+
+  V_DrawPatchSH(x, y, title);
+
+  int numx = SCREENWIDTH - x;
+
+  if (inter_ratio_stats && cnt2 > -1)
+  {
+    const int width = NumWidth(cnt2f) + NumWidth(max) + SHORT(colon->width) + 2;
+
+    if (x + SHORT(title->width) + SHORT(num[0]->width) < numx - width)
+    {
+      int numx2 = numx;
+
+      numx = WI_drawNum(numx, y, max, -1);
+      SHADOW_REDRAW(numx2 = WI_drawNum(numx2, y, max, -1)) // HUD/menu shadows
+
+      numx -= SHORT(colon->width) + 1;
+      V_DrawPatchSH(numx, y, colon);
+      numx -= 1;
+
+      numx2 = numx;
+
+      numx = WI_drawNum(numx, y, cnt2, -1);
+      SHADOW_REDRAW(numx2 = WI_drawNum(numx2, y, cnt2, -1)) // HUD/menu shadows
+
+      return;
+    }
+  }
+
+  WI_drawPercent(numx, y, cnt);
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 // ====================================================================
 // WI_drawStats
 // Purpose: Put the solo stats on the screen
@@ -2224,14 +2351,10 @@ static void WI_drawStats(void)
 
   WI_drawLF();
 
-  V_DrawPatchSH(SP_STATSX, SP_STATSY, kills);
-  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
-
-  V_DrawPatchSH(SP_STATSX, SP_STATSY+lh, items);
-  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
-
-  V_DrawPatchSH(SP_STATSX, SP_STATSY+2*lh, sp_secret);
-  WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
+  // [Nugget] Ratio stats: factored out
+  DrawStat(SP_STATSX, SP_STATSY,          0);
+  DrawStat(SP_STATSX, SP_STATSY + lh,     1);
+  DrawStat(SP_STATSX, SP_STATSY + lh * 2, 2);
 
   const boolean draw_partime = (W_IsIWADLump(maplump) || deh_pars || um_pars) &&
                                (wbs->epsd < 3 || um_pars);
@@ -2342,41 +2465,45 @@ void WI_Ticker(void)
       break;
     }
 
-  { // [Nugget] Alt. intermission background
-    static boolean big_last = false;
-    boolean big;
+  // [Nugget] Alt. intermission background ---------------------------------
 
-    {
-      int level = (state == StatCount) ? wbs->last : wbs->next;
-      patch_t *patch = (0 <= level && level < num_lnames) ? lnames[level] : NULL;
+  static boolean big_last = false;
+  boolean big_title;
 
-      if (patch) {
-        big =    ((SCREENWIDTH  / 2) < SHORT(patch->width))
-              && ((SCREENHEIGHT / 2) < SHORT(patch->height));
-      }
-      else { big = false; }
-    }
+  const int levelnum = (state == StatCount) ? wbs->last : wbs->next;
 
-    // Don't use the alt. interpic if the last-level title is big,
-    // regardless of the next-level title's size
-    if (state == StatCount) { big_last = big; }
+  const patch_t *const titlepatch = (0 <= levelnum && levelnum < num_lnames)
+                                  ? lnames[levelnum] : NULL;
 
-    if (STRICTMODE(alt_interpic) && !big_last && !big)
-    {
-      alt_interpic_on = true;
-    }
-    else { alt_interpic_on = false; }
-
-    if (old_alt_interpic_on != alt_interpic_on)
-    {
-      old_alt_interpic_on = alt_interpic_on;
-
-      if (!alt_interpic_on)
-      { R_SetViewSize(screenblocks); }
-
-      R_ExecuteSetViewSize();
-    }
+  if (titlepatch)
+  {
+    big_title = ((SCREENWIDTH  / 2) < SHORT(titlepatch->width))
+              & ((SCREENHEIGHT / 2) < SHORT(titlepatch->height));
   }
+  else { big_title = false; }
+
+  // Don't use the alt. interpic if the last-level title is big,
+  // regardless of the next-level title's size
+  if (state == StatCount) { big_last = big_title; }
+
+  // Likewise, don't use it if the last level's background is from a PWAD
+  // and we only use the feature for IWAD backgrounds
+  const boolean iwad_background = (exitpic ? W_IsIWADLump(W_CheckNumForName(exitpic)) : true)
+                                & W_IsIWADLump(W_CheckNumForName(WI_getBackgroundName()));
+
+  alt_interpic_on = STRICTMODE(alt_interpic) && !big_last && !big_title
+                    && (iwad_background || alt_interpic == ALTINTERPIC_ALWAYS);
+
+  if (old_alt_interpic_on != alt_interpic_on)
+  {
+    old_alt_interpic_on = alt_interpic_on;
+
+    if (!alt_interpic_on)
+    { R_SetViewSize(screenblocks); }
+
+    R_ExecuteSetViewSize();
+  }
+
 }
 
 // ====================================================================

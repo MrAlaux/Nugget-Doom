@@ -349,11 +349,10 @@ void V_InitColorTranslation(void)
 
     for (int i = 0;  i < 256;  i++)
     {
-        double red   = *palsrc++ * 0.299;
-        double green = *palsrc++;
-        double blue  = *palsrc++ * 0.144;
-
-        double greatest = MAX(MAX(blue, red), green);
+        const double red   = *palsrc++,
+                     green = *palsrc++,
+                     blue  = *palsrc++,
+                     greatest = MAX(MAX(blue, red), green);
         
         nightvision[i] = I_GetNearestColor(playpal, 0.0, greatest, 0.0);
     }

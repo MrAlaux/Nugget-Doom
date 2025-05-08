@@ -106,6 +106,9 @@ extern fixed_t attackrange;
 
 // [Nugget] ==================================================================
 
+// CVARs
+extern boolean smart_autoaim;
+
 fixed_t P_PitchToSlope(const fixed_t pitch);
 fixed_t P_SlopeToPitch(const fixed_t slope);
 fixed_t P_GetLinetargetTopSlope(void);
@@ -120,6 +123,12 @@ void P_SetIsBFGTracer(const boolean value);
 void P_SetIsBoomShot(const boolean value); // Explosive hitscan cheat
 
 extern boolean riotmode;
+
+// Smart autoaim -------------------------------------------------------------
+
+void P_ClearProjectileInfo(void);
+void P_SetProjectileInfo(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, fixed_t height);
+void P_SetProjectileOffsets(fixed_t x, fixed_t y, fixed_t z);
 
 // Hitscan trails ------------------------------------------------------------
 

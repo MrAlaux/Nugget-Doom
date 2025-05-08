@@ -39,6 +39,8 @@ void AM_UpdateMinimap(
   const boolean under_messages
 );
 
+extern boolean tanz;
+
 // [Nugget] =================================================================/
 
 // Used by ST StatusBar stuff.

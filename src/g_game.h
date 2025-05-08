@@ -136,19 +136,24 @@ extern boolean secretexit;
 
 // [Nugget] ==================================================================
 
+extern boolean doom_weapon_toggles; // Global
+
 // CVARs ---------------------------------------------------------------------
 
-extern boolean one_key_saveload;
-extern boolean skip_ammoless_weapons;
-
-enum {
+typedef enum screenshotpalette_s {
   SHOTPAL_NONE,
   SHOTPAL_NORMAL,
   SHOTPAL_CLEAN,
   SHOTPAL_BOTH,
-}; extern int screenshot_palette;
+} screenshotpalette_t;
 
+extern boolean one_key_saveload;
+extern boolean improved_weapon_toggles;
+extern boolean skip_ammoless_weapons;
+extern screenshotpalette_t screenshot_palette;
 extern boolean comp_longautoaim;
+
+extern boolean nugget_devmode;
 
 // Periodic auto save --------------------------------------------------------
 
@@ -177,6 +182,11 @@ boolean G_GetSlowMotion(void);
 void G_SetSlowMotion(const boolean value);
 void G_ResetSlowMotion(void);
 int G_GetSlowMotionFactor(void);
+
+// Improved weapon toggles ---------------------------------------------------
+
+boolean G_ToggleFistChainsaw(const player_t *const player, boolean vanilla);
+boolean G_ToggleShotgunSSG(const player_t *const player, boolean vanilla);
 
 // Skill ---------------------------------------------------------------------
 

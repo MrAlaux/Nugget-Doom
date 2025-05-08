@@ -790,36 +790,79 @@ static boolean P_NuggetForceGibbing(
 
   if (extra_gibbing[EXGIB_BFG] && P_IsBFGTracer()
       && (P_AproxDistance(target->x - source->x, target->y - source->y)
-          < ((128*FRACUNIT) + target->info->radius)))
+          < (128*FRACUNIT + target->info->radius)))
   {
     return true;
   }
 
   if (source->player)
   {
-    if (extra_gibbing[EXGIB_FIST]
-        && source->player->psprites->state->action.p2 == (actionf_p2) A_Punch
-        && source->player->powers[pw_strength]
-        && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < ((64*FRACUNIT) + target->info->radius)))
+    const state_t *const state = source->player->psprites->state;
+
+    if (extra_gibbing[EXGIB_FIST])
     {
-      return true;
+      if (state->action.p2 == (actionf_p2) A_Punch
+          && source->player->powers[pw_strength]
+          && (P_AproxDistance(target->x - source->x, target->y - source->y)
+              < (64*FRACUNIT + target->info->radius)))
+      {
+        return true;
+      }
+
+      if (state->action.p2 == (actionf_p2) A_WeaponMeleeAttack)
+      {
+        const unsigned damagebase = state->args[0],
+                       damagemod  = state->args[1];
+
+        const fixed_t zerkfactor = source->player->powers[pw_strength]
+                                 ? state->args[2] : FRACUNIT;
+
+        const fixed_t range = state->args[4] ? state->args[4] : source->info->meleerange;
+
+        const int average_damage = ((int) (damagebase * ((damagemod + 1) / 2.0f))
+                                    * zerkfactor) >> FRACBITS;
+
+        if (average_damage >= 100 // Just below theoretical avg. damage of berserk fist
+            && (P_AproxDistance(target->x - source->x, target->y - source->y)
+                < (range + target->info->radius)))
+        {
+          return true;
+        }
+      }
     }
 
     if (extra_gibbing[EXGIB_CSAW]
-        && source->player->psprites->state->action.p2 == (actionf_p2) A_Saw
+        && state->action.p2 == (actionf_p2) A_Saw
         && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < ((65*FRACUNIT) + target->info->radius)))
+            < (65*FRACUNIT + target->info->radius)))
     {
       return true;
     }
 
-    if (extra_gibbing[EXGIB_SSG]
-        && source->player->psprites->state->action.p2 == (actionf_p2) A_FireShotgun2
-        && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < ((128*FRACUNIT) + target->info->radius)))
+    if (extra_gibbing[EXGIB_SSG])
     {
-      return true;
+      if (state->action.p2 == (actionf_p2) A_FireShotgun2
+          && (P_AproxDistance(target->x - source->x, target->y - source->y)
+              < (128*FRACUNIT + target->info->radius)))
+      {
+        return true;
+      }
+
+      if (state->action.p2 == (actionf_p2) A_WeaponBulletAttack)
+      {
+        const unsigned numbullets = state->args[2],
+                       damagebase = state->args[3],
+                       damagemod  = state->args[4];
+
+        const int average_damage = damagebase * ((damagemod + 1) / 2.0f) * numbullets;
+
+        if (average_damage >= 200 // Theoretical avg. damage of SSG
+            && (P_AproxDistance(target->x - source->x, target->y - source->y)
+                < (128*FRACUNIT + target->info->radius)))
+        {
+          return true;
+        }
+      }
     }
   }
 
@@ -829,17 +872,18 @@ static boolean P_NuggetForceGibbing(
 // Bloodier Gibbing ----------------------------------------------------------
 
 boolean bloodier_gibbing;
+int bloodier_gibbing_splats;
 
 void P_NuggetGib(mobj_t *mo, const boolean crushed)
 {
-  int quantity;
   extern boolean idgaf;
 
   if (!casual_play || !bloodier_gibbing) { return; }
-  
-  quantity = crushed ? (4 + (Woof_Random() % 5)) : (20 + (Woof_Random() % 21));
 
-  for (int i = 0; i < quantity; i++)
+  const int num_splats = bloodier_gibbing_splats / (crushed ? 10 : 2);
+  const int quantity = num_splats + (Woof_Random() % (num_splats + 1));
+
+  for (int i = 0;  i < quantity;  i++)
   {
     const fixed_t height = !crushed ? (mo->height * 3/2) : 0;
 
@@ -862,17 +906,24 @@ void P_NuggetGib(mobj_t *mo, const boolean crushed)
       splat->bloodcolor = V_BloodColor(mo->info->bloodcolor);
     }
 
-    splat->momx = (Woof_Random() - Woof_Random()) << (12 - crushed);
-    splat->momy = (Woof_Random() - Woof_Random()) << (12 - crushed);
+    #define MOM_SCALE (FRACUNIT / 16)
+
+    const fixed_t momentum = Woof_Random() * (MOM_SCALE / (crushed ? 2 : 1));
+    const int fineangle = (FINEANGLES - 1) * Woof2_Random() / 255;
+
+    splat->momx = FixedMul(momentum, finecosine[fineangle]);
+    splat->momy = FixedMul(momentum,   finesine[fineangle]);
 
     if (crushed) { splat->height = FRACUNIT; }
-    else         { splat->momz = Woof_Random() << 12; }
+    else         { splat->momz = Woof_Random() * MOM_SCALE; }
+
+    #undef MOM_SCALE
 
     // Physics differ between versions (complevels),
     // so this is done to get rather-decent behavior in vanilla
     if (demo_version < DV_BOOM200) { splat->flags |= MF_NOCLIP; }
 
-    splat->tics += (Woof_Random() & 3) - (Woof_Random() & 3);
+    splat->tics += (Woof2_Random() % 7) - 3;
     splat->tics = MAX(1, splat->tics);
   }
 }
@@ -1050,9 +1101,14 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
   if (casual_play && tossdrop)
   {
     mo->z += target->height * 5/4;
-    mo->momx = (Woof_Random() - Woof_Random()) << 7;
-    mo->momy = (Woof_Random() - Woof_Random()) << 7;
-    mo->momz = (4*FRACUNIT) + ((Woof_Random() % 9) * FRACUNIT/8);
+
+    const fixed_t momentum = Woof_Random() * FRACUNIT/512;
+    const int fineangle = (FINEANGLES - 1) * Woof2_Random() / 255;
+
+    mo->momx = FixedMul(momentum, finecosine[fineangle]);
+    mo->momy = FixedMul(momentum,   finesine[fineangle]);
+
+    mo->momz = 4*FRACUNIT + (Woof_Random() * FRACUNIT/256);
   }
 }
 
@@ -1193,10 +1249,13 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
         const int dmg = MAX(0, damage) / 2;
         int pitch;
 
-        if (inflictor) { // Hitscan, melee, projectile, explosion
-          pitch = -(dmg+1) * finecosine[(R_PointToAngle2(inflictor->x, inflictor->y,
-                                                            target->x,    target->y)
-                                         - player->mo->angle) >> ANGLETOFINESHIFT] / FRACUNIT;
+        if (inflictor) // Hitscan, melee, projectile, explosion
+        {
+          pitch = -(dmg+1)
+                * finecosine[
+                    (R_PointToAngle2(inflictor->x, inflictor->y, target->x, target->y)
+                     - player->mo->angle) >> ANGLETOFINESHIFT
+                  ] / FRACUNIT;
         }
         else { pitch = dmg * ((Woof_Random() % 2) ? -1 : 1); }
 

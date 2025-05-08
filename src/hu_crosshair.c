@@ -186,13 +186,21 @@ void HU_UpdateCrosshair(void)
                          && !(plr->readyweapon == wp_fist && plr->cheats & CF_SAITAMA)) // [Nugget]
                         ? MELEERANGE : 16 * 64 * FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1); // [Nugget]
         boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
-        int side = 0; // [Nugget]
+
+        // [Nugget]
+        const boolean is_projectile_weapon = ammo == am_misl || ammo == am_cell;
+        int side = 0;
 
         crosshair_target = linetarget = NULL;
 
+        // [Nugget] The crosshair target doesn't necessarily correspond
+        // to the target given by smart autoaim
+        if (CASUALPLAY(smart_autoaim) && is_projectile_weapon)
+        { return; }
+
         overflow[emu_intercepts].enabled = false;
         P_AimLineAttack(plr->mo, an, range, CROSSHAIR_AIM);
-        if (!vertical_aiming && (ammo == am_misl || ammo == am_cell)
+        if (!vertical_aiming && is_projectile_weapon
             && (!no_hor_autoaim || !casual_play)) // [Nugget]
         {
             if (!linetarget)

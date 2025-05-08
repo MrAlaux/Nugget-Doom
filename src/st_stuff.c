@@ -20,6 +20,7 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "am_map.h"
@@ -251,9 +252,6 @@ static int armor_green;   // armor amount above is blue, below is green
 static boolean hud_armor_type; // color of armor depends on type
 
 static boolean weapon_carousel;
-
-// used for evil grin
-static boolean  oldweaponsowned[NUMWEAPONS];
 
 static sbardef_t *sbardef;
 
@@ -747,10 +745,13 @@ static void UpdateFace(sbe_face_t *face, player_t *player)
 
             for (int i = 0; i < NUMWEAPONS; ++i)
             {
-                if (oldweaponsowned[i] != player->weaponowned[i])
+                if (face->oldweaponsowned[i] != player->weaponowned[i])
                 {
-                    doevilgrin = true;
-                    oldweaponsowned[i] = player->weaponowned[i];
+                    if (face->oldweaponsowned[i] < player->weaponowned[i])
+                    {
+                        doevilgrin = true;
+                    }
+                    face->oldweaponsowned[i] = player->weaponowned[i];
                 }
             }
 
@@ -1323,7 +1324,7 @@ static void UpdateStatusBar(player_t *player)
     oldbarindex = barindex;
 }
 
-static void ResetElem(sbarelem_t *elem)
+static void ResetElem(sbarelem_t *elem, player_t *player)
 {
     switch (elem->type)
     {
@@ -1340,6 +1341,10 @@ static void ResetElem(sbarelem_t *elem)
                 face->faceindex = 0;
                 face->facecount = 0;
                 face->oldhealth = -1;
+                for (int i = 0; i < NUMWEAPONS; i++)
+                {
+                    face->oldweaponsowned[i] = player->weaponowned[i];
+                }
             }
             break;
 
@@ -1372,19 +1377,21 @@ static void ResetElem(sbarelem_t *elem)
     sbarelem_t *child;
     array_foreach(child, elem->children)
     {
-        ResetElem(child);
+        ResetElem(child, player);
     }
 }
 
 static void ResetStatusBar(void)
 {
+    player_t *player = &players[displayplayer];
+
     statusbar_t *local_statusbar;
     array_foreach(local_statusbar, sbardef->statusbars)
     {
         sbarelem_t *child;
         array_foreach(child, local_statusbar->children)
         {
-            ResetElem(child);
+            ResetElem(child, player);
         }
     }
 
@@ -3661,7 +3668,7 @@ end_amnum:
   {
     sbarelem_t elem = CreateNughudWidget(nughud.sts, sbw_monsec, &dig);
 
-    elem.subtype.widget->vertical_layout = MAX(0, nughud.sts_ml);
+    elem.subtype.widget->vertical = nughud.sts_ml;
 
     array_push(sb.children, elem);
   }
@@ -3671,7 +3678,7 @@ end_amnum:
   {
     sbarelem_t elem = CreateNughudWidget(nughud.coord, sbw_coord, &dig);
 
-    elem.subtype.widget->vertical_layout = MAX(0, nughud.coord_ml);
+    elem.subtype.widget->vertical = nughud.coord_ml;
 
     array_push(sb.children, elem);
   }
@@ -3774,7 +3781,8 @@ void ST_BindSTSVariables(void)
 {
   // [Nugget] NUGHUD
   M_BindBool("use_nughud", &use_nughud, NULL,
-             true, ss_stat, wad_no, "Replace second-to-last HUD with NUGHUD");
+             true, ss_stat, wad_yes,
+             "Replace second-to-last HUD with NUGHUD");
 
   M_BindNum("st_layout", &st_layout, NULL,  st_wide, st_original, st_wide,
              ss_stat, wad_no, "HUD layout");
@@ -3793,10 +3801,12 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
-  M_BindBool("sts_show_berserk", &sts_show_berserk, NULL, true, ss_stat, wad_yes,
-             "Show Berserk pack on the status bar when using the Fist, if available");
+  M_BindBool("sts_show_berserk", &sts_show_berserk, NULL,
+             true, ss_stat, wad_yes,
+             "Show Berserk on the status bar when using the Fist, if available");
 
-  M_BindBool("hud_blink_keys", &hud_blink_keys, NULL, false, ss_stat, wad_yes,
+  M_BindBool("hud_blink_keys", &hud_blink_keys, NULL,
+             false, ss_stat, wad_yes,
              "Make missing keys blink when trying to trigger linedef actions");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -3820,7 +3830,8 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] Crosshair toggle
   M_BindBool("hud_crosshair_on", &hud_crosshair_on, NULL,
-             false, ss_stat, wad_no, "Crosshair");
+             false, ss_stat, wad_no,
+             "Crosshair");
 
   // [Nugget] Crosshair type
   M_BindNum("hud_crosshair", &hud_crosshair, NULL, 1, 1, 10 - 1, ss_stat, wad_no,
@@ -3839,15 +3850,18 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] Vertical-only option
   M_BindNum("hud_crosshair_lockon", &hud_crosshair_lockon, NULL,
-            0, 0, 2, ss_stat, wad_no, "Lock crosshair on target (1 = Vertically only; 2 = Fully)");
+            0, 0, 2, ss_stat, wad_no,
+            "Lock crosshair on target (1 = Vertically only; 2 = Fully)");
 
   // [Nugget] Horizontal autoaim indicators
   M_BindBool("hud_crosshair_indicators", &hud_crosshair_indicators, NULL,
-             false, ss_stat, wad_no, "Horizontal-autoaim indicators for crosshair");
+             false, ss_stat, wad_no,
+             "Horizontal-autoaim indicators for crosshair");
 
   // [Nugget]
   M_BindBool("hud_crosshair_fuzzy", &hud_crosshair_fuzzy, NULL,
-             false, ss_stat, wad_no, "Account for fuzzy targets when coloring and/or locking-on");
+             false, ss_stat, wad_no,
+             "Account for fuzzy targets when coloring and/or locking-on");
 
   M_BindNum("hud_crosshair_color", &hud_crosshair_color, NULL,
             CR_GRAY, CR_BRICK, CR_NONE, ss_stat, wad_no,
@@ -3861,7 +3875,8 @@ void ST_BindSTSVariables(void)
 
   // [Nugget]
   M_BindNum("force_carousel", &force_carousel, NULL,
-            1, 0, 2, ss_weap, wad_no, "Force display of weapon carousel (1 = Off player; 2 = Always)");
+            1, 0, 2, ss_weap, wad_no,
+            "Force display of weapon carousel (0 = Off; 1 = Off player; 2 = Always)");
 }
 
 //----------------------------------------------------------------------------

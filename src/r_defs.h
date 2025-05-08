@@ -391,6 +391,8 @@ typedef struct vissprite_s
   // [Nugget] ----------------------------------------------------------------
 
   byte *tranmap;
+  boolean fullbright;
+  boolean flipped;
 
   // True color
   short lightindex;

@@ -165,6 +165,25 @@ enum
     input_saitama,
     input_boomcan,
 
+    // Fancy cast
+    input_fc_start,
+    input_fc_toggle = input_fc_start,
+    input_fc_help,
+    input_fc_spawn,
+    input_fc_see,
+    input_fc_melee,
+    input_fc_missile,
+    input_fc_pain,
+    input_fc_death,
+    input_fc_xdeath,
+    input_fc_raise,
+    input_fc_pause,
+    input_fc_background,
+    input_fc_name,
+    input_fc_moveup,
+    input_fc_movedown,
+    input_fc_end,
+
     // [Nugget] -------------------------------------------------------------/
 
     NUM_INPUT_ID

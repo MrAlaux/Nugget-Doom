@@ -24,8 +24,14 @@
 
 struct event_s;
 
-// [Nugget]
+// [Nugget] /-----------------------------------------------------------------
+
+// CVARs
 extern boolean quick_quitgame;
+
+void MN_UpdateImprovedWeaponTogglesItem(void);
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // MENUS

@@ -583,9 +583,9 @@ void P_LoadLineDefs (int lump)
 
       // [Nugget]:
       // [crispy] calculate sound origin of line to be its midpoint
-	  ld->soundorg.x = ld->bbox[BOXLEFT] / 2 + ld->bbox[BOXRIGHT] / 2;
-	  ld->soundorg.y = ld->bbox[BOXTOP] / 2 + ld->bbox[BOXBOTTOM] / 2;
-	  ld->soundorg.thinker.function.v = (actionf_v)P_DegenMobjThinker;
+      ld->soundorg.x = ld->bbox[BOXLEFT] / 2 + ld->bbox[BOXRIGHT] / 2;
+      ld->soundorg.y = ld->bbox[BOXTOP] / 2 + ld->bbox[BOXBOTTOM] / 2;
+      ld->soundorg.thinker.function.v = (actionf_v)P_DegenMobjThinker;
 
       ld->sidenum[0] = SHORT(mld->sidenum[0]);
       ld->sidenum[1] = SHORT(mld->sidenum[1]);
@@ -1525,17 +1525,37 @@ void P_SegLengths(boolean contrast_only)
             }
         }
 
+        // [Nugget] Fake contrast
+        const fakecontrast_t fakecontrast = BETWEEN(strictmode, FAKECONTRAST_VANILLA, fake_contrast);
+
         // [crispy] smoother fake contrast
-        if (!dy)
-            li->fakecontrast = -LIGHTBRIGHT;
-        else if (abs(finesine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
-            li->fakecontrast = -(LIGHTBRIGHT >> 1);
-        else if (!dx)
-            li->fakecontrast = LIGHTBRIGHT;
-        else if (abs(finecosine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
-            li->fakecontrast = LIGHTBRIGHT >> 1;
-        else
-            li->fakecontrast = 0;
+        if (fakecontrast == FAKECONTRAST_SMOOTH) // [Nugget]
+        {
+            if (!dy)
+                li->fakecontrast = -LIGHTBRIGHT;
+            else if (abs(finesine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
+                li->fakecontrast = -(LIGHTBRIGHT >> 1);
+            else if (!dx)
+                li->fakecontrast = LIGHTBRIGHT;
+            else if (abs(finecosine[li->r_angle >> ANGLETOFINESHIFT]) < rightangle)
+                li->fakecontrast = LIGHTBRIGHT >> 1;
+            else
+                li->fakecontrast = 0;
+        }
+        // [Nugget]
+        else if (fakecontrast == FAKECONTRAST_VANILLA)
+        {
+            if (li->v1->y == li->v2->y)
+            {
+                li->fakecontrast = -LIGHTBRIGHT;
+            }
+            else if (li->v1->x == li->v2->x)
+            {
+                li->fakecontrast = LIGHTBRIGHT;
+            }
+            else { li->fakecontrast = 0; }
+        }
+        else { li->fakecontrast = 0; }
     }
 }
 
@@ -1763,6 +1783,47 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
 
   // set up world state
   P_SpawnSpecials();
+
+  // [Nugget] Thanks Mikolah!
+  if (allow_flakes)
+  {
+    P_ClearFlakers();
+
+    for (int i = 0;  i < numsectors;  i++)
+    {
+      const sector_t *const sector = &sectors[i];
+
+      if (sector->ceilingpic != skyflatnum || sector->floorheight >= sector->ceilingheight)
+      { continue; }
+
+      fixed_t bbox[4];
+      M_ClearBox(bbox);
+
+      for (int j = 0;  j < sector->linecount;  j++)
+      {
+        const line_t *const line = sector->lines[j];
+
+        M_AddToBox(bbox, line->v1->x, line->v1->y);
+        M_AddToBox(bbox, line->v2->x, line->v2->y);
+      }
+
+      const fixed_t x1 = (bbox[BOXLEFT]   + FLAKER_DIST_MASK) & ~FLAKER_DIST_MASK,
+                    x2 =  bbox[BOXRIGHT]                      & ~FLAKER_DIST_MASK,
+                    y1 = (bbox[BOXBOTTOM] + FLAKER_DIST_MASK) & ~FLAKER_DIST_MASK,
+                    y2 =  bbox[BOXTOP]                        & ~FLAKER_DIST_MASK;
+
+      for (fixed_t x = x1;  x <= x2;  x += FLAKER_DIST)
+      {
+        for (fixed_t y = y1;  y <= y2;  y += FLAKER_DIST)
+        {
+          if (R_PointInSubsector(x, y)->sector != sector) { continue; }
+
+          P_AddFlaker(x, y, sector->ceilingheight, sector);
+        }
+      }
+    }
+  }
+
   P_MapEnd();
 
   // preload graphics

@@ -1,11 +1,13 @@
 ## New Features
 
-None.
+- **_Extra Gibbing_ for MBF21 hitscan-weapon functions**
+- *`CASTCALL`* developer cheat
 
 ## Changes
 
-None.
+- **Tweaked _Night-Vision Visor Effect_ to improve visibility**
+- **Improved randomization for _Bloodier Gibbing_ and _Toss Items Upon Death_**
 
 ## Bug Fixes
 
-- **Weapon voxel models being incorrectly affected by view pitch**
+- **Sprite flipping not being disabled when disabling fancy character cast**

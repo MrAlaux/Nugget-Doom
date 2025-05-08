@@ -33,65 +33,65 @@ nughud_t nughud; // Behold!!!
 
 
 #define WIDGET(_cvar_, _struct_, _x_, _y_, _wide_)                                         \
- { _cvar_ "_x",    (config_t *) &(_struct_).x,    NULL, { _x_    }, { -1, 320 }, number }, \
- { _cvar_ "_y",    (config_t *) &(_struct_).y,    NULL, { _y_    }, {  0, 200 }, number }, \
- { _cvar_ "_wide", (config_t *) &(_struct_).wide, NULL, { _wide_ }, { -2, 2   }, number }
+ { _cvar_ "_x",    { .i = &(_struct_).x    }, {0}, { .number = _x_    }, { -1, 320 }, number }, \
+ { _cvar_ "_y",    { .i = &(_struct_).y    }, {0}, { .number = _y_    }, {  0, 200 }, number }, \
+ { _cvar_ "_wide", { .i = &(_struct_).wide }, {0}, { .number = _wide_ }, { -2, 2   }, number }
 
 
 #define WIDGET2(_cvar_, _struct_, _x_, _y_, _wide_, _align_)                               \
  WIDGET(_cvar_, _struct_, _x_, _y_, _wide_),                                               \
- { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1 }, number }
+ { _cvar_ "_align", { .i = &(_struct_).align }, {0}, { .number = _align_ }, { -1, 1 }, number }
 
 
 #define WIDGET3(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _vlign_)                      \
  WIDGET2(_cvar_, _struct_, _x_, _y_, _wide_, _align_),                                     \
- { _cvar_ "_vlign", (config_t *) &(_struct_).vlign, NULL, { _vlign_ }, { -1, 1 }, number }
+ { _cvar_ "_vlign", { .i = &(_struct_).vlign }, {0}, { .number = _vlign_ }, { -1, 1 }, number }
 
 
 #define BAR(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _vlign_)                            \
  WIDGET3(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _vlign_),                              \
- { _cvar_ "_xstep", (config_t *) &(_struct_).xstep, NULL, {   0 }, {  0,  64    }, number }, \
- { _cvar_ "_ystep", (config_t *) &(_struct_).ystep, NULL, {   0 }, {  0,  64    }, number }, \
- { _cvar_ "_ups",   (config_t *) &(_struct_).ups,   NULL, { 100 }, { 10, 10000 }, number }
+ { _cvar_ "_xstep", { .i = &(_struct_).xstep }, {0}, { .number =   0 }, {  0,  64    }, number }, \
+ { _cvar_ "_ystep", { .i = &(_struct_).ystep }, {0}, { .number =   0 }, {  0,  64    }, number }, \
+ { _cvar_ "_ups",   { .i = &(_struct_).ups   }, {0}, { .number = 100 }, { 10, 10000 }, number }
 
 
 #define STK (NUMNUGHUDSTACKS)
 
 #define TEXTLINE(_cvar_, _struct_, _x_, _y_, _wide_, _align_, _stack_, _order_)               \
- { _cvar_ "_x",     (config_t *) &(_struct_).x,     NULL, { _x_     }, { -1, 320 }, number }, \
- { _cvar_ "_y",     (config_t *) &(_struct_).y,     NULL, { _y_     }, { -1, 200 }, number }, \
- { _cvar_ "_wide",  (config_t *) &(_struct_).wide,  NULL, { _wide_  }, { -2, 2   }, number }, \
- { _cvar_ "_align", (config_t *) &(_struct_).align, NULL, { _align_ }, { -1, 1   }, number }, \
- { _cvar_ "_stack", (config_t *) &(_struct_).stack, NULL, { _stack_ }, {  1, STK }, number }, \
- { _cvar_ "_order", (config_t *) &(_struct_).order, NULL, { _order_ }, {  0, 64  }, number }
+ { _cvar_ "_x",     { .i = &(_struct_).x     }, {0}, { .number = _x_     }, { -1, 320 }, number }, \
+ { _cvar_ "_y",     { .i = &(_struct_).y     }, {0}, { .number = _y_     }, { -1, 200 }, number }, \
+ { _cvar_ "_wide",  { .i = &(_struct_).wide  }, {0}, { .number = _wide_  }, { -2, 2   }, number }, \
+ { _cvar_ "_align", { .i = &(_struct_).align }, {0}, { .number = _align_ }, { -1, 1   }, number }, \
+ { _cvar_ "_stack", { .i = &(_struct_).stack }, {0}, { .number = _stack_ }, {  1, STK }, number }, \
+ { _cvar_ "_order", { .i = &(_struct_).order }, {0}, { .number = _order_ }, {  0, 64  }, number }
 
 
 #define STACK(_i_, _x_, _y_, _wide_, _align_, _vlign_)                                                                 \
- { "nughud_stack" #_i_ "_x",     (config_t *) &nughud.stacks[_i_ - 1].x,     NULL, { _x_     }, {  0, 320 }, number }, \
- { "nughud_stack" #_i_ "_y",     (config_t *) &nughud.stacks[_i_ - 1].y,     NULL, { _y_     }, {  0, 200 }, number }, \
- { "nughud_stack" #_i_ "_wide",  (config_t *) &nughud.stacks[_i_ - 1].wide,  NULL, { _wide_  }, { -2, 2   }, number }, \
- { "nughud_stack" #_i_ "_align", (config_t *) &nughud.stacks[_i_ - 1].align, NULL, { _align_ }, { -1, 1   }, number }, \
- { "nughud_stack" #_i_ "_vlign", (config_t *) &nughud.stacks[_i_ - 1].vlign, NULL, { _vlign_ }, { -1, 1   }, number }
+ { "nughud_stack" #_i_ "_x",     { .i = &nughud.stacks[_i_ - 1].x     }, {0}, { .number = _x_     }, {  0, 320 }, number }, \
+ { "nughud_stack" #_i_ "_y",     { .i = &nughud.stacks[_i_ - 1].y     }, {0}, { .number = _y_     }, {  0, 200 }, number }, \
+ { "nughud_stack" #_i_ "_wide",  { .i = &nughud.stacks[_i_ - 1].wide  }, {0}, { .number = _wide_  }, { -2, 2   }, number }, \
+ { "nughud_stack" #_i_ "_align", { .i = &nughud.stacks[_i_ - 1].align }, {0}, { .number = _align_ }, { -1, 1   }, number }, \
+ { "nughud_stack" #_i_ "_vlign", { .i = &nughud.stacks[_i_ - 1].vlign }, {0}, { .number = _vlign_ }, { -1, 1   }, number }
 
 
 #define PATCH(_cvar_, _i_)                                                                               \
- { _cvar_ "_x",     (config_t *) &nughud.patches[_i_].x,     NULL, {  0        }, {  0, 320 }, number }, \
- { _cvar_ "_y",     (config_t *) &nughud.patches[_i_].y,     NULL, {  0        }, {  0, 200 }, number }, \
- { _cvar_ "_wide",  (config_t *) &nughud.patches[_i_].wide,  NULL, {  0        }, { -2, 2   }, number }, \
- { _cvar_ "_align", (config_t *) &nughud.patches[_i_].align, NULL, { -1        }, { -1, 1   }, number }, \
- { _cvar_ "_vlign", (config_t *) &nughud.patches[_i_].vlign, NULL, {  1        }, { -1, 1   }, number }, \
- { _cvar_ "_name",  (config_t *) &nughud.patchnames[_i_],    NULL, { .s = NULL }, {  0      }, string }
+ { _cvar_ "_x",     { .i = &nughud.patches[_i_].x     }, {0}, { .number =  0   }, {  0, 320 }, number }, \
+ { _cvar_ "_y",     { .i = &nughud.patches[_i_].y     }, {0}, { .number =  0   }, {  0, 200 }, number }, \
+ { _cvar_ "_wide",  { .i = &nughud.patches[_i_].wide  }, {0}, { .number =  0   }, { -2, 2   }, number }, \
+ { _cvar_ "_align", { .i = &nughud.patches[_i_].align }, {0}, { .number = -1   }, { -1, 1   }, number }, \
+ { _cvar_ "_vlign", { .i = &nughud.patches[_i_].vlign }, {0}, { .number =  1   }, { -1, 1   }, number }, \
+ { _cvar_ "_name",  { .s = &nughud.patchnames[_i_]    }, {0}, { .string = NULL }, {  0      }, string }
 
 
 #define SBCHUNK(_cvar_, _i_)                                                                \
  WIDGET(_cvar_, nughud.sbchunks[_i_], -1, 0, 0),                                            \
- { _cvar_ "_sx", (config_t *) &nughud.sbchunks[_i_].sx, NULL, { 0 },  { 0, 319 }, number }, \
- { _cvar_ "_sy", (config_t *) &nughud.sbchunks[_i_].sy, NULL, { 0 },  { 0, 31  }, number }, \
- { _cvar_ "_sw", (config_t *) &nughud.sbchunks[_i_].sw, NULL, { 1 },  { 1, 320 }, number }, \
- { _cvar_ "_sh", (config_t *) &nughud.sbchunks[_i_].sh, NULL, { 32 }, { 1, 32  }, number }
+ { _cvar_ "_sx", { .i = &nughud.sbchunks[_i_].sx }, {0}, { .number = 0 },  { 0, 319 }, number }, \
+ { _cvar_ "_sy", { .i = &nughud.sbchunks[_i_].sy }, {0}, { .number = 0 },  { 0, 31  }, number }, \
+ { _cvar_ "_sw", { .i = &nughud.sbchunks[_i_].sw }, {0}, { .number = 1 },  { 1, 320 }, number }, \
+ { _cvar_ "_sh", { .i = &nughud.sbchunks[_i_].sh }, {0}, { .number = 32 }, { 1, 32  }, number }
 
 
-#define TOGGLE(_cvar_, _struct_, _value_) { _cvar_, (config_t *) &(_struct_), NULL, { _value_ }, { 0, 1 }, number }
+#define TOGGLE(_cvar_, _struct_, _value_) { _cvar_, { .i = &(_struct_) }, {0}, { .number = _value_ }, { 0, 1 }, number }
 
 
 //
@@ -143,15 +143,15 @@ default_t nughud_defaults[] = {
 
   TEXTLINE( "nughud_time", nughud.time, -1, -1, -1, -1, 3, 2 ),
 
-  TEXTLINE( "nughud_sts", nughud.sts, -1, -1, -1, -1, 3, 1 ),
-  { "nughud_sts_ml", (config_t *) &nughud.sts_ml, NULL, { -1 }, { -1, 1 }, number },
+  TEXTLINE( "nughud_sts",    nughud.sts,    -1, -1, -1, -1, 3, 1 ),
+  TOGGLE(   "nughud_sts_ml", nughud.sts_ml,  0                   ),
 
   TEXTLINE( "nughud_title", nughud.title, -1, -1, -1, -1, 3, 0 ),
 
   TEXTLINE( "nughud_powers", nughud.powers, -1, -1, -1, -1, 2, 0 ),
 
   TEXTLINE( "nughud_coord",    nughud.coord,    -1, -1, -1, -1, 2, 1 ),
-  { "nughud_coord_ml", (config_t *) &nughud.coord_ml, NULL, { -1 }, { -1, 1 }, number },
+  TOGGLE(   "nughud_coord_ml", nughud.coord_ml,  0                   ),
 
   TEXTLINE( "nughud_fps", nughud.fps, -1, -1, -1, -1, 2, 2 ),
 
@@ -161,11 +161,11 @@ default_t nughud_defaults[] = {
 
   TEXTLINE( "nughud_speed", nughud.speed, 160, 160, 0, 0, 1, 0 ),
 
-  { "nughud_message_x",     (config_t *) &nughud.message.x,     NULL, { -1 }, { -1, 320 }, number },
-  { "nughud_message_y",     (config_t *) &nughud.message.y,     NULL, { -1 }, { -1, 200 }, number },
-  { "nughud_message_wide",  (config_t *) &nughud.message.wide,  NULL, { -1 }, { -2, 2   }, number },
-  { "nughud_message_align", (config_t *) &nughud.message.align, NULL, { -1 }, { -1, 1   }, number },
-  { "nughud_message_stack", (config_t *) &nughud.message.stack, NULL, {  1 }, {  1, STK }, number },
+  { "nughud_message_x",     { .i = &nughud.message.x     }, {0}, { .number = -1 }, { -1, 320 }, number },
+  { "nughud_message_y",     { .i = &nughud.message.y     }, {0}, { .number = -1 }, { -1, 200 }, number },
+  { "nughud_message_wide",  { .i = &nughud.message.wide  }, {0}, { .number = -1 }, { -2, 2   }, number },
+  { "nughud_message_align", { .i = &nughud.message.align }, {0}, { .number = -1 }, { -1, 1   }, number },
+  { "nughud_message_stack", { .i = &nughud.message.stack }, {0}, { .number =  1 }, {  1, STK }, number },
   TOGGLE( "nughud_message_defx", nughud.message_defx, 1 ),
 
   TEXTLINE( "nughud_secret", nughud.secret, 160, (SCREENHEIGHT - ST_HEIGHT) / 4, 0, 0, 1, 0 ),
@@ -198,15 +198,15 @@ default_t nughud_defaults[] = {
   SBCHUNK( "nughud_sbchunk8", 7 ),
 
   WIDGET( "nughud_minimap", nughud.minimap, 8, 0, -2),
-  { "nughud_minimap_w",       (config_t *) &nughud.minimap.w,       NULL, { 80 }, { 32, 96  }, number },
-  { "nughud_minimap_h",       (config_t *) &nughud.minimap.h,       NULL, { 80 }, { 32, 96  }, number },
-  { "nughud_minimap_undmess", (config_t *) &nughud.minimap.undmess, NULL, {  1 }, {  0, 1   }, number },
+  { "nughud_minimap_w",       { .i = &nughud.minimap.w       }, {0}, { .number = 80 }, { 32, 96  }, number },
+  { "nughud_minimap_h",       { .i = &nughud.minimap.h       }, {0}, { .number = 80 }, { 32, 96  }, number },
+  { "nughud_minimap_undmess", { .i = &nughud.minimap.undmess }, {0}, { .number =  1 }, {  0, 1   }, number },
 
   TOGGLE( "nughud_percents",      nughud.percents,      1 ),
   TOGGLE( "nughud_patch_offsets", nughud.patch_offsets, 1 ),
 
-  { "nughud_weapheight", (config_t *) &nughud.weapheight, NULL, { 0 }, { -32, 32 }, number },
-  { "nughud_viewoffset", (config_t *) &nughud.viewoffset, NULL, { 0 }, { -32, 32 }, number },
+  { "nughud_weapheight", { .i = &nughud.weapheight }, {0}, { .number = 0 }, { -32, 32 }, number },
+  { "nughud_viewoffset", { .i = &nughud.viewoffset }, {0}, { .number = 0 }, { -32, 32 }, number },
 
   { NULL }         // last entry
 };
@@ -280,16 +280,16 @@ static boolean M_NughudParseOption(const char *p, boolean wad)
     if (wad && !dp->modified) // Modified by wad
     {
       dp->modified = 1;                     // Mark it as modified
-      dp->orig_default.s = dp->location->s; // Save original default
+      dp->orig_default.string = *dp->location.s; // Save original default
     }
-    else { free(dp->location->s); } // Free old value
+    else { free(*dp->location.s); } // Free old value
 
-    dp->location->s = strdup(strparm+1); // Change default value
+    *dp->location.s = strdup(strparm+1); // Change default value
 
-    if (dp->current) // Current value
+    if (dp->current.s) // Current value
     {
-      free(dp->current->s);               // Free old value
-      dp->current->s = strdup(strparm+1); // Change current value
+      free(*dp->current.s);               // Free old value
+      *dp->current.s = strdup(strparm+1); // Change current value
     }
   }
   else if (dp->type == number)
@@ -305,13 +305,14 @@ static boolean M_NughudParseOption(const char *p, boolean wad)
         if (!dp->modified) // First time it's modified by wad
         {
           dp->modified = 1;                     // Mark it as modified
-          dp->orig_default.i = dp->location->i; // Save original default
+          // Save original default
+          dp->orig_default.number = *dp->location.i;
         }
 
-        if (dp->current) { dp->current->i = parm; } // Change current value
+        if (dp->current.i) { *dp->current.i = parm; } // Change current value
       }
 
-      dp->location->i = parm;          // Change default
+      *dp->location.i = parm;          // Change default
     }
   }
 
@@ -360,11 +361,11 @@ void M_NughudLoadDefaults (void)
   {
     if (dp->type == string && dp->defaultvalue.s)
     {
-      dp->location->s = strdup(dp->defaultvalue.s);
+      *dp->location.s = strdup(dp->defaultvalue.string);
     }
     else if (dp->type == number)
     {
-      dp->location->i = dp->defaultvalue.i;
+      *dp->location.i = dp->defaultvalue.number;
     }
   }
 }

@@ -40,6 +40,8 @@ void F_Drawer (void);
 
 void F_StartFinale (void);
 
+void F_StartCast(void); // [Nugget] Global
+
 #endif
 
 //----------------------------------------------------------------------------

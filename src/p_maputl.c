@@ -22,6 +22,7 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h> // [Nugget]
 
 #include "doomdata.h"
 #include "doomstat.h"
@@ -548,10 +549,38 @@ boolean P_BlockThingsIterator(int x, int y, boolean func(mobj_t*),
 // 1/11/98 killough: Intercept limit removed
 static intercept_t *intercepts, *intercept_p;
 
+static size_t num_intercepts; // [Nugget] Extracted from function below
+
+// [Nugget] /-----------------------------------------------------------------
+
+static intercept_t *saved_intercepts;
+static size_t num_saved_intercepts, saved_intercepts_index;
+
+void P_SaveIntercepts(void)
+{
+  if (num_saved_intercepts < num_intercepts)
+  {
+    num_saved_intercepts = num_intercepts;
+    saved_intercepts = Z_Realloc(saved_intercepts,
+                                 sizeof(*saved_intercepts) * num_saved_intercepts,
+                                 PU_STATIC, 0);
+  }
+
+  memcpy(saved_intercepts, intercepts, sizeof(*intercepts) * num_intercepts);
+  saved_intercepts_index = intercept_p - intercepts;
+}
+
+void P_RestoreIntercepts(void)
+{
+  memcpy(intercepts, saved_intercepts, sizeof(*saved_intercepts) * num_saved_intercepts);
+  intercept_p = intercepts + saved_intercepts_index;
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 // Check for limit and double size if necessary -- killough
 static void check_intercept(void)
 {
-  static size_t num_intercepts;
   size_t offset = intercept_p - intercepts;
   if (offset >= num_intercepts)
     {
@@ -616,6 +645,45 @@ boolean PIT_AddLineIntercepts(line_t *ld)
   return true;  // continue
 }
 
+// [Nugget] Hitbox-based hitscan collision /----------------------------------
+
+boolean hitbox_hitscan;
+
+static const inline boolean CheckPointsOnSides(mobj_t *const thing,
+                                               const fixed_t x1, const fixed_t y1,
+                                               const fixed_t x2, const fixed_t y2)
+{
+  if (   P_PointOnDivlineSide(x1, y1, &trace)
+      != P_PointOnDivlineSide(x2, y2, &trace))
+  {
+    divline_t dl = {
+      .x  = x1,
+      .dx = x2 - x1,
+      .y  = y1,
+      .dy = y2 - y1
+    };
+
+    const fixed_t frac = P_InterceptVector(&trace, &dl);
+
+    if (frac >= 0)
+    {
+      check_intercept();
+
+      intercept_p->frac = frac;
+      intercept_p->isaline = false;
+      intercept_p->d.thing = thing;
+      InterceptsOverrun(intercept_p - intercepts, intercept_p);
+      intercept_p++;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 //
 // PIT_AddThingIntercepts
 //
@@ -623,6 +691,112 @@ boolean PIT_AddLineIntercepts(line_t *ld)
 
 boolean PIT_AddThingIntercepts(mobj_t *thing)
 {
+  // [Nugget] Hitbox-based hitscan collision
+  if (CASUALPLAY(hitbox_hitscan))
+  {
+    #define CHECK_POINTS_ON_LEFT()   CheckPointsOnSides(thing, lx, by, lx, ty)
+    #define CHECK_POINTS_ON_RIGHT()  CheckPointsOnSides(thing, rx, by, rx, ty)
+    #define CHECK_POINTS_ON_BOTTOM() CheckPointsOnSides(thing, lx, by, rx, by)
+    #define CHECK_POINTS_ON_TOP()    CheckPointsOnSides(thing, lx, ty, rx, ty)
+
+    const fixed_t lx = thing->x - thing->radius,
+                  rx = thing->x + thing->radius,
+                  by = thing->y - thing->radius,
+                  ty = thing->y + thing->radius;
+
+    signed char hside = (trace.x > rx)
+                      - (trace.x < lx);
+
+    signed char vside = (trace.y > ty)
+                      - (trace.y < by);
+
+    if (hside == -1) // Left quadrant
+    {
+      if (vside == -1) // Bottom-left quadrant
+      {
+        if (CHECK_POINTS_ON_LEFT() || CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_RIGHT()) { CHECK_POINTS_ON_TOP(); }
+        }
+      }
+      else if (vside == 0) // Middle-left quadrant
+      {
+        if (CHECK_POINTS_ON_LEFT())
+        {
+          if (!CHECK_POINTS_ON_RIGHT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-left quadrant
+        if (CHECK_POINTS_ON_LEFT() || CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_RIGHT()) { CHECK_POINTS_ON_BOTTOM(); }
+        }
+      }
+    }
+    else if (hside == 0) // Middle quadrant
+    {
+      if (vside == -1) // Bottom-middle quadrant
+      {
+        if (CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_TOP())
+          {
+            if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_RIGHT(); }
+          }
+        }
+      }
+      else if (vside == 0) // Middle-middle quadrant
+      {
+        if (!CHECK_POINTS_ON_LEFT())
+        {
+          if (!CHECK_POINTS_ON_RIGHT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-middle quadrant
+        if (CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_BOTTOM())
+          {
+            if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_RIGHT(); }
+          }
+        }
+      }
+    }
+    else { // hside == 1 | Right quadrant
+      if (vside == -1) // Bottom-right quadrant
+      {
+        if (CHECK_POINTS_ON_RIGHT() || CHECK_POINTS_ON_BOTTOM())
+        {
+          if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_TOP(); }
+        }
+      }
+      else if (vside == 0) // Middle-right quadrant
+      {
+        if (CHECK_POINTS_ON_RIGHT())
+        {
+          if (!CHECK_POINTS_ON_LEFT())
+          {
+            if (!CHECK_POINTS_ON_BOTTOM()) { CHECK_POINTS_ON_TOP(); }
+          }
+        }
+      }
+      else { // vside == 1 | Top-right quadrant
+        if (CHECK_POINTS_ON_RIGHT() || CHECK_POINTS_ON_TOP())
+        {
+          if (!CHECK_POINTS_ON_LEFT()) { CHECK_POINTS_ON_BOTTOM(); }
+        }
+      }
+    }
+
+    return true;
+  }
+
   fixed_t   x1, y1;
   fixed_t   x2, y2;
   int       s1, s2;

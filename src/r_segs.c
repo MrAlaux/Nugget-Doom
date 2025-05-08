@@ -129,26 +129,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   {
     #define INDEX_PRECISION 255
 
-    dc_minlightindex = lightlevel + (extralight * 16);
-
-    int fakecontrast = 0;
-
-    // [crispy] smoother fake contrast
-    if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
-    {
-      fakecontrast = curline->fakecontrast;
-    }
-    // [Nugget] Vanilla effect
-    else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
-    {
-      if (curline->v1->y == curline->v2->y)
-        fakecontrast = -1;
-      else if (curline->v1->x == curline->v2->x)
-        fakecontrast = 1;
-    }
-
-    dc_minlightindex += fakecontrast * 16;
-
+    dc_minlightindex = lightlevel + ((extralight + curline->fakecontrast) * 16);
     dc_minlightindex = BETWEEN(0, INDEX_PRECISION, dc_minlightindex);
 
     #undef INDEX_PRECISION
@@ -159,19 +140,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
     lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
 
     // [crispy] smoother fake contrast
-    if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
-    {
-      lightnum += curline->fakecontrast;
-    }
-    // [Nugget] Vanilla effect
-    else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
-    {
-      if (curline->v1->y == curline->v2->y)
-        lightnum--;
-      else
-        if (curline->v1->x == curline->v2->x)
-          lightnum++;
-    }
+    lightnum += curline->fakecontrast;
+#if 0
+    if (curline->v1->y == curline->v2->y)
+      lightnum--;
+    else
+      if (curline->v1->x == curline->v2->x)
+        lightnum++;
+#endif
 
     walllights = lightnum >= LIGHTLEVELS ? scalelight[LIGHTLEVELS-1] :
       lightnum <  0           ? scalelight[0] : scalelight[lightnum];
@@ -222,7 +198,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
               dc_lightindex = dc_minlightindex;
 
-              if (!STRICTMODE(!diminished_lighting))
+              if (!STRICTMODE(!diminishing_lighting))
               {
                 R_GetLightIndex(spryscale);
                 dc_lightindex += R_GetLightIndexFrac();
@@ -234,7 +210,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
             }
             else
             {
-              const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+              const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
                                 ? 0 : R_GetLightIndex(spryscale);
 
               dc_colormap[0] = walllights[index];
@@ -471,7 +447,7 @@ static void R_RenderSegLoop (void)
 
             dc_lightindex = dc_minlightindex;
 
-            if (!STRICTMODE(!diminished_lighting))
+            if (!STRICTMODE(!diminishing_lighting))
             {
               R_GetLightIndex(spryscale);
               dc_lightindex += R_GetLightIndexFrac();
@@ -483,7 +459,7 @@ static void R_RenderSegLoop (void)
           }
           else
           {
-            const int index = STRICTMODE(!diminished_lighting) // [Nugget]
+            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
                               ? 0 : R_GetLightIndex(rw_scale);
 
             dc_colormap[0] = walllights[index];
@@ -902,26 +878,7 @@ void R_StoreWallRange(const int start, const int stop)
           {
             #define INDEX_PRECISION 255
 
-            dc_minlightindex = frontsector->lightlevel + (extralight * 16);
-
-            int fakecontrast = 0;
-
-            // [crispy] smoother fake contrast
-            if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
-            {
-              fakecontrast = curline->fakecontrast;
-            }
-            // [Nugget] Vanilla effect
-            else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
-            {
-              if (curline->v1->y == curline->v2->y)
-                fakecontrast = -1;
-              else if (curline->v1->x == curline->v2->x)
-                fakecontrast = 1;
-            }
-
-            dc_minlightindex += fakecontrast * 16;
-
+            dc_minlightindex = frontsector->lightlevel + ((extralight + curline->fakecontrast) * 16);
             dc_minlightindex = BETWEEN(0, INDEX_PRECISION, dc_minlightindex);
 
             #undef INDEX_PRECISION
@@ -931,18 +888,13 @@ void R_StoreWallRange(const int start, const int stop)
             int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
 
             // [crispy] smoother fake contrast
-            if (BETWEEN(strictmode, 2, fake_contrast) == 1) // [Nugget]
-            {
-              lightnum += curline->fakecontrast;
-            }
-            // [Nugget] Vanilla effect
-            else if (BETWEEN(strictmode, 2, fake_contrast) == 2)
-            {
-              if (curline->v1->y == curline->v2->y)
-                lightnum--;
-              else if (curline->v1->x == curline->v2->x)
-                lightnum++;
-            }
+            lightnum += curline->fakecontrast;
+#if 0
+            if (curline->v1->y == curline->v2->y)
+              lightnum--;
+            else if (curline->v1->x == curline->v2->x)
+              lightnum++;
+#endif
 
             if (lightnum < 0)
               walllights = scalelight[0];

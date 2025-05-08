@@ -54,6 +54,7 @@ typedef enum bobstyle_s {
 
 // CVARs ---------------------------------------------------------------------
 
+extern int weapon_recoilpitch_scale_pct;
 extern boolean weapswitch_interruption;
 extern boolean always_bob;
 extern bobstyle_t bobbing_style;

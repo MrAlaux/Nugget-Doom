@@ -67,8 +67,9 @@ static boolean hud_stats_show_map[NUMSHOWSTATS];
 boolean hud_time[NUMTIMERS];
 
 static int hud_power_timers;
+static boolean hud_power_timers_notime;
 
-static boolean hud_allow_icons = false;
+static boolean hud_allow_icons;
 
 static int hudcolor_time_scale;
 static int hudcolor_total_time;
@@ -87,6 +88,7 @@ static boolean message_flash;
 static int hud_msg_duration;
 static int hud_chat_duration;
 static int hud_msg_lines;
+static int hud_msg_total_lines;
 static boolean hud_msg_scrollup;
 static boolean hud_msg_group;
 
@@ -101,7 +103,7 @@ boolean ST_MessageFadeoutOn(void)
 
 int ST_GetNumMessageLines(void)
 {
-    return hud_msg_lines;
+    return MAX(hud_msg_total_lines, hud_msg_lines);
 }
 
 void FadeOutLine(widgetline_t *const line, const int duration_left)
@@ -165,12 +167,12 @@ static boolean message_review;
 
 // [Nugget] Message list /----------------------------------------------------
 
-const int MAX_COPIES = 99999;
+static const int MAX_COPIES = 99999;
 
 typedef struct linkedmessage_s
 {
     struct linkedmessage_s *prev, *next;
-    char string[HU_MAXLINELENGTH + 8]; // Extra space for " [MAX_COPIES]"
+    char string[HU_MAXLINELENGTH + 8]; // Extra space for " [#]", where # is MAX_COPIES
     size_t orig_length;
     int duration_left;
     int flash_duration_left; // Message flash
@@ -182,7 +184,8 @@ typedef struct linkedmessage_s
 
 static linkedmessage_t *message_list_head = NULL, *message_list_tail = NULL;
 
-static int message_index = 0;
+static int num_messages = 0;
+static int message_review_duration_left = 0;
 
 static void AddMessage(char *const string, int duration, const boolean is_chat_msg)
 {
@@ -201,12 +204,12 @@ static void AddMessage(char *const string, int duration, const boolean is_chat_m
         );
     }
     else {
-        message_index++;
+        num_messages++;
         num_copies = 1;
 
-        if (message_list_tail && message_index > hud_msg_lines)
+        if (message_list_tail && num_messages > ST_GetNumMessageLines())
         {
-            message_index--;
+            num_messages--;
 
             linkedmessage_t *m = message_list_head;
 
@@ -291,7 +294,8 @@ void ST_ClearMessages(void)
     }
 
     message_list_head = message_list_tail = NULL;
-    message_index = 0;
+    num_messages = 0;
+    message_review_duration_left = 0;
 }
 
 void ST_HideMessages(void)
@@ -303,6 +307,8 @@ void ST_HideMessages(void)
         m->duration_left = 0;
         m = m->next;
     }
+
+    message_review_duration_left = 0;
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -314,9 +320,9 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
     ST_ClearLines(widget);
 
     // Handle setting changes
-    while (message_index > hud_msg_lines)
+    while (num_messages > ST_GetNumMessageLines())
     {
-        message_index--;
+        num_messages--;
 
         message_list_head = message_list_head->next;
         Z_Free(message_list_head->prev);
@@ -339,14 +345,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
         else if (message_review)
         {
             message_review = false;
-
-            linkedmessage_t *m = message_list_head;
-
-            while (m)
-            {
-                m->duration_left = widget->duration;
-                m = m->next;
-            }
+            message_review_duration_left = hud_msg_duration ? hud_msg_duration : widget->duration;
         }
     }
 
@@ -357,30 +356,52 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
 
     linkedmessage_t *m = hud_msg_scrollup ? message_list_head : message_list_tail;
 
-    while (m)
+    // If true, show full list, otherwise maybe omit some messages
+    if (message_review_duration_left > 0)
     {
-        if (m->duration_left > 0)
+        message_review_duration_left--;
+    }
+
+    for (int index = hud_msg_scrollup ? 0 : num_messages-1;  m;)
+    {
+        if ((m->duration_left > 0 && index >= num_messages - hud_msg_lines)
+            || message_review_duration_left > 0)
         {
-            m->duration_left--;
+            if (m->duration_left > 0) { m->duration_left--; }
 
             ST_AddLine(widget, m->string);
 
             widgetline_t *const line = &widget->lines[array_size(widget->lines) - 1];
 
-            FadeOutLine(line, m->duration_left); // Message fadeout
+            // Message fadeout -----------------------------------------------
+
+            const int fadeout_time = (index < num_messages - hud_msg_lines)
+                                     ? message_review_duration_left
+                                     : MAX(m->duration_left, message_review_duration_left);
+
+            FadeOutLine(line, fadeout_time);
 
             // Message flash -------------------------------------------------
 
-            if (m->flash_duration_left) { m->flash_duration_left--; }
+            if (m->flash_duration_left > 0) { m->flash_duration_left--; }
 
             line->flash = !!m->flash_duration_left;
         }
         else {
+            m->duration_left = 0;
             m->is_chat_msg = false; // Allow overwriting
             m->flash_duration_left = 0;
         }
 
-        m = hud_msg_scrollup ? m->next : m->prev;
+        if (hud_msg_scrollup)
+        {
+            m = m->next;
+            index++;
+        }
+        else {
+            m = m->prev;
+            index--;
+        }
     }
 }
 
@@ -973,31 +994,30 @@ static void UpdateCoord(sbe_widget_t *widget, player_t *player)
     // killough 10/98: allow coordinates to display non-following pointer
     AM_Coordinates(player->mo, &x, &y, &z);
 
-    // [Nugget] /-------------------------------------------------------------
-
-    static char x_str[16], y_str[16], z_str[16];
-
-    M_snprintf(x_str, sizeof(x_str), "\x1b%cX " GRAY_S "%d", '0' + hudcolor_xyco, x >> FRACBITS);
-    M_snprintf(y_str, sizeof(y_str), "\x1b%cY " GRAY_S "%d", '0' + hudcolor_xyco, y >> FRACBITS);
-    M_snprintf(z_str, sizeof(z_str), "\x1b%cZ " GRAY_S "%d", '0' + hudcolor_xyco, z >> FRACBITS);
-
-    // [Nugget] -------------------------------------------------------------/
-
-    // [Nugget]
-    if (widget->vertical_layout)
+    if (!widget->vertical)
     {
-        ST_AddLine(widget, x_str);
-        ST_AddLine(widget, y_str);
-        ST_AddLine(widget, z_str);
+        static char string[80];
+        // jff 2/16/98 output new coord display
+        M_snprintf(string, sizeof(string),
+                   "\x1b%cX " GRAY_S "%d \x1b%cY " GRAY_S "%d \x1b%cZ " GRAY_S "%d",
+                   '0' + hudcolor_xyco, x >> FRACBITS, '0' + hudcolor_xyco,
+                   y >> FRACBITS, '0' + hudcolor_xyco, z >> FRACBITS);
+        ST_AddLine(widget, string);
     }
     else
     {
-        static char string[80];
-
-        // jff 2/16/98 output new coord display
-        M_snprintf(string, sizeof(string), "%s %s %s", x_str, y_str, z_str);
-
-        ST_AddLine(widget, string);
+        static char string1[16];
+        M_snprintf(string1, sizeof(string1), "\x1b%cX " GRAY_S "%d",
+                   '0' + hudcolor_xyco, x >> FRACBITS);
+        ST_AddLine(widget, string1);
+        static char string2[16];
+        M_snprintf(string2, sizeof(string2), "\x1b%cY " GRAY_S "%d",
+                   '0' + hudcolor_xyco, y >> FRACBITS);
+        ST_AddLine(widget, string2);
+        static char string3[16];
+        M_snprintf(string3, sizeof(string3), "\x1b%cZ " GRAY_S "%d",
+                   '0' + hudcolor_xyco, z >> FRACBITS);
+        ST_AddLine(widget, string3);
     }
 }
 
@@ -1073,8 +1093,6 @@ static void UpdateMonSec(sbe_widget_t *widget)
     // [Nugget] -------------------------------------------------------------/
 
     ForceDoomFont(widget);
-
-    static char string[120];
 
     int fullkillcount = 0;
     int fullitemcount = 0;
@@ -1173,35 +1191,41 @@ static void UpdateMonSec(sbe_widget_t *widget)
           secretlabelcolor, secretlabel, secretcolor, secret_str);
     }
 
-    // [Nugget]
-    if (widget->vertical_layout)
+    if (!widget->vertical)
+    {
+        static char string[120];
+        int offset = 0;
+
+        if (kill_str2[0])
+        {
+            offset += M_snprintf(
+              string + offset, sizeof(string) - offset, "%s%s", kill_str2,
+              (item_str2[0] || secret_str2[0]) ? " " : ""
+            );
+        }
+
+        if (item_str2[0])
+        {
+            offset += M_snprintf(
+              string + offset, sizeof(string) - offset, "%s%s", item_str2,
+              secret_str2[0] ? " " : ""
+            );
+        }
+
+        if (secret_str2[0])
+        {
+            offset += M_snprintf(
+              string + offset, sizeof(string) - offset, "%s", secret_str2
+            );
+        }
+  
+        ST_AddLine(widget, string);
+    }
+    else
     {
         if (kill_str2[0])   { ST_AddLine(widget, kill_str2); }
         if (item_str2[0])   { ST_AddLine(widget, item_str2); }
         if (secret_str2[0]) { ST_AddLine(widget, secret_str2); }
-    }
-    else
-    {
-        int offset = 0;
-
-        if (showstats[SHOWSTATS_KILLS])
-        {
-            offset += M_snprintf(string + offset, sizeof(string) - offset, "%s%s", kill_str2,
-              (showstats[SHOWSTATS_ITEMS] || showstats[SHOWSTATS_SECRETS]) ? " " : "");
-        }
-
-        if (showstats[SHOWSTATS_ITEMS])
-        {
-            offset += M_snprintf(string + offset, sizeof(string) - offset, "%s%s", item_str2,
-              showstats[SHOWSTATS_SECRETS] ? " " : "");
-        }
-
-        if (showstats[SHOWSTATS_SECRETS])
-        {
-            offset += M_snprintf(string + offset, sizeof(string) - offset, "%s", secret_str2);
-        }
-  
-        ST_AddLine(widget, string);
     }
 }
 
@@ -1421,30 +1445,33 @@ static void UpdatePowers(sbe_widget_t *widget, player_t *player)
     // TO-DO: Multi-lined?
 
     #define POWERUP_TIMER(_power_, _powerdur_, _numicon_, _string_, _color_) \
-        if (player->powers[_power_] > 0)                                     \
-        {                                                                    \
-          const boolean runout = POWER_RUNOUT(player->powers[_power_]);      \
-                                                                             \
-          if (hud_allow_icons && ST_IconAvailable(_numicon_))                \
-          {                                                                  \
-            offset += M_snprintf(                                            \
-              string + offset, sizeof(string) - offset, "\x1b%c%c\x1b%c",    \
-              '0' + (runout ? CR_NONE : CR_BLACK),                           \
-              (char) (HU_FONTEND + 1 + _numicon_),                           \
-              '0' + (runout ? _color_ : CR_BLACK)                            \
-            );                                                               \
-          }                                                                  \
-          else {                                                             \
-            offset += M_snprintf(                                            \
-              string + offset, sizeof(string) - offset, "\x1b%c" _string_,   \
-              '0' + (runout ? _color_ : CR_BLACK)                            \
-            );                                                               \
-          }                                                                  \
-                                                                             \
-          offset += M_snprintf(                                              \
-            string + offset, sizeof(string) - offset, " %i\" ",              \
-            MIN(_powerdur_/TICRATE, 1 + (player->powers[_power_] / TICRATE)) \
-          );                                                                 \
+        if (player->powers[_power_] > 0) \
+        { \
+          const boolean runout = POWER_RUNOUT(player->powers[_power_]); \
+          \
+          if (hud_allow_icons && ST_IconAvailable(_numicon_)) \
+          { \
+            offset += M_snprintf( \
+              string + offset, sizeof(string) - offset, "\x1b%c%c\x1b%c ", \
+              '0' + (runout ? CR_NONE : CR_BLACK), \
+              (char) (HU_FONTEND + 1 + _numicon_), \
+              '0' + (runout ? _color_ : CR_BLACK) \
+            ); \
+          } \
+          else { \
+            offset += M_snprintf( \
+              string + offset, sizeof(string) - offset, "\x1b%c" _string_ " ", \
+              '0' + (runout ? _color_ : CR_BLACK) \
+            ); \
+          } \
+          \
+          if (!hud_power_timers_notime) \
+          { \
+            offset += M_snprintf( \
+              string + offset, sizeof(string) - offset, "%i\" ", \
+              MIN(_powerdur_ / TICRATE, 1 + (player->powers[_power_] / TICRATE)) \
+            ); \
+          } \
         }
 
     POWERUP_TIMER(pw_invisibility,    INVISTICS,  3, "INVIS", CR_RED);
@@ -1456,7 +1483,7 @@ static void UpdatePowers(sbe_widget_t *widget, player_t *player)
 
     if (offset <= 0) { return; }
 
-    string[offset - 1] = '\0'; // Trim leading space
+    string[offset - 1] = '\0'; // Trim trailing space
     SetLine(widget, string);
 }
 
@@ -1673,26 +1700,31 @@ void ST_BindHUDVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("hud_stats_format_map", &hud_stats_format_map, NULL,
-            STATSFORMAT_MATCHHUD, STATSFORMAT_MATCHHUD, NUM_STATSFORMATS-1,
-            ss_stat, wad_no,
+            STATSFORMAT_MATCHHUD, STATSFORMAT_MATCHHUD, NUM_STATSFORMATS-1, ss_stat, wad_no,
             "Format of level stats in automap (0 = Match HUD)");
 
-  M_BindBool("hud_stats_kills", &hud_stats_show[SHOWSTATS_KILLS], NULL, true, ss_stat, wad_no,
+  M_BindBool("hud_stats_kills", &hud_stats_show[SHOWSTATS_KILLS], NULL,
+             true, ss_stat, wad_no,
              "Show kill count in the level-stats widget");
 
-  M_BindBool("hud_stats_items", &hud_stats_show[SHOWSTATS_ITEMS], NULL, true, ss_stat, wad_no,
+  M_BindBool("hud_stats_items", &hud_stats_show[SHOWSTATS_ITEMS], NULL,
+             true, ss_stat, wad_no,
              "Show item count in the level-stats widget");
 
-  M_BindBool("hud_stats_secrets", &hud_stats_show[SHOWSTATS_SECRETS], NULL, true, ss_stat, wad_no,
+  M_BindBool("hud_stats_secrets", &hud_stats_show[SHOWSTATS_SECRETS], NULL,
+             true, ss_stat, wad_no,
              "Show secrets count in the level-stats widget");
 
-  M_BindBool("hud_stats_kills_map", &hud_stats_show_map[SHOWSTATS_KILLS], NULL, true, ss_stat, wad_no,
+  M_BindBool("hud_stats_kills_map", &hud_stats_show_map[SHOWSTATS_KILLS], NULL,
+             true, ss_stat, wad_no,
              "Show kill count in the automap's level-stats widget");
 
-  M_BindBool("hud_stats_items_map", &hud_stats_show_map[SHOWSTATS_ITEMS], NULL, true, ss_stat, wad_no,
+  M_BindBool("hud_stats_items_map", &hud_stats_show_map[SHOWSTATS_ITEMS], NULL,
+             true, ss_stat, wad_no,
              "Show item count in the automap's level-stats widget");
 
-  M_BindBool("hud_stats_secrets_map", &hud_stats_show_map[SHOWSTATS_SECRETS], NULL, true, ss_stat, wad_no,
+  M_BindBool("hud_stats_secrets_map", &hud_stats_show_map[SHOWSTATS_SECRETS], NULL,
+             true, ss_stat, wad_no,
              "Show secrets count in the automap's level-stats widget");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -1717,28 +1749,34 @@ void ST_BindHUDVariables(void)
              "Show split time when pressing the use-button");
 
   M_BindNum("hud_widget_font", &hud_widget_font, NULL,
-            HUD_WIDGET_OFF, HUD_WIDGET_OFF, HUD_WIDGET_ALWAYS,
+            HUD_WIDGET_AUTOMAP, HUD_WIDGET_OFF, HUD_WIDGET_ALWAYS,
             ss_stat, wad_no,
             "Use standard Doom font for widgets (1 = On automap; 2 = On HUD; 3 "
             "= Always)");
 
   // [Nugget] /---------------------------------------------------------------
 
-  M_BindBool("hud_time_teleport", &hud_time[TIMER_TELEPORT], NULL, false, ss_stat, wad_no,
+  M_BindBool("hud_time_teleport", &hud_time[TIMER_TELEPORT], NULL,
+             false, ss_stat, wad_no,
              "Show split time when going through a teleporter");
 
-  M_BindBool("hud_time_keypickup", &hud_time[TIMER_KEYPICKUP], NULL, false, ss_stat, wad_no,
+  M_BindBool("hud_time_keypickup", &hud_time[TIMER_KEYPICKUP], NULL,
+             false, ss_stat, wad_no,
              "Show split time when picking up a key");
 
   M_BindNum("hud_power_timers", &hud_power_timers, NULL,
-            HUD_WIDGET_OFF, HUD_WIDGET_OFF, HUD_WIDGET_ALWAYS,
-            ss_stat, wad_no,
+            HUD_WIDGET_OFF, HUD_WIDGET_OFF, HUD_WIDGET_ALWAYS, ss_stat, wad_no,
             "Show powerup-timers widget (1 = On automap; 2 = On HUD; 3 = Always)");
+
+  M_BindBool("hud_power_timers_notime", &hud_power_timers_notime, NULL,
+             false, ss_none, wad_no,
+             "Show only powerup names/icons in powerup-timers widget");
 
   // [Nugget] ---------------------------------------------------------------/
 
   // [Nugget]
-  M_BindBool("hud_allow_icons", &hud_allow_icons, NULL, true, ss_stat, wad_yes,
+  M_BindBool("hud_allow_icons", &hud_allow_icons, NULL,
+             true, ss_stat, wad_yes,
              "Allow usage of icons for some labels in HUD widgets");
 
   M_BindNum("hudcolor_titl", &hudcolor_titl, NULL,
@@ -1798,7 +1836,8 @@ void ST_BindHUDVariables(void)
 
   // [Nugget] Announce milestone completion
   M_BindBool("announce_milestones", &announce_milestones, NULL,
-            false, ss_stat, wad_no, "Announce completion of milestones");
+            false, ss_stat, wad_yes,
+            "Announce completion of milestones");
 
   M_BindBool("show_toggle_messages", &show_toggle_messages, NULL,
             true, ss_stat, wad_no, "Show toggle messages");
@@ -1809,7 +1848,8 @@ void ST_BindHUDVariables(void)
 
   // [Nugget] (CFG-only)
   M_BindBool("show_save_messages", &show_save_messages, NULL,
-             true, ss_none, wad_no, "Show save messages");
+             true, ss_none, wad_no,
+             "Show save messages");
 
   // [Nugget] Restored menu item
   M_BindNum("hudcolor_obituary", &hudcolor_obituary, NULL,
@@ -1826,18 +1866,29 @@ void ST_BindHUDVariables(void)
 
   // Message fadeout
   M_BindBool("message_fadeout", &message_fadeout, NULL,
-             false, ss_stat, wad_no, "Messages fade out");
+             false, ss_stat, wad_yes,
+             "Messages fade out");
 
   // Message flash
   M_BindBool("message_flash", &message_flash, NULL,
-             false, ss_stat, wad_no, "Messages flash when they first appear");
+             false, ss_stat, wad_yes,
+             "Messages flash when they first appear");
 
-  BIND_NUM(hud_msg_duration, 0, 0, UL, "Force duration of messages, in tics (0 = Don't force)");
-  BIND_NUM(hud_chat_duration, 0, 0, UL, "Force duration of chat messages, in tics (0 = Don't force)");
-  BIND_NUM(hud_msg_lines, 1, 1, 8, "Number of lines for message list");
+  BIND_NUM(hud_msg_duration, 0, 0, UL,
+           "Force duration of messages, in tics (0 = Don't force)");
+
+  BIND_NUM(hud_chat_duration, 0, 0, UL,
+           "Force duration of chat messages, in tics (0 = Don't force)");
+
+  BIND_NUM(hud_msg_lines, 1, 1, 8,
+           "Number of lines in message list shown normally");
+
+  BIND_NUM(hud_msg_total_lines, 1, 1, 8,
+           "Number of lines in message list shown during message review");
 
   M_BindBool("hud_msg_group", &hud_msg_group, NULL,
-             false, ss_stat, wad_no, "Group repeated messages together");
+             false, ss_stat, wad_no,
+             "Group repeated messages together");
 
   // (CFG-only)
   BIND_BOOL(hud_msg_scrollup, true, "Message list scrolls upwards");

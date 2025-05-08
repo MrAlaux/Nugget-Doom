@@ -139,12 +139,15 @@ Spawn an actor based on its mobj type index, where:
 For example, to spawn a hostile Shotgun Guy (whose index is 2), the full cheat would be `SUMMONE002`.
 
 Actors are always spawned facing the same direction as the player.
-If the Automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
+If the automap is enabled and the Follow Mode is off, the actors will be spawned where the pointer is located.
 Otherwise, they will be spawned in front of the player.
 
 `IDDF[C][T]`  
-Find a key on the Automap.
+Find a key in the automap.
 This cheat functions similarly to the `KEY` cheat, with `C` and `T` specifying the key color and type respectively.
+
+`IDDET`  
+Find exits in the automap.
 
 `RESURRECT` / `IDRES`  
 Resurrect the player without toggling IDDQD.
@@ -175,6 +178,17 @@ Change the player speed in-game.
 
 `NOMOMENTUM`  
 Toggle no-momentum mode (re-enabled debugging cheat).
+
+The following cheats in this section are developer-only: the `nugget_devmode` CVAR must be enabled for them to take effect.
+
+`FAUXDEMO`  
+Toggle faux-demo mode, which emulates the condition of demo/net play (disables some features).
+
+`DIMLIGHT`  
+Toggle diminishing lighting.
+
+`CASTCALL`  
+Enter the character cast call.
 
 ## Beta cheats
 

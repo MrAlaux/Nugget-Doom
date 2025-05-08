@@ -48,7 +48,9 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "m_array.h"
 #include "p_user.h"
+#include "r_data.h"
 
 // [Nugget] CVARs
 int viewheight_value;
@@ -1607,7 +1609,7 @@ void P_SpawnBlood(fixed_t x,fixed_t y,fixed_t z,int damage,mobj_t *bleeder)
   th->tics -= P_Random(pr_spawnblood)&3;
 
   // [Nugget] Fuzzy blood for fuzzy things
-  if (comp_fuzzyblood && bleeder->flags & MF_SHADOW)
+  if (CASUALPLAY(comp_fuzzyblood) && bleeder->flags & MF_SHADOW)
   { th->flags |= MF_SHADOW; }
 
   if (bleeder->info->bloodcolor || idgaf)
@@ -1731,6 +1733,15 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
   // killough 7/19/98: autoaiming was not in original beta
   if (!beta_emulation || autoaim)
     {
+      // [Nugget] Smart autoaim
+      P_SetProjectileInfo(
+        source->x,
+        source->y,
+        source->z + (4*8*FRACUNIT) - source->player->crouchoffset,
+        mobjinfo[type].radius,
+        mobjinfo[type].height
+      );
+
       // killough 8/2/98: prefer autoaiming at enemies
       int mask = demo_version < DV_MBF ? 0 : MF_FRIEND;
       // [Nugget] Moved vertical aiming code above
@@ -1752,6 +1763,8 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
             slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? source->player->slope : 0;
         }
       while (mask && (mask=0, !linetarget));  // killough 8/2/98
+
+      P_ClearProjectileInfo(); // [Nugget] Smart autoaim
     }
 
   x = source->x;
@@ -1959,6 +1972,60 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
   P_AddThinker(&mobj->thinker);
 
   return mobj;
+}
+
+boolean flakes, allow_flakes;
+
+typedef struct flaker_s {
+  fixed_t x, y, z;
+  const sector_t *sector;
+} flaker_t;
+
+flaker_t *flakers = NULL;
+
+void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const sector_t *sector)
+{
+  array_push(flakers, ((flaker_t) { x, y, z, sector }));
+}
+
+void P_ClearFlakers(void)
+{
+  array_clear(flakers);
+}
+
+void P_RunFlakers(void)
+{
+  if (!flakes) { return; }
+
+  if (nodrawers || leveltime <= 1) { return; } // View positions are presumably uninitialized
+
+  const flaker_t *flaker;
+  array_foreach(flaker, flakers)
+  {
+    const fixed_t dist = P_AproxDistance(viewx - flaker->x, viewy - flaker->y);
+
+    if (dist > 4096*FRACUNIT) { continue; }
+
+    if (M_Random() != 4) { continue; }
+
+    const fixed_t x = flaker->x + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2,
+                  y = flaker->y + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2,
+                  z = MIN(flaker->z, viewz + 1024*FRACUNIT);
+
+    if (R_PointInSubsector(x, y)->sector != flaker->sector) { continue; }
+
+    mobj_t *const flake = P_SpawnVisualMobj(x, y, z, AS_FLAKE1);
+
+    flake->flags |= MF_NOGRAVITY|MF_TRANSLUCENT;
+    flake->intflags |= MIF_FLAKE;
+    flake->tranmap = R_GetGenericTranMap(40);
+
+    const fixed_t momz = FRACUNIT + (dist / 3000);
+
+    flake->momz = -(momz + (momz * Woof_Random() / 255));
+
+    flake->alttics = 28 + (z - flaker->sector->floorheight) / -flake->momz;
+  }
 }
 
 //----------------------------------------------------------------------------

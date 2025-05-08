@@ -54,6 +54,16 @@ typedef struct {
   } d;
 } intercept_t;
 
+// [Nugget] /-----------------------------------------------------------------
+
+// CVARs
+extern boolean hitbox_hitscan; // Hitbox-based hitscan collision
+
+void P_SaveIntercepts(void);
+void P_RestoreIntercepts(void);
+
+// [Nugget] -----------------------------------------------------------------/
+
 typedef boolean (*traverser_t)(intercept_t *in);
 
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);

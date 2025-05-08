@@ -1547,7 +1547,7 @@ extern char *altsprnames[]; // [Nugget] Alt. sprites
 typedef enum {
   ASPR_NULL = -1,
 
-  ASPR_PLYC, ASPR_NGCH, ASPR_NGCL, ASPR_NGTR,
+  ASPR_PLYC, ASPR_NGCH, ASPR_NGCL, ASPR_NGTR, ASPR_NGFL,
 
   NUMALTSPRITES
 } altspritenum_t;
@@ -1563,6 +1563,7 @@ typedef enum {
   AS_TRAIL5,
   AS_TRAIL6,
   AS_TRAIL7,
+  AS_FLAKE1,
 
   NUMALTSTATES
 } altstatenum_t;

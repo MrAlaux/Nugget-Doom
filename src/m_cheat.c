@@ -57,6 +57,7 @@
 
 // [Nugget]
 #include "am_map.h"
+#include "f_finale.h"
 #include "r_main.h"
 
 #define plyr (players+consoleplayer)     /* the console player */
@@ -67,10 +68,14 @@
 
 #ifdef NUGMAGIC
 
+int nugmagic = 0;
+
 static void cheat_magic(void)
 {
   displaymsg("Light %s", (diminished_lighting = !diminished_lighting) ? "ON" : "OFF");
 }
+
+int nugmagic2 = 0;
 
 static void cheat_magic2(void)
 {
@@ -139,13 +144,12 @@ static void cheat_speed(void);
 // [Nugget] /-----------------------------------------------------------------
 
 static void cheat_nomomentum(void);
-static void cheat_fauxdemo(void);   // Emulates demo/net play state, for debugging
 static void cheat_infammo(void);    // Infinite ammo cheat
 static void cheat_fastweaps(void);  // Fast weapons cheat
 static void cheat_bobbers(void);    // Shortcut to the two cheats above
 
-boolean gibbers;                // Used for 'GIBBERS'
-static void cheat_gibbers(void);    // Everything gibs
+boolean gibbers;                 // Used for 'GIBBERS'
+static void cheat_gibbers(void); // Everything gibs
 
 static void cheat_riotmode(void);
 static void cheat_resurrect(void);
@@ -171,14 +175,19 @@ static void cheat_reveal_key(void);
 static void cheat_reveal_keyx(void);
 static void cheat_reveal_keyxx(int key);
 
-static void cheat_linetarget(void); // Give info on the current linetarget
-static void cheat_trails(void);     // Show hitscan trails
-static void cheat_mdk(void);        // Inspired by ZDoom's console command
-static void cheat_saitama(void);    // MDK Fist
+static void cheat_reveal_exit(void);
+static void cheat_linetarget(void);  // Give info on the current linetarget
+static void cheat_trails(void);      // Show hitscan trails
+static void cheat_mdk(void);         // Inspired by ZDoom's console command
+static void cheat_saitama(void);     // MDK Fist
+static void cheat_boomcan(void);     // Explosive hitscan
 
-static void cheat_boomcan(void);    // Explosive hitscan
+static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
+static void cheat_dimlight(void);
+static void cheat_castcall(void);
 
 static void cheat_cheese(void);
+static void cheat_flakes(void);
 
 boolean idgaf;
 static void cheat_idgaf(void);
@@ -411,7 +420,6 @@ struct cheat_s cheat[] = {
   // [Nugget] /---------------------------------------------------------------
 
   {"nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum}     },
-  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo}       }, // Emulates demo/net play state, for debugging
   {"fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo}        }, // Infinite ammo cheat
   {"valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps}      }, // Fast weapons cheat
   {"bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers}        }, // Shortcut for the two above cheats
@@ -442,13 +450,20 @@ struct cheat_s cheat[] = {
   {"iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3 },
   {"iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4 },
 
-  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget} }, // Give info on the current linetarget
-  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}     }, // Show hitscan trails
-  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}        },
-  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}    }, // MDK Fist
-  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}    }, // Explosive hitscan
-  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese}     },
-  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}      },
+  {"iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit} }, // Exit finder
+  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget}  }, // Give info on the current linetarget
+  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}      }, // Show hitscan trails
+  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}         },
+  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}     }, // MDK Fist
+  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}     }, // Explosive hitscan
+
+  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
+  {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
+  {"castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
+
+  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
+  {"flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
+  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}  },
 
   #ifdef NUGMAGIC
 
@@ -470,18 +485,6 @@ static void cheat_nomomentum(void)
 {
   plyr->cheats ^= CF_NOMOMENTUM;
   displaymsg("No Momentum Mode %s", (plyr->cheats & CF_NOMOMENTUM) ? "ON" : "OFF");
-}
-
-// Emulates demo and/or net play state, for debugging
-static void cheat_fauxdemo(void)
-{
-  extern void D_UpdateCasualPlay(void);
-
-  fauxdemo = !fauxdemo;
-  D_UpdateCasualPlay();
-
-  S_StartSound(plyr->mo, sfx_tink);
-  displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
 }
 
 // Infinite ammo
@@ -520,6 +523,11 @@ static void cheat_gibbers(void)
 {
   gibbers = !gibbers;
   displaymsg("%s", gibbers ? "Ludicrous Gibs!" : "Ludicrous Gibs no more.");
+}
+
+static void cheat_riotmode(void)
+{
+  displaymsg("Riot Mode %s", (riotmode = !riotmode) ? "ON" : "OFF");
 }
 
 // Resurrection --------------------------------------------------------------
@@ -797,6 +805,68 @@ static void cheat_reveal_keyxx(int key)
 
 // ---------------------------------------------------------------------------
 
+// Exit finder
+static void cheat_reveal_exit(void)
+{
+  if (automapactive != AM_FULL) { return; }
+
+  static int last_exit_line = -1;
+  int i, start_i;
+
+  i = last_exit_line + 1;
+
+  if (i >= numlines) { i = 0; }
+
+  start_i = i;
+
+  // (found_exit & 1) == normal
+  // (found_exit & 2) == secret
+  // Can be both
+  int found_exit = 0;
+
+  do {
+    const line_t *const line = &lines[i];
+    const short special = line->special;
+
+    if (   special ==  11 || special ==  51 || special ==  52
+        || special == 124 || special == 197 || special == 198)
+    {
+      found_exit |= 1 + (special == 51 || special == 124 || special == 198);
+    }
+
+    for (int j = 0;  j < 2;  j++)
+    {
+      sector_t *const sector = j ? line->backsector : line->frontsector;
+
+      if (sector && P_IsDeathExit(sector))
+      {
+        found_exit |= 1 + (   (sector->special & DEATH_MASK)
+                           && (sector->special & DAMAGE_MASK) == DAMAGE_MASK);
+      }
+    }
+
+    if (found_exit)
+    {
+      followplayer = false;
+      AM_SetMapCenter(line->v1->x, line->v1->y);
+
+      displaymsg(
+        "Exit Finder: found %s",
+          (found_exit == 3) ? "normal and secret exits"
+        : (found_exit == 2) ? "secret exit"
+        :                     "normal exit"
+      );
+
+      last_exit_line = i;
+      break;
+    }
+
+    if (++i >= numlines) { i = 0; }
+  } while (i != start_i);
+
+  if (!found_exit) { displaymsg("Exit Finder: no exits found"); }
+}
+
 // Give info on the current `linetarget`
 static void cheat_linetarget(void)
 {
@@ -856,15 +926,51 @@ static void cheat_boomcan(void)
   displaymsg("Explosive Hitscan %s", (plyr->cheats & CF_BOOMCAN) ? "ON" : "OFF");
 }
 
-static void cheat_riotmode(void)
+// Developer cheats ----------------------------------------------------------
+
+// Emulates demo/net-play state, for debugging
+static void cheat_fauxdemo(void)
 {
-  displaymsg("Riot Mode %s", (riotmode = !riotmode) ? "ON" : "OFF");
+  if (!nugget_devmode) { return; }
+
+  extern void D_UpdateCasualPlay(void);
+
+  fauxdemo = !fauxdemo;
+  D_UpdateCasualPlay();
+
+  S_StartSound(plyr->mo, sfx_tink);
+  displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
 }
+
+static void cheat_dimlight(void)
+{
+  if (!nugget_devmode) { return; }
+
+  diminishing_lighting = !diminishing_lighting;
+  displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
+}
+
+static void cheat_castcall(void)
+{
+  if (!nugget_devmode) { return; }
+
+  F_StartFinale();
+  F_StartCast();
+}
+
+// ---------------------------------------------------------------------------
 
 static void cheat_cheese(void)
 {
   cheese = !cheese;
   displaymsg("%s", cheese ? "cheese :)" : "no cheese :(");
+}
+
+static void cheat_flakes(void)
+{
+  if (!allow_flakes) { return; }
+
+  flakes = !flakes;
 }
 
 static void cheat_idgaf(void)
@@ -961,13 +1067,14 @@ boolean comp_choppers; // [Nugget]
 static void cheat_choppers(void)
 {
   plyr->weaponowned[wp_chainsaw] = true;
-  
+
   // [Nugget]
   if (casual_play && comp_choppers)
     P_GivePower(plyr, pw_invulnerability);
   else
     plyr->powers[pw_invulnerability] = true;
-  
+
+  plyr->bonuscount += 2; // trigger evil grin now
   displaymsg("%s", s_STSTR_CHOPPERS); // Ty 03/27/98 - externalized
 }
 
@@ -1098,6 +1205,7 @@ static void cheat_fa(void)
     if (i!=am_cell || gamemode!=shareware)
       plyr->ammo[i] = plyr->maxammo[i];
 
+  plyr->bonuscount += 2; // trigger evil grin now
   displaymsg("%s", s_STSTR_FAADDED);
 }
 
@@ -1704,7 +1812,10 @@ static void cheat_weapx(char *buf)
     if (w >= 0 && w < NUMWEAPONS)
     {
       if ((plyr->weaponowned[w] = !plyr->weaponowned[w]))
+      {
+        plyr->bonuscount += 2; // trigger evil grin now
         displaymsg("Weapon Added");  // Ty 03/27/98 - *not* externalized
+      }
       else 
         {
           displaymsg("Weapon Removed"); // Ty 03/27/98 - *not* externalized
