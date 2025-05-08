@@ -1110,7 +1110,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
 	const int linesize = video.pitch;
-	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
