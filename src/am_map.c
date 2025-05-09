@@ -3227,7 +3227,7 @@ static mline_t *GetTanzerF(int f)
   #undef RX
   #undef R
 
-  return tanzer[f];
+  return f[tanzer];
 }
 
 //----------------------------------------------------------------------------

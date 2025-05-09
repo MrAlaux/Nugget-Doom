@@ -60,7 +60,7 @@
 
 static byte *R_InitGenericTranMap(const int filter_pct)
 {
-  I_Printf(VB_DEBUG, "R_InitGenericTranMap: %i%%", filter_pct);
+  I_Printf(VB_DEBUG, "%s: %i%%", __func__, filter_pct);
 
   unsigned char *const playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
 
