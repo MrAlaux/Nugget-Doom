@@ -127,12 +127,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   // [Nugget] True color
   if (truecolor_rendering == TRUECOLOR_FULL)
   {
-    #define INDEX_PRECISION 255
-
     dc_minlightindex = lightlevel + ((extralight + curline->fakecontrast) * 16);
-    dc_minlightindex = BETWEEN(0, INDEX_PRECISION, dc_minlightindex);
-
-    #undef INDEX_PRECISION
+    dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
   }
   else
   {
@@ -194,19 +190,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
             if (truecolor_rendering == TRUECOLOR_FULL)
             {
-              #define INDEX_PRECISION 255
-
               dc_lightindex = dc_minlightindex;
 
               if (!STRICTMODE(!diminishing_lighting))
               {
                 R_GetLightIndex(spryscale);
                 dc_lightindex += R_GetLightIndexFrac();
+
+                dc_lightindex = MIN(255, dc_lightindex);
               }
-
-              dc_lightindex = BETWEEN(0, INDEX_PRECISION, dc_lightindex);
-
-              #undef INDEX_PRECISION
             }
             else
             {
@@ -443,19 +435,15 @@ static void R_RenderSegLoop (void)
 
           if (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
           {
-            #define INDEX_PRECISION 255
-
             dc_lightindex = dc_minlightindex;
 
             if (!STRICTMODE(!diminishing_lighting))
             {
-              R_GetLightIndex(spryscale);
+              R_GetLightIndex(rw_scale);
               dc_lightindex += R_GetLightIndexFrac();
+
+              dc_lightindex = MIN(255, dc_lightindex);
             }
-
-            dc_lightindex = BETWEEN(0, INDEX_PRECISION, dc_lightindex);
-
-            #undef INDEX_PRECISION
           }
           else
           {
@@ -876,12 +864,8 @@ void R_StoreWallRange(const int start, const int stop)
           // [Nugget] True color
           if (truecolor_rendering == TRUECOLOR_FULL)
           {
-            #define INDEX_PRECISION 255
-
             dc_minlightindex = frontsector->lightlevel + ((extralight + curline->fakecontrast) * 16);
-            dc_minlightindex = BETWEEN(0, INDEX_PRECISION, dc_minlightindex);
-
-            #undef INDEX_PRECISION
+            dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
           }
           else
           {

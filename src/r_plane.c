@@ -216,8 +216,6 @@ static void R_MapPlane(int y, int x1, int x2)
     {
       // [Nugget] True color
 
-      #define INDEX_PRECISION 255
-
       if (truecolor_rendering == TRUECOLOR_FULL)
       {
         ds_lightindex = ds_minlightindex;
@@ -229,11 +227,11 @@ static void R_MapPlane(int y, int x1, int x2)
 
           const fixed_t invdistance = max - distance;
 
-          if (invdistance > step)
+          if (invdistance >= step)
           { ds_lightindex += invdistance / step; }
-        }
 
-        ds_lightindex = BETWEEN(0, INDEX_PRECISION, ds_lightindex);
+          ds_lightindex = MIN(255, ds_lightindex);
+        }
       }
       else
       {
@@ -250,13 +248,11 @@ static void R_MapPlane(int y, int x1, int x2)
             && 0 < index
             && ds_colormap[0] != planezlight[index - 1])
         {
-          ds_lightindex = INDEX_PRECISION-1 - ((distance % (1 << LIGHTZSHIFT)) * INDEX_PRECISION / (1 << LIGHTZSHIFT));
+          ds_lightindex = 255-1 - ((distance % (1 << LIGHTZSHIFT)) * 255 / (1 << LIGHTZSHIFT));
 
           ds_nextcolormap = planezlight[index - 1];
         }
       }
-
-      #undef INDEX_PRECISION
     }
 
   ds_y = y;
@@ -689,6 +685,7 @@ static void do_draw_plane(visplane_t *pl)
     if (truecolor_rendering == TRUECOLOR_FULL)
     {
       ds_minlightindex = pl->lightlevel + (extralight * 16);
+      ds_minlightindex = BETWEEN(0, 255, ds_minlightindex);
     }
     else
     {

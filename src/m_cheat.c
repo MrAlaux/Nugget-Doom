@@ -72,7 +72,7 @@ int nugmagic = 0;
 
 static void cheat_magic(void)
 {
-  displaymsg("Light %s", (diminishing_lighting = !diminishing_lighting) ? "ON" : "OFF");
+  
 }
 
 int nugmagic2 = 0;

@@ -593,7 +593,8 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
         if (truecolor_rendering == TRUECOLOR_FULL)
         {
-          dc_lightindex = R_GetLightLevelInPoint(gx, gy) + (extralight * 16);
+          dc_lightindex = R_GetLightLevelInPoint(gx, gy) + (extralight * 16) + R_GetLightIndexFrac();
+          dc_lightindex = BETWEEN(0, 255, dc_lightindex);
         }
         else {
           const int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
@@ -859,8 +860,6 @@ static void R_ProjectSprite (mobj_t* thing)
 
       if (truecolor_rendering == TRUECOLOR_FULL)
       {
-        #define INDEX_PRECISION 255
-
         // [Nugget] Thing lighting
         if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
         {
@@ -884,9 +883,7 @@ static void R_ProjectSprite (mobj_t* thing)
           vis->lightindex += R_GetLightIndexFrac();
         }
 
-        vis->lightindex = BETWEEN(0, INDEX_PRECISION, vis->lightindex);
-
-        #undef INDEX_PRECISION
+        vis->lightindex = BETWEEN(0, 255, vis->lightindex);
 
         // Assign a colormap so that it doesn't apply the fuzz effect
         vis->colormap[0] = scalelight[0][0];
@@ -982,6 +979,7 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   if (truecolor_rendering == TRUECOLOR_FULL)
   {
     dc_minlightindex = lightlevel + (extralight * 16);
+    dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
   }
   else
   {
@@ -1189,7 +1187,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
     if (truecolor_rendering == TRUECOLOR_FULL)
     {
       vis->lightindex = dc_minlightindex + index;
-      vis->lightindex = BETWEEN(0, 255, vis->lightindex);
+      vis->lightindex = MIN(255, vis->lightindex);
 
       // Assign a colormap so that it doesn't apply the fuzz effect
       vis->colormap[0] = scalelight[0][0];
@@ -1269,6 +1267,7 @@ void R_DrawPlayerSprites(void)
   if (truecolor_rendering == TRUECOLOR_FULL)
   {
     dc_minlightindex = lightlevel + (extralight * 16);
+    dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
   }
   else
   {
