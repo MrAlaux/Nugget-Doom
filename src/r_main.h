@@ -164,6 +164,8 @@ int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y);
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
 
+byte R_GetLightIndexFrac(void);
+
 // FOV effects ---------------------------------------------------------------
 
 enum {

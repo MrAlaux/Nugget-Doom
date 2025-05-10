@@ -32,6 +32,10 @@ extern fixed_t  dc_texturemid;
 extern int      dc_texheight;    // killough
 extern byte     dc_skycolor;
 
+// [Nugget] True color
+extern short dc_lightindex, dc_minlightindex, dc_maxlightindex;
+extern lighttable_t *dc_nextcolormap;
+
 // first pixel in a column
 extern byte     *dc_source;         
 extern const byte *dc_brightmap;
@@ -78,6 +82,10 @@ extern fixed_t ds_xfrac;
 extern fixed_t ds_yfrac;
 extern fixed_t ds_xstep;
 extern fixed_t ds_ystep;
+
+// [Nugget] True color
+extern short ds_lightindex, ds_minlightindex, ds_maxlightindex;
+extern lighttable_t *ds_nextcolormap;
 
 // start of a 64*64 tile image
 extern byte *ds_source;              

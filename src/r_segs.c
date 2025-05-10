@@ -41,6 +41,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "i_video.h"
+
 // OPTIMIZE: closed two sided lines as single sided
 
 // killough 1/6/98: replaced globals with statics where appropriate
@@ -119,22 +122,32 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
   texnum = texturetranslation[curline->sidedef->midtexture];
 
-  // killough 4/13/98: get correct lightlevel for 2s normal textures
-  lightnum = (R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)
-              ->lightlevel >> LIGHTSEGSHIFT)+extralight;
+  const int lightlevel = R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel;
 
-  // [crispy] smoother fake contrast
-  lightnum += curline->fakecontrast;
-#if 0
-  if (curline->v1->y == curline->v2->y)
-    lightnum--;
+  // [Nugget] True color
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    dc_minlightindex = lightlevel + ((extralight + curline->fakecontrast) * 16);
+    dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
+  }
   else
-    if (curline->v1->x == curline->v2->x)
-      lightnum++;
+  {
+    // killough 4/13/98: get correct lightlevel for 2s normal textures
+    lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+    // [crispy] smoother fake contrast
+    lightnum += curline->fakecontrast;
+#if 0
+    if (curline->v1->y == curline->v2->y)
+      lightnum--;
+    else
+      if (curline->v1->x == curline->v2->x)
+        lightnum++;
 #endif
 
-  walllights = lightnum >= LIGHTLEVELS ? scalelight[LIGHTLEVELS-1] :
-    lightnum <  0           ? scalelight[0] : scalelight[lightnum];
+    walllights = lightnum >= LIGHTLEVELS ? scalelight[LIGHTLEVELS-1] :
+      lightnum <  0           ? scalelight[0] : scalelight[lightnum];
+  }
 
   maskedtexturecol = ds->maskedtexturecol;
 
@@ -166,15 +179,43 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
       {
-        if (!fixedcolormap)      // calculate lighting
-          {                             // killough 11/98:
-            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                              ? 0 : R_GetLightIndex(spryscale);
+        dc_nextcolormap = NULL; // [Nugget] True color
 
+        if (!fixedcolormap)      // calculate lighting
+          {
             // [crispy] brightmaps for two sided mid-textures
             dc_brightmap = texturebrightmap[texnum];
-            dc_colormap[0] = walllights[index];
-            dc_colormap[1] = STRICTMODE(brightmaps) ? fullcolormap : dc_colormap[0];
+
+            // [Nugget] True color
+
+            if (truecolor_rendering == TRUECOLOR_FULL)
+            {
+              dc_lightindex = dc_minlightindex;
+
+              if (!STRICTMODE(!diminishing_lighting))
+              {
+                R_GetLightIndex(spryscale);
+                dc_lightindex += R_GetLightIndexFrac();
+
+                dc_lightindex = MIN(255, dc_lightindex);
+              }
+            }
+            else
+            {
+              const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                                ? 0 : R_GetLightIndex(spryscale);
+
+              dc_colormap[0] = walllights[index];
+              dc_colormap[1] = STRICTMODE(brightmaps) ? fullcolormap : dc_colormap[0];
+
+              if (truecolor_rendering == TRUECOLOR_HYBRID
+                  && index < MAXLIGHTSCALE-1
+                  && dc_colormap[0] != walllights[index + 1])
+              {
+                dc_lightindex = R_GetLightIndexFrac();
+                dc_nextcolormap = walllights[index + 1];
+              }
+            }
           }
 
         // killough 3/2/98:
@@ -378,21 +419,49 @@ static void R_RenderSegLoop (void)
       // texturecolumn and lighting are independent of wall tiers
       if (segtextured)
         {
-          const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                            ? 0 : R_GetLightIndex(rw_scale);
-
           // calculate texture offset
           angle_t angle =(rw_centerangle+xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
           angle &= 0xFFF; // Prevent finetangent overflow.
           texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
           texturecolumn >>= FRACBITS;
 
-          // calculate lighting
-          dc_colormap[0] = walllights[index];
-          dc_colormap[1] = (!fixedcolormap && STRICTMODE(brightmaps)) ?
-                           fullcolormap : dc_colormap[0];
           dc_x = rw_x;
           dc_iscale = 0xffffffffu / (unsigned)rw_scale;
+
+          // calculate lighting
+          // [Nugget] True color
+
+          dc_nextcolormap = NULL;
+
+          if (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+          {
+            dc_lightindex = dc_minlightindex;
+
+            if (!STRICTMODE(!diminishing_lighting))
+            {
+              R_GetLightIndex(rw_scale);
+              dc_lightindex += R_GetLightIndexFrac();
+
+              dc_lightindex = MIN(255, dc_lightindex);
+            }
+          }
+          else
+          {
+            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                              ? 0 : R_GetLightIndex(rw_scale);
+
+            dc_colormap[0] = walllights[index];
+            dc_colormap[1] = (!fixedcolormap && STRICTMODE(brightmaps)) ?
+                             fullcolormap : dc_colormap[0];
+
+            if (truecolor_rendering == TRUECOLOR_HYBRID
+                && index < MAXLIGHTSCALE-1
+                && dc_colormap[0] != walllights[index + 1])
+            {
+              dc_lightindex = R_GetLightIndexFrac();
+              dc_nextcolormap = walllights[index + 1];
+            }
+          }
         }
 
       // draw the wall tiers
@@ -792,22 +861,32 @@ void R_StoreWallRange(const int start, const int stop)
       // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
       if (!fixedcolormap)
         {
-          int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
-
-          // [crispy] smoother fake contrast
-          lightnum += curline->fakecontrast;
-#if 0
-          if (curline->v1->y == curline->v2->y)
-            lightnum--;
-          else if (curline->v1->x == curline->v2->x)
-            lightnum++;
-#endif
-          if (lightnum < 0)
-            walllights = scalelight[0];
-          else if (lightnum >= LIGHTLEVELS)
-            walllights = scalelight[LIGHTLEVELS-1];
+          // [Nugget] True color
+          if (truecolor_rendering == TRUECOLOR_FULL)
+          {
+            dc_minlightindex = frontsector->lightlevel + ((extralight + curline->fakecontrast) * 16);
+            dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
+          }
           else
-            walllights = scalelight[lightnum];
+          {
+            int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+            // [crispy] smoother fake contrast
+            lightnum += curline->fakecontrast;
+#if 0
+            if (curline->v1->y == curline->v2->y)
+              lightnum--;
+            else if (curline->v1->x == curline->v2->x)
+              lightnum++;
+#endif
+
+            if (lightnum < 0)
+              walllights = scalelight[0];
+            else if (lightnum >= LIGHTLEVELS)
+              walllights = scalelight[LIGHTLEVELS-1];
+            else
+              walllights = scalelight[lightnum];
+          }
         }
     }
 

@@ -64,7 +64,7 @@
 
 // [Nugget] Testing cheat /------------
 
-//#define NUGMAGIC
+#define NUGMAGIC
 
 #ifdef NUGMAGIC
 

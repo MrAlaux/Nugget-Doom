@@ -388,10 +388,15 @@ typedef struct vissprite_s
   // andrewj: voxel support
   int voxel_index;
 
-  // [Nugget]
+  // [Nugget] ----------------------------------------------------------------
+
   byte *tranmap;
   boolean fullbright;
   boolean flipped;
+
+  // True color
+  short lightindex;
+  lighttable_t *nextcolormap;
 } vissprite_t;
 
 //

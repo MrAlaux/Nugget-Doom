@@ -866,7 +866,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 	boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
 	int linesize = video.pitch;
-	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
@@ -992,7 +992,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = V_IndexToRGB(pix);
 				}
 			}
 			else if (has_bottom)
@@ -1007,7 +1007,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = V_IndexToRGB(pix);
 				}
 			}
 
@@ -1025,7 +1025,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					byte src = slab[i];
 					byte pix = colormap[spr->brightmap[src]][src];
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = V_IndexToRGB(pix);
 				}
 			}
 		}
@@ -1110,7 +1110,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
 	const int linesize = video.pitch;
-	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
