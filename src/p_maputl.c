@@ -549,7 +549,7 @@ boolean P_BlockThingsIterator(int x, int y, boolean func(mobj_t*),
 // 1/11/98 killough: Intercept limit removed
 static intercept_t *intercepts, *intercept_p;
 
-static size_t num_intercepts; // [Nugget] Extracted from function below
+static size_t num_intercepts; // [Nugget] Extracted from `check_intercept()`
 
 // [Nugget] /-----------------------------------------------------------------
 

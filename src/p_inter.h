@@ -83,7 +83,7 @@ extern int deh_species_infighting;
 extern int maxammo[], clipammo[];
 
 // [Nugget]
-void P_NuggetGib(struct mobj_s *mo, const boolean crushed);
+void P_NuggetGib(const struct mobj_s *const mo, const boolean crushed);
 
 #endif
 

@@ -874,7 +874,7 @@ static boolean P_NuggetForceGibbing(
 boolean bloodier_gibbing;
 int bloodier_gibbing_splats;
 
-void P_NuggetGib(mobj_t *mo, const boolean crushed)
+void P_NuggetGib(const mobj_t *const mo, const boolean crushed)
 {
   extern boolean idgaf;
 

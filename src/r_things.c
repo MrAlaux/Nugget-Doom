@@ -546,7 +546,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
   boolean percolumn_lighting;
 
-  fixed_t pcl_patchoffset = 0;
+  fixed_t pcl_offset = 0;
   fixed_t pcl_cosine = 0, pcl_sine = 0;
   int pcl_lightindex = 0;
 
@@ -555,7 +555,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   {
     percolumn_lighting = true;
 
-    pcl_patchoffset = SHORT(patch->leftoffset) << FRACBITS;
+    pcl_offset = (SHORT(patch->leftoffset) << FRACBITS) - vis->xiscale/2;
 
     const int angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
 
@@ -580,7 +580,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
       // [Nugget] Thing lighting
       if (percolumn_lighting)
       {
-        fixed_t offset = frac - pcl_patchoffset;
+        fixed_t offset = frac - pcl_offset;
 
         if (vis->flipped) { offset = -offset; }
 
@@ -1549,8 +1549,8 @@ void R_DrawMasked(void)
     {
       for (int x = 0;  x < viewwidth/2;  x++)
       {
-        pixel_t *left = &I_VideoBuffer[(viewwindowy + y) * video.pitch + viewwindowx + x],
-                *right = left + viewwidth - 1 - x*2,
+        pixel_t *const restrict left = &I_VideoBuffer[(viewwindowy + y) * video.pitch + viewwindowx + x],
+                *const restrict right = left + viewwidth - 1 - x*2,
                 temp = *left;
 
         *left = *right;
