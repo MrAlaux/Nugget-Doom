@@ -21,7 +21,9 @@ Although the new code has been written with the intention of not breaking demo c
 
 Note that this feature list is relative to [Woof!'s](https://github.com/fabiangreffrath/woof/blob/master/README.md#key-features);
 read the latter for more details.
-Some features were first implemented in Nugget Doom and later in Woof!, and so they're not listed here anymore.
+Some features were first implemented in Nugget Doom and later in Woof!, so they're not listed here anymore.
+
+The build corresponding to this README is based on [Woof! 15.2.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.2.0).
 
 Most of Nugget Doom's features come from other sources, like source ports and mods;
 the initial implementations for some are **ported from (p.f.)** said sources, while others are just **inspired by (i.b.)** them.
