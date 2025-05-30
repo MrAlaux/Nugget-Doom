@@ -1497,10 +1497,10 @@ static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   int h = f_h;
-  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
   while (h--)
   {
-    memset(src, color, f_w);
+    V_IndexSet(src, color, f_w);
     src += video.pitch;
   }
 }
@@ -1653,7 +1653,7 @@ static void PUTDOT(int xx, int yy, int cc)
 
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h))
-    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+    I_VideoBuffer[(yy) * video.pitch + (xx)] = V_IndexToRGB(cc);
 }
 
 
@@ -1749,19 +1749,26 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 {
   if (STRICTMODE(flip_levels)) { x = f_x*2 + f_w - 1 - x; } // [Nugget] Flip levels
 
-   byte *dest = &I_VideoBuffer[y * video.pitch + x];
-   unsigned int *fg2rgb = Col2RGB8[weight];
-   unsigned int *bg2rgb = Col2RGB8[64 - weight];
-   unsigned int fg, bg;
-
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
   { return; }
 
-   fg = fg2rgb[color];
-   bg = bg2rgb[*dest];
-   fg = (fg + bg) | 0x1f07c1f;
-   *dest = RGB32k[0][0][fg & (fg >> 15)];
+   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
+
+   if (truecolor_rendering)
+   {
+      if (weight) { *dest = V_LerpRGB(*dest, V_IndexToRGB(color), weight, 64); }
+   }
+   else {
+      unsigned int *fg2rgb = Col2RGB8[weight];
+      unsigned int *bg2rgb = Col2RGB8[64 - weight];
+      unsigned int fg, bg;
+
+      fg = fg2rgb[color];
+      bg = bg2rgb[V_IndexFromRGB(*dest)];
+      fg = (fg + bg) | 0x1f07c1f;
+      *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
+   }
 }
 
 
@@ -2851,7 +2858,17 @@ void AM_shadeScreen(void)
       for (int y = f_y;  y < f_y+f_h;  y++)
       {
         const int pixel = y * video.pitch + x;
-        I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];
+
+        if (truecolor_rendering)
+        {
+          I_VideoBuffer[pixel] = V_ShadeRGB(I_VideoBuffer[pixel], automap_overlay_darkening, 32);
+        }
+        else
+        {
+          I_VideoBuffer[pixel] = V_IndexToRGB(
+            colormaps[0][automap_overlay_darkening * 256 + V_IndexFromRGB(I_VideoBuffer[pixel])]
+          );
+        }
       }
     }
   }
