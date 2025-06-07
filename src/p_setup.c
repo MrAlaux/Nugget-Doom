@@ -56,6 +56,7 @@
 
 // [Nugget]
 #include "m_array.h"
+#include "m_random.h"
 #include "st_stuff.h"
 
 //
@@ -1644,6 +1645,8 @@ static boolean P_LoadReject(int lumpnum, int totallines)
 // fast-forward demo to the next map
 boolean playback_nextlevel = false;
 
+boolean src_ain = false; // [Nugget]
+
 void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
 {
   int   i;
@@ -1844,6 +1847,19 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
     gen_blockmap ? "+Blockmap" : "",
     pad_reject ? "+Reject" : "",
     G_GetCurrentComplevelName());
+
+    // [Nugget]
+    if (src_ain && Woof_Random() == 107)
+    {
+      static char s[] = {
+        0116, 0157, 0144, 0145, 040, 0107, 0162, 0141, 0160, 0150,
+        040, 0157, 0165, 0164, 040, 0157, 0146, 040, 0104, 0141,
+        0164, 0145, 056, 040, 0122, 0145, 0142, 0165, 0151, 0154,
+        0144, 0151, 0156, 0147, 056, 056, 056, 0
+      };
+
+      players[consoleplayer].secretmessage = s;
+    }
 }
 
 //

@@ -44,6 +44,8 @@ struct sector_s *GetSectorAtNullAddress(void);
 void P_DegenMobjThinker(void *p);
 void P_SegLengths(boolean contrast_only);
 
+extern boolean src_ain; // [Nugget]
+
 #endif
 
 //----------------------------------------------------------------------------

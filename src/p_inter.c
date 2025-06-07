@@ -360,8 +360,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       player->mo->health = player->health = MIN(maxhealthbonus, player->health + 1);
 
       static const char s[] = {
-        0x50, 0x69, 0x63, 0x6B, 0x65, 0x64, 0x20, 0x75, 0x70, 0x20,
-        0x61, 0x20, 0x63, 0x68, 0x65, 0x65, 0x73, 0x65, 0x2E, 0x00
+        0120, 0151, 0143, 0153, 0145, 0144, 040, 0165, 0160, 040,
+        0141, 040, 0143, 0150, 0145, 0145, 0163, 0145, 056, 0
       };
 
       pickupmsg(player, "%s", s);
@@ -374,9 +374,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       if (!player->armortype) { player->armortype = green_armor_class; }
 
       static const char s[] = {
-        0x50, 0x69, 0x63, 0x6B, 0x65, 0x64, 0x20, 0x75, 0x70, 0x20,
-        0x61, 0x20, 0x63, 0x61, 0x63, 0x2D, 0x6F, 0x27, 0x2D, 0x6C,
-        0x61, 0x6E, 0x74, 0x65, 0x72, 0x6E, 0x2E, 0x00
+        0120, 0151, 0143, 0153, 0145, 0144, 040, 0165, 0160, 040,
+        0141, 040, 0143, 0141, 0143, 055, 0157, 047, 055, 0154,
+        0141, 0156, 0164, 0145, 0162, 0156, 056, 0
       };
 
       pickupmsg(player, "%s", s);
