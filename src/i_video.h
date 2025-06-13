@@ -60,7 +60,7 @@ void I_SetPalette(byte *palette);
 
 void I_FinishUpdate(void);
 
-void I_ReadScreen(byte *dst);
+void I_ReadScreen(pixel_t *dst);
 
 void I_ResetScreen(void); // killough 10/98
 void I_ToggleVsync(void); // [JN] Calls native SDL vsync toggle
@@ -81,9 +81,25 @@ extern boolean toggle_exclusive_fullscreen;
 extern boolean correct_aspect_ratio;
 extern boolean screenvisible;
 
-// [Nugget]
+// [Nugget] /-----------------------------------------------------------------
+
+typedef enum truecolormode_s {
+  TRUECOLOR_OFF,
+  TRUECOLOR_HYBRID,
+  TRUECOLOR_FULL,
+
+  NUM_TRUECOLOR_MODES
+} truecolormode_t;
+
+extern truecolormode_t truecolor_rendering;
+
+extern int red_intensity, green_intensity, blue_intensity;
+extern int color_saturation, color_contrast;
+
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
+
+// [Nugget] -----------------------------------------------------------------/
 
 extern int gamma2;
 byte I_GetNearestColor(byte *palette, int r, int g, int b);

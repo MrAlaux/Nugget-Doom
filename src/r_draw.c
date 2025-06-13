@@ -54,7 +54,7 @@ int viewwidth;
 int viewheight;
 int viewwindowx;
 int viewwindowy;
-static byte **ylookup = NULL;
+static pixel_t **ylookup = NULL;
 static int *columnofs = NULL;
 static int linesize; // killough 11/98
 
@@ -80,6 +80,10 @@ fixed_t dc_texturemid;
 int dc_texheight; // killough
 byte *dc_source;  // first pixel in a column (possibly virtual)
 byte dc_skycolor;
+
+// [Nugget] True color
+short dc_lightindex, dc_minlightindex, dc_maxlightindex = 255;
+lighttable_t *dc_nextcolormap;
 
 //
 // A column is a vertical slice/span from a wall texture that,
@@ -112,7 +116,7 @@ byte dc_skycolor;
                     dc_x);                                               \
         }                                                                \
                                                                          \
-        byte *dest = ylookup[dc_yl] + columnofs[dc_x];                   \
+        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                \
                                                                          \
         const fixed_t fracstep = dc_iscale;                              \
         fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
@@ -160,8 +164,35 @@ byte dc_skycolor;
         }                                                                \
     }
 
-DRAW_COLUMN(, dc_colormap[0][src])
-DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
+DRAW_COLUMN(,
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      dc_maxlightindex - dc_lightindex,
+      dc_maxlightindex
+    )
+  : (dc_nextcolormap)
+    ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
+                V_IndexToRGB(dc_nextcolormap[src]),
+                dc_lightindex,
+                dc_maxlightindex)
+    : V_IndexToRGB(dc_colormap[0][src])
+)
+
+DRAW_COLUMN(Brightmap,
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      dc_brightmap[src] ? 0 : dc_maxlightindex - dc_lightindex,
+      dc_maxlightindex
+    )
+  : (dc_nextcolormap && !dc_brightmap[src])
+    ? V_LerpRGB(V_IndexToRGB(dc_colormap[0][src]),
+                V_IndexToRGB(dc_nextcolormap[src]),
+                dc_lightindex,
+                dc_maxlightindex)
+    : V_IndexToRGB(dc_colormap[dc_brightmap[src]][src])
+)
 
 // Here is the version of R_DrawColumn that deals with translucent  // phares
 // textures and sprites. It's identical to R_DrawColumn except      //    |
@@ -176,9 +207,14 @@ DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
 // actual code differences are.
 
 DRAW_COLUMN(TL,
-    tranmap[(*dest << 8) + dc_colormap[0][src]])
+    V_IndexToRGB(tranmap[(V_IndexFromRGB(*dest) << 8)
+                         + dc_colormap[0][src]])
+)
+
 DRAW_COLUMN(TLBrightmap,
-    tranmap[(*dest << 8) + dc_colormap[dc_brightmap[src]][src]])
+    V_IndexToRGB(tranmap[(V_IndexFromRGB(*dest) << 8)
+                         + dc_colormap[dc_brightmap[src]][src]])
+)
 
 //
 // Sky drawing: for showing just a color above the texture
@@ -200,7 +236,7 @@ void R_DrawSkyColumn(void)
     }
 #endif
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
@@ -225,6 +261,7 @@ void R_DrawSkyColumn(void)
         for (i = 0; i < n; ++i)
         {
             *dest = colormap[skycolor];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -249,6 +286,7 @@ void R_DrawSkyColumn(void)
                 [(main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]]
                   << 8)
                  + colormap[skycolor]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -272,6 +310,7 @@ void R_DrawSkyColumn(void)
         {
             *dest =
                 main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -297,6 +336,7 @@ void R_DrawSkyColumn(void)
         do
         {
             *dest = colormap[source[frac >> FRACBITS]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize; // killough 11/98
             if ((frac += fracstep) >= heightmask)
             {
@@ -309,15 +349,18 @@ void R_DrawSkyColumn(void)
         while ((count -= 2) >= 0) // texture height is a power of 2 -- killough
         {
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize; // killough 11/98
             frac += fracstep;
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize; // killough 11/98
             frac += fracstep;
         }
         if (count & 1)
         {
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            *dest = V_IndexToRGB(*dest);
         }
     }
 }
@@ -406,7 +449,7 @@ static void DrawFuzzColumnOriginal(void)
     //  or blocky mode removed.
 
     // Does not work with blocky mode.
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     // Looks like an attempt at dithering,
     // using the colormap #6 (of 0-31, a bit brighter than average).
@@ -426,7 +469,8 @@ static void DrawFuzzColumnOriginal(void)
         // why_i_left_doom.html
 
         *dest =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+        *dest = V_IndexToRGB(*dest);
         dest += linesize; // killough 11/98
 
         ++fuzzpos;
@@ -440,7 +484,8 @@ static void DrawFuzzColumnOriginal(void)
     if (cutoff)
     {
         *dest = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
+            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+        *dest = V_IndexToRGB(*dest);
     }
 }
 
@@ -484,7 +529,7 @@ static void DrawFuzzColumnBlocky(void)
 
     ++count;
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -504,11 +549,11 @@ static void DrawFuzzColumnBlocky(void)
         count &= ~mask;
 
         const byte fuzz =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
 
         do
         {
-            memset(dest, fuzz, fuzzblockwidth);
+            V_IndexSet(dest, fuzz, fuzzblockwidth);
             dest += linesize;
         } while (--lines);
 
@@ -523,8 +568,8 @@ static void DrawFuzzColumnBlocky(void)
     if (cutoff)
     {
         const byte fuzz = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+        V_IndexSet(dest, fuzz, fuzzblocksize);
     }
 }
 
@@ -578,7 +623,7 @@ static void DrawFuzzColumnRefraction(void)
 
     ++count;
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -600,11 +645,11 @@ static void DrawFuzzColumnRefraction(void)
         lines += count & mask;
         count &= ~mask;
 
-        const byte fuzz = fullcolormap[dark + dest[linesize * offset]];
+        const byte fuzz = fullcolormap[dark + V_IndexFromRGB(dest[linesize * offset])];
 
         do
         {
-            memset(dest, fuzz, fuzzblockwidth);
+            V_IndexSet(dest, fuzz, fuzzblockwidth);
             dest += linesize;
         } while (--lines);
 
@@ -622,8 +667,8 @@ static void DrawFuzzColumnRefraction(void)
     if (cutoff)
     {
         const byte fuzz =
-            fullcolormap[dark + dest[linesize * (offset - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+            fullcolormap[dark + V_IndexFromRGB(dest[linesize * (offset - FUZZOFF) / 2])];
+        V_IndexSet(dest, fuzz, fuzzblocksize);
     }
 }
 
@@ -644,13 +689,13 @@ static void DrawFuzzColumnShadow(void)
     }
 #endif
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     count++; // killough 1/99: minor tuning
 
     do
     {
-        *dest = fullcolormap[8 * 256 + *dest];
+        *dest = V_IndexToRGB(fullcolormap[8 * 256 + V_IndexFromRGB(*dest)]);
 
         dest += linesize; // killough 11/98
     } while (--count);
@@ -763,13 +808,17 @@ fixed_t ds_yfrac;
 fixed_t ds_xstep;
 fixed_t ds_ystep;
 
+// [Nugget] True color
+short ds_lightindex, ds_minlightindex, ds_maxlightindex = 255;
+lighttable_t *ds_nextcolormap;
+
 // start of a 64*64 tile image
 byte *ds_source;
 
 #define R_DRAW_SPAN(NAME, SRCPIXEL)                    \
     static void DrawSpan##NAME(void)                   \
     {                                                  \
-        byte *dest = ylookup[ds_y] + columnofs[ds_x1]; \
+        pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1]; \
                                                        \
         unsigned count = ds_x2 - ds_x1 + 1;            \
                                                        \
@@ -828,8 +877,35 @@ byte *ds_source;
         }                                              \
     }
 
-R_DRAW_SPAN(, ds_colormap[0][src])
-R_DRAW_SPAN(Brightmap, ds_colormap[ds_brightmap[src]][src])
+R_DRAW_SPAN(,
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      ds_maxlightindex - ds_lightindex,
+      ds_maxlightindex
+    )
+  : (ds_nextcolormap)
+    ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
+                V_IndexToRGB(ds_nextcolormap[src]),
+                ds_lightindex,
+                ds_maxlightindex)
+    : V_IndexToRGB(ds_colormap[0][src])
+)
+
+R_DRAW_SPAN(Brightmap,
+  (truecolor_rendering == TRUECOLOR_FULL && !fixedcolormap)
+  ? V_ShadeRGB(
+      V_IndexToRGB(src),
+      dc_brightmap[src] ? 0 : ds_maxlightindex - ds_lightindex,
+      ds_maxlightindex
+    )
+  : (ds_nextcolormap && !ds_brightmap[src])
+    ? V_LerpRGB(V_IndexToRGB(ds_colormap[0][src]),
+                V_IndexToRGB(ds_nextcolormap[src]),
+                ds_lightindex,
+                ds_maxlightindex)
+    : V_IndexToRGB(ds_colormap[ds_brightmap[src]][src])
+)
 
 void (*R_DrawColumn)(void) = DrawColumn;
 void (*R_DrawTLColumn)(void) = DrawColumnTL;

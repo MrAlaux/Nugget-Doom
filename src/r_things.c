@@ -505,6 +505,10 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   dc_colormap[1] = vis->colormap[1];
   dc_brightmap = vis->brightmap;
 
+  // [Nugget] True color
+  dc_lightindex    = vis->lightindex;
+  dc_nextcolormap  = vis->nextcolormap;
+
   // killough 4/11/98: rearrange and handle translucent sprites
   // mixed with translucent/non-translucent 2s normals
 
@@ -587,10 +591,17 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
-                     + extralight;
+        if (truecolor_rendering == TRUECOLOR_FULL)
+        {
+          dc_lightindex = R_GetLightLevelInPoint(gx, gy) + (extralight * 16) + R_GetLightIndexFrac();
+          dc_lightindex = BETWEEN(0, 255, dc_lightindex);
+        }
+        else {
+          const int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
+                             + extralight;
 
-        dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][pcl_lightindex];
+          dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][pcl_lightindex];
+        }
       }
 
       column = (column_t *)((byte *) patch +
@@ -829,6 +840,8 @@ static void R_ProjectSprite (mobj_t* thing)
     vis->startfrac += vis->xiscale*(vis->x1-x1);
   vis->patch = lump;
 
+  vis->nextcolormap = NULL; // [Nugget] True color
+
   // get light level
   if (thing->flags & MF_SHADOW)
     vis->colormap[0] = vis->colormap[1] = NULL;               // shadow draw
@@ -838,32 +851,77 @@ static void R_ProjectSprite (mobj_t* thing)
   {
     vis->colormap[0] = vis->colormap[1] = fullcolormap;       // full bright  // killough 3/20/98
     vis->fullbright = true; // [Nugget]
+    vis->lightindex = 255; // [Nugget] True color
   }
   else
-    {      // diminished light
-      const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                        ? 0 : R_GetLightIndex(xscale);
+    {
+      // diminished light
+      // [Nugget] True color
 
-      // [Nugget] Thing lighting
-      if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
+      if (truecolor_rendering == TRUECOLOR_FULL)
       {
-        int lightlevel = 0;
-
-        for (int i = 0;  i < 9;  i++)
+        // [Nugget] Thing lighting
+        if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
         {
-          const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
-                        gy = vis->gy + (thing->radius * ((i / 3) - 1));
+          int lightlevel = 0;
 
-          lightlevel += R_GetLightLevelInPoint(gx, gy);
+          for (int i = 0;  i < 9;  i++)
+          {
+            const fixed_t gx = viewx + (viewplayer->mo->radius * ((i % 3) - 1)),
+                          gy = viewy + (viewplayer->mo->radius * ((i / 3) - 1));
+
+            lightlevel += R_GetLightLevelInPoint(gx, gy);
+          }
+
+          vis->lightindex = (lightlevel / 9) + (extralight * 16);
+        }
+        else { vis->lightindex = dc_minlightindex; }
+
+        if (!STRICTMODE(!diminishing_lighting))
+        {
+          R_GetLightIndex(xscale);
+          vis->lightindex += R_GetLightIndexFrac();
         }
 
-        int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
+        vis->lightindex = BETWEEN(0, 255, vis->lightindex);
 
-        spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+        // Assign a colormap so that it doesn't apply the fuzz effect
+        vis->colormap[0] = scalelight[0][0];
       }
+      else
+      {
+        const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                          ? 0 : R_GetLightIndex(xscale);
 
-      vis->colormap[0] = spritelights[index];
-      vis->colormap[1] = fullcolormap;
+        // [Nugget] Thing lighting
+        if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
+        {
+          int lightlevel = 0;
+
+          for (int i = 0;  i < 9;  i++)
+          {
+            const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
+                          gy = vis->gy + (thing->radius * ((i / 3) - 1));
+
+            lightlevel += R_GetLightLevelInPoint(gx, gy);
+          }
+
+          const int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
+
+          spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+        }
+
+        vis->colormap[0] = spritelights[index];
+        vis->colormap[1] = fullcolormap;
+
+        if (truecolor_rendering == TRUECOLOR_HYBRID
+            && index < MAXLIGHTSCALE-1
+            && vis->colormap[0] != spritelights[index + 1])
+        {
+          vis->lightindex = R_GetLightIndexFrac();
+          vis->nextcolormap = spritelights[index + 1];
+        }
+      }
     }
 
   vis->brightmap = R_BrightmapForState(thing->state - states);
@@ -917,14 +975,23 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   if (demo_version <= DV_BOOM)
     lightlevel = sec->lightlevel;
 
-  lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
-
-  if (lightnum < 0)
-    spritelights = scalelight[0];
-  else if (lightnum >= LIGHTLEVELS)
-    spritelights = scalelight[LIGHTLEVELS-1];
+  // [Nugget] True color
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    dc_minlightindex = lightlevel + (extralight * 16);
+    dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
+  }
   else
-    spritelights = scalelight[lightnum];
+  {
+    lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+    if (lightnum < 0)
+      spritelights = scalelight[0];
+    else if (lightnum >= LIGHTLEVELS)
+      spritelights = scalelight[LIGHTLEVELS-1];
+    else
+      spritelights = scalelight[lightnum];
+  }
 
   // Handle all things in sector.
 
@@ -1098,6 +1165,8 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   vis->patch = lump;
 
+  vis->nextcolormap = NULL; // [Nugget] True color
+
   // killough 7/11/98: beta psprites did not draw shadows
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
 
@@ -1114,7 +1183,20 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
     // [Nugget]
     const int index = (STRICTMODE(!diminishing_lighting)) ? 0 : MAXLIGHTSCALE-1;
 
-    vis->colormap[0] = spritelights[index];  // local light
+    // [Nugget] True color
+    if (truecolor_rendering == TRUECOLOR_FULL)
+    {
+      vis->lightindex = dc_minlightindex + index;
+      vis->lightindex = MIN(255, vis->lightindex);
+
+      // Assign a colormap so that it doesn't apply the fuzz effect
+      vis->colormap[0] = scalelight[0][0];
+    }
+    else
+    {
+      vis->colormap[0] = spritelights[index];  // local light
+    }
+
     vis->colormap[1] = fullcolormap;
   }
   vis->brightmap = R_BrightmapForState(psp->state - states);
@@ -1154,11 +1236,11 @@ void R_DrawPlayerSprites(void)
   // killough 9/18/98: compute lightlevel from floor and ceiling lightlevels
   // (see r_bsp.c for similar calculations for non-player sprites)
 
+  int lightlevel = 0; // [Nugget]
+
   // [Nugget] Thing lighting
   if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
   {
-    int lightlevel = 0;
-
     for (int i = 0;  i < 9;  i++)
     {
       const fixed_t gx = viewx + (viewplayer->mo->radius * ((i % 3) - 1)),
@@ -1171,22 +1253,33 @@ void R_DrawPlayerSprites(void)
       lightlevel += floorlightlevel + ceilinglightlevel;
     }
 
-    lightnum = ((lightlevel / 9) >> (LIGHTSEGSHIFT+1)) + extralight;
+    lightlevel = (lightlevel >> 1) / 9;
   }
   else
   {
     R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
                &floorlightlevel, &ceilinglightlevel, 0);
-    lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
-      + extralight;
+
+    lightlevel = (floorlightlevel + ceilinglightlevel) >> 1;
   }
 
-  if (lightnum < 0)
-    spritelights = scalelight[0];
-  else if (lightnum >= LIGHTLEVELS)
-    spritelights = scalelight[LIGHTLEVELS-1];
+  // [Nugget] True color
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    dc_minlightindex = lightlevel + (extralight * 16);
+    dc_minlightindex = BETWEEN(0, 255, dc_minlightindex);
+  }
   else
-    spritelights = scalelight[lightnum];
+  {
+    lightnum = (lightlevel >> LIGHTSEGSHIFT) + extralight;
+
+    if (lightnum < 0)
+      spritelights = scalelight[0];
+    else if (lightnum >= LIGHTLEVELS)
+      spritelights = scalelight[LIGHTLEVELS-1];
+    else
+      spritelights = scalelight[lightnum];
+  }
 
   // clip to screen bounds
   mfloorclip = screenheightarray;

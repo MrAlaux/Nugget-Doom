@@ -373,6 +373,7 @@ enum
 
     // [Nugget] --------------------------------------------------------------
 
+    str_truecolor_mode,
     str_bobbing_style,
     str_force_carousel,
     str_crosshair_lockon,
@@ -2698,6 +2699,11 @@ static setup_tab_t gen_tabs[] = {
     {NULL}
 };
 
+// [Nugget] True color
+static const char *truecolor_mode_strings[] = {
+  "Off", "Hybrid", "Full"
+};
+
 static int resolution_scale;
 
 static const char **GetResolutionScaleStrings(void)
@@ -2832,7 +2838,10 @@ void MN_ResetGamma(void)
 
 static setup_menu_t gen_settings1[] = {
 
-    // [Nugget] These first three items now report
+    {"True-color Rendering", S_CHOICE, CNTR_X, M_SPC, {"truecolor_rendering"},
+     .strings_id = str_truecolor_mode},
+
+    // [Nugget] The following three items now report
     // the current resolution when sitting on them
 
     {"Resolution Scale", S_THERMO | S_THRM_SIZE11 | S_ACTION | S_RES, CNTR_X,
@@ -5666,6 +5675,7 @@ static const char **selectstrings[] = {
 
     // [Nugget] --------------------------------------------------------------
 
+    truecolor_mode_strings,
     bobbing_style_strings,
     force_carousel_strings,
     crosshair_lockon_strings,
