@@ -145,12 +145,12 @@ static void UpdateMouseModifiers(void)
 
 int autosave_interval;
 
-static boolean is_periodic_autosave = false;
+static boolean saving_periodic_autosave = false;
 static int autosave_countdown = 0;
 
 boolean G_SavingPeriodicAutoSave(void)
 {
-  return is_periodic_autosave;
+  return saving_periodic_autosave;
 }
 
 void G_SetAutoSaveCountdown(int value)
@@ -2870,20 +2870,45 @@ char *G_AutoSaveName(void)
   // [Nugget] Periodic auto save /--------------------------------------------
 
   char buf[16] = {0};
+  static int autoslot = -1;
+  static boolean last_save_was_periodic = false; // Only changes upon saving
 
-  if (G_SavingPeriodicAutoSave())
+  if (saving_periodic_autosave)
   {
-    static int autoslot = 0;
-
-    sprintf(buf, "autosav%i.dsg", autoslot + 1);
+    // We're autosaving (periodic)
 
     autoslot = (autoslot + 1) % 7; // 8 pages, minus one with the level-end save
+
+    sprintf(buf, "autosav%i.dsg", autoslot + 1);
+    last_save_was_periodic = true;
   }
-  else if (savepage > 0)
+  else if (death_use_state == DEATH_USE_STATE_ACTIVE)
   {
+    // We're loading by on-death action
+
+    if (last_save_was_periodic)
+    {
+      sprintf(buf, "autosav%i.dsg", autoslot + 1);
+    }
+    else { sprintf(buf, "autosave.dsg"); }
+  }
+  else if (savepage > 0 && gameaction != ga_saveautosave)
+  {
+    // We're loading a periodic auto save manually
+
     sprintf(buf, "autosav%i.dsg", savepage);
   }
-  else { sprintf(buf, "autosave.dsg"); }
+  else {
+    // We're loading a level-end auto save manually, or autosaving upon level end
+
+    sprintf(buf, "autosave.dsg");
+
+    if (gameaction == ga_saveautosave)
+    {
+      // We're autosaving upon level end
+      last_save_was_periodic = false;
+    }
+  }
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -3079,7 +3104,7 @@ static void DoSaveGame(char *name)
   // [Nugget] ===============================================================/
 
   // [Nugget] Periodic auto save
-  if (!is_periodic_autosave)
+  if (!saving_periodic_autosave)
   {
     // [FG] save snapshot
     CheckSaveGame(MN_SnapshotDataSize());
@@ -3093,7 +3118,7 @@ static void DoSaveGame(char *name)
 
   if (!M_WriteFile(name, savebuffer, length))
     displaymsg("%s", errno ? strerror(errno) : "Could not save game: Error unknown");
-  else if (show_save_messages && !is_periodic_autosave) // [Nugget]
+  else if (show_save_messages && !saving_periodic_autosave) // [Nugget]
     displaymsg("%s", s_GGSAVED);  // Ty 03/27/98 - externalized
 
   Z_Free(savebuffer);  // killough
@@ -4002,13 +4027,13 @@ void G_Ticker(void)
   {
     if (--autosave_countdown <= 0)
     {
-      is_periodic_autosave = true;
+      saving_periodic_autosave = true;
 
       M_SaveAutoSave();
       save_autosave = false;
       G_DoSaveAutoSave();
 
-      is_periodic_autosave = false;
+      saving_periodic_autosave = false;
     }
   }
 

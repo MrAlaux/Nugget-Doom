@@ -354,13 +354,13 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
         messages_enabled = show_messages;
     }
 
-    linkedmessage_t *m = hud_msg_scrollup ? message_list_head : message_list_tail;
-
     // If true, show full list, otherwise maybe omit some messages
     if (message_review_duration_left > 0)
     {
         message_review_duration_left--;
     }
+
+    linkedmessage_t *m = hud_msg_scrollup ? message_list_head : message_list_tail;
 
     for (int index = hud_msg_scrollup ? 0 : num_messages-1;  m;)
     {
@@ -376,8 +376,8 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
             // Message fadeout -----------------------------------------------
 
             const int fadeout_time = (index < num_messages - hud_msg_lines)
-                                     ? message_review_duration_left
-                                     : MAX(m->duration_left, message_review_duration_left);
+                                   ? message_review_duration_left
+                                   : MAX(m->duration_left, message_review_duration_left);
 
             FadeOutLine(line, fadeout_time);
 
