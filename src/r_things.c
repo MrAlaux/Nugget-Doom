@@ -508,6 +508,13 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   // killough 4/11/98: rearrange and handle translucent sprites
   // mixed with translucent/non-translucent 2s normals
 
+  // [Nugget] Sprite shadows
+  if (vis->yscale > 0)
+  {
+    colfunc = R_DrawColumnShadow;
+  }
+  else
+
   if (!dc_colormap[0])   // NULL colormap = shadow draw
     colfunc = R_DrawFuzzColumn;    // killough 3/14/98
   else
@@ -541,6 +548,9 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   frac = vis->startfrac;
   spryscale = vis->scale;
   sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
+
+  // [Nugget] Sprite shadows
+  if (vis->yscale > 0) { spryscale = vis->yscale; }
 
   // [Nugget] Thing lighting /------------------------------------------------
 
@@ -789,6 +799,37 @@ static void R_ProjectSprite (mobj_t* thing)
         return;
     }
 
+  // [Nugget] Sprite shadows /------------------------------------------------
+
+  vissprite_t *shadow_vis = NULL;
+  fixed_t floorheight, shadow_yscale, shadow_gz, shadow_gzt;
+
+  if (R_SpriteShadowsOn() && xscale > FRACUNIT/4 && !(frame & FF_FULLBRIGHT)
+      && !(thing->flags & MF_SHADOW))
+  {
+    floorheight = R_PointInSubsector(interpx, interpy)->sector->floorheight;
+
+    if (floorheight + FRACUNIT < viewz)
+    {
+      const fixed_t yscale_divisor = 10*FRACUNIT + MAX(0, interpz - floorheight);
+
+      shadow_yscale = FixedDiv(xscale, yscale_divisor);
+
+      if (shadow_yscale > 0)
+      {
+        const fixed_t shadow_height = FixedDiv(spriteheight[lump], yscale_divisor);
+
+        shadow_gz  = floorheight - shadow_height/4;
+        shadow_gzt = shadow_gz   + shadow_height;
+
+        // Could clip shadows out of view due to height
+        shadow_vis = R_NewVisSprite();
+      }
+    }
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
+
   // store information in a vissprite
   vis = R_NewVisSprite ();
 
@@ -811,6 +852,7 @@ static void R_ProjectSprite (mobj_t* thing)
   vis->color = thing->bloodcolor;
 
   // [Nugget]
+  vis->yscale = 0;
   vis->fullbright = false;
   vis->flipped = flip;
 
@@ -871,6 +913,23 @@ static void R_ProjectSprite (mobj_t* thing)
     vis->brightmap = R_BrightmapForSprite(sprite);
 
   vis->tranmap = thing->tranmap; // [Nugget]
+
+  // [Nugget] Sprite shadows
+  if (shadow_vis)
+  {
+    *shadow_vis = *vis;
+
+    shadow_vis->gz = shadow_gz;
+    shadow_vis->gzt = shadow_gzt;
+    shadow_vis->texturemid = shadow_vis->gzt - viewz;
+
+    shadow_vis->yscale = shadow_yscale;
+
+    shadow_vis->mobjflags |= MF_TRANSLUCENT;
+
+    // Thing lighting: set true to make per-column lighting not apply to shadows
+    shadow_vis->fullbright = true;
+  }
 
   // [Alaux] Lock crosshair on target
   if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target
@@ -1079,6 +1138,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   vis->scale = pspritescale;
 
   // [Nugget]
+  vis->yscale = 0;
   vis->fullbright = true; // Thing lighting: set true to make per-column lighting not apply to psprites
   vis->flipped = flip;
 

@@ -37,6 +37,9 @@
 #include "v_video.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "r_data.h"
+
 //
 // All drawing to the view buffer is accomplished in this file.
 // The other refresh files only know about ccordinates,
@@ -179,6 +182,29 @@ DRAW_COLUMN(TL,
     tranmap[(*dest << 8) + dc_colormap[0][src]])
 DRAW_COLUMN(TLBrightmap,
     tranmap[(*dest << 8) + dc_colormap[dc_brightmap[src]][src]])
+
+// [Nugget] Sprite shadows /--------------------------------------------------
+
+const byte *sprite_shadows_tranmap;
+
+void R_DrawColumnShadow(void)
+{
+    int count = dc_yh - dc_yl + 1;
+
+    if (count <= 0) { return; }
+
+    if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
+
+    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+
+    do {
+        *dest = sprite_shadows_tranmap[*dest << 8];
+        dest += linesize; // killough 11/98
+    } while (--count);
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // Sky drawing: for showing just a color above the texture
@@ -854,6 +880,9 @@ void R_InitDrawFunctions(void)
         R_DrawTranslatedColumn = DrawColumnTR;
         R_DrawSpan = DrawSpan;
     }
+
+    // [Nugget] Sprite shadows
+    sprite_shadows_tranmap = R_GetGenericTranMap(sprite_shadows_tran_pct);
 }
 
 void R_InitBufferRes(void)

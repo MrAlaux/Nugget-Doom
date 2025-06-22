@@ -143,6 +143,8 @@ typedef enum fakecontrast_s {
 
 extern boolean vertical_lockon;
 
+extern boolean sprite_shadows;
+extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
 extern boolean flip_levels;
 extern boolean nightvision_visor;
@@ -159,6 +161,7 @@ extern boolean comp_powerrunout;
 extern boolean have_crouch_sprites;
 
 fixed_t R_GetNughudViewPitch(void);
+boolean R_SpriteShadowsOn(void);
 int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y);
 
 #define POWER_RUNOUT(power) \

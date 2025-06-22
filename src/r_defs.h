@@ -389,6 +389,7 @@ typedef struct vissprite_s
   int voxel_index;
 
   // [Nugget]
+  fixed_t yscale;
   byte *tranmap;
   boolean fullbright;
   boolean flipped;
