@@ -187,6 +187,7 @@ extern int menu_backdrop_darkening;
 extern boolean hud_menu_shadows;
 extern int hud_menu_shadows_filter_pct;
 
+void V_InitShadowTranMap(void);
 void V_ToggleShadows(const boolean on);
 void V_SetShadowCrop(const int value);
 
