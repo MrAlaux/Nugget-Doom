@@ -801,7 +801,8 @@ static void R_ProjectSprite (mobj_t* thing)
 
   // [Nugget] Sprite shadows /------------------------------------------------
 
-  vissprite_t *shadow_vis = NULL;
+  boolean have_shadow = false;
+  size_t shadow_vis_index;
   fixed_t floorheight, shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
 
   if (R_SpriteShadowsOn() && xscale > FRACUNIT/4 && !(frame & FF_FULLBRIGHT)
@@ -830,7 +831,12 @@ static void R_ProjectSprite (mobj_t* thing)
         shadow_gzt = shadow_gz   + shadow_height;
 
         // Could clip shadows out of view due to height
-        shadow_vis = R_NewVisSprite();
+
+        // We'll save the index instead of the pointer,
+        // since the next `R_NewVisSprite()` call might leave us with a dangling pointer
+        R_NewVisSprite();
+        shadow_vis_index = num_vissprite - 1;
+        have_shadow = true;
       }
     }
   }
@@ -922,8 +928,10 @@ static void R_ProjectSprite (mobj_t* thing)
   vis->tranmap = thing->tranmap; // [Nugget]
 
   // [Nugget] Sprite shadows
-  if (shadow_vis)
+  if (have_shadow)
   {
+    vissprite_t *const shadow_vis = vissprites + shadow_vis_index;
+
     *shadow_vis = *vis;
 
     shadow_vis->gz = shadow_gz;
