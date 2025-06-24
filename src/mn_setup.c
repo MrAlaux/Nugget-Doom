@@ -70,7 +70,6 @@
 // [Nugget]
 #include "p_inter.h"
 #include "p_setup.h"
-#include "st_stuff.h"
 
 static int M_GetKeyString(int c, int offset);
 static void DrawMenuString(int cx, int cy, int color);
@@ -1445,10 +1444,7 @@ static setup_tab_t keys_tabs[] = {
     {"map"},
     {"cheat"},
 
-    // [Nugget]
-    {"ng1"},
-    {"ng2"},
-    {"ng3"},
+    {"nugget"}, // [Nugget]
 
     {NULL}
 };
@@ -1583,49 +1579,78 @@ static setup_menu_t keys_settings6[] = {
 
 static void UpdateFOV(void);
 
-#define NKB_X 145
+static void MN_MapKeys(void);
+static void MN_CheatKeys(void);
+
+#define N_X 152
 
 static setup_menu_t keys_settings7[] =
 {
-  {"Nugget - General", S_SKIP|S_TITLE, NKB_X, M_SPC},
-  
-    {"Jump/Fly Up",        S_INPUT|S_STRICT|S_CRITICAL, NKB_X, M_SPC, {0}, m_scrn, input_jump},
-    {"Crouch/Fly Down",    S_INPUT|S_STRICT|S_CRITICAL, NKB_X, M_SPC, {0}, m_scrn, input_crouch},
+    {"Jump/Fly Up",        S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_jump},
+    {"Crouch/Fly Down",    S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_crouch},
     MI_GAP,
-    {"Cycle Chasecam",     S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_scrn, input_chasecam},
-    {"Toggle Freecam",     S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_scrn, input_freecam},
+    {"Cycle Chasecam",     S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_scrn, input_chasecam},
+    {"Toggle Freecam",     S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_scrn, input_freecam},
     MI_GAP,
-    {"Toggle Slow Motion", S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_scrn, input_slowmo},
-    {"Toggle Zoom",        S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_scrn, input_zoom},
-    {"Zoom FOV",           S_NUM  |S_STRICT,            NKB_X, M_SPC, {"zoom_fov"}, .action = UpdateFOV},
+    {"Toggle Slow Motion", S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_scrn, input_slowmo},
+    {"Toggle Zoom",        S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_scrn, input_zoom},
+    {"Zoom FOV",           S_NUM  |S_STRICT,            N_X, M_SPC, {"zoom_fov"}, .action = UpdateFOV},
     MI_GAP,
-    {"Toggle Crosshair",   S_INPUT,                     NKB_X, M_SPC, {0}, m_scrn, input_crosshair},
+    {"Toggle Crosshair",   S_INPUT,                     N_X, M_SPC, {0}, m_scrn, input_crosshair},
     MI_GAP,
-    {"Rewind",             S_INPUT|S_STRICT|S_CRITICAL, NKB_X, M_SPC, {0}, m_scrn, input_rewind},
+    {"Rewind",             S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_rewind},
+
+    MI_GAP,
+    {"Automap Keys", S_FUNC, N_X, M_SPC, .action = MN_MapKeys},
+    {"Cheat Keys",   S_FUNC, N_X, M_SPC, .action = MN_CheatKeys},
 
   MI_END
 };
 
-static setup_menu_t keys_settings8[] =
+#undef N_X
+
+#define N_X KB_X
+
+static setup_menu_t mapkeys_settings1[] =
 {
-  {"Nugget - Automap", S_SKIP|S_TITLE, NKB_X, M_SPC},
-  
-    {"Minimap",            S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_map,  input_map_mini},
+    {"Minimap",            S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_mini},
     MI_GAP,
-    {"Tag Finder",         S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_map,  input_map_tagfinder},
+    {"Tag Finder",         S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_tagfinder},
     MI_GAP,
-    {"Highlight P.O.I.'s", S_INPUT|S_STRICT,            NKB_X, M_SPC, {0}, m_map,  input_map_blink},
+    {"Highlight P.O.I.'s", S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_blink},
     MI_GAP,
-    {"Warp to Pointer",    S_INPUT|S_STRICT|S_CRITICAL, NKB_X, M_SPC, {0}, m_map,  input_map_teleport},
-    {"Fancy Warping",      S_ONOFF|S_STRICT|S_CRITICAL, NKB_X, M_SPC, {"fancy_teleport"}},
+    {"Warp to Pointer",    S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_map,  input_map_teleport},
+    {"Fancy Warping",      S_ONOFF|S_STRICT|S_CRITICAL, N_X, M_SPC, {"fancy_teleport"}},
 
   MI_END
 };
 
-static setup_menu_t keys_settings9[] =
-{
-  {"Nugget - Cheats", S_SKIP|S_TITLE, CHEAT_X, M_SPC},
+#undef N_X
 
+static setup_menu_t *mapkeys_settings[] = { mapkeys_settings1, NULL };
+static setup_tab_t mapkeys_tabs[] = { {"Automap"}, {NULL} };
+static void MN_MapKeys(void)
+{
+    SetItemOn(set_item_on);
+    SetPageIndex(current_page);
+    MN_SetNextMenuAlt(ss_mapkeys);
+    setup_screen = ss_mapkeys;
+    current_page = GetPageIndex(mapkeys_settings);
+    current_menu = mapkeys_settings[current_page];
+    current_tabs = mapkeys_tabs;
+    SetupMenuSecondary();
+}
+void MN_DrawMapKeys(void)
+{
+    DrawBackground("FLOOR4_6");
+    MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_KEYBND", "Key Bindings");
+    DrawTabs();
+    DrawInstructions();
+    DrawScreenItems(current_menu);
+}
+
+static setup_menu_t cheatkeys_settings1[] =
+{
   {"Infinite Ammo",      S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_infammo    },
   {"Fast Weapons",       S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_fastweaps  },
   {"Resurrect",          S_INPUT, CHEAT_X, M_SPC, {0}, m_scrn, input_resurrect  },
@@ -1639,7 +1664,27 @@ static setup_menu_t keys_settings9[] =
   MI_END
 };
 
-#undef NKB_X
+static setup_menu_t *cheatkeys_settings[] = { cheatkeys_settings1, NULL };
+static setup_tab_t cheatkeys_tabs[] = { {"Cheats"}, {NULL} };
+static void MN_CheatKeys(void)
+{
+    SetItemOn(set_item_on);
+    SetPageIndex(current_page);
+    MN_SetNextMenuAlt(ss_cheatkeys);
+    setup_screen = ss_cheatkeys;
+    current_page = GetPageIndex(cheatkeys_settings);
+    current_menu = cheatkeys_settings[current_page];
+    current_tabs = cheatkeys_tabs;
+    SetupMenuSecondary();
+}
+void MN_DrawCheatKeys(void)
+{
+    DrawBackground("FLOOR4_6");
+    MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_KEYBND", "Key Bindings");
+    DrawTabs();
+    DrawInstructions();
+    DrawScreenItems(current_menu);
+}
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -1651,10 +1696,7 @@ static setup_menu_t *keys_settings[] = {
     keys_settings5,
     keys_settings6,
 
-    // [Nugget]
-    keys_settings7,
-    keys_settings8,
-    keys_settings9,
+    keys_settings7, // [Nugget]
 
     NULL,
 };
@@ -2049,9 +2091,7 @@ static setup_tab_t stat_tabs[] = {
     {"Crosshair"},
     {"Messages"},
 
-    // [Nugget]
-    {"NG1"},
-    {"NG2"},
+    {"Nugget"}, // [Nugget]
 
     {NULL}
 };
@@ -2279,17 +2319,20 @@ static void UpdateStatsFormatItem(void)
 
 // [Nugget] /-----------------------------------------------------------------
 
+static void MN_HUDColors(void);
+
 static setup_menu_t stat_settings5[] =
 {
-  {"Nugget - HUD", S_SKIP|S_TITLE, M_X, M_SPC},
+  {"HUD", S_SKIP|S_TITLE, M_X, M_SPC},
 
     {"Show Powerup Timers",              S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_power_timers"}, .strings_id = str_show_widgets},
     {"Blink Missing Keys",               S_ONOFF,             M_X, M_SPC, {"hud_blink_keys"}},
     {"Berserk display when using Fist",  S_ONOFF,             M_X, M_SPC, {"sts_show_berserk"}},
     {"Allow HUD Icons",                  S_ONOFF,             M_X, M_SPC, {"hud_allow_icons"}},
+    {"HUD Colors",                       S_FUNC,              M_X, M_SPC, .action = MN_HUDColors},
 
   MI_GAP,
-  {"Nugget - Event Timers", S_SKIP|S_TITLE, M_X, M_SPC},
+  {"Event Timers", S_SKIP|S_TITLE, M_X, M_SPC},
 
     {"Teleport Timer",   S_ONOFF|S_STRICT, M_X, M_SPC, {"hud_time_teleport"}},
     {"Key-Pickup Timer", S_ONOFF|S_STRICT, M_X, M_SPC, {"hud_time_keypickup"}},
@@ -2297,23 +2340,47 @@ static setup_menu_t stat_settings5[] =
   MI_END
 };
 
-static setup_menu_t stat_settings6[] =
-{
-  {"Nugget - HUD Colors", S_SKIP|S_TITLE, M_X, M_SPC},
+#define N_X (M_X - 20)
 
-    {"Time Scale (Game Speed %)", S_CRITEM, M_X, M_SPC, {"hudcolor_time_scale"},  .strings_id = str_hudcolor},
-    {"Total Level Time",          S_CRITEM, M_X, M_SPC, {"hudcolor_total_time"},  .strings_id = str_hudcolor},
-    {"Level Time",                S_CRITEM, M_X, M_SPC, {"hudcolor_time"},        .strings_id = str_hudcolor},
-    {"Event Timer",               S_CRITEM, M_X, M_SPC, {"hudcolor_event_timer"}, .strings_id = str_hudcolor},
+static setup_menu_t hudcol_settings1[] =
+{
+    {"Time Scale (Game Speed %)", S_CRITEM, N_X, M_SPC, {"hudcolor_time_scale"},  .strings_id = str_hudcolor},
+    {"Total Level Time",          S_CRITEM, N_X, M_SPC, {"hudcolor_total_time"},  .strings_id = str_hudcolor},
+    {"Level Time",                S_CRITEM, N_X, M_SPC, {"hudcolor_time"},        .strings_id = str_hudcolor},
+    {"Event Timer",               S_CRITEM, N_X, M_SPC, {"hudcolor_event_timer"}, .strings_id = str_hudcolor},
     MI_GAP,
-    {"Kills label",               S_CRITEM, M_X, M_SPC, {"hudcolor_kills"},     .strings_id = str_hudcolor},
-    {"Items label",               S_CRITEM, M_X, M_SPC, {"hudcolor_items"},     .strings_id = str_hudcolor},
-    {"Secrets label",             S_CRITEM, M_X, M_SPC, {"hudcolor_secrets"},   .strings_id = str_hudcolor},
-    {"Incomplete Milestone",      S_CRITEM, M_X, M_SPC, {"hudcolor_ms_incomp"}, .strings_id = str_hudcolor},
-    {"Complete Milestone",        S_CRITEM, M_X, M_SPC, {"hudcolor_ms_comp"},   .strings_id = str_hudcolor},
+    {"Kills Label",               S_CRITEM, N_X, M_SPC, {"hudcolor_kills"},     .strings_id = str_hudcolor},
+    {"Items Label",               S_CRITEM, N_X, M_SPC, {"hudcolor_items"},     .strings_id = str_hudcolor},
+    {"Secrets Label",             S_CRITEM, N_X, M_SPC, {"hudcolor_secrets"},   .strings_id = str_hudcolor},
+    {"Incomplete Milestone",      S_CRITEM, N_X, M_SPC, {"hudcolor_ms_incomp"}, .strings_id = str_hudcolor},
+    {"Complete Milestone",        S_CRITEM, N_X, M_SPC, {"hudcolor_ms_comp"},   .strings_id = str_hudcolor},
 
   MI_END
 };
+
+#undef N_X
+
+static setup_menu_t *hudcol_settings[] = { hudcol_settings1, NULL };
+static setup_tab_t hudcol_tabs[] = { {"HUD Colors"}, {NULL} };
+static void MN_HUDColors(void)
+{
+    SetItemOn(set_item_on);
+    SetPageIndex(current_page);
+    MN_SetNextMenuAlt(ss_hudcol);
+    setup_screen = ss_hudcol;
+    current_page = GetPageIndex(hudcol_settings);
+    current_menu = hudcol_settings[current_page];
+    current_tabs = hudcol_tabs;
+    SetupMenuSecondary();
+}
+void MN_DrawHUDCol(void)
+{
+    DrawBackground("FLOOR4_6");
+    MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_STAT", "Status Bar/HUD");
+    DrawTabs();
+    DrawInstructions();
+    DrawScreenItems(current_menu);
+}
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -2323,9 +2390,7 @@ static setup_menu_t *stat_settings[] = {
     stat_settings3,
     stat_settings4,
 
-    // [Nugget]
-    stat_settings5,
-    stat_settings6,
+    stat_settings5, // [Nugget]
 
     NULL
 };
@@ -2690,10 +2755,7 @@ static setup_tab_t gen_tabs[] = {
     {"display"},
     {"misc"},
 
-    // [Nugget]
-    {"ng1"},
-    {"ng2"},
-    {"ng3"},
+    {"nugget"}, // [Nugget]
 
     {NULL}
 };
@@ -3808,6 +3870,44 @@ static setup_menu_t gen_settings6[] = {
 
 // Page 7 --------------------------------------------------------------------
 
+static const char *over_under_strings[] = {
+  "Off", "Player Only", "All Things", NULL
+};
+
+static void MN_View(void);
+static void MN_Display(void);
+static void MN_Misc(void);
+
+#define N_X (M_X - 16)
+
+setup_menu_t gen_settings7[] = {
+
+  {"Gameplay", S_SKIP|S_TITLE, N_X, M_SPC},
+
+    {"Move Over/Under Things", S_CHOICE|S_STRICT|S_CRITICAL, N_X, M_SPC, {"over_under"}, .strings_id = str_over_under},
+    {"Jumping/Crouching",      S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"jump_crouch"}},
+
+  MI_GAP,
+  {"Accessibility", S_SKIP|S_TITLE, N_X, M_SPC},
+#if 0 // For future use, hopefully
+    {"Flickering Sector Lighting", S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_sector_lighting"}},
+#endif
+    {"Weapon Flash Lighting",      S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_weapon_flash"}},
+    {"Weapon Flash Sprite",        S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_weapon_pspr"}},
+    {"Invulnerability Colormap",   S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_invul_colormap"}},
+
+  MI_GAP,
+  {"View Options",          S_FUNC, N_X, M_SPC, .action = MN_View},
+  {"Display Options",       S_FUNC, N_X, M_SPC, .action = MN_Display},
+  {"Miscellaneous Options", S_FUNC, N_X, M_SPC, .action = MN_Misc},
+
+  MI_END
+};
+
+#undef N_X
+
+// Page 7: View (1) ----------------------------------------------------------
+
 static void ChangeViewHeight(void)
 {
   static int oldviewheight = 0;
@@ -3825,10 +3925,6 @@ static void ToggleVerticalLockon(void)
   { players[displayplayer].centering = true; }
 }
 
-static const char *over_under_strings[] = {
-  "Off", "Player Only", "All Things", NULL
-};
-
 static const char *flinching_strings[] = {
   "Nothing", "Landing", "Damage", "Both", NULL
 };
@@ -3837,19 +3933,10 @@ static const char *chasecam_strings[] = {
   "Off", "Back", "Front", NULL
 };
 
-#define N_X (M_X - 8)
-#define N_X_THRM8 (M_X_THRM8 - 8)
-#define N_X_THRM11 (M_X_THRM11 - 8)
+#define N_X (M_X - 2)
+#define N_X_THRM8 (M_X_THRM8 - 2)
 
-setup_menu_t gen_settings7[] = {
-
-  {"Nugget - Gameplay", S_SKIP|S_TITLE, N_X, M_SPC},
-
-    {"Move Over/Under Things", S_CHOICE|S_STRICT|S_CRITICAL, N_X, M_SPC, {"over_under"}, .strings_id = str_over_under},
-    {"Jumping/Crouching",      S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"jump_crouch"}},
-
-  {"",              S_SKIP,         N_X, M_SPC/2},
-  {"Nugget - View", S_SKIP|S_TITLE, N_X, M_SPC},
+static setup_menu_t view_settings1[] = {
 
     {"View Height",                   S_NUM   |S_STRICT, N_X,       M_SPC,      {"viewheight_value"}, .action = ChangeViewHeight},
     {"Vertical Target Lock-on",       S_ONOFF |S_STRICT, N_X,       M_SPC,      {"vertical_lockon"}, .action = ToggleVerticalLockon},
@@ -3857,15 +3944,47 @@ setup_menu_t gen_settings7[] = {
     {"Explosion Shake Effect",        S_ONOFF |S_STRICT, N_X,       M_SPC,      {"explosion_shake"}},
     {"Subtle Idle Bobbing/Breathing", S_ONOFF |S_STRICT, N_X,       M_SPC,      {"breathing"}},
     {"Teleporter Zoom",               S_ONOFF |S_STRICT, N_X,       M_SPC,      {"teleporter_zoom"}},
+    MI_GAP,
     {"Death Camera",                  S_ONOFF |S_STRICT, N_X,       M_SPC,      {"death_camera"}},
     {"Chasecam",                      S_CHOICE|S_STRICT, N_X,       M_SPC,      {"chasecam_mode"}, .strings_id = str_chasecam},
     {"Chasecam Distance",             S_THERMO|S_STRICT, N_X_THRM8, M_THRM_SPC, {"chasecam_distance"}},
     {"Chasecam Height",               S_THERMO|S_STRICT, N_X_THRM8, M_THRM_SPC, {"chasecam_height"}},
 
-  MI_END
+    MI_END
 };
 
-// Page 8 --------------------------------------------------------------------
+#undef N_X_THRM8
+#undef N_X
+
+// Page 7: View --------------------------------------------------------------
+
+static setup_menu_t *view_settings[] = { view_settings1, NULL };
+
+static setup_tab_t view_tabs[] = { {"View"}, {NULL} };
+
+static void MN_View(void)
+{
+    SetItemOn(set_item_on);
+    SetPageIndex(current_page);
+
+    MN_SetNextMenuAlt(ss_view);
+    setup_screen = ss_view;
+    current_page = GetPageIndex(view_settings);
+    current_menu = view_settings[current_page];
+    current_tabs = view_tabs;
+    SetupMenuSecondary();
+}
+
+void MN_DrawView(void)
+{
+    DrawBackground("FLOOR4_6");
+    MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_GENERL", "General");
+    DrawTabs();
+    DrawInstructions();
+    DrawScreenItems(current_menu);
+}
+
+// Page 7: Display (1) -------------------------------------------------------
 
 static void RecalculateFakeContrast(void)
 {
@@ -3884,11 +4003,9 @@ static const char *alt_interpic_strings[] = {
   "Off", "IWAD only", "Always", NULL
 };
 
-static void MN_Color(void);
+#define N_X (M_X - 14)
 
-setup_menu_t gen_settings8[] = {
-
-  {"Nugget - Display", S_SKIP|S_TITLE, N_X, M_SPC},
+setup_menu_t display_settings1[] = {
 
     {"Backdrop For All Menus",       S_ONOFF,                 N_X, M_SPC, {"menu_background_all"}},
     {"No Palette Tint in Menus",     S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_menu_tint"}},
@@ -3903,10 +4020,69 @@ setup_menu_t gen_settings8[] = {
     {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
     {"Screen Wipe Speed Percentage", S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
     {"Alt. Intermission Background", S_CHOICE|S_STRICT,       N_X, M_SPC, {"alt_interpic"}, .strings_id = str_alt_interpic},
-    {"Color Options",                S_FUNC,                  N_X, M_SPC, .action = MN_Color},
 
   MI_END
 };
+
+#undef N_X
+
+// Page 7: Display (2) -------------------------------------------------------
+
+void SetPalette(void)
+{
+    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
+}
+
+static setup_menu_t display_settings2[] = {
+
+    {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
+    {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
+    {"Blue Intensity",  S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"blue_intensity"},   .action = SetPalette},
+    {"Saturation",      S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_saturation"}, .action = SetPalette},
+    {"Contrast",        S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_contrast"},   .action = SetPalette},
+
+    MI_END
+};
+
+// Page 7: Display -----------------------------------------------------------
+
+static setup_menu_t *display_settings[] = { display_settings1, display_settings2, NULL };
+
+static setup_tab_t display_tabs[] = { {"Display"}, {"Colors"}, {NULL} };
+
+static void MN_Display(void)
+{
+    SetItemOn(set_item_on);
+    SetPageIndex(current_page);
+
+    MN_SetNextMenuAlt(ss_display);
+    setup_screen = ss_display;
+    current_page = GetPageIndex(display_settings);
+    current_menu = display_settings[current_page];
+    current_tabs = display_tabs;
+    SetupMenuSecondary();
+}
+
+void MN_DrawDisplay(void)
+{
+    DrawBackground("FLOOR4_6");
+    MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_GENERL", "General");
+    DrawTabs();
+    DrawInstructions();
+    DrawScreenItems(current_menu);
+
+    if (current_page == 1)
+    {
+      patch_t *const patch = V_CachePatchName("M_PALETT", PU_CACHE);
+
+      const int x = (SCREENWIDTH / 2) - (SHORT(patch->width) / 2);
+      const int y = 109;
+
+      V_DrawPatchSH(x, y, patch);
+    }
+}
+
+// Page 7: Misc (1) ----------------------------------------------------------
 
 static void UpdateAutoSaveInterval(void)
 {
@@ -3935,91 +4111,55 @@ static const char *page_ticking_strings[] = {
   "Always", "Not In Menus", "Never", NULL
 };
 
-// Page 8: Color -------------------------------------------------------------
+#define N_X (M_X - 28)
 
-void SetPalette(void)
-{
-    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
-}
+static setup_menu_t misc_settings1[] = {
 
-static setup_menu_t color_settings1[] = {
-
-    {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
-    {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
-    {"Blue Intensity",  S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"blue_intensity"},   .action = SetPalette},
-    {"Saturation",      S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_saturation"}, .action = SetPalette},
-    {"Contrast",        S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_contrast"},   .action = SetPalette},
+    {"Sound Hearing Distance",  S_CHOICE|S_STRICT,            N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
+    {"One-Key Quick-Save/Load", S_ONOFF,                      N_X, M_SPC, {"one_key_saveload"}},
+    {"Auto Save Interval (S)",  S_NUM,                        N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
+    {"Rewind Interval (S)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
+    {"Rewind Depth",            S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
+    {"Rewind Timeout (MS)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_timeout"}, .action = G_EnableRewind},
+    {"Play Internal Demos",     S_CHOICE,                     N_X, M_SPC, {"no_page_ticking"}, .strings_id = str_page_ticking},
+    {"Quick \"Quit Game\"",     S_ONOFF,                      N_X, M_SPC, {"quick_quitgame"}},
 
     MI_END
 };
 
-static setup_menu_t *color_settings[] = { color_settings1, NULL };
+#undef N_X
 
-static setup_tab_t color_tabs[] = { {"Colors"}, {NULL} };
+static void UpdateAutoSaveItems(void)
+{
+  DisableItem(!G_AutoSaveEnabled(), misc_settings1, "autosave_interval");
+}
 
-static void MN_Color(void)
+// Page 7: Misc --------------------------------------------------------------
+
+static setup_menu_t *misc_settings[] = { misc_settings1, NULL };
+
+static setup_tab_t misc_tabs[] = { {"Miscellaneous"}, {NULL} };
+
+static void MN_Misc(void)
 {
     SetItemOn(set_item_on);
     SetPageIndex(current_page);
 
-    MN_SetNextMenuAlt(ss_color);
-    setup_screen = ss_color;
-    current_page = GetPageIndex(color_settings);
-    current_menu = color_settings[current_page];
-    current_tabs = color_tabs;
+    MN_SetNextMenuAlt(ss_misc);
+    setup_screen = ss_misc;
+    current_page = GetPageIndex(misc_settings);
+    current_menu = misc_settings[current_page];
+    current_tabs = misc_tabs;
     SetupMenuSecondary();
 }
 
-void MN_DrawColor(void)
+void MN_DrawMisc(void)
 {
     DrawBackground("FLOOR4_6");
     MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_GENERL", "General");
     DrawTabs();
     DrawInstructions();
     DrawScreenItems(current_menu);
-
-    patch_t *const patch = V_CachePatchName("M_PALETT", PU_CACHE);
-
-    const int x = (SCREENWIDTH / 2) - (SHORT(patch->width) / 2);
-    const int y = 109;
-
-    V_DrawPatchSH(x, y, patch);
-}
-
-// Page 9 --------------------------------------------------------------------
-
-#define N2_X (M_X - 16)
-
-setup_menu_t gen_settings9[] = { // [Nugget]
-
-  {"Nugget - Miscellaneous", S_SKIP|S_TITLE, N2_X, M_SPC},
-
-    {"Sound Hearing Distance",  S_CHOICE|S_STRICT,            N2_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
-    {"One-Key Quick-Save/Load", S_ONOFF,                      N2_X, M_SPC, {"one_key_saveload"}},
-    {"Auto Save Interval (S)",  S_NUM,                        N2_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
-    {"Rewind Interval (S)",     S_NUM   |S_STRICT|S_CRITICAL, N2_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
-    {"Rewind Depth",            S_NUM   |S_STRICT|S_CRITICAL, N2_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
-    {"Rewind Timeout (MS)",     S_NUM   |S_STRICT|S_CRITICAL, N2_X, M_SPC, {"rewind_timeout"}, .action = G_EnableRewind},
-    {"Play Internal Demos",     S_CHOICE,                     N2_X, M_SPC, {"no_page_ticking"}, .strings_id = str_page_ticking},
-    {"Quick \"Quit Game\"",     S_ONOFF,                      N2_X, M_SPC, {"quick_quitgame"}},
-
-  MI_GAP,
-  {"Nugget - Accessibility", S_SKIP|S_TITLE, N2_X, M_SPC},
-#if 0 // For future use, hopefully
-    {"Flickering Sector Lighting", S_ONOFF|S_STRICT, N2_X, M_SPC, {"a11y_sector_lighting"}},
-#endif
-    {"Weapon Flash Lighting",      S_ONOFF|S_STRICT, N2_X, M_SPC, {"a11y_weapon_flash"}},
-    {"Weapon Flash Sprite",        S_ONOFF|S_STRICT, N2_X, M_SPC, {"a11y_weapon_pspr"}},
-    {"Invulnerability Colormap",   S_ONOFF|S_STRICT, N2_X, M_SPC, {"a11y_invul_colormap"}},
-
-  MI_END
-};
-
-#undef N2_X
-
-static void UpdateAutoSaveItems(void)
-{
-  DisableItem(!G_AutoSaveEnabled(), gen_settings9, "autosave_interval");
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -4028,8 +4168,7 @@ static setup_menu_t *gen_settings[] = {
     gen_settings1, gen_settings2, gen_settings3, gen_settings4,
     gen_settings5, gen_settings6,
 
-    // [Nugget]
-    gen_settings7, gen_settings8, gen_settings9,
+    gen_settings7, // [Nugget]
 
     NULL
 };
@@ -4069,12 +4208,12 @@ static void UpdateVoxelRenderingModeItem(void)
 // [Nugget]
 static void UpdatePaletteItems(void)
 {
-  DisableItem(!palette_changes, gen_settings8, "no_menu_tint");
-  DisableItem(!palette_changes, gen_settings8, "no_berserk_tint");
-  DisableItem(!palette_changes, gen_settings8, "no_radsuit_tint");
-  DisableItem(!palette_changes, gen_settings8, "damagecount_cap");
-  DisableItem(!palette_changes, gen_settings8, "bonuscount_cap");
-  DisableItem(!palette_changes, gen_settings9, "a11y_invul_colormap");
+  DisableItem(!palette_changes, display_settings1, "no_menu_tint");
+  DisableItem(!palette_changes, display_settings1, "no_berserk_tint");
+  DisableItem(!palette_changes, display_settings1, "no_radsuit_tint");
+  DisableItem(!palette_changes, display_settings1, "damagecount_cap");
+  DisableItem(!palette_changes, display_settings1, "bonuscount_cap");
+  DisableItem(!palette_changes, gen_settings7, "a11y_invul_colormap");
 }
 
 void MN_Trans(void) // To reset translucency after setting it in menu
@@ -4246,7 +4385,12 @@ static setup_menu_t **setup_screens[] = {
     gyro_settings,
 
     // [Nugget]
-    color_settings,
+    view_settings,
+    display_settings,
+    misc_settings,
+    hudcol_settings,
+    mapkeys_settings,
+    cheatkeys_settings,
     customskill_settings, // Custom Skill menu
 };
 
@@ -4377,7 +4521,13 @@ static void ResetDefaultsSecondary(void)
         ResetDefaults(ss_padadv);
         ResetDefaults(ss_gyro);
 
-        ResetDefaults(ss_color); // [Nugget]
+        // [Nugget]
+        ResetDefaults(ss_view);
+        ResetDefaults(ss_display);
+        ResetDefaults(ss_misc);
+        ResetDefaults(ss_hudcol);
+        ResetDefaults(ss_mapkeys);
+        ResetDefaults(ss_cheatkeys);
     }
 }
 
@@ -5792,15 +5942,15 @@ void MN_BindMenuVariables(void)
              "Darkening level for dark menu backdrop");
 
     M_BindBool("menu_background_all", &menu_background_all, NULL,
-               false, ss_gen, wad_yes,
+               false, ss_display, wad_yes,
                "Backdrop for all menus");
 
     M_BindBool("no_menu_tint", &no_menu_tint, NULL,
-               false, ss_gen, wad_yes,
+               false, ss_display, wad_yes,
                "Disable palette tint in menus");
 
     M_BindBool("hud_menu_shadows", &hud_menu_shadows, NULL,
-               false, ss_gen, wad_yes,
+               false, ss_display, wad_yes,
                "Shadows for HUD/menu graphics");
 
     // (CFG-only)
@@ -5808,8 +5958,9 @@ void MN_BindMenuVariables(void)
               66, 0, 100, ss_none, wad_yes,
               "HUD/menu-shadows translucency percent");
 
-    BIND_BOOL_GENERAL(quick_quitgame, false,
-                      "Skip \"Quit Game\" prompt");
+    M_BindBool("quick_quitgame", &quick_quitgame, NULL,
+               false, ss_misc, wad_no,
+               "Skip \"Quit Game\" prompt");
 
     // [Nugget] -------------------------------------------------------------/
 

@@ -6102,22 +6102,24 @@ void G_BindGameVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindNum("autosave_interval", &autosave_interval, NULL,
-            0, 0, 600, ss_gen, wad_no,
+            0, 0, 600, ss_misc, wad_no,
             "Interval between periodic auto saves, in seconds (0 = Off)");
 
-  BIND_BOOL_GENERAL(one_key_saveload, false, "One-key quick-saving/loading");
+  M_BindBool("one_key_saveload", &one_key_saveload, NULL,
+             false, ss_misc, wad_no,
+             "One-key quick-saving/loading");
 
-  BIND_NUM_GENERAL(rewind_interval,
-                   1, 1, 600,
-                   "Interval between rewind key-frames, in seconds");
+  M_BindNum("rewind_interval", &rewind_interval, NULL,
+            1, 1, 600, ss_misc, wad_no,
+            "Interval between rewind key-frames, in seconds");
 
-  BIND_NUM_GENERAL(rewind_depth,
-                   60, 0, 3000,
-                   "Number of rewind key-frames to be stored (0 = No rewinding)");
+  M_BindNum("rewind_depth", &rewind_depth, NULL,
+            60, 0, 3000, ss_misc, wad_no,
+            "Number of rewind key-frames to be stored (0 = No rewinding)");
 
-  BIND_NUM_GENERAL(rewind_timeout,
-                   10, 0, 25,
-                   "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
+  M_BindNum("rewind_timeout", &rewind_timeout, NULL,
+            10, 0, 25, ss_misc, wad_no,
+            "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
 }
 
 void G_BindEnemVariables(void)

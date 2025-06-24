@@ -106,7 +106,12 @@ void MN_DrawGyro(void);
 
 // [Nugget] /-----------------------------------------------------------------
 
-void MN_DrawColor(void);
+void MN_DrawView(void);
+void MN_DrawDisplay(void);
+void MN_DrawMisc(void);
+void MN_DrawHUDCol(void);
+void MN_DrawMapKeys(void);
+void MN_DrawCheatKeys(void);
 
 // Custom Skill menu
 void MN_CustomSkill(void);

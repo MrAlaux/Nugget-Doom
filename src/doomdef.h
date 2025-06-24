@@ -234,7 +234,12 @@ typedef enum {
   ss_gyro,
 
   // [Nugget]
-  ss_color,
+  ss_view,
+  ss_display,
+  ss_misc,
+  ss_hudcol,
+  ss_mapkeys,
+  ss_cheatkeys,
   ss_skill, // Custom Skill menu
 
   ss_max

@@ -2774,12 +2774,12 @@ void D_BindMiscVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
-  BIND_NUM_GENERAL(wipe_speed_percentage,
-                   100, 50, 200,
-                   "Screen-wipe speed percent");
+  M_BindNum("wipe_speed_percentage", &wipe_speed_percentage, NULL,
+            100, 50, 200, ss_display, wad_no,
+            "Screen-wipe speed percent");
 
   M_BindNum("alt_interpic", &alt_interpic, NULL,
-            ALTINTERPIC_OFF, ALTINTERPIC_OFF, NUM_ALTINTERPIC-1, ss_gen, wad_yes,
+            ALTINTERPIC_OFF, ALTINTERPIC_OFF, NUM_ALTINTERPIC-1, ss_display, wad_yes,
             "Alternative intermission background (0 = Off; 1 = IWAD backgrounds only; 2 = Always)");
 
   // (CFG-only)
@@ -2787,9 +2787,9 @@ void D_BindMiscVariables(void)
              false, ss_none, wad_yes,
              "Use ratios for stats in intermission screen");
 
-  BIND_NUM_GENERAL(no_page_ticking,
-                   0, 0, 2,
-                   "Play internal demos (0 = Always; 1 = Not in menus; 2 = Never)");
+  M_BindNum("no_page_ticking", &no_page_ticking, NULL,
+            0, 0, 2, ss_misc, wad_no,
+            "Play internal demos (0 = Always; 1 = Not in menus; 2 = Never)");
 
   // [Nugget] ---------------------------------------------------------------/
 

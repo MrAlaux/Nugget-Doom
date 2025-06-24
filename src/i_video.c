@@ -2066,12 +2066,25 @@ void I_BindVideoVariables(void)
 
     // [Nugget] --------------------------------------------------------------
 
-    BIND_NUM(red_intensity,   100, 0, 100, "Intensity percent of the screen's red component");
-    BIND_NUM(green_intensity, 100, 0, 100, "Intensity percent of the screen's green component");
-    BIND_NUM(blue_intensity,  100, 0, 100, "Intensity percent of the screen's blue component");
+    M_BindNum("red_intensity", &red_intensity, NULL,
+              100, 0, 100, ss_display, wad_no,
+              "Intensity percent of the screen's red component");
 
-    BIND_NUM(color_saturation, 100, 0, 100, "Saturation percent of the screen's colors");
-    BIND_NUM(color_contrast, 100, 10, 200, "Contrast percent of the screen's colors");
+    M_BindNum("green_intensity", &green_intensity, NULL,
+              100, 0, 100, ss_display, wad_no,
+              "Intensity percent of the screen's green component");
+
+    M_BindNum("blue_intensity", &blue_intensity, NULL,
+              100, 0, 100, ss_display, wad_no,
+              "Intensity percent of the screen's blue component");
+
+    M_BindNum("color_saturation", &color_saturation, NULL,
+              100, 0, 100, ss_display, wad_no,
+              "Saturation percent of the screen's colors");
+
+    M_BindNum("color_contrast", &color_contrast, NULL,
+              100, 10, 200, ss_display, wad_no,
+              "Contrast percent of the screen's colors");
 }
 
 //----------------------------------------------------------------------------

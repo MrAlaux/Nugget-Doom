@@ -1885,7 +1885,9 @@ void R_BindRenderVariables(void)
   BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
 
   // [Nugget] FOV-based sky stretching (CFG-only)
-  BIND_BOOL(fov_stretchsky, true, "Stretch skies based on FOV");
+  M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,
+             true, ss_display, wad_no,
+             "Stretch skies based on FOV");
 
   BIND_BOOL_GENERAL(linearsky, false, "Linear horizontal scrolling for skies");
   BIND_BOOL_GENERAL(r_swirl, false, "Swirling animated flats");
@@ -1894,7 +1896,7 @@ void R_BindRenderVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("fake_contrast", &fake_contrast, NULL,
-            FAKECONTRAST_SMOOTH, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_gen, wad_yes,
+            FAKECONTRAST_SMOOTH, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_display, wad_yes,
             "Fake contrast for walls (0 = Off; 1 = Smooth; 2 = Vanilla)");
 
   // (CFG-only)
@@ -1903,7 +1905,7 @@ void R_BindRenderVariables(void)
              "Diminishing lighting (light emitted by player)");
 
   M_BindNum("thing_lighting_mode", &thing_lighting_mode, NULL,
-            THINGLIGHTING_ORIGIN, THINGLIGHTING_ORIGIN, NUM_THINGLIGHTING-1, ss_gen, wad_yes,
+            THINGLIGHTING_ORIGIN, THINGLIGHTING_ORIGIN, NUM_THINGLIGHTING-1, ss_display, wad_yes,
             "Thing lighting mode (0 = Origin (vanilla); 1 = Hitbox; 2 = Per-column)");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -1923,7 +1925,9 @@ void R_BindRenderVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
-  BIND_BOOL_GENERAL(flip_levels, false, "Flip levels horizontally (visual filter)");
+  M_BindBool("flip_levels", &flip_levels, NULL,
+             false, ss_display, wad_no,
+             "Flip levels horizontally (visual filter)");
 
   // (CFG-only)
   M_BindNum("lowres_pixel_width", &lowres_pixel_width, NULL,
@@ -1936,23 +1940,23 @@ void R_BindRenderVariables(void)
             "Height multiplier for pixels at 100% resolution");
 
   M_BindBool("no_berserk_tint", &no_berserk_tint, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_display, wad_yes,
              "Disable Berserk tint");
 
   M_BindBool("no_radsuit_tint", &no_radsuit_tint, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_display, wad_yes,
              "Disable Radiation Suit tint");
 
   M_BindBool("nightvision_visor", &nightvision_visor, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_display, wad_yes,
              "Night-vision effect for the light amplification visor");
 
   M_BindNum("damagecount_cap", &damagecount_cap, NULL,
-            100, 0, 100, ss_gen, wad_yes,
+            100, 0, 100, ss_display, wad_yes,
             "Player damage-tint cap");
 
   M_BindNum("bonuscount_cap", &bonuscount_cap, NULL,
-            -1, -1, 100, ss_gen, wad_yes,
+            -1, -1, 100, ss_display, wad_yes,
             "Player bonus-tint cap (-1 = Uncapped)");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -1961,7 +1965,7 @@ void R_BindRenderVariables(void)
 
   // [Nugget] (CFG-only)
   M_BindBool("no_killough_face", &no_killough_face, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_none, wad_yes,
              "Disable the Killough-face easter egg");
 
   BIND_NUM(screenblocks, 10, 3, UL, "Size of game-world screen");
@@ -1984,19 +1988,19 @@ void R_BindRenderVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindNum("viewheight_value", &viewheight_value, NULL,
-            41, 32, 56, ss_gen, wad_yes,
+            41, 32, 56, ss_view, wad_yes,
             "Height of player's POV");
 
   M_BindNum("flinching", &flinching, NULL,
-            0, 0, 3, ss_gen, wad_yes,
+            0, 0, 3, ss_view, wad_yes,
             "Flinch player view (0 = Off; 1 = Upon landing; 2 = Upon taking damage; 3 = Upon either)");
 
   M_BindBool("vertical_lockon", &vertical_lockon, NULL,
-             false, ss_gen, wad_no,
+             false, ss_view, wad_no,
              "Camera automatically locks onto targets vertically");
 
   M_BindBool("explosion_shake", &explosion_shake, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_view, wad_yes,
              "Explosions shake the view");
 
   // (CFG-only)
@@ -2005,27 +2009,27 @@ void R_BindRenderVariables(void)
             "Explosion-shake intensity percent");
 
   M_BindBool("breathing", &breathing, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_view, wad_yes,
              "Imitate player's breathing (subtle idle bobbing)");
 
   M_BindBool("teleporter_zoom", &teleporter_zoom, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_view, wad_yes,
              "Zoom effect when teleporting");
 
   M_BindBool("death_camera", &death_camera, NULL,
-             false, ss_gen, wad_yes,
+             false, ss_view, wad_yes,
              "Force third-person perspective upon death");
 
   M_BindNum("chasecam_mode", &chasecam_mode, NULL,
-            CHASECAMMODE_OFF, CHASECAMMODE_OFF, NUM_CHASECAMMODES-1, ss_gen, wad_yes,
+            CHASECAMMODE_OFF, CHASECAMMODE_OFF, NUM_CHASECAMMODES-1, ss_view, wad_yes,
             "Chasecam mode (0 = Off; 1 = Back; 2 = Front)");
 
   M_BindNum("chasecam_distance", &chasecam_distance, NULL,
-            80, 1, 128, ss_gen, wad_yes,
+            80, 1, 128, ss_view, wad_yes,
             "Chasecam distance");
 
   M_BindNum("chasecam_height", &chasecam_height, NULL,
-            48, 1, 64, ss_gen, wad_yes,
+            48, 1, 64, ss_view, wad_yes,
             "Chasecam height");
 
   // (CFG-only)

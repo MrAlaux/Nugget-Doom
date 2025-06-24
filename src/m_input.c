@@ -30,6 +30,7 @@
 #include "am_map.h"
 #include "g_game.h"
 #include "i_video.h"
+#include "mn_internal.h"
 #include "r_main.h"
 #include "st_widgets.h"
 
@@ -699,6 +700,13 @@ void M_BindInputVariables(void)
 {
 #define BIND_INPUT(id, help) M_BindInput(#id, id, help)
 
+// [Nugget]
+#define BIND_INPUT_SUB(id, help, submenu) { \
+    default_t item = { #id, {0}, {0}, {0}, {UL,UL}, input, submenu, wad_no, \
+                       help, id }; \
+    array_push(defaults, item); \
+}
+
     BIND_INPUT(input_forward, "Move forward");
     BIND_INPUT(input_backward, "Move backward");
     BIND_INPUT(input_turnright, "Turn right");
@@ -801,20 +809,22 @@ void M_BindInputVariables(void)
     BIND_INPUT(input_map_mark, "Drop a marker on automap");
     BIND_INPUT(input_map_clear, "Clear last marker on automap");
     BIND_INPUT(input_map_gobig, "Toggle max zoom on automap");
-    BIND_INPUT(input_map_mini, "Activate minimap mode"); // [Nugget]
+
+    BIND_INPUT_SUB(input_map_mini, "Activate minimap mode", ss_mapkeys); // [Nugget]
+
     BIND_INPUT(input_map_grid, "Toggle grid display over automap");
     BIND_INPUT(input_map_overlay, "Toggle automap overlay mode");
     BIND_INPUT(input_map_rotate, "Toggle automap rotation");
 
     // [Nugget] /---------------------------------------------------------------
 
-    BIND_INPUT(input_map_blink,     "Highlight points of interest (keyed lines, marks) on the automap");
+    BIND_INPUT_SUB(input_map_blink, "Highlight points of interest (keyed lines, marks) on the automap", ss_mapkeys);
 
-    BIND_INPUT(input_map_tagfinder, "Find associated sectors and lines");
+    BIND_INPUT_SUB(input_map_tagfinder, "Find associated sectors and lines", ss_mapkeys);
 
-    BIND_INPUT(input_map_teleport,  "Teleport to automap pointer");
+    BIND_INPUT_SUB(input_map_teleport, "Teleport to automap pointer", ss_mapkeys);
 
-    M_BindBool("fancy_teleport", &fancy_teleport, NULL, true, ss_keys, wad_no,
+    M_BindBool("fancy_teleport", &fancy_teleport, NULL, true, ss_mapkeys, wad_no,
                "Use effects when teleporting to pointer (fog, sound and zoom)");
 
     // [Nugget] ---------------------------------------------------------------/
@@ -844,15 +854,15 @@ void M_BindInputVariables(void)
     BIND_INPUT(input_avj, "Fake Archvile Jump");
 
     // [Nugget]
-    BIND_INPUT(input_infammo,    "Infinite ammo");
-    BIND_INPUT(input_fastweaps,  "Fast weapons");
-    BIND_INPUT(input_resurrect,  "Resurrect");
-    BIND_INPUT(input_fly,        "Fly mode");
-    BIND_INPUT(input_summonr,    "Summon last summoned mobj");
-    BIND_INPUT(input_linetarget, "Linetarget-query mode");
-    BIND_INPUT(input_mdk,        "MDK attack");
-    BIND_INPUT(input_saitama,    "MDK Fist");
-    BIND_INPUT(input_boomcan,    "Explosive hitscan attacks");
+    BIND_INPUT_SUB(input_infammo,    "Infinite ammo",             ss_cheatkeys);
+    BIND_INPUT_SUB(input_fastweaps,  "Fast weapons",              ss_cheatkeys);
+    BIND_INPUT_SUB(input_resurrect,  "Resurrect",                 ss_cheatkeys);
+    BIND_INPUT_SUB(input_fly,        "Fly mode",                  ss_cheatkeys);
+    BIND_INPUT_SUB(input_summonr,    "Summon last summoned mobj", ss_cheatkeys);
+    BIND_INPUT_SUB(input_linetarget, "Linetarget-query mode",     ss_cheatkeys);
+    BIND_INPUT_SUB(input_mdk,        "MDK attack",                ss_cheatkeys);
+    BIND_INPUT_SUB(input_saitama,    "MDK Fist",                  ss_cheatkeys);
+    BIND_INPUT_SUB(input_boomcan,    "Explosive hitscan attacks", ss_cheatkeys);
 
     // [Nugget] Fancy cast
     for (int i = 0;  i < input_fc_end - input_fc_start;  i++)
