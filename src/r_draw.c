@@ -187,6 +187,11 @@ DRAW_COLUMN(TLBrightmap,
 
 const byte *sprite_shadows_tranmap;
 
+void R_InitShadowTranMap(void)
+{
+  sprite_shadows_tranmap = R_GetGenericTranMap(sprite_shadows_tran_pct);
+}
+
 void R_DrawColumnShadow(void)
 {
     int count = dc_yh - dc_yl + 1;
@@ -882,7 +887,7 @@ void R_InitDrawFunctions(void)
     }
 
     // [Nugget] Sprite shadows
-    sprite_shadows_tranmap = R_GetGenericTranMap(sprite_shadows_tran_pct);
+    if (sprite_shadows) { R_InitShadowTranMap(); }
 }
 
 void R_InitBufferRes(void)
