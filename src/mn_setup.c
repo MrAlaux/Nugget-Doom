@@ -3867,11 +3867,6 @@ setup_menu_t gen_settings7[] = {
 
 // Page 8 --------------------------------------------------------------------
 
-static void ShadowTrans(void)
-{
-  R_GetGenericTranMap(hud_menu_shadows_filter_pct);
-}
-
 static void RecalculateFakeContrast(void)
 {
   P_SegLengths(true);
@@ -3897,7 +3892,7 @@ setup_menu_t gen_settings8[] = {
 
     {"Backdrop For All Menus",       S_ONOFF,                 N_X, M_SPC, {"menu_background_all"}},
     {"No Palette Tint in Menus",     S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_menu_tint"}},
-    {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = ShadowTrans},
+    {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = V_InitShadowTranMap},
     {"Sprite Shadows",               S_ONOFF |S_STRICT,       N_X, M_SPC, {"sprite_shadows"}},
     {"Thing Lighting Mode",          S_CHOICE|S_STRICT,       N_X, M_SPC, {"thing_lighting_mode"}, .strings_id = str_thing_lighting},
     {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
