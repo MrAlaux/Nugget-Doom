@@ -757,7 +757,7 @@ void I_BindSoundVariables(void)
 
     // [Nugget]
     M_BindBool("s_clipping_dist_x2", &s_clipping_dist_x2, NULL,
-               false, ss_gen, wad_yes,
+               false, ss_misc, wad_yes,
                "Double sound-clipping distance");
 
     BIND_NUM_SFX(snd_channels, MAX_CHANNELS, 1, MAX_CHANNELS,

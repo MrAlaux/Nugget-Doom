@@ -2235,11 +2235,56 @@ static menu_t GyroDef = {
 
 // [Nugget] /-----------------------------------------------------------------
 
-static menu_t ColorDef = {
+static menu_t ViewDef = {
     generic_setup_end,
     &SetupDef,
     Generic_Setup,
-    MN_DrawColor,
+    MN_DrawView,
+    34, 5,
+    0
+};
+
+static menu_t DisplayDef = {
+    generic_setup_end,
+    &SetupDef,
+    Generic_Setup,
+    MN_DrawDisplay,
+    34, 5,
+    0
+};
+
+static menu_t MiscDef = {
+    generic_setup_end,
+    &SetupDef,
+    Generic_Setup,
+    MN_DrawMisc,
+    34, 5,
+    0
+};
+
+static menu_t HUDColDef = {
+    generic_setup_end,
+    &SetupDef,
+    Generic_Setup,
+    MN_DrawHUDCol,
+    34, 5,
+    0
+};
+
+static menu_t MapKeysDef = {
+    generic_setup_end,
+    &SetupDef,
+    Generic_Setup,
+    MN_DrawMapKeys,
+    34, 5,
+    0
+};
+
+static menu_t CheatKeysDef = {
+    generic_setup_end,
+    &SetupDef,
+    Generic_Setup,
+    MN_DrawCheatKeys,
     34, 5,
     0
 };
@@ -2263,7 +2308,12 @@ void MN_SetNextMenuAlt(ss_types type)
         &MidiDef,   &EqualizerDef, &PadAdvDef,    &GyroDef,
 
         // [Nugget]
-        &ColorDef,
+        &ViewDef,
+        &DisplayDef,
+        &MiscDef,
+        &HUDColDef,
+        &MapKeysDef,
+        &CheatKeysDef,
         &CustomSkillDef // Custom Skill menu
     };
 
