@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Sprite Shadows_** setting
 - **_Extra Gibbing_ for MBF21 hitscan-weapon functions**
 - *`CASTCALL`* developer cheat
 

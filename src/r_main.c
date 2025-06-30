@@ -145,6 +145,13 @@ fixed_t R_GetNughudViewPitch(void)
   return nughud_viewpitch;
 }
 
+static boolean sprite_shadows_on = false;
+
+boolean R_SpriteShadowsOn(void)
+{
+  return sprite_shadows_on;
+}
+
 int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y)
 {
   int lightlevel;
@@ -169,6 +176,8 @@ int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y)
 
 boolean vertical_lockon;
 
+boolean sprite_shadows;
+int sprite_shadows_tran_pct;
 thinglighting_t thing_lighting_mode;
 boolean flip_levels;
 static int lowres_pixel_width;
@@ -1796,6 +1805,10 @@ void R_RenderPlayerView (player_t* player)
   // check for new console commands.
   NetUpdate ();
 
+  // [Nugget]
+  sprite_shadows_on = STRICTMODE(sprite_shadows)
+                      && !viewplayer->powers[pw_infrared];
+
   // The head node is the last node output.
   R_RenderBSPNode (numnodes-1);
 
@@ -1903,6 +1916,15 @@ void R_BindRenderVariables(void)
   M_BindBool("diminishing_lighting", &diminishing_lighting, NULL,
              true, ss_none, wad_yes,
              "Diminishing lighting (light emitted by player)");
+
+  M_BindBool("sprite_shadows", &sprite_shadows, NULL,
+             false, ss_gen, wad_yes,
+             "Shadows for world sprites");
+
+  // (CFG-only)
+  M_BindNum("sprite_shadows_tran_pct", &sprite_shadows_tran_pct, NULL,
+            50, 0, 100, ss_none, wad_yes,
+            "Sprite-shadows translucency percent");
 
   M_BindNum("thing_lighting_mode", &thing_lighting_mode, NULL,
             THINGLIGHTING_ORIGIN, THINGLIGHTING_ORIGIN, NUM_THINGLIGHTING-1, ss_display, wad_yes,

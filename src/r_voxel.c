@@ -694,6 +694,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	vis->x2 = x2;
 
 	// [Nugget]
+	vis->yscale = 0;
 	vis->fullbright = false;
 	vis->flipped = false;
 

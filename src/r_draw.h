@@ -43,6 +43,10 @@ extern void (*R_DrawColumn)(void);
 extern void (*R_DrawTLColumn)(void);      // drawing translucent textures // phares
 extern void (*R_DrawFuzzColumn)(void);    // The Spectre/Invisibility effect.
 
+// [Nugget] Sprite shadows
+void R_InitShadowTranMap(void);
+void R_DrawColumnShadow(void);
+
 // [crispy] draw fuzz effect independent of rendering frame rate
 void R_SetFuzzPosTic(void);
 void R_SetFuzzPosDraw(void);
