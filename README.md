@@ -216,29 +216,29 @@ All of these are CFG-only, so their CVAR names are included.
 
 ### Cheats
 
-- **_'FULLCLIP'_** for infinite ammo
-- **_'VALIANT'_** for fast weapons [i.b. ZDoom]
-  - **_'BOBBERS'_** serves as a shortcut to toggle the two cheats mentioned above, plus IDFA
-- **_'GIBBERS'_** to force gibbing on dying enemies, independently of damage dealt
-- **_'RIOTMODE'_** cheat, to make enemies attack all sentient entities
-- **_'IDFLY'_** to fly (uses jumping/crouching buttons) [i.b. PrBoom+, ZDoom]
-- **_'SUMMON'_** to spawn an actor based on its type index [i.b. ZDoom, PrBoomX]
-- **_'IDDF'_** to find a key in the automap
-- **_'IDDET'_** to find exits in the automap
-- **_'RESURRECT' / 'IDRES'_** to resurrect the player without toggling IDDQD [i.b. ZDoom]
-- **_'LINETARGET'_** to give some info on the player's linetarget [i.b. ZDoom]
-- **_'TRAILS'_** to show hitscan trails
-- **_'MDK'_** to perform a hitscan attack of 1-million damage [i.b. ZDoom]
-- **_'SAITAMA'_** to enable the MDK Fist
-- **_'BOOMCAN'_** for explosive hitscan attacks
-- **_'NEXTMAP'_** to exit the level [i.b. ZDoom]
-- **_'NEXTSECRET'_** to exit the level as if using a secret exit [i.b. ZDoom]
-- **_'TURBO'_** to change the player speed in-game
-- **_'TNTEM'_** as an alternative to _'KILLEM'_
-- **_'FPS'_** as a replacement for _'SHOWFPS'_
+- **`FULLCLIP`** for infinite ammo
+- **`VALIANT`** for fast weapons [i.b. ZDoom]
+  - **`BOBBERS`** serves as a shortcut to toggle the two above cheats, and `IDFA`
+- **`GIBBERS`** to force gibbing on dying enemies, independently of damage dealt
+- **`RIOTMODE`** cheat, to make enemies attack all sentient entities
+- **`IDFLY`** to fly (uses jumping/crouching buttons) [i.b. PrBoom+, ZDoom]
+- **`SUMMON`** to spawn an actor based on its type index [i.b. ZDoom, PrBoomX]
+- **`IDDF`** to find a key in the automap
+- **`IDDET`** to find exits in the automap
+- **`RESURRECT / IDRES`** to resurrect the player without toggling `IDDQD` [i.b. ZDoom]
+- **`LINETARGET`** to give some info on the player's linetarget [i.b. ZDoom]
+- **`TRAILS`** to show hitscan trails
+- **`MDK`** to perform a hitscan attack of 1-million damage [i.b. ZDoom]
+- **`SAITAMA`** to enable the MDK Fist
+- **`BOOMCAN`** for explosive hitscan attacks
+- **`NEXTMAP`** to exit the level [i.b. ZDoom]
+- **`NEXTSECRET`** to exit the level as if using a secret exit [i.b. ZDoom]
+- **`TURBO`** to change the player speed in-game
+- **`TNTEM`** as an alternative to `KILLEM`
+- **`FPS`** as a replacement for `SHOWFPS`
 - **Mid-air control while in noclipping mode** [p.f. Crispy Doom]
 - **Key-binding for Computer Area Map cheat**
-- Reenabled **_'NOMOMENTUM'_** cheat [p.f. Crispy Doom]
+- Reenabled **`NOMOMENTUM`** cheat [p.f. Crispy Doom]
 
 For a complete list with more details, see the _New Nugget Doom cheats_ section of `docs/cheats.md`.
 
