@@ -8,6 +8,7 @@
 
 - **Tweaked _Night-Vision Visor Effect_ to improve visibility**
 - **Improved randomization for _Bloodier Gibbing_ and _Toss Items Upon Death_**
+- **Raised maximum freecam speed to 40 units**
 - **Reorganized setup menus**
 
 ## Bug Fixes

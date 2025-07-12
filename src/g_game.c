@@ -4286,7 +4286,7 @@ void G_Ticker(void)
 
           if (speedchange)
           {
-            basespeed = BETWEEN(FRACUNIT, 20*FRACUNIT, basespeed + (FRACUNIT * speedchange));
+            basespeed = BETWEEN(FRACUNIT, 40*FRACUNIT, basespeed + (FRACUNIT * speedchange));
 
             const int scaledspeed = basespeed / FRACUNIT;
             displaymsg("Freecam Speed: %i unit%s", scaledspeed, (scaledspeed == 1) ? "" : "s");
