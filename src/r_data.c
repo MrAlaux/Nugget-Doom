@@ -1215,9 +1215,7 @@ void R_InitData(void)
   if (hud_menu_shadows && hud_menu_shadows_filter_pct != 100)
   { R_GetGenericTranMap(hud_menu_shadows_filter_pct); }
 
-  // Sprite shadows
-  if (sprite_shadows)
-  { R_GetGenericTranMap(sprite_shadows_tran_pct); }
+  // Sprite shadows are handled in `R_InitDrawFunctions()`
 
   // Message fadeout
   if (ST_MessageFadeoutOn())

@@ -176,7 +176,7 @@ int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y)
 
 boolean vertical_lockon;
 
-boolean sprite_shadows;
+spriteshadows_t sprite_shadows;
 int sprite_shadows_tran_pct;
 thinglighting_t thing_lighting_mode;
 boolean flip_levels;
@@ -1806,7 +1806,7 @@ void R_RenderPlayerView (player_t* player)
   NetUpdate ();
 
   // [Nugget]
-  sprite_shadows_on = STRICTMODE(sprite_shadows)
+  sprite_shadows_on = STRICTMODE(sprite_shadows != 0)
                       && !viewplayer->powers[pw_infrared];
 
   // The head node is the last node output.
@@ -1917,9 +1917,9 @@ void R_BindRenderVariables(void)
              true, ss_none, wad_yes,
              "Diminishing lighting (light emitted by player)");
 
-  M_BindBool("sprite_shadows", &sprite_shadows, NULL,
-             false, ss_gen, wad_yes,
-             "Shadows for world sprites");
+  M_BindNum("sprite_shadows", &sprite_shadows, NULL,
+            SPRITESHADOWS_OFF, SPRITESHADOWS_OFF, NUM_SPRITESHADOWS-1, ss_display, wad_yes,
+            "Shadows for world sprites (1 = Simple; 2 = 3D)");
 
   // (CFG-only)
   M_BindNum("sprite_shadows_tran_pct", &sprite_shadows_tran_pct, NULL,

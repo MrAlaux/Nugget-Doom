@@ -1715,19 +1715,40 @@ fixed_t P_SlopeToPitch(const fixed_t slope)
 {
   if (!slope) { return 0; }
 
-  int closest = 0;
-  fixed_t closest_diff = abs(finetangent[closest] - slope);
+  size_t closest_i = 0;
+  fixed_t closest_diff = INT_MAX;
 
-  for (int i = 1;  i < FINEANGLES/2;  i++)
+  for (size_t l = 0, r = FINEANGLES/2;;)
   {
-    if (abs(finetangent[i] - slope) < closest_diff)
+    const size_t remaining = (r - l) / 2,  i = l + remaining;
+
+    const fixed_t found = finetangent[i],
+                   diff = abs(found - slope);
+
+    if (closest_diff > diff)
     {
-      closest = i;
-      closest_diff = abs(finetangent[i] - slope);
+      closest_i = i;
+
+      if (diff)
+      {
+        closest_diff = diff;
+      }
+      else { break; }
     }
+
+    if (slope < found)
+    {
+      r -= remaining + 1;
+    }
+    else // found < slope
+    {
+      l += remaining + 1;
+    }
+
+    if (l >= r) { break; }
   }
 
-  return (closest << ANGLETOFINESHIFT) - ANG90;
+  return (closest_i << ANGLETOFINESHIFT) - ANG90;
 }
 
 static fixed_t linetarget_topslope = 0,
@@ -2471,7 +2492,7 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
 
     // Hit line
     R_SetChasecamHit(true);
-    
+
     // Position a bit closer
     frac = in->frac - FixedDiv(FRACUNIT, attackrange);
     fixed_t x = trace.x + FixedMul(trace.dx, frac);

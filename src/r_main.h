@@ -125,6 +125,14 @@ void R_SetViewSize(int blocks);              // Called by M_Responder.
 
 // CVARs ---------------------------------------------------------------------
 
+typedef enum spriteshadows_s {
+  SPRITESHADOWS_OFF,
+  SPRITESHADOWS_SIMPLE,
+  SPRITESHADOWS_3D,
+
+  NUM_SPRITESHADOWS
+} spriteshadows_t;
+
 typedef enum thinglighting_s {
   THINGLIGHTING_ORIGIN,
   THINGLIGHTING_HITBOX,
@@ -143,7 +151,7 @@ typedef enum fakecontrast_s {
 
 extern boolean vertical_lockon;
 
-extern boolean sprite_shadows;
+extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
 extern boolean flip_levels;

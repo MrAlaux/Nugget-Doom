@@ -1728,7 +1728,9 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
   // Taken outside of code block after this one
   // to allow direct vertical aiming in Beta
   if (vertical_aiming == VERTAIM_DIRECT)
-  { slope = source->player->slope; }
+  {
+    slope = source->player->slope;
+  }
   else
   // killough 7/19/98: autoaiming was not in original beta
   if (!beta_emulation || autoaim)
