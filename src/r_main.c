@@ -1419,7 +1419,10 @@ void R_SetupFrame (player_t *player)
 
   if (uncapped && (camera_ready || (R_FreecamOn() && freecam.interp)))
   {
-    if ((use_localview || (R_FreecamOn() && (!R_GetFreecamMobj() || R_ChasecamOn()))) // [Nugget] Freecam
+    if ((use_localview
+         // [Nugget] Freecam
+         || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM
+             && (!R_GetFreecamMobj() || R_ChasecamOn())))
         && CalcViewAngle)
     {
       viewangle = CalcViewAngle(player);
