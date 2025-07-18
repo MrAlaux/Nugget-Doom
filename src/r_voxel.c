@@ -516,7 +516,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 
 	// skip the player thing we are viewing from
 	// [Nugget] Unless using chasecam or freecam
-	if (thing->player == viewplayer && !(R_GetChasecamOn() || R_GetFreecamOn()))
+	if (thing->player == viewplayer && !(R_ChasecamOn() || R_FreecamOn()))
 		return true;
 
 	// does the voxel model exist?
@@ -1342,9 +1342,9 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
                               const boolean translucent)
 {
   if (STRICTMODE(hide_weapon)
-      || R_GetChasecamOn() // Chasecam
-      || R_GetFreecamOn() // Freecam
-      || (WI_UsingAltInterpic() && (gamestate == GS_INTERMISSION))) // Alt. intermission background
+      || R_ChasecamOn() // Chasecam
+      || R_FreecamOn() // Freecam
+      || (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)) // Alt. intermission background
   {
     return false;
   }

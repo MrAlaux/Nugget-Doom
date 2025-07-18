@@ -426,7 +426,7 @@ static wi_animation_t *animation;
 
 static boolean alt_interpic_on = false, old_alt_interpic_on = false;
 
-boolean WI_UsingAltInterpic(void)
+boolean WI_AltInterpicOn(void)
 {
   return alt_interpic_on;
 }

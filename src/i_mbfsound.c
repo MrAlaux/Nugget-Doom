@@ -41,7 +41,7 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
     angle_t angle;
 
     // [Nugget] Freecam
-    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+    const mobj_t *playermo = (R_FreecamOn() && !nodrawers)
                              ? viewplayer->mo
                              : players[displayplayer].mo;
 

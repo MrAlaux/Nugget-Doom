@@ -384,7 +384,7 @@ void P_MovePlayer (player_t* player)
   // Forcefully stand up under certain conditions
   if ((mo->intflags & MIF_CROUCHING)
       && (!jump_crouch || player->cheats & CF_FLY
-          || ((R_GetChasecamOn() || R_GetFreecamOn()) && !have_crouch_sprites)))
+          || ((R_ChasecamOn() || R_FreecamOn()) && !have_crouch_sprites)))
   {
     mo->intflags &= ~MIF_CROUCHING;
   }
@@ -474,7 +474,7 @@ void P_MovePlayer (player_t* player)
           // [Nugget] -------------------------------------------------------/
 
           // [Nugget] Freecam
-          const angle_t angle = (casual_play && R_GetFreecamOn() && player == &players[consoleplayer])
+          const angle_t angle = (casual_play && R_FreecamOn() && player == &players[consoleplayer])
                                 ? R_GetFreecamAngle() : mo->angle;
 
           if (cmd->forwardmove)
@@ -584,7 +584,7 @@ void P_DeathThink (player_t* player)
 
         fixed_t pitch;
 
-        if (!R_GetChasecamOn())
+        if (!R_ChasecamOn())
         {
           const fixed_t slope =
             FixedDiv(
@@ -766,7 +766,7 @@ void P_PlayerThink (player_t* player)
     {
       // [Nugget] Disable zoom upon death
       if (player == &players[displayplayer] && R_GetZoom() == ZOOM_ON
-          && !R_GetFreecamOn())
+          && !R_FreecamOn())
       {
         R_SetZoom(ZOOM_OFF);
       }

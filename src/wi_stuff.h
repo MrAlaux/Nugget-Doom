@@ -39,7 +39,7 @@ extern boolean inter_ratio_stats;
 
 // Alt. intermission background ----------------------------------------------
 
-extern boolean WI_UsingAltInterpic(void);
+extern boolean WI_AltInterpicOn(void);
 extern void WI_DisableAltInterpic(void);
 
 // [Nugget] =================================================================/

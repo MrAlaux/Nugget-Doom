@@ -160,7 +160,7 @@ void HU_UpdateCrosshair(void)
                                        : SCREENHEIGHT / 2;
 
     // [Nugget] Freecam
-    if (R_GetFreecamOn()) {
+    if (R_FreecamOn()) {
       crosshair.cr = colrngs[hud_crosshair_color];
       return;
     }
@@ -264,9 +264,9 @@ void HU_DrawCrosshair(void)
       // Crash fix
       || !crosshair.cr
       // Chasecam
-      || (R_GetChasecamOn() && !chasecam_crosshair)
+      || (R_ChasecamOn() && !chasecam_crosshair)
       // Freecam
-      || (R_GetFreecamOn() && (R_GetFreecamMode() != FREECAM_CAM || R_GetFreecamMobj()))
+      || (R_FreecamOn() && (R_GetFreecamMode() != FREECAM_CAM || R_GetFreecamMobj()))
       // Alt. intermission background
       || (gamestate == GS_INTERMISSION))
     {

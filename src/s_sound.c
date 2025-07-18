@@ -259,7 +259,7 @@ static void StartSound(const mobj_t *origin, int sfx_id,
     // killough 3/7/98, 4/25/98: code rearranged slightly
 
     // [Nugget] Freecam
-    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+    const mobj_t *playermo = (R_FreecamOn() && !nodrawers)
                              ? viewplayer->mo
                              : players[displayplayer].mo;
 
@@ -634,7 +634,7 @@ void S_UpdateSounds(const mobj_t *listener)
     }
 
     // [Nugget] Freecam
-    if (R_GetFreecamOn() && !nodrawers) { listener = viewplayer->mo; }
+    if (R_FreecamOn() && !nodrawers) { listener = viewplayer->mo; }
 
     I_DeferSoundUpdates();
 

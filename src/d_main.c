@@ -291,7 +291,7 @@ void D_Display (void)
     fractionaltic = I_GetFracTime();
 
     if (!menuactive && gamestate == GS_LEVEL && raw_input
-        && (!paused || R_FreecamTurningOverride())) // [Nugget] Freecam
+        && (!paused || R_FreecamOn())) // [Nugget] Freecam
     {
       I_StartDisplay();
     }
@@ -1809,7 +1809,7 @@ void D_UpdateCasualPlay(void)
 
     R_SetFuzzColumnMode();
     R_SetZoom(ZOOM_RESET); // Reset FOV
-    R_SetFreecamOn(R_GetFreecamOn());
+    R_SetFreecamOn(R_FreecamOn());
 
     MN_SetupResetMenu();
   }

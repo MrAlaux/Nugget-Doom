@@ -303,7 +303,7 @@ static boolean I_3D_AdjustSoundParams(const mobj_t *listener,
     }
 
     // [Nugget] Freecam
-    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+    const mobj_t *playermo = (R_FreecamOn() && !nodrawers)
                              ? viewplayer->mo
                              : players[displayplayer].mo;
 

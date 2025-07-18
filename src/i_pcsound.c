@@ -391,7 +391,7 @@ static boolean I_PCS_AdjustSoundParams(const mobj_t *listener,
     fixed_t adx, ady, approx_dist;
 
     // [Nugget] Freecam
-    const mobj_t *playermo = (R_GetFreecamOn() && !nodrawers)
+    const mobj_t *playermo = (R_FreecamOn() && !nodrawers)
                              ? viewplayer->mo
                              : players[displayplayer].mo;
 

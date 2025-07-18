@@ -2832,7 +2832,7 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (STRICTMODE(M_InputActivated(input_chasecam)))
     {
         // Freecam
-        if (R_GetFreecamOn() && !R_GetFreecamMobj())
+        if (R_FreecamOn() && !R_GetFreecamMobj())
         {
           const freecammode_t mode = R_CycleFreecamMode();
 
@@ -2846,7 +2846,7 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (STRICTMODE(M_InputActivated(input_freecam)))
     {
-        R_SetFreecamOn(!R_GetFreecamOn());
+        R_SetFreecamOn(!R_FreecamOn());
     }
 
     if (STRICTMODE(M_InputActivated(input_rewind)))
@@ -3342,7 +3342,7 @@ boolean M_Responder(event_t *ev)
         if (!chat_on
             && ((demoplayback
                  && (action == MENU_ENTER || action == MENU_BACKSPACE)
-                 && !R_GetFreecamOn()) // [Nugget] Freecam
+                 && !R_FreecamOn()) // [Nugget] Freecam
                 || action == MENU_ESCAPE)) // phares
         {
             I_ShowMouseCursor(menu_input != pad_mode);

@@ -33,7 +33,7 @@ extern boolean force_flip_pan;
 
 // when to clip out sounds
 // Does not fit the large outdoor areas.
-// [Nugget] Now variable; initialized in `I_AdjustSoundParams()`
+// [Nugget] Now variable
 extern int S_CLIPPING_DIST;
 
 // Distance to origin when sounds should be maxed out.
@@ -46,7 +46,7 @@ extern int S_CLIPPING_DIST;
 
 #define S_CLOSE_DIST    (200 << FRACBITS)
 
-// [Nugget] Now variable; initialized in `I_AdjustSoundParams()`
+// [Nugget] Now variable
 extern int S_ATTENUATOR;
 
 // Adjustable by menu.

@@ -2082,8 +2082,9 @@ static void DoPaletteStuff(player_t *player)
         }
     }
 
-    // [Nugget] Disable palette tint in menus
-    if (STRICTMODE(!palette_changes || (no_menu_tint && menuactive)))
+    // [Nugget] Disable palette tint in menus or when controlling freecam
+    if (STRICTMODE(!palette_changes || (no_menu_tint && menuactive)
+                   || R_GetFreecamMode() == FREECAM_CAM))
     {
         palette = 0;
     }

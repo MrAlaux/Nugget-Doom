@@ -261,7 +261,7 @@ static void ProcessFOVEffects(void)
 {
   float targetfov = custom_fov;
 
-  if (WI_UsingAltInterpic() && gamestate == GS_INTERMISSION)
+  if (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)
   {
     targetfov = MAX(140, targetfov);
   }
@@ -370,7 +370,7 @@ static void ProcessFOVEffects(void)
 
     for (int i = 0;  i < NUMFOVFX;  i++)
     {
-      if (FOVFX_ZOOM < i && R_GetFreecamOn()) { break; }
+      if (FOVFX_ZOOM < i && R_FreecamOn()) { break; }
 
       targetfov += fovfx[i].current;
     }
@@ -450,7 +450,7 @@ boolean chasecam_on = false;
 fixed_t  chasexofs, chaseyofs;
 angle_t  chaseaofs;
 
-boolean R_GetChasecamOn(void)
+boolean R_ChasecamOn(void)
 {
   return chasecam_on;
 }
@@ -482,7 +482,7 @@ static struct {
   mobj_t *mobj;
 } freecam;
 
-boolean R_GetFreecamOn(void)
+boolean R_FreecamOn(void)
 {
   return freecam_on;
 }
@@ -494,7 +494,7 @@ void R_SetFreecamOn(const boolean value)
 
 freecammode_t R_GetFreecamMode(void)
 {
-  return freecam_on * freecam_mode;
+  return freecam_on ? freecam_mode : FREECAM_OFF;
 }
 
 freecammode_t R_CycleFreecamMode(void)
@@ -505,11 +505,6 @@ freecammode_t R_CycleFreecamMode(void)
 angle_t R_GetFreecamAngle(void)
 {
   return freecam.angle;
-}
-
-boolean R_FreecamTurningOverride(void)
-{
-  return freecam_on && (!freecam.mobj || R_GetChasecamOn());
 }
 
 void R_ResetFreecam(const boolean newmap)
@@ -617,7 +612,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     freecam.y = freecam.mobj->y;
     freecam.z = freecam.mobj->z + (freecam.mobj->height * 13/16);
 
-    if (R_GetChasecamOn())
+    if (R_ChasecamOn())
     {
       freecam.angle    += angle;
       freecam.ticangle += ticangle;
@@ -1096,7 +1091,7 @@ void R_ExecuteSetViewSize (void)
   setsizeneeded = false;
 
   // [Nugget] Alt. intermission background
-  if (WI_UsingAltInterpic() && gamestate == GS_INTERMISSION)
+  if (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)
   { setblocks = 11; }
 
   if (setblocks == 11)
@@ -1221,7 +1216,7 @@ void R_ExecuteSetViewSize (void)
     }
 
   // [Nugget] Alt. intermission background
-  if (!WI_UsingAltInterpic())
+  if (!WI_AltInterpicOn())
     ST_refreshBackground(); // [Nugget] NUGHUD
 }
 
@@ -1270,11 +1265,6 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 
 static inline boolean CheckLocalView(const player_t *player)
 {
-  // [Nugget] Freecam: use localview unless
-  // locked onto a mobj in first person, or not controlling the camera
-  if (R_FreecamTurningOverride() && R_GetFreecamMode() == FREECAM_CAM)
-  { return true; }
-
   return (
     // Don't use localview if the player is spying.
     player == &players[consoleplayer] &&
@@ -1327,13 +1317,13 @@ void R_SetupFrame (player_t *player)
 {
   // [Nugget]
   chasecam_on = gamestate == GS_LEVEL
-                && !(R_GetFreecamOn() && !R_GetFreecamMobj())
+                && !(R_FreecamOn() && !R_GetFreecamMobj())
                 && STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0
                                                 && player->playerstate == PST_DEAD
-                                                && !R_GetFreecamOn()));
+                                                && !R_FreecamOn()));
 
   // [Nugget] Freecam
-  if (freecam_on && gamestate == GS_LEVEL)
+  if (R_FreecamOn() && gamestate == GS_LEVEL)
   {
     static player_t dummyplayer = {0};
     static mobj_t dummymobj = {0};
@@ -1342,11 +1332,13 @@ void R_SetupFrame (player_t *player)
     {
       dummymobj = *freecam.mobj;
 
-      if (R_GetChasecamOn())
-      {
-        if (uncapped && leveltime > oldleveltime)
-        { dummymobj.angle = LerpAngle(dummymobj.oldangle, dummymobj.angle); }
+      if (uncapped && dummymobj.interp && leveltime > oldleveltime)
+      { dummymobj.angle = LerpAngle(dummymobj.oldangle, dummymobj.angle); }
 
+      dummymobj.oldangle = dummymobj.angle;
+
+      if (R_ChasecamOn())
+      {
         dummymobj.oldangle += freecam.oangle;
         dummymobj.angle    += freecam.angle;
       }
@@ -1394,8 +1386,7 @@ void R_SetupFrame (player_t *player)
     // that would necessitate turning it off for a tic.
     player->mo->interp == true &&
     // Don't interpolate during a paused state
-    (leveltime > oldleveltime
-     || (R_FreecamTurningOverride() && gamestate == GS_LEVEL)) // [Nugget] Freecam
+    leveltime > oldleveltime
   );
 
   // [Nugget]
@@ -1406,7 +1397,9 @@ void R_SetupFrame (player_t *player)
   viewplayer = player;
 
   // [AM] Interpolate the player camera if the feature is enabled.
-  if (uncapped && camera_ready)
+  // [Nugget] Freecam: separated position and rotation
+
+  if (uncapped && (camera_ready || (R_FreecamOn() && freecam.interp && !R_GetFreecamMobj())))
   {
     // Interpolate player camera from their old position to their current one.
     viewx = LerpFixed(player->mo->oldx, player->mo->x);
@@ -1414,8 +1407,20 @@ void R_SetupFrame (player_t *player)
     viewz = LerpFixed(player->oldviewz, player->viewz);
 
     playerz = LerpFixed(player->mo->oldz, player->mo->z); // [Nugget]
+  }
+  else
+  {
+    viewx = player->mo->x;
+    viewy = player->mo->y;
+    viewz = player->viewz; // [FG] moved here
 
-    if (use_localview && CalcViewAngle)
+    playerz = player->mo->z; // [Nugget]
+  }
+
+  if (uncapped && (camera_ready || (R_FreecamOn() && freecam.interp)))
+  {
+    if ((use_localview || (R_FreecamOn() && (!R_GetFreecamMobj() || R_ChasecamOn()))) // [Nugget] Freecam
+        && CalcViewAngle)
     {
       viewangle = CalcViewAngle(player);
     }
@@ -1424,7 +1429,7 @@ void R_SetupFrame (player_t *player)
       viewangle = LerpAngle(player->mo->oldangle, player->mo->angle);
     }
 
-    if ((use_localview || (R_GetFreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
+    if ((use_localview || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
         && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
@@ -1445,17 +1450,12 @@ void R_SetupFrame (player_t *player)
   }
   else
   {
-    viewx = player->mo->x;
-    viewy = player->mo->y;
-    viewz = player->viewz; // [FG] moved here
     viewangle = player->mo->angle;
     // [crispy] pitch is actual lookdir and weapon pitch
     basepitch = player->pitch;
     pitch = basepitch + player->recoilpitch;
 
-    // [Nugget]
-    playerz = player->mo->z;
-    pitch += player->flinch; // Flinching
+    pitch += player->flinch; // [Nugget] Flinching
 
     if (camera_ready && use_localview && lowres_turn && fake_longtics)
     {
@@ -1471,7 +1471,7 @@ void R_SetupFrame (player_t *player)
 
   // Alt. intermission background --------------------------------------------
 
-  if (WI_UsingAltInterpic() && gamestate == GS_INTERMISSION)
+  if (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)
   {
     static int oldtic = -1;
 

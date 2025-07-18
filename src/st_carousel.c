@@ -134,7 +134,7 @@ boolean ST_ForceCarousel(const player_t *const player)
 {
   return player->pendingweapon != wp_nochange
          && (force_carousel == 2
-             || (force_carousel == 1 && (R_GetChasecamOn() || R_GetFreecamOn())));
+             || (force_carousel == 1 && (R_ChasecamOn() || R_FreecamOn())));
 }
 
 void ST_UpdateCarousel(player_t *player)

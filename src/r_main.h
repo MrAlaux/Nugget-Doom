@@ -216,7 +216,7 @@ enum {
 }; extern int chasecam_mode;
 extern boolean chasecam_crosshair;
 
-extern boolean R_GetChasecamOn(void);
+extern boolean R_ChasecamOn(void);
 extern void    R_SetChasecamHit(const boolean value);
 extern void    R_UpdateChasecam(fixed_t x, fixed_t y, fixed_t z);
 
@@ -230,12 +230,11 @@ typedef enum freecammode_s {
   NUMFREECAMMODES
 } freecammode_t;
 
-extern boolean       R_GetFreecamOn(void);
+extern boolean       R_FreecamOn(void);
 extern void          R_SetFreecamOn(const boolean value);
 extern freecammode_t R_GetFreecamMode(void);
 extern freecammode_t R_CycleFreecamMode(void);
 extern angle_t       R_GetFreecamAngle(void);
-extern boolean       R_FreecamTurningOverride(void);
 extern void          R_ResetFreecam(const boolean newmap);
 extern void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
 

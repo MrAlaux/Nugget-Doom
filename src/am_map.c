@@ -2529,13 +2529,13 @@ static void AM_drawPlayers(void)
   int   color;
   mpoint_t pt;
 
-  if (!netgame || R_GetFreecamOn()) // [Nugget] Freecam
+  if (!netgame || R_FreecamOn()) // [Nugget] Freecam
   {
     // [crispy] smooth player arrow rotation
     const angle_t smoothangle = (automaprotate ? plr->mo->angle : viewangle) - chaseaofs; // [Nugget]
 
     // interpolate player arrow
-    if ((uncapped && leveltime > oldleveltime) || R_GetFreecamOn()) // [Nugget]
+    if ((uncapped && leveltime > oldleveltime) || R_FreecamOn()) // [Nugget]
     {
         // [Nugget] Prevent Chasecam from shifting the map view
         pt.x = (viewx - chasexofs) >> FRACTOMAPBITS;
@@ -2571,7 +2571,7 @@ static void AM_drawPlayers(void)
         pt.y);
 
     // [Nugget] Freecam: draw the other arrows
-    if (!R_GetFreecamOn())
+    if (!R_FreecamOn())
       return;
   }
 

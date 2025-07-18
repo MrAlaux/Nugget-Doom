@@ -1473,7 +1473,7 @@ static void G_DoLoadLevel(void)
   R_SetShake(-1);
 
   // Alt. intermission background
-  if (WI_UsingAltInterpic())
+  if (WI_AltInterpicOn())
   {
     R_SetViewSize(screenblocks);
     R_ExecuteSetViewSize();
@@ -1805,7 +1805,7 @@ boolean G_Responder(event_t* ev)
       // Don't suck up keys, which may be cheats
 
       // [Nugget] Freecam
-      if (!R_GetFreecamOn())
+      if (!R_FreecamOn())
         return gamestate == GS_DEMOSCREEN &&
 	  !(paused & 2) && automapactive != AM_FULL &&
 	  ((ev->type == ev_keydown) ||
@@ -4240,7 +4240,7 @@ void G_Ticker(void)
 	  gamestate == GS_DEMOSCREEN ? D_PageTicker() : (void) 0;
 
   // [Nugget] Freecam
-  if (R_GetFreecamOn())
+  if (R_FreecamOn())
   {
     fixed_t x = 0,
             y = 0,
@@ -4273,7 +4273,7 @@ void G_Ticker(void)
         lock = true;
       }
       else {
-        if (R_FreecamTurningOverride())
+        if (!R_GetFreecamMobj() || R_ChasecamOn())
         {
           angle = cmd->angleturn << 16;
           ticangle = cmd->ticangleturn << FRACBITS;
