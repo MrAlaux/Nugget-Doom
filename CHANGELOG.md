@@ -10,8 +10,9 @@
 - **Improved randomization for _Bloodier Gibbing_ and _Toss Items Upon Death_**
 - **Freecam:**
   - Disabled palette changes when controlling it
-  - Made summon cheats account for it
+  - Made summoning cheats account for it
   - Raised maximum speed to 40 units
+- **Made _Explosion Shake_ calculation account for chasecam and freecam**
 - **Reorganized setup menus**
 
 ## Bug Fixes

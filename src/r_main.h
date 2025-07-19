@@ -202,7 +202,7 @@ extern void R_SetZoom(const int state);
 extern boolean explosion_shake;
 extern int explosion_shake_intensity_pct;
 
-extern void R_SetShake(int value);
+extern void R_ClearShake(void);
 extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range);
 
 // Chasecam ------------------------------------------------------------------

@@ -391,44 +391,39 @@ static void ProcessFOVEffects(void)
 boolean explosion_shake;
 int explosion_shake_intensity_pct;
 
-static fixed_t shake;
-#define MAXSHAKE 50
+static int shake;
+#define MAX_SHAKE 50
 
-void R_SetShake(int value)
+void R_ClearShake(void)
 {
-  if (strictmode || !explosion_shake || value == -1)
-  {
-    shake = 0;
-    return;
-  }
-
-  shake = MIN(shake + value, MAXSHAKE);
+  shake = 0;
 }
 
 void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 {
-  #define SHAKERANGEMULT 5
-
-  const mobj_t *const player = players[displayplayer].mo;
-  fixed_t dx, dy, dist;
-
   if (strictmode || !explosion_shake) { return; }
 
-  range *= SHAKERANGEMULT;
-  force *= SHAKERANGEMULT;
+  #define SHAKE_RANGE_MULT 5
 
-  dx = abs(player->x - bombx);
-  dy = abs(player->y - bomby);
+  range *= SHAKE_RANGE_MULT;
+  force *= SHAKE_RANGE_MULT;
 
-  dist = MAX(dx, dy);
-  dist = (dist - player->radius) >> FRACBITS;
-  dist = MAX(0, dist);
+  const fixed_t dx = abs(viewx - bombx),
+                dy = abs(viewy - bomby);
+
+  const fixed_t radius = viewplayer
+                       ? viewplayer->mo->radius
+                       : players[displayplayer].mo->radius;
+
+  fixed_t dist = (MAX(dx, dy) - radius) >> FRACBITS;
+          dist = MAX(0, dist);
 
   if (dist >= range) { return; }
 
-  R_SetShake((force * (range - dist) / range) / ((128 / MAXSHAKE) * SHAKERANGEMULT));
+  shake += (force * (range - dist) / range) / ((128 / MAX_SHAKE) * SHAKE_RANGE_MULT);
+  shake = MIN(shake, MAX_SHAKE);
 
-  #undef SHAKERANGEMULT
+  #undef SHAKE_RANGE_MULT
 }
 
 // Chasecam ------------------------------------------------------------------
@@ -1392,7 +1387,7 @@ void R_SetupFrame (player_t *player)
   // [Nugget]
   fixed_t playerz, basepitch;
   static angle_t old_interangle, target_interangle;
-  static fixed_t chasecamheight;
+  static fixed_t camera_height;
 
   viewplayer = player;
 
@@ -1493,8 +1488,8 @@ void R_SetupFrame (player_t *player)
 
   // Explosion shake effect --------------------------------------------------
 
-  chasecamheight = R_GetFreecamMobj() ? freecam.z - freecam.mobj->z
-                                      : chasecam_height * FRACUNIT;
+  camera_height = R_GetFreecamMobj() ? freecam.z - freecam.mobj->z
+                                     : chasecam_height * FRACUNIT;
 
   if (shake > 0)
   {
@@ -1505,11 +1500,13 @@ void R_SetupFrame (player_t *player)
       static int oldtime = -1;
       const fixed_t intensity = FRACUNIT * explosion_shake_intensity_pct / 100;
 
-      #define CALCSHAKE (((Woof_Random() - 128) % 3) * intensity) * shake / MAXSHAKE
-      xofs = CALCSHAKE;
-      yofs = CALCSHAKE;
-      zofs = CALCSHAKE;
-      #undef CALCSHAKE
+      #define CALC_SHAKE (((Woof_Random() - 128) % 3) * intensity) * shake / MAX_SHAKE
+
+      xofs = CALC_SHAKE;
+      yofs = CALC_SHAKE;
+      zofs = CALC_SHAKE;
+
+      #undef CALC_SHAKE
 
       if (oldtime != leveltime) { shake--; }
 
@@ -1519,7 +1516,7 @@ void R_SetupFrame (player_t *player)
     viewx += xofs;
     viewy += yofs;
     viewz += zofs;
-    chasecamheight += zofs;
+    camera_height += zofs;
   }
 
   // Chasecam ----------------------------------------------------------------
@@ -1599,7 +1596,7 @@ void R_SetupFrame (player_t *player)
     const fixed_t z = MIN(
       player->mo->ceilingz - (2*FRACUNIT),
       playerz + ((player->mo->health <= 0 && player->playerstate == PST_DEAD)
-                 ? 6*FRACUNIT : chasecamheight - curcrouchoffset)
+                 ? 6*FRACUNIT : camera_height - curcrouchoffset)
     );
 
     P_PositionChasecam(z, dist, slope);

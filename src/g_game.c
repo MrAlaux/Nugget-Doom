@@ -1422,7 +1422,8 @@ static void G_DoLoadLevel(void)
 
   // clear cmd building stuff
   // [Nugget] Rewind: unless we just rewound
-  if (lastaction != ga_rewind) {
+  if (lastaction != ga_rewind)
+  {
     memset (gamekeydown, 0, sizeof(gamekeydown));
     G_ClearInput();
     sendpause = sendsave = paused = false;
@@ -1460,7 +1461,8 @@ static void G_DoLoadLevel(void)
   ST_HideMessages();
 
   // Minimap
-  if (minimap_was_on) {
+  if (minimap_was_on)
+  {
     AM_ChangeMode(AM_MINI);
     minimap_was_on = false;
   }
@@ -1470,7 +1472,7 @@ static void G_DoLoadLevel(void)
 
   // Clear visual effects
   R_ClearFOVFX();
-  R_SetShake(-1);
+  R_ClearShake();
 
   // Alt. intermission background
   if (WI_AltInterpicOn())
@@ -1486,9 +1488,7 @@ static void G_DoLoadLevel(void)
   R_UpdateFreecamMobj(NULL);
 
   if (lastepisode != gameepisode || lastmap != gamemap)
-  {
-    R_ResetFreecam(true);
-  }
+  { R_ResetFreecam(true); }
 
   // -------------------------------------------------------------------------
 
@@ -2414,7 +2414,7 @@ frommapinfo:
 
   // Clear visual effects
   R_ClearFOVFX();
-  R_SetShake(-1);
+  R_ClearShake();
 }
 
 static void G_DoWorldDone(void)
