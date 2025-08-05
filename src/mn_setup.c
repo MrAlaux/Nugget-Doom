@@ -2261,6 +2261,7 @@ static setup_menu_t stat_settings3[] = {
 
 static const char *secretmessage_strings[] = {
     "Off", "On", "Count",
+    "Sound only", // [Nugget]
 };
 
 // [Nugget] Minimap

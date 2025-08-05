@@ -2,6 +2,7 @@
 
 - **_Sprite Shadows_** setting
 - **_Extra Gibbing_ for MBF21 hitscan-weapon functions**
+- **_Sound only_ option for "secret revealed" message**
 - *`CASTCALL`* developer cheat
 
 ## Changes

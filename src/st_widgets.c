@@ -1828,10 +1828,13 @@ void ST_BindHUDVariables(void)
   // [Nugget] ---------------------------------------------------------------/
 
   BIND_BOOL(show_messages, true, "Show messages");
+
+  // [Nugget] Sound-only option
   M_BindNum("hud_secret_message", &hud_secret_message, NULL,
-            SECRETMESSAGE_ON, SECRETMESSAGE_OFF, SECRETMESSAGE_COUNT,
+            SECRETMESSAGE_ON, SECRETMESSAGE_OFF, NUM_SECRETMESSAGE-1,
             ss_stat, wad_no,
-            "Announce revealed secrets (0 = Off; 1 = On; 2 = Count)");
+            "Announce revealed secrets (0 = Off; 1 = On; 2 = Count; 3 = Sound only)");
+
   M_BindBool("hud_map_announce", &hud_map_announce, NULL,
             false, ss_stat, wad_no, "Announce map titles");
 

@@ -2215,7 +2215,12 @@ static void P_SecretRevealed(player_t *player)
 
   if (hud_secret_message && player == &players[consoleplayer])
   {
-    if (hud_secret_message == SECRETMESSAGE_COUNT)
+    // [Nugget] Sound-only option
+    if (hud_secret_message == SECRETMESSAGE_SOUNDONLY)
+    {
+      // No message, duh
+    }
+    else if (hud_secret_message == SECRETMESSAGE_COUNT)
     {
       static char str_count[32];
 

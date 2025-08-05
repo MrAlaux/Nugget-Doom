@@ -141,7 +141,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Horizontal-autoaim indicators
   - Option to account for fuzzy targets [i.b. From Doom With Love]
   - Dedicated toggle button
-- **Secret count in "secret revealed" message** [p.f. Crispy Doom]
+- **_Sound only_ option for "secret revealed" message**
 - **Show Save Messages** setting (CFG-only: `show_save_messages`)
 - **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
 - **_Message Fadeout_** setting

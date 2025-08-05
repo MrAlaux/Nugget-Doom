@@ -56,7 +56,11 @@ typedef enum
 {
   SECRETMESSAGE_OFF,
   SECRETMESSAGE_ON,
-  SECRETMESSAGE_COUNT
+  SECRETMESSAGE_COUNT,
+
+  // [Nugget]
+  SECRETMESSAGE_SOUNDONLY,
+  NUM_SECRETMESSAGE
 } secretmessage_t;
 
 extern secretmessage_t hud_secret_message; // "A secret is revealed!" message
