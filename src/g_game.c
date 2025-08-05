@@ -2869,7 +2869,7 @@ char *G_AutoSaveName(void)
 {
   // [Nugget] Periodic auto save /--------------------------------------------
 
-  char buf[16] = {0};
+  char buf[24] = {0};
   static int autoslot = -1;
   static boolean last_save_was_periodic = false; // Only changes upon saving
 

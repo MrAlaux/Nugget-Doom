@@ -1779,7 +1779,9 @@ static void M_QuickSave(void)
         return;
     }
 
-    if (!one_key_saveload) { // [Nugget] Restore quick-save/load prompts
+    // [Nugget] Restore quick-save/load prompts
+    if (!one_key_saveload)
+    {
         sprintf(tempstring, QSPROMPT, savegamestrings[quickSaveSlot]);
         M_StartMessage(tempstring, M_QuickSaveResponse, true);
     }
@@ -1827,7 +1829,9 @@ static void M_QuickLoad(void)
         return;
     }
 
-    if (!one_key_saveload) { // [Nugget] Restore quick-save/load prompts
+    // [Nugget] Restore quick-save/load prompts
+    if (!one_key_saveload)
+    {
         sprintf(tempstring, QLPROMPT, savegamestrings[quickSaveSlot]);
         M_StartMessage(tempstring, M_QuickLoadResponse, true);
     }

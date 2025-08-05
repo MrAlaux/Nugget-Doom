@@ -1747,16 +1747,21 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 //
 static void AM_putWuDot(int x, int y, int color, int weight)
 {
-  if (STRICTMODE(flip_levels)) { x = f_x*2 + f_w - 1 - x; } // [Nugget] Flip levels
+  // [Nugget] /---------------------------------------------------------------
+
+  // Flip levels
+  if (STRICTMODE(flip_levels)) { x = f_x*2 + f_w - 1 - x; }
+
+  // Minimap: take `f_x` and `f_y` into account
+  if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
+  { return; }
+
+  // [Nugget] ---------------------------------------------------------------/
 
    byte *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;
-
-  // [Nugget] Minimap: take `f_x` and `f_y` into account
-  if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
-  { return; }
 
    fg = fg2rgb[color];
    bg = bg2rgb[*dest];
