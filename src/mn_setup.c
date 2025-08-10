@@ -2103,6 +2103,12 @@ static void SizeDisplayAlt(void)
     MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
 
+// [Nugget] Minimap
+void MoveMinimap(void)
+{
+    if (automapactive == AM_MINI) { AM_Start(); }
+}
+
 static void RefreshSolidBackground(void)
 {
     ST_refreshBackground(); // [Nugget] NUGHUD
@@ -2126,7 +2132,7 @@ static setup_menu_t stat_settings1[] = {
     {"Use NUGHUD", S_ONOFF, H_X, M_SPC, {"use_nughud"}},
 
     {"Layout", S_CHOICE, H_X, M_SPC, {"st_layout"},
-     .strings_id = str_stlayout, .action = AM_Start}, // [Nugget] Minimap
+     .strings_id = str_stlayout, .action = MoveMinimap}, // [Nugget] Minimap
 
     MI_GAP,
 
@@ -2263,12 +2269,6 @@ static const char *secretmessage_strings[] = {
     "Off", "On", "Count",
     "Sound only", // [Nugget]
 };
-
-// [Nugget] Minimap
-void MoveMinimap(void)
-{
-    if (automapactive == AM_MINI) { AM_Start(); }
-}
 
 static setup_menu_t stat_settings4[] = {
     {"Announce Revealed Secrets", S_CHOICE, H_X, M_SPC, {"hud_secret_message"},

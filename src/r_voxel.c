@@ -1212,7 +1212,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 // [Nugget] Voxel rendering mode: function pointer /--------------------------
 
-static void (*VX_DrawColumn) (vissprite_t*, int, int) = VX_DrawColumnBounded;
+static void (*VX_DrawColumn) (vissprite_t*, int, int) = VX_DrawColumnCubes;
 
 void VX_SetVoxelRenderingMode(void)
 {
