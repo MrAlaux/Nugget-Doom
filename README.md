@@ -155,6 +155,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Show Powerup Timers_** setting
   - The CFG-only `hud_power_timers_notime` CVAR can be enabled to show only the powerup names/icons
 - **_Blink Missing Keys_** setting [partially p.f. Crispy Doom]
+- **_Animated Health/Armor Count_** setting
 - **_Berserk display when using Fist_** setting [partially p.f. Crispy Doom]
 - **_Automap Level Stats Format_** setting
 - **Level-Stats Selection** settings (CFG-only: `hud_stats_#[_map]`)
@@ -374,6 +375,7 @@ Copyright:
  © 2005-2006 by Florian Schulze, Colin Phipps, Neil Stevens, Andrey Budko;  
  © 2005-2018 Simon Howard;  
  © 2006 Ben Ryves;  
+ © 2006-2025 by The Odamex Team;  
  © 2007-2011 Moritz "Ripper" Kroll;  
  © 2008-2019 Simon Judd;  
  © 2017 Christoph Oelckers;  

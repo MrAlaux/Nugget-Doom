@@ -381,8 +381,21 @@ int W_GetNumForName (const char* name)     // killough -- const added
 {
   int i = W_CheckNumForName (name);
   if (i == -1)
-    I_Error ("W_GetNumForName: %.8s not found!", name); // killough .8 added
+    I_Error ("%.8s not found!", name); // killough .8 added
   return i;
+}
+
+// [Nyan] Widescreen patches
+const char *W_CheckWidescreenPatch(const char *lump_main)
+{
+  static char lump_wide[9] = "W_";
+  strncpy(&lump_wide[2], lump_main, 6);
+
+  if (W_CheckNumForName(lump_wide) >= 0)
+  {
+    return lump_wide;
+  }
+  return lump_main;
 }
 
 //
@@ -443,7 +456,7 @@ void W_InitPredefinedLumps(void)
 void W_InitMultipleFiles(void)
 {
   if (!numlumps)
-    I_Error ("W_InitFiles: no files found");
+    I_Error ("no files found");
 
   //jff 1/23/98
   // get all the sprites and flats into one marked block each
@@ -480,7 +493,7 @@ void W_InitMultipleFiles(void)
 int W_LumpLength (int lump)
 {
   if (lump >= numlumps)
-    I_Error ("W_LumpLength: %i >= numlumps",lump);
+    I_Error ("%i >= numlumps",lump);
   return lumpinfo[lump].size;
 }
 
@@ -497,7 +510,7 @@ void W_ReadLump(int lump, void *dest)
 #ifdef RANGECHECK
     if (lump >= numlumps)
     {
-        I_Error("W_ReadLump: %i >= numlumps", lump);
+        I_Error("%i >= numlumps", lump);
     }
 #endif
 
@@ -528,7 +541,7 @@ void *W_CacheLumpNum(int lump, pu_tag tag)
 {
 #ifdef RANGECHECK
   if ((unsigned)lump >= numlumps)
-    I_Error ("W_CacheLumpNum: %i >= numlumps",lump);
+    I_Error ("%i >= numlumps",lump);
 #endif
 
   if (!lumpcache[lump])      // read the lump in

@@ -437,7 +437,7 @@ static void G_UpdateInitialLoadout(void)
 #define SAVEGAMESIZE  0x20000
 #define SAVESTRINGSIZE  24
 
-static size_t   savegamesize = SAVEGAMESIZE; // killough
+size_t savegamesize = SAVEGAMESIZE; // killough
 static char     *demoname = NULL;
 // the original name of the demo, without "-00000" and file extension
 static char *demoname_orig = NULL;
@@ -507,6 +507,9 @@ int             realtic_clock_rate = 100;
 boolean         doom_weapon_toggles; // [Nugget] Global
 
 complevel_t     force_complevel, default_complevel;
+
+// ID24 exit line specials
+boolean reset_inventory = false;
 
 static boolean  pistolstart, default_pistolstart;
 
@@ -1302,7 +1305,7 @@ static void G_DoLoadLevel(void)
   int i;
 
   // [Nugget]
-  int lastaction = gameaction;
+  const int lastaction = gameaction;
   static int lastepisode = -1, lastmap = -1;
 
   // Set the sky map.
@@ -1350,8 +1353,6 @@ static void G_DoLoadLevel(void)
         break;
       }//jff 3/27/98 end sky setting fix
 
-  R_InitSkyMap(); // [FG] stretch short skies
-
   levelstarttic = gametic;        // for time calculation
 
   playback_levelstarttic = playback_tic;
@@ -1389,10 +1390,18 @@ static void G_DoLoadLevel(void)
     ignore_pistolstart = false;
   }
   else
+  // ID24 exit line specials
   // [crispy] pistol start
-  if (CRITICAL(pistolstart) && lastaction != ga_rewind) // [Nugget] Rewind
+  if ((reset_inventory || CRITICAL(pistolstart)) && lastaction != ga_rewind) // [Nugget] Rewind
   {
-    G_PlayerReborn(0);
+    for (int player = 0; player < MAXPLAYERS; player++)
+    {
+      if (playeringame[player])
+      {
+        G_PlayerReborn(player);
+      }
+    }
+    reset_inventory = false;
   }
 
   // [Nugget] Rewind: skip level setup if rewinding within the same map
@@ -1406,6 +1415,8 @@ static void G_DoLoadLevel(void)
 
   MN_UpdateFreeLook(!mouselook && !padlook);
   HU_UpdateTurnFormat();
+
+  R_InitSkyMap(); // SKYDEFS flatmapping
 
   // [Woof!] Do not reset chosen player view across levels in multiplayer
   // demo playback. However, it must be reset when starting a new game.
@@ -1529,12 +1540,12 @@ int G_GotoNextLevel(int *pEpi, int *pMap)
     {12, 13, 19, 15, 16, 17, 18, 21, 14},
     {22, 23, 24, 25, 29, 27, 28, 31, 26},
     {32, 33, 34, 35, 36, 39, 38, 41, 37},
-    {42, 49, 44, 45, 46, 47, 48, 11, 43}
+    {42, 49, 44, 45, 46, 47, 48, -1, 43}
   };
   byte doom2_next[32] = {
      2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
     12, 13, 14, 15, 31, 17, 18, 19, 20, 21,
-    22, 23, 24, 25, 26, 27, 28, 29, 30,  1,
+    22, 23, 24, 25, 26, 27, 28, 29, 30, -1,
     32, 16
   };
 
@@ -1549,25 +1560,19 @@ int G_GotoNextLevel(int *pEpi, int *pMap)
       next = gamemapinfo->nextsecret;
     else if (gamemapinfo->nextmap[0])
       next = gamemapinfo->nextmap;
-    else if (gamemapinfo->flags & MapInfo_EndGame)
-    {
-      epsd = 1;
-      map = 1;
-    }
 
     if (next)
       G_ValidateMapName(next, &epsd, &map);
   }
-
-  if (map == -1)
+  else
   {
     // secret level
     doom2_next[14] = (haswolflevels ? 31 : 16);
 
     // shareware doom has only episode 1
-    doom_next[0][7] = (gamemode == shareware ? 11 : 21);
+    doom_next[0][7] = (gamemode == shareware ? -1 : 21);
 
-    doom_next[2][7] = (gamemode == registered ? 11 : 41);
+    doom_next[2][7] = (gamemode == registered ? -1 : 41);
 
     //doom2_next and doom_next are 0 based, unlike gameepisode and gamemap
     epsd = gameepisode - 1;
@@ -1612,8 +1617,11 @@ int G_GotoNextLevel(int *pEpi, int *pMap)
   {
     char *name = MapName(epsd, map);
 
-    if (W_CheckNumForName(name) == -1)
-      displaymsg("Next level not found: %s", name);
+    if (map == -1 || W_CheckNumForName(name) == -1)
+    {
+      name = MapName(gameepisode, gamemap);
+      displaymsg("Next level not found for %s", name);
+    }
     else
     {
       G_DeferedInitNew(gameskill, epsd, map);
@@ -1622,6 +1630,66 @@ int G_GotoNextLevel(int *pEpi, int *pMap)
   }
 
   return false;
+}
+
+int G_GotoPrevLevel(void)
+{
+    if (gamestate != GS_LEVEL || deathmatch || netgame || demorecording
+        || demoplayback || menuactive)
+    {
+        return false;
+    }
+
+    const int cur_epsd = gameepisode;
+    const int cur_map = gamemap;
+    struct mapentry_s *const cur_gamemapinfo = gamemapinfo;
+    int ret = false;
+
+    do
+    {
+        gamemap = cur_map;
+
+        while ((gamemap = (gamemap + 99) % 100) != cur_map)
+        {
+            int next_epsd, next_map;
+            gamemapinfo = G_LookupMapinfo(gameepisode, gamemap);
+            G_GotoNextLevel(&next_epsd, &next_map);
+
+            // do not let linear and UMAPINFO maps cross
+            if ((cur_gamemapinfo == NULL && gamemapinfo != NULL) ||
+                (cur_gamemapinfo != NULL && gamemapinfo == NULL))
+            {
+                continue;
+            }
+
+            if (next_epsd == cur_epsd && next_map == cur_map)
+            {
+                char *name = MapName(gameepisode, gamemap);
+
+                if (W_CheckNumForName(name) != -1)
+                {
+                    G_DeferedInitNew(gameskill, gameepisode, gamemap);
+                    ret = true;
+                    break;
+                }
+            }
+        }
+    } while (ret == false
+             // only check one episode in Doom 2
+             && gamemode != commercial
+             && (gameepisode = (gameepisode + 9) % 10) != cur_epsd);
+
+    gameepisode = cur_epsd;
+    gamemap = cur_map;
+    gamemapinfo = cur_gamemapinfo;
+
+    if (ret == false)
+    {
+        char *name = MapName(gameepisode, gamemap);
+        displaymsg("Previous level not found for %s", name);
+    }
+
+    return ret;
 }
 
 static boolean G_StrictModeSkipEvent(event_t *ev)
@@ -1787,9 +1855,15 @@ boolean G_Responder(event_t* ev)
 	if (M_InputActivated(input_pause))
 	{
 	  if (paused ^= 2)
+	  {
 	    S_PauseSound();
+	    S_PauseMusic();
+	  }
 	  else
+	  {
 	    S_ResumeSound();
+	    S_ResumeMusic();
+	  }
 	  return true;
 	}
 
@@ -1806,14 +1880,14 @@ boolean G_Responder(event_t* ev)
 
       // [Nugget] Freecam
       if (!R_FreecamOn())
+      {
         return gamestate == GS_DEMOSCREEN &&
-	  !(paused & 2) && automapactive != AM_FULL &&
+	  !(paused & 2) && !automapactive &&
 	  ((ev->type == ev_keydown) ||
 	   (ev->type == ev_mouseb_down) ||
 	   (ev->type == ev_joyb_down)) ?
-	  (!menuactive ? S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn) // [Nugget]: [NS] Optional menu sounds.
-	               : true),
 	  MN_StartControlPanel(), true : false;
+      }
     }
 
   if (gamestate == GS_FINALE && F_Responder(ev))
@@ -1931,6 +2005,7 @@ static void G_JoinDemo(void)
 
   // [crispy] continue recording
   demoplayback = false;
+  usergame = true;
 
   // clear progress demo bar
   ST_Start();
@@ -2521,23 +2596,23 @@ static void G_DoPlayDemo(void)
 
     if (*demo_p++ != 1)
     {
-      I_Error("G_DoPlayDemo: Unknown demo format.");
+      I_Error("Unknown demo format.");
     }
 
     // the defunct format had only one extension (in two bytes)
     if (*demo_p++ != 1 || *demo_p++ != 0)
     {
-      I_Error("G_DoPlayDemo: Unknown demo format.");
+      I_Error("Unknown demo format.");
     }
 
     if (*demo_p++ != 8)
     {
-      I_Error("G_DoPlayDemo: Unknown demo format.");
+      I_Error("Unknown demo format.");
     }
 
     if (memcmp(demo_p, "UMAPINFO", 8))
     {
-      I_Error("G_DoPlayDemo: Unknown demo format.");
+      I_Error("Unknown demo format.");
     }
 
     demo_p += 8;
@@ -2734,7 +2809,31 @@ static void G_DoPlayDemo(void)
 // killough 2/22/98: version id string format for savegames
 #define VERSIONID "MBF %d"
 
-#define CURRENT_SAVE_VERSION "Nugget 4.0.0" // [Nugget]
+#define CURRENT_SAVE_VERSION "Nugget 4.5.0" // [Nugget]
+
+static const char *saveg_versions[] =
+{
+    [saveg_woof510] = "Woof 5.1.0",
+    [saveg_woof600] = "Woof 6.0.0",
+
+    // [Nugget] /-------------------------------------------------------------
+
+    /*
+    [saveg_woof1300] = "Woof 13.0.0",
+    [saveg_woof1500] = "Woof 15.0.0",
+    */
+
+    [saveg_nugget200] = "Nugget 2.0.0",
+    [saveg_nugget210] = "Nugget 2.1.0",
+    [saveg_nugget300] = "Nugget 2.4.0", // Yes, these were mislabeled
+    [saveg_nugget320] = "Nugget 3.2.0",
+    [saveg_nugget330] = "Nugget 3.3.0",
+    [saveg_nugget400] = "Nugget 4.0.0",
+
+    // [Nugget] -------------------------------------------------------------/
+
+    [saveg_current] = CURRENT_SAVE_VERSION
+};
 
 static char *savename = NULL;
 
@@ -2824,16 +2923,6 @@ void G_SaveGame(int slot, char *description)
   savegameslot = slot;
   strcpy(savedescription, description);
   sendsave = true;
-}
-
-// Check for overrun and realloc if necessary -- Lee Killough 1/22/98
-void CheckSaveGame(size_t size)
-{
-  size_t pos = save_p - savebuffer;
-  size += 1024;  // breathing room
-  if (pos+size > savegamesize)
-    save_p = (savebuffer = Z_Realloc(savebuffer,
-           savegamesize += (size+1023) & ~1023, PU_STATIC, 0)) + pos;
 }
 
 // killough 3/22/98: form savegame name in one location
@@ -2980,7 +3069,7 @@ static void DoSaveGame(char *name)
 
   save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, 0);
 
-  CheckSaveGame(SAVESTRINGSIZE+VERSIONSIZE+sizeof(uint64_t));
+  saveg_buffer_size(SAVESTRINGSIZE + VERSIONSIZE);
   memcpy (save_p, description, SAVESTRINGSIZE);
   save_p += SAVESTRINGSIZE;
   memset (name2,0,sizeof(name2));
@@ -2992,14 +3081,14 @@ static void DoSaveGame(char *name)
   memcpy (save_p, name2, VERSIONSIZE);
   save_p += VERSIONSIZE;
 
-  *save_p++ = demo_version;
+  saveg_write8(demo_version);
 
   // killough 2/14/98: save old compatibility flag:
-  *save_p++ = compatibility;
+  saveg_write8(compatibility);
 
-  *save_p++ = gameskill;
-  *save_p++ = gameepisode;
-  *save_p++ = gamemap;
+  saveg_write8(gameskill);
+  saveg_write8(gameepisode);
+  saveg_write8(gamemap);
 
   {  // killough 3/16/98, 12/98: store lump name checksum
     uint64_t checksum = G_Signature(gameepisode, gamemap);
@@ -3012,29 +3101,28 @@ static void DoSaveGame(char *name)
     for (*save_p = 0, i = 0; i < array_size(wadfiles); i++)
       {
         const char *basename = M_BaseName(wadfiles[i]);
-        CheckSaveGame(strlen(basename)+2);
+        saveg_buffer_size(strlen(basename)+2);
         strcat(strcat((char *) save_p, basename), "\n");
       }
     save_p += strlen((char *) save_p)+1;
   }
 
-  CheckSaveGame(G_GameOptionSize()+MIN_MAXPLAYERS+10);
-
   for (i=0 ; i<MAXPLAYERS ; i++)
-    *save_p++ = playeringame[i];
+    saveg_write8(playeringame[i]);
 
   for (;i<MIN_MAXPLAYERS;i++)         // killough 2/28/98
-    *save_p++ = 0;
+    saveg_write8(0);
 
-  *save_p++ = idmusnum;               // jff 3/17/98 save idmus state
+  saveg_write8(idmusnum);               // jff 3/17/98 save idmus state
 
+  saveg_buffer_size(G_GameOptionSize());
   save_p = G_WriteOptions(save_p);    // killough 3/1/98: save game options
 
   // [FG] fix copy size and pointer progression
   saveg_write32(leveltime); //killough 11/98: save entire word
 
   // killough 11/98: save revenant tracer state
-  *save_p++ = (gametic-basetic) & 255;
+  saveg_write8((gametic-basetic) & 255);
 
   P_ArchivePlayers();
   P_ArchiveWorld();
@@ -3043,14 +3131,13 @@ static void DoSaveGame(char *name)
   P_ArchiveRNG();    // killough 1/18/98: save RNG information
   P_ArchiveMap();    // killough 1/22/98: save automap information
 
-  *save_p++ = 0xe6;   // consistancy marker
+  saveg_write8(0xe6);   // consistancy marker
 
   // [FG] save total time for all completed levels
-  CheckSaveGame(sizeof totalleveltimes);
   saveg_write32(totalleveltimes);
 
   // save lump name for current MUSINFO item
-  CheckSaveGame(8);
+  saveg_buffer_size(8);
   if (musinfo.current_item > 0)
     memcpy(save_p, lumpinfo[musinfo.current_item].name, 8);
   else
@@ -3058,18 +3145,17 @@ static void DoSaveGame(char *name)
   save_p += 8;
 
   // save max_kill_requirement
-  CheckSaveGame(sizeof(max_kill_requirement));
   saveg_write32(max_kill_requirement);
 
   // [Nugget] /===============================================================
 
   // Save milestones
-  CheckSaveGame(sizeof(complete_milestones));
+  saveg_buffer_size(sizeof(complete_milestones));
   saveg_write_enum(complete_milestones);
 
   // Save custom-skill settings ----------------------------------------------
 
-  CheckSaveGame(sizeof(customskill));
+  saveg_buffer_size(sizeof(customskill));
 
   saveg_write32(customskill.things);
   saveg_write32(customskill.coopspawns);
@@ -3082,7 +3168,7 @@ static void DoSaveGame(char *name)
   saveg_write32(customskill.aggressive);
   saveg_write32(customskill.x2monsters);
 
-  CheckSaveGame(sizeof(initial_loadout));
+  saveg_buffer_size(sizeof(initial_loadout));
 
   saveg_write32(initial_loadout.mohealth);
   saveg_write32(initial_loadout.health);
@@ -3107,7 +3193,7 @@ static void DoSaveGame(char *name)
   if (!saving_periodic_autosave)
   {
     // [FG] save snapshot
-    CheckSaveGame(MN_SnapshotDataSize());
+    saveg_buffer_size(MN_SnapshotDataSize());
     MN_WriteSnapshot(save_p);
     save_p += MN_SnapshotDataSize();
   }
@@ -3149,14 +3235,6 @@ static void G_DoSaveAutoSave(void)
   DoSaveGame(name);
 }
 
-static void CheckSaveVersion(const char *str, saveg_compat_t ver)
-{
-  if (strncmp((char *) save_p, str, strlen(str)) == 0)
-  {
-    saveg_compat = ver;
-  }
-}
-
 static boolean DoLoadGame(boolean do_load_autosave)
 {
   int  length, i;
@@ -3189,14 +3267,21 @@ static boolean DoLoadGame(boolean do_load_autosave)
   // killough 2/22/98: "proprietary" version string :-)
   sprintf (vcheck,VERSIONID,MBFVERSION);
 
-  CheckSaveVersion(vcheck, saveg_mbf);
-  CheckSaveVersion("Woof 6.0.0", saveg_woof600);
-  CheckSaveVersion("Nugget 2.0.0", saveg_nugget200);
-  CheckSaveVersion("Nugget 2.1.0", saveg_nugget210);
-  CheckSaveVersion("Nugget 2.4.0", saveg_nugget300);
-  CheckSaveVersion("Nugget 3.2.0", saveg_nugget320);
-  CheckSaveVersion("Nugget 3.3.0", saveg_nugget330);
-  CheckSaveVersion(CURRENT_SAVE_VERSION, saveg_current);
+  if (strncmp((char *)save_p, vcheck, VERSIONSIZE) == 0)
+  {
+      saveg_compat = saveg_mbf;
+  }
+  else
+  {
+      for (int i = saveg_woof510; i < arrlen(saveg_versions); ++i)
+      {
+          if (strncmp((char *)save_p, saveg_versions[i], VERSIONSIZE) == 0)
+          {
+              saveg_compat = i;
+              break;
+          }
+      }
+  }
 
   // killough 2/22/98: Friendly savegame version difference message
   if (!forced_loadgame && saveg_compat != saveg_mbf && saveg_compat < saveg_woof600)
@@ -3557,7 +3642,7 @@ static void G_SaveKeyFrame(void)
   *save_p++ = gameepisode;
   *save_p++ = gamemap;
 
-  CheckSaveGame(G_GameOptionSize()+MIN_MAXPLAYERS+10);
+  saveg_buffer_size(G_GameOptionSize()+MIN_MAXPLAYERS+10);
 
   for (i=0 ; i<MAXPLAYERS ; i++)
     *save_p++ = playeringame[i];
@@ -3585,11 +3670,11 @@ static void G_SaveKeyFrame(void)
   *save_p++ = 0xe6;   // consistancy marker
 
   // [FG] save total time for all completed levels
-  CheckSaveGame(sizeof totalleveltimes);
+  saveg_buffer_size(sizeof totalleveltimes);
   saveg_write32(totalleveltimes);
 
   // save lump name for current MUSINFO item
-  CheckSaveGame(8);
+  saveg_buffer_size(8);
   if (musinfo.current_item > 0)
     memcpy(save_p, lumpinfo[musinfo.current_item].name, 8);
   else
@@ -3597,18 +3682,18 @@ static void G_SaveKeyFrame(void)
   save_p += 8;
 
   // save max_kill_requirement
-  CheckSaveGame(sizeof(max_kill_requirement));
+  saveg_buffer_size(sizeof(max_kill_requirement));
   saveg_write32(max_kill_requirement);
 
   // [Nugget] /===============================================================
 
   // Save milestones
-  CheckSaveGame(sizeof(complete_milestones));
+  saveg_buffer_size(sizeof(complete_milestones));
   saveg_write_enum(complete_milestones);
 
   // Save custom-skill settings ----------------------------------------------
 
-  CheckSaveGame(sizeof(customskill));
+  saveg_buffer_size(sizeof(customskill));
 
   saveg_write32(customskill.things);
   saveg_write32(customskill.coopspawns);
@@ -3621,7 +3706,7 @@ static void G_SaveKeyFrame(void)
   saveg_write32(customskill.aggressive);
   saveg_write32(customskill.x2monsters);
 
-  CheckSaveGame(sizeof(initial_loadout));
+  saveg_buffer_size(sizeof(initial_loadout));
 
   saveg_write32(initial_loadout.mohealth);
   saveg_write32(initial_loadout.health);
@@ -3783,7 +3868,7 @@ static void G_DoRewind(void)
   P_UnArchiveMap();    // killough 1/22/98: load automap information
   P_MapEnd();
 
-  if (*save_p != 0xe6) { I_Error("G_DoRewind: Bad key frame."); }
+  if (*save_p != 0xe6) { I_Error("Bad key frame."); }
 
   // [FG] restore total time for all completed levels
   if (save_p++ - savebuffer < length - sizeof totalleveltimes)
@@ -4154,9 +4239,15 @@ void G_Ticker(void)
 
 	    case BTS_PAUSE:
 	      if ((paused ^= 1))
-		S_PauseSound();
+	      {
+	        S_PauseSound();
+	        S_PauseMusic();
+	      }
 	      else
-		S_ResumeSound();
+	      {
+	        S_ResumeSound();
+	        S_ResumeMusic();
+	      }
 	      break;
 
 	    case BTS_SAVEGAME:
@@ -4512,7 +4603,7 @@ static boolean G_CheckSpot(int playernum, mapthing_t *mthing)
             ya = finesine[an];
             break;
         default:
-            I_Error("G_CheckSpot: unexpected angle %d\n", an);
+            I_Error("unexpected angle %d\n", an);
             xa = ya = 0;
             break;
       }
@@ -4754,7 +4845,7 @@ demo_version_t G_GetNamedComplevel(const char *arg)
     {
         const char *const name;
         demo_version_t demover;
-        int exe;
+        GameVersion_t exe;
     } named_complevel[] = {
         {"vanilla",  DV_VANILLA, exe_indetermined},
         {"doom2",    DV_VANILLA, exe_doom_1_9    },
@@ -4772,6 +4863,8 @@ demo_version_t G_GetNamedComplevel(const char *arg)
         {"11",       DV_MBF,     exe_indetermined},
         {"mbf21",    DV_MBF21,   exe_indetermined},
         {"21",       DV_MBF21,   exe_indetermined},
+        {"id24",     DV_ID24,    exe_indetermined},
+        {"24",       DV_ID24,    exe_indetermined},
     };
 
     for (int i = 0; i < arrlen(named_complevel); i++)
@@ -4798,7 +4891,8 @@ static struct
     {DV_VANILLA, CL_VANILLA},
     {DV_BOOM,    CL_BOOM   },
     {DV_MBF,     CL_MBF    },
-    {DV_MBF21,   CL_MBF21  }
+    {DV_MBF21,   CL_MBF21  },
+    {DV_ID24,    CL_ID24   },
 };
 
 static complevel_t GetComplevel(demo_version_t demover)
@@ -4839,6 +4933,8 @@ const char *G_GetCurrentComplevelName(void)
             return "MBF";
         case DV_MBF21:
             return "MBF21";
+        case DV_ID24:
+            return "ID24";
         default:
             return "Unknown";
     }
@@ -4871,6 +4967,10 @@ static demo_version_t GetWadDemover(void)
     else if (length == 5 && !strncasecmp("mbf21", data, 5))
     {
         return DV_MBF21;
+    }
+    else if (length == 4 && !strncasecmp("id24", data, 4))
+    {
+        return DV_ID24;
     }
 
     return DV_NONE;
@@ -5124,13 +5224,17 @@ void G_ReloadDefaults(boolean keep_demover)
   rngseed = time(NULL);
 
   if (beta_emulation && demo_version != DV_MBF)
-    I_Error("G_ReloadDefaults: Beta emulation requires complevel MBF.");
+    I_Error("Beta emulation requires complevel MBF.");
 
   if ((M_CheckParm("-dog") || M_CheckParm("-dogs")) && demo_version < DV_MBF)
-    I_Error("G_ReloadDefaults: Helper dogs require complevel MBF or MBF21.");
+    I_Error("Helper dogs require complevel MBF or MBF21.");
 
   if (M_CheckParm("-skill") && startskill == sk_none && !demo_compatibility)
-    I_Error("G_ReloadDefaults: '-skill 0' requires complevel Vanilla.");
+    I_Error("'-skill 0' requires complevel Vanilla.");
+
+  if (demorecording && demo_version == DV_ID24)
+    I_Error("Recording ID24 demos is currently not enabled. "
+            "Demo-compability in Complevel ID24 is not yet stable.");
 
   if (demo_version < DV_MBF)
   {
@@ -5226,7 +5330,7 @@ void G_InitNew(skill_t skill, int episode, int map)
   if (paused)
     {
       paused = false;
-      S_ResumeSound();
+      S_ResumeMusic();
     }
 
   if (skill > sk_nightmare && skill != sk_custom) // [Nugget] Custom Skill
@@ -5403,7 +5507,7 @@ static byte* G_WriteOptionsMBF21(byte* demo_p)
     *demo_p++ = comp[i] != 0;
 
   if (demo_p != target)
-    I_Error("mbf21_WriteOptions: MBF21_GAME_OPTION_SIZE is too small");
+    I_Error("MBF21_GAME_OPTION_SIZE is too small");
 
   return demo_p;
 }
@@ -5479,7 +5583,7 @@ byte *G_WriteOptions(byte *demo_p)
     *demo_p++ = 0;
 
   if (demo_p != target)
-    I_Error("G_WriteOptions: GAME_OPTION_SIZE is too small");
+    I_Error("GAME_OPTION_SIZE is too small");
 
   return target;
 }
@@ -5655,7 +5759,7 @@ void G_BeginRecording(void)
 
   demo_p = demobuffer;
 
-  if (demo_version == DV_MBF || mbf21)
+  if (demo_version >= DV_MBF)
   {
   *demo_p++ = demo_version;
 

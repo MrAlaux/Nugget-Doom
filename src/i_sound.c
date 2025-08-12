@@ -78,8 +78,6 @@ typedef struct
     sfxinfo_t *sfx;
 
     boolean enabled;
-    // haleyjd 06/16/08: unique id number
-    int idnum;
 } channel_info_t;
 
 static channel_info_t channelinfo[MAX_CHANNELS];
@@ -97,6 +95,10 @@ int S_ATTENUATOR;
 
 // Pitch to stepping lookup.
 static float steptable[256];
+
+boolean snd_limiter;
+int snd_channels_per_sfx;
+int snd_volume_per_sfx;
 
 //
 // StopChannel
@@ -131,14 +133,14 @@ static void StopChannel(int channel)
 // Returns false if no sound should be played.
 //
 boolean I_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
-                            int chanvol, int *vol, int *sep, int *pri)
+                            sfxparams_t *params)
 {
     if (!snd_init)
     {
         return false;
     }
 
-    return sound_module->AdjustSoundParams(listener, source, chanvol, vol, sep, pri);
+    return sound_module->AdjustSoundParams(listener, source, params);
 }
 
 //
@@ -147,7 +149,7 @@ boolean I_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
 // Changes sound parameters in response to stereo panning and relative location
 // change.
 //
-void I_UpdateSoundParams(int channel, int volume, int separation)
+void I_UpdateSoundParams(int channel, const sfxparams_t *params)
 {
     if (!snd_init)
     {
@@ -157,11 +159,11 @@ void I_UpdateSoundParams(int channel, int volume, int separation)
 #ifdef RANGECHECK
     if (channel < 0 || channel >= MAX_CHANNELS)
     {
-        I_Error("I_UpdateSoundParams: channel out of range");
+        I_Error("channel out of range");
     }
 #endif
 
-    sound_module->UpdateSoundParams(channel, volume, separation);
+    sound_module->UpdateSoundParams(channel, params);
 }
 
 void I_UpdateListenerParams(const mobj_t *listener)
@@ -192,6 +194,23 @@ void I_ProcessSoundUpdates(void)
     }
 
     sound_module->ProcessUpdates();
+}
+
+void I_SetGain(int channel, float gain)
+{
+    if (!snd_init || !sound_module->SetGain)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if (channel < 0 || channel >= MAX_CHANNELS)
+    {
+        I_Error("I_SetGain: channel out of range");
+    }
+#endif
+
+    sound_module->SetGain(channel, gain);
 }
 
 //
@@ -270,9 +289,8 @@ int I_GetSfxLumpNum(sfxinfo_t *sfx)
 // active sounds, which is maintained as a given number
 // of internal channels. Returns a free channel.
 //
-int I_StartSound(sfxinfo_t *sfx, int vol, int sep, int pitch)
+int I_StartSound(sfxinfo_t *sfx, const sfxparams_t *params, int pitch)
 {
-    static unsigned int id = 0;
     int channel;
 
     if (!snd_init)
@@ -305,9 +323,8 @@ int I_StartSound(sfxinfo_t *sfx, int vol, int sep, int pitch)
 
     channelinfo[channel].sfx = sfx;
     channelinfo[channel].enabled = true;
-    channelinfo[channel].idnum = id++; // give the sound a unique id
 
-    I_UpdateSoundParams(channel, vol, sep);
+    I_UpdateSoundParams(channel, params);
 
     float step = (pitch == NORM_PITCH) ? 1.0f : steptable[pitch];
 
@@ -337,11 +354,51 @@ void I_StopSound(int channel)
 #ifdef RANGECHECK
     if (channel < 0 || channel >= MAX_CHANNELS)
     {
-        I_Error("I_StopSound: channel out of range");
+        I_Error("channel out of range");
     }
 #endif
 
     StopChannel(channel);
+}
+
+void I_PauseSound(int channel)
+{
+    if (!snd_init || !sound_module->PauseSound)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if (channel < 0 || channel >= MAX_CHANNELS)
+    {
+        I_Error("channel out of range");
+    }
+#endif
+
+    if (channelinfo[channel].enabled)
+    {
+        sound_module->PauseSound(channel);
+    }
+}
+
+void I_ResumeSound(int channel)
+{
+    if (!snd_init || !sound_module->ResumeSound)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if (channel < 0 || channel >= MAX_CHANNELS)
+    {
+        I_Error("channel out of range");
+    }
+#endif
+
+    if (channelinfo[channel].enabled)
+    {
+        sound_module->ResumeSound(channel);
+    }
 }
 
 //
@@ -359,36 +416,28 @@ boolean I_SoundIsPlaying(int channel)
 #ifdef RANGECHECK
     if (channel < 0 || channel >= MAX_CHANNELS)
     {
-        I_Error("I_SoundIsPlaying: channel out of range");
+        I_Error("channel out of range");
     }
 #endif
 
     return sound_module->SoundIsPlaying(channel);
 }
 
-//
-// I_SoundID
-//
-// haleyjd: returns the unique id number assigned to a specific instance
-// of a sound playing on a given channel. This is required to make sure
-// that the higher-level sound code doesn't start updating sounds that have
-// been displaced without it noticing.
-//
-int I_SoundID(int channel)
+boolean I_SoundIsPaused(int channel)
 {
-    if (!snd_init)
+    if (!snd_init || !sound_module->SoundIsPaused)
     {
-        return 0;
+        return false;
     }
 
 #ifdef RANGECHECK
     if (channel < 0 || channel >= MAX_CHANNELS)
     {
-        I_Error("I_SoundID: channel out of range\n");
+        I_Error("channel out of range");
     }
 #endif
 
-    return channelinfo[channel].idnum;
+    return sound_module->SoundIsPaused(channel);
 }
 
 //
@@ -500,8 +549,6 @@ boolean I_AllowReinitSound(void)
 
 void I_SetSoundModule(void)
 {
-    int i;
-
     if (!snd_init)
     {
         I_Printf(VB_WARNING, "I_SetSoundModule: Sound was never initialized.");
@@ -512,11 +559,6 @@ void I_SetSoundModule(void)
     {
         I_Printf(VB_WARNING, "I_SetSoundModule: Invalid choice.");
         return;
-    }
-
-    for (i = 0; i < MAX_CHANNELS; i++)
-    {
-        StopChannel(i);
     }
 
     sound_module->ShutdownModule();
@@ -593,7 +635,7 @@ void I_SetMidiPlayer(void)
         count_devices += array_size(strings);
     }
 
-    I_Error("I_SetMidiPlayer: No music module could be initialized");
+    I_Error("No music module could be initialized");
 }
 
 boolean I_InitMusic(void)
@@ -761,7 +803,14 @@ void I_BindSoundVariables(void)
                "Double sound-clipping distance");
 
     BIND_NUM_SFX(snd_channels, MAX_CHANNELS, 1, MAX_CHANNELS,
-        "Maximum number of simultaneous sound effects");
+        "Number of sound channels");
+    BIND_BOOL_SFX(snd_limiter, false, "Use sound output limiter");
+    BIND_NUM(snd_channels_per_sfx, 5, 0, MAX_CHANNELS,
+        "[Limiter] Max number of channels allowed to simultaneously play the "
+        "same sound (0 = Off)");
+    BIND_NUM(snd_volume_per_sfx, 5 * 100, 0, MAX_CHANNELS * 100,
+        "[Limiter] Max volume allowed for a sound that is played "
+        "simultaneously by multiple channels [percent] (0 = Off)");
     BIND_NUM_GENERAL(snd_module, SND_MODULE_MBF, 0, NUM_SND_MODULES - 1,
         "Sound module (0 = Standard; 1 = OpenAL 3D; 2 = PC Speaker Sound)");
     for (int i = 0; i < arrlen(sound_modules); ++i)

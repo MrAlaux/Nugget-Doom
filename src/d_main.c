@@ -478,7 +478,8 @@ void D_PageTicker(void)
 
 void D_PageDrawer(void)
 {
-  V_DrawPatchFullScreen(V_CachePatchName(pagename, PU_CACHE));
+  V_DrawPatchFullScreen(
+    V_CachePatchName(W_CheckWidescreenPatch(pagename), PU_CACHE));
 }
 
 //
@@ -575,7 +576,7 @@ void D_AddFile(const char *file)
 
   if (!W_AddPath(path))
   {
-    I_Error("Error: Failed to load %s", file);
+    I_Error("Failed to load %s", file);
   }
 }
 
@@ -1352,7 +1353,7 @@ static void AutoLoadWADs(const char *path)
 
         if (!W_AddPath(filename))
         {
-            I_Error("Error: Failed to load %s", filename);
+            I_Error("Failed to load %s", filename);
         }
     }
     I_EndGlob(glob);
@@ -1360,73 +1361,128 @@ static void AutoLoadWADs(const char *path)
     W_AddPath(path);
 }
 
+static int firstpwad = 1;
+
 static void LoadIWadBase(void)
 {
-    GameMission_t local_gamemission =
-        D_GetGameMissionByIWADName(M_BaseName(wadfiles[0]));
+    GameMode_t local_gamemode;
+    GameMission_t local_gamemission;
+    D_GetModeAndMissionByIWADName(M_BaseName(wadfiles[0]), &local_gamemode,
+                                  &local_gamemission);
+
+    if (local_gamemission == none || local_gamemode == indetermined)
+    {
+        return;
+    }
 
     if (local_gamemission < pack_chex)
     {
         W_AddBaseDir("doom-all");
     }
+    if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
+    {
+        W_AddBaseDir("chex-all");
+    }
     if (local_gamemission == doom)
     {
         W_AddBaseDir("doom1-all");
     }
-    else if (local_gamemission >= doom2
-             && local_gamemission <= pack_plut)
+    else if (local_gamemission >= doom2 && local_gamemission <= pack_plut)
     {
         W_AddBaseDir("doom2-all");
     }
-    W_AddBaseDir(M_BaseName(wadfiles[0]));
+    else if (local_gamemission == pack_freedoom)
+    {
+        W_AddBaseDir("freedoom-all");
+        if (local_gamemode == commercial)
+        {
+            W_AddBaseDir("freedoom2-all");
+        }
+        else
+        {
+            W_AddBaseDir("freedoom1-all");
+        }
+    }
+    for (int i = 0; i < firstpwad; i++)
+    {
+        W_AddBaseDir(M_BaseName(wadfiles[i]));
+    }
 }
 
 static void AutoloadIWadDir(void (*AutoLoadFunc)(const char *path))
 {
-    GameMission_t local_gamemission =
-        D_GetGameMissionByIWADName(M_BaseName(wadfiles[0]));
+    GameMode_t local_gamemode;
+    GameMission_t local_gamemission;
+    D_GetModeAndMissionByIWADName(M_BaseName(wadfiles[0]), &local_gamemode, &local_gamemission);
 
-    for (int i = 0; i < array_size(autoload_paths); ++i)
+    for (int i = 0; i < firstpwad; i++)
     {
-        char *dir = GetAutoloadDir(autoload_paths[i], "all-all", true);
-        AutoLoadFunc(dir);
-        free(dir);
-
-        // common auto-loaded files for all Doom flavors
-        if (local_gamemission != none)
+        for (int j = 0; j < array_size(autoload_paths); ++j)
         {
-            if (local_gamemission < pack_chex)
+            char *dir = GetAutoloadDir(autoload_paths[j], "all-all", true);
+            AutoLoadFunc(dir);
+            free(dir);
+
+            // common auto-loaded files for all Doom flavors
+            if (local_gamemission != none)
             {
-                dir = GetAutoloadDir(autoload_paths[i], "doom-all", true);
-                AutoLoadFunc(dir);
-                free(dir);
+                if (local_gamemission < pack_chex)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "doom-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                }
+                else if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "chex-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                }
+
+                if (local_gamemission == doom)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "doom1-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                }
+                else if (local_gamemission >= doom2
+                         && local_gamemission <= pack_plut)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "doom2-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                }
+                else if (local_gamemission == pack_freedoom)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "freedoom-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                    if (local_gamemode == commercial)
+                    {
+                        dir = GetAutoloadDir(autoload_paths[j], "freedoom2-all", true);
+                        AutoLoadFunc(dir);
+                        free(dir);
+                    }
+                    else
+                    {
+                        dir = GetAutoloadDir(autoload_paths[j], "freedoom1-all", true);
+                        AutoLoadFunc(dir);
+                        free(dir);
+                    }
+                }
             }
 
-            if (local_gamemission == doom)
-            {
-                dir = GetAutoloadDir(autoload_paths[i], "doom1-all", true);
-                AutoLoadFunc(dir);
-                free(dir);
-            }
-            else if (local_gamemission >= doom2
-                     && local_gamemission <= pack_plut)
-            {
-                dir = GetAutoloadDir(autoload_paths[i], "doom2-all", true);
-                AutoLoadFunc(dir);
-                free(dir);
-            }
+            // auto-loaded files per IWAD
+            dir = GetAutoloadDir(autoload_paths[j], M_BaseName(wadfiles[i]), true);
+            AutoLoadFunc(dir);
+            free(dir);
         }
-
-        // auto-loaded files per IWAD
-        dir = GetAutoloadDir(autoload_paths[i], M_BaseName(wadfiles[0]), true);
-        AutoLoadFunc(dir);
-        free(dir);
     }
 }
 
 static void LoadPWadBase(void)
 {
-    for (int i = 1; i < array_size(wadfiles); ++i)
+    for (int i = firstpwad; i < array_size(wadfiles); ++i)
     {
         W_AddBaseDir(wadfiles[i]);
     }
@@ -1434,7 +1490,7 @@ static void LoadPWadBase(void)
 
 static void AutoloadPWadDir(void (*AutoLoadFunc)(const char *path))
 {
-    for (int i = 1; i < array_size(wadfiles); ++i)
+    for (int i = firstpwad; i < array_size(wadfiles); ++i)
     {
         for (int j = 0; j < array_size(autoload_paths); ++j)
         {
@@ -1586,7 +1642,13 @@ typedef enum {
 static exit_sequence_t exit_sequence;
 static boolean endoom_pwad_only;
 
-boolean D_AllowQuitSound(void)
+boolean D_EndDoomEnabled(void)
+{
+  return (exit_sequence == EXIT_SEQUENCE_FULL
+          || exit_sequence == EXIT_SEQUENCE_ENDOOM_ONLY);
+}
+
+boolean D_QuitSoundEnabled(void)
 {
   return (exit_sequence == EXIT_SEQUENCE_FULL
           || exit_sequence == EXIT_SEQUENCE_SOUND_ONLY);
@@ -1600,33 +1662,34 @@ static void D_ShowEndDoom(void)
   I_Endoom(endoom);
 }
 
-boolean disable_endoom = false;
+boolean fast_exit = false;
 
-static boolean AllowEndDoom(void)
+boolean D_AllowEndDoom(void)
 {
-  return (!disable_endoom
-          && (exit_sequence == EXIT_SEQUENCE_FULL
-          || exit_sequence == EXIT_SEQUENCE_ENDOOM_ONLY));
+  if (fast_exit)
+  {
+    return false; // Alt-F4 or pressed the close button.
+  }
+
+  if (!D_EndDoomEnabled())
+  {
+    return false; // Exit sequence is set to "Off" or "Sound Only".
+  }
+
+  if (W_IsIWADLump(W_CheckNumForName("ENDOOM")) && endoom_pwad_only)
+  {
+    return false; // User prefers PWAD ENDOOM only.
+  }
+
+  return true;
 }
 
 static void D_EndDoom(void)
 {
-  // Do we even want to show an ENDOOM?
-  if (!AllowEndDoom())
+  if (D_AllowEndDoom())
   {
-    return;
+    D_ShowEndDoom();
   }
-
-  // If so, is it from the IWAD?
-  bool iwad_endoom = W_IsIWADLump(W_CheckNumForName("ENDOOM"));
-
-  // Does the user want to see it, in that case?
-  if (iwad_endoom && endoom_pwad_only)
-  {
-    return;
-  }
-
-  D_ShowEndDoom();
 }
 
 // [FG] fast-forward demo to the desired map
@@ -1902,6 +1965,7 @@ void D_DoomMain(void)
       if (path)
       {
           D_AddFile(path);
+          firstpwad = array_size(wadfiles);
       }
   }
 

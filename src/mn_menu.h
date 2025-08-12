@@ -102,6 +102,7 @@ boolean MN_MenuIsShaded(void);
 extern int savepage;
 
 extern const char *default_skill_strings[];
+extern const char *widescreen_strings[];
 
 void M_ResetAutoSave(void);
 
@@ -113,6 +114,7 @@ void MN_InitMenuStrings(void);
 
 boolean MN_StartsWithMapIdentifier(char *str);
 
+int MN_StringWidth(const char *string);
 int MN_GetPixelWidth(const char *ch);
 void MN_DrawString(int cx, int cy, int color, const char *ch);
 

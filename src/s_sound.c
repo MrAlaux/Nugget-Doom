@@ -51,12 +51,12 @@ typedef struct channel_s
 {
     sfxinfo_t *sfxinfo;   // sound information (if null, channel avail.)
     const mobj_t *origin; // origin of sound
-    int volume;           // volume scale value for effect -- haleyjd 05/29/06
+    int volume_scale;     // volume scale value for effect -- haleyjd 05/29/06
     int handle;           // handle of the sound being played
     int o_priority;       // haleyjd 09/27/06: stored priority value
     int priority;         // current priority value
     int singularity;      // haleyjd 09/27/06: stored singularity value
-    int idnum;            // haleyjd 09/30/06: unique id num for sound event
+    int volume;
 } channel_t;
 
 // the set of channels available
@@ -86,6 +86,37 @@ int snd_channels;
 // jff 3/17/98 to keep track of last IDMUS specified music num
 int idmusnum;
 
+static int max_channels_per_sfx;
+static int max_volume_per_sfx;
+
+static void ResetActive(void)
+{
+    for (int cnum = 0; cnum < MAX_CHANNELS; cnum++)
+    {
+        if (channels[cnum].sfxinfo)
+        {
+            channels[cnum].sfxinfo->active.count = 0;
+            channels[cnum].sfxinfo->active.volume = 0;
+        }
+    }
+
+    max_channels_per_sfx = 0;
+    max_volume_per_sfx = 0;
+
+    if (snd_limiter)
+    {
+        max_channels_per_sfx = MIN(snd_channels_per_sfx, snd_channels);
+
+        // Limit volume per sfx only when it makes sense to do so.
+        if (max_channels_per_sfx < 1
+            || snd_volume_per_sfx < max_channels_per_sfx * 100)
+        {
+            // Convert percent to Doom's volume scale.
+            max_volume_per_sfx = 127 * snd_volume_per_sfx / 100;
+        }
+    }
+}
+
 //
 // Internals.
 //
@@ -100,13 +131,14 @@ static void S_StopChannel(int cnum)
 #ifdef RANGECHECK
     if (cnum < 0 || cnum >= snd_channels)
     {
-        I_Error("S_StopChannel: handle %d out of range\n", cnum);
+        I_Error("handle %d out of range\n", cnum);
     }
 #endif
 
     if (channels[cnum].sfxinfo)
     {
         I_StopSound(channels[cnum].handle); // stop the sound playing
+        channels[cnum].sfxinfo->active.count--;
 
         // haleyjd 09/27/06: clear the entire channel
         memset(&channels[cnum], 0, sizeof(channel_t));
@@ -120,6 +152,7 @@ void S_StopChannels(void)
         I_StopSound(channels[i].handle);
     }
 
+    ResetActive();
     memset(channels, 0, sizeof(channels));
     memset(sobjs, 0, sizeof(sobjs));
 }
@@ -134,9 +167,56 @@ void S_StopChannels(void)
 // haleyjd: added priority scaling
 //
 static int S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
-                               int chanvol, int *vol, int *sep, int *pri)
+                               sfxparams_t *params)
 {
-    return I_AdjustSoundParams(listener, source, chanvol, vol, sep, pri);
+    return I_AdjustSoundParams(listener, source, params);
+}
+
+static void LimitChannelsPerSfx(const mobj_t *origin, const sfxinfo_t *sfxinfo,
+                                int priority, int *cnum)
+{
+    if (max_channels_per_sfx < 1 || *cnum != snd_channels || !origin)
+    {
+        return;
+    }
+
+    int lowestpriority = -1;
+    int lpcnum = -1;
+    int num_channels = 0;
+
+    for (int i = 0; i < snd_channels; i++)
+    {
+        const channel_t *c = &channels[i];
+        const sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx && sfxinfo == sfx && c->origin)
+        {
+            // Find the lowest priority channel using the target sound.
+            if (c->priority > lowestpriority)
+            {
+                lowestpriority = c->priority;
+                lpcnum = i;
+            }
+
+            // Find the number of channels using the target sound.
+            num_channels++;
+        }
+    }
+
+    if (num_channels >= max_channels_per_sfx)
+    {
+        if (priority > lowestpriority)
+        {
+            // The other channels have higher priority.
+            *cnum = -1;
+        }
+        else
+        {
+            // Stop the lowest priority channel.
+            S_StopChannel(lpcnum);
+            *cnum = lpcnum;
+        }
+    }
 }
 
 //
@@ -146,8 +226,8 @@ static int S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
 //   haleyjd 09/27/06: fixed priority/singularity bugs
 //   Note that a higher priority number means lower priority!
 //
-static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
-                        int singularity)
+static int S_getChannel(const mobj_t *origin, const sfxinfo_t *sfxinfo,
+                        int priority, int singularity)
 {
     // channel number to use
     int cnum;
@@ -170,6 +250,8 @@ static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
             break;
         }
     }
+
+    LimitChannelsPerSfx(origin, sfxinfo, priority, &cnum);
 
     // Find an open channel
     if (cnum == snd_channels)
@@ -208,11 +290,58 @@ static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
 #ifdef RANGECHECK
     if (cnum >= snd_channels)
     {
-        I_Error("S_getChannel: handle %d out of range\n", cnum);
+        I_Error("handle %d out of range\n", cnum);
     }
 #endif
 
     return cnum;
+}
+
+static void LimitVolumePerSfx(void)
+{
+    if (max_volume_per_sfx < 1)
+    {
+        return;
+    }
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx)
+        {
+            sfx->active.volume = 0;
+        }
+    }
+
+    // Find channels using the same sound and add up the total volume.
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx && sfx->active.count > 1 && c->origin)
+        {
+            sfx->active.volume += c->volume;
+        }
+    }
+
+    // If the total volume of a sound is too loud, reduce the volume of each
+    // channel playing that sound.
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx && sfx->active.volume > max_volume_per_sfx)
+        {
+            const float gain = (float)c->volume * max_volume_per_sfx
+                               / (127 * sfx->active.volume);
+
+            I_SetGain(c->handle, gain);
+        }
+    }
 }
 
 static int optionals[NUG_SFX_END - NUG_SFX_START]; // [Nugget]
@@ -220,9 +349,8 @@ static int optionals[NUG_SFX_END - NUG_SFX_START]; // [Nugget]
 static void StartSound(const mobj_t *origin, int sfx_id,
                        pitchrange_t pitch_range, rumble_type_t rumble_type)
 {
-    int sep, pitch, o_priority, priority, singularity, cnum, handle;
-    int volumeScale = 127;
-    int volume = snd_SfxVolume;
+    int pitch, o_priority, singularity, cnum, handle;
+    sfxparams_t params;
     sfxinfo_t *sfx;
 
     // jff 1/22/98 return if sound is not enabled
@@ -249,10 +377,11 @@ static void StartSound(const mobj_t *origin, int sfx_id,
 
     // Initialize sound parameters
     pitch = NORM_PITCH;
+    params.volume_scale = 127;
 
     // haleyjd: modified so that priority value is always used
     // haleyjd: also modified to get and store proper singularity value
-    o_priority = priority = sfx->priority;
+    o_priority = params.priority = sfx->priority;
     singularity = sfx->singularity;
 
     // Check to see if it is audible, modify the params
@@ -263,8 +392,7 @@ static void StartSound(const mobj_t *origin, int sfx_id,
                              ? viewplayer->mo
                              : players[displayplayer].mo;
 
-    if (!S_AdjustSoundParams(playermo, origin, volumeScale,
-                             &volume, &sep, &priority))
+    if (!S_AdjustSoundParams(playermo, origin, &params))
     {
         return;
     }
@@ -293,7 +421,7 @@ static void StartSound(const mobj_t *origin, int sfx_id,
     }
 
     // try to find a channel
-    if ((cnum = S_getChannel(origin, sfx, priority, singularity)) < 0)
+    if ((cnum = S_getChannel(origin, sfx, params.priority, singularity)) < 0)
     {
         return;
     }
@@ -301,12 +429,11 @@ static void StartSound(const mobj_t *origin, int sfx_id,
 #ifdef RANGECHECK
     if (cnum < 0 || cnum >= snd_channels)
     {
-        I_Error("S_StartSfxInfo: handle %d out of range\n", cnum);
+        I_Error("handle %d out of range\n", cnum);
     }
 #endif
 
     channels[cnum].sfxinfo = sfx;
-    channels[cnum].origin = origin;
 
     // [Nugget] Check if there's a lump for the sound,
     // and skip the loop if there is, therefore using the lump instead
@@ -316,20 +443,22 @@ static void StartSound(const mobj_t *origin, int sfx_id,
     }
 
     // Assigns the handle to one of the channels in the mix/output buffer.
-    handle = I_StartSound(sfx, volume, sep, pitch);
+    handle = I_StartSound(sfx, &params, pitch);
 
     // haleyjd: check to see if the sound was started
     if (handle >= 0)
     {
-        channels[cnum].handle = handle;
-
         // haleyjd 05/29/06: record volume scale value
         // haleyjd 09/27/06: store priority and singularity values (!!!)
-        channels[cnum].volume = volumeScale;
-        channels[cnum].o_priority = o_priority; // original priority
-        channels[cnum].priority = priority;     // scaled priority
+        channels[cnum].origin = origin;
+        channels[cnum].handle = handle;
+        channels[cnum].volume_scale = params.volume_scale;
+        channels[cnum].o_priority = o_priority;    // original priority
+        channels[cnum].priority = params.priority; // scaled priority
         channels[cnum].singularity = singularity;
-        channels[cnum].idnum = I_SoundID(handle); // unique instance id
+        channels[cnum].volume = params.volume;
+        channels[cnum].sfxinfo->active.count++;
+        LimitVolumePerSfx();
 
         if (rumble_type != RUMBLE_NONE)
         {
@@ -585,11 +714,51 @@ void S_UnlinkSound(mobj_t *origin)
     }
 }
 
+void S_PauseSound(void)
+{
+    if (nosfxparm)
+    {
+        return;
+    }
+
+    I_DeferSoundUpdates();
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        if (channels[cnum].sfxinfo)
+        {
+            I_PauseSound(channels[cnum].handle);
+        }
+    }
+
+    I_ProcessSoundUpdates();
+}
+
+void S_ResumeSound(void)
+{
+    if (nosfxparm)
+    {
+        return;
+    }
+
+    I_DeferSoundUpdates();
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        if (channels[cnum].sfxinfo)
+        {
+            I_ResumeSound(channels[cnum].handle);
+        }
+    }
+
+    I_ProcessSoundUpdates();
+}
+
 //
 // Stop and resume music, during game PAUSE.
 //
 
-void S_PauseSound(void)
+void S_PauseMusic(void)
 {
     if (mus_playing && !mus_paused)
     {
@@ -598,7 +767,7 @@ void S_PauseSound(void)
     }
 }
 
-void S_ResumeSound(void)
+void S_ResumeMusic(void)
 {
     if (mus_playing && mus_paused)
     {
@@ -637,56 +806,50 @@ void S_UpdateSounds(const mobj_t *listener)
     if (R_FreecamOn() && !nodrawers) { listener = viewplayer->mo; }
 
     I_DeferSoundUpdates();
+    I_UpdateListenerParams(listener);
 
     for (cnum = 0; cnum < snd_channels; ++cnum)
     {
         channel_t *c = &channels[cnum];
         sfxinfo_t *sfx = c->sfxinfo;
 
-        // haleyjd: has this software channel lost its hardware channel?
-        if (c->idnum != I_SoundID(c->handle))
-        {
-            // clear the channel and keep going
-            memset(c, 0, sizeof(channel_t));
-            continue;
-        }
-
         if (sfx)
         {
             if (I_SoundIsPlaying(c->handle))
             {
-                // initialize parameters
-                int volume = snd_SfxVolume;
-                int sep = NORM_SEP;
-                int pri = c->o_priority; // haleyjd 09/27/06: priority
-
                 // check non-local sounds for distance clipping
                 // or modify their params
 
                 if (c->origin && listener != c->origin) // killough 3/20/98
                 {
-                    if (!S_AdjustSoundParams(listener, c->origin, c->volume,
-                                             &volume, &sep, &pri))
+                    // initialize parameters
+                    sfxparams_t params;
+                    params.volume_scale = c->volume_scale;
+                    params.priority = c->o_priority; // haleyjd 09/27/06: priority
+
+                    if (S_AdjustSoundParams(listener, c->origin, &params))
                     {
-                        S_StopChannel(cnum);
+                        I_UpdateSoundParams(c->handle, &params);
+                        c->priority = params.priority; // haleyjd
+                        c->volume = params.volume;
                     }
                     else
                     {
-                        I_UpdateSoundParams(c->handle, volume, sep);
-                        c->priority = pri; // haleyjd
+                        S_StopChannel(cnum);
                     }
                 }
 
                 I_UpdateRumbleParams(listener, c->origin, c->handle);
             }
-            else // if channel is allocated but sound has stopped, free it
+            else if (!I_SoundIsPaused(c->handle))
             {
+                // if channel is allocated but sound has stopped, free it
                 S_StopChannel(cnum);
             }
         }
     }
 
-    I_UpdateListenerParams(listener);
+    LimitVolumePerSfx();
     I_ProcessSoundUpdates();
     I_UpdateRumble();
 }
@@ -774,16 +937,9 @@ void S_ChangeMusic(int musicnum, int looping)
 
     // load & register it
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-    if (extra_music && trakinfo_found)
+    if (extra_music)
     {
-        const char *extra =
-            S_GetExtra(music->data, W_LumpLength(music->lumpnum), extra_music);
-        if (extra)
-        {
-            music->lumpnum = W_GetNumForName(extra);
-            Z_Free(music->data);
-            music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-        }
+        S_GetExtra(music, extra_music);
     }
     // julian: added lump length
     music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
@@ -838,16 +994,9 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
     music->lumpnum = lumpnum;
 
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-    if (extra_music && trakinfo_found)
+    if (extra_music)
     {
-        const char *extra =
-            S_GetExtra(music->data, W_LumpLength(music->lumpnum), extra_music);
-        if (extra)
-        {
-            music->lumpnum = W_GetNumForName(extra);
-            Z_Free(music->data);
-            music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-        }
+        S_GetExtra(music, extra_music);
     }
     music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
 
@@ -1137,7 +1286,7 @@ static void InitFinalDoomMusic()
     {
         char name[9] = "d_";
 
-        strncpy(&name[2], altmusic[j].to, 6);
+        M_CopyLumpName(&name[2], altmusic[j].to);
 
         if (W_CheckNumForName(name) == -1)
         {
@@ -1153,6 +1302,8 @@ static void InitFinalDoomMusic()
 
 void S_Init(int sfxVolume, int musicVolume)
 {
+    ResetActive();
+
     // jff 1/22/98 skip sound init if sound not enabled
     if (!nosfxparm)
     {

@@ -82,6 +82,7 @@ demo_version_t G_GetNamedComplevel(const char *arg);
 const char *G_GetCurrentComplevelName(void);
 
 int G_GotoNextLevel(int *pEpi, int *pMap);
+int G_GotoPrevLevel(void);
 
 void G_BindGameInputVariables(void);
 void G_BindGameVariables(void);
@@ -96,9 +97,13 @@ typedef enum
   CL_BOOM,
   CL_MBF,
   CL_MBF21,
+  CL_ID24,
 } complevel_t;
 
 extern complevel_t force_complevel, default_complevel;
+
+// ID24 exit line specials
+extern boolean reset_inventory;
 
 extern int realtic_clock_rate;
 

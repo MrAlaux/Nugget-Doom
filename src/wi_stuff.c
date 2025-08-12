@@ -755,7 +755,8 @@ void WI_slamBackground(void)
 
     const char *name = WI_getBackgroundName(); // [Nugget] Factored out
 
-    V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
+    V_DrawPatchFullScreen(
+      V_CachePatchName(W_CheckWidescreenPatch(name), PU_CACHE));
 }
 
 // ====================================================================

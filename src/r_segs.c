@@ -525,7 +525,7 @@ void R_StoreWallRange(const int start, const int stop)
   int64_t dx, dy, dx1, dy1, dist;
   const uint32_t len = curline->r_length; // [FG] use re-calculated seg lengths
 
-  if (ds_p == drawsegs+maxdrawsegs)   // killough 1/98 -- fix 2s line HOM
+  if (!drawsegs || ds_p == drawsegs+maxdrawsegs) // killough 1/98 -- fix 2s line HOM
     {
       unsigned newmax = maxdrawsegs ? maxdrawsegs*2 : 128; // killough
       drawsegs = Z_Realloc(drawsegs,newmax*sizeof(*drawsegs),PU_STATIC,0);
@@ -535,7 +535,7 @@ void R_StoreWallRange(const int start, const int stop)
 
 #ifdef RANGECHECK
   if (start >=viewwidth || start > stop)
-    I_Error ("Bad R_RenderWallRange: %i to %i", start , stop);
+    I_Error ("Bad range: %i to %i", start , stop);
 #endif
 
   sidedef = curline->sidedef;
@@ -701,6 +701,7 @@ void R_StoreWallRange(const int start, const int stop)
         // killough 3/7/98: Add checks for (x,y) offsets
         || backsector->floor_xoffs != frontsector->floor_xoffs
         || backsector->floor_yoffs != frontsector->floor_yoffs
+        || backsector->floor_rotation != frontsector->floor_rotation
 
         // killough 4/15/98: prevent 2s normals
         // from bleeding through deep water
@@ -720,6 +721,7 @@ void R_StoreWallRange(const int start, const int stop)
         // killough 3/7/98: Add checks for (x,y) offsets
         || backsector->ceiling_xoffs != frontsector->ceiling_xoffs
         || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
+        || backsector->ceiling_rotation != frontsector->ceiling_rotation
 
         // killough 4/15/98: prevent 2s normals
         // from bleeding through fake ceilings

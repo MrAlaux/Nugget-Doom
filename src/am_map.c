@@ -1497,7 +1497,7 @@ static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   int h = f_h;
-  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
   while (h--)
   {
     memset(src, color, f_w);
@@ -1758,7 +1758,7 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 
   // [Nugget] ---------------------------------------------------------------/
 
-   byte *dest = &I_VideoBuffer[y * video.pitch + x];
+   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;

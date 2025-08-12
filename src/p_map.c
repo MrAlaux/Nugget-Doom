@@ -1507,7 +1507,7 @@ static void P_HitSlideLine(line_t *ld)
       if (deltaangle > ANG180)
 	deltaangle += ANG180;
 
-      //  I_Error ("SlideLine: ang>ANG180");
+      //  I_Error ("ang>ANG180");
 
       lineangle >>= ANGLETOFINESHIFT;
       deltaangle >>= ANGLETOFINESHIFT;
@@ -1528,7 +1528,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 
 #ifdef RANGECHECK
   if (!in->isaline)
-    I_Error ("PTR_SlideTraverse: not a line?");
+    I_Error ("not a line?");
 #endif
 
   li = in->d.line;
@@ -1938,7 +1938,10 @@ static boolean PTR_ShootTraverse(intercept_t *in)
       line_t *li = in->d.line;
 
       if (li->special)
-	P_ShootSpecialLine (shootthing, li);
+	{
+	  int side = P_PointOnLineSide(shootthing->x, shootthing->y, li);
+	  P_ShootSpecialLine(shootthing, li, side);
+	}
 
       if (li->flags & ML_TWOSIDED)
 	{  // crosses a two sided (really 2s) line
@@ -3089,7 +3092,7 @@ void P_CreateSecNodeList(mobj_t *thing,fixed_t x,fixed_t y)
 void P_MapStart(void)
 {
   if (tmthing)
-    I_Error("P_MapStart: tmthing set!");
+    I_Error("tmthing set!");
 }
 
 void P_MapEnd(void)

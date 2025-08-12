@@ -60,12 +60,14 @@ int bonuscount_cap;
 boolean comp_fuzzyblood;
 boolean comp_nonbleeders;
 
-int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+vertaim_t vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+int max_pitch_angle = 32 * ANG1, default_max_pitch_angle;
 
 void P_UpdateDirectVerticalAiming(void)
 {
   // [Nugget]
   vertical_aiming = CRITICAL(mouselook || padlook) ? default_vertical_aiming : 0;
+  max_pitch_angle = default_max_pitch_angle * ANG1;
 }
 
 //
@@ -1018,28 +1020,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   // NULL head of sector list // phares 3/13/98
   mobj->touching_sectorlist = NULL;
 
-  // [AM] Do not interpolate on spawn.
-  mobj->interp = false;
-
-  // [AM] Just in case interpolation is attempted...
-  mobj->oldx = mobj->x;
-  mobj->oldy = mobj->y;
-  mobj->oldz = mobj->z;
-  mobj->oldangle = mobj->angle;
-
-  // [Nugget] /---------------------------------------------------------------
-
-  mobj->altsprite = mobj->altframe = -1; // Alt. sprites
-
-  // Alt. states
-  mobj->altstate = NULL;
-  mobj->alttics  = -1; 
-
-  mobj->isvisual = false;
-  mobj->tranmap = NULL;
-
-  // [Nugget] ---------------------------------------------------------------/
-
   // set subsector and/or block links
 
   P_SetThingPosition(mobj);
@@ -1050,6 +1030,15 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   mobj->z = z == ONFLOORZ ? mobj->floorz : z == ONCEILINGZ ?
     mobj->ceilingz - mobj->height : z;
+
+  // [AM] Do not interpolate on spawn.
+  mobj->interp = false;
+
+  // [AM] Just in case interpolation is attempted...
+  mobj->oldx = mobj->x;
+  mobj->oldy = mobj->y;
+  mobj->oldz = mobj->z;
+  mobj->oldangle = mobj->angle;
 
   mobj->thinker.function.p1 = (actionf_p1)P_MobjThinker;
   mobj->above_thing = mobj->below_thing = 0;           // phares
@@ -1067,6 +1056,19 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   }
 
   // [Nugget] Removed `actualheight`
+
+  // [Nugget] /---------------------------------------------------------------
+
+  mobj->altsprite = mobj->altframe = -1; // Alt. sprites
+
+  // Alt. states
+  mobj->altstate = NULL;
+  mobj->alttics  = -1; 
+
+  mobj->isvisual = false;
+  mobj->tranmap = NULL;
+
+  // [Nugget] ---------------------------------------------------------------/
 
   P_AddThinker(&mobj->thinker);
 
@@ -1538,7 +1540,7 @@ spawnit:
   if (mobj->flags & MF_COUNTITEM)
     totalitems++;
 
-  mobj->angle = ANG45 * (mthing->angle/45);
+  mobj->angle = (angle_t)ANG45 * (mthing->angle/45);
   if (mthing->options & MTF_AMBUSH)
     mobj->flags |= MF_AMBUSH;
 

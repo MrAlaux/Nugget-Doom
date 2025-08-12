@@ -521,7 +521,7 @@ static void ProcessEvent(SDL_Event *ev)
             break;
 
         case SDL_QUIT:
-            disable_endoom = true;
+            fast_exit = true;
             I_SafeExit(0);
             break;
 
@@ -925,7 +925,7 @@ void I_FinishUpdate(void)
 // I_ReadScreen
 //
 
-void I_ReadScreen(byte *dst)
+void I_ReadScreen(pixel_t *dst)
 {
     V_GetBlock(0, 0, video.width, video.height, dst);
 }
@@ -1180,7 +1180,7 @@ boolean I_WritePNGfile(char *filename)
     // [FG] allocate memory for screenshot image
     int pitch = rect.w * 3;
     int size = rect.h * pitch;
-    byte *pixels = malloc(size);
+    pixel_t *pixels = malloc(size);
 
     SDL_RenderReadPixels(renderer, &rect, SDL_PIXELFORMAT_RGB24, pixels, pitch);
 
@@ -1389,7 +1389,8 @@ static void ResetResolution(int height, boolean reset_pitch)
         AM_ResetScreenSize();
     }
 
-    I_Printf(VB_DEBUG, "ResetResolution: %dx%d", video.width, video.height);
+    I_Printf(VB_DEBUG, "ResetResolution: %dx%d (%s)", video.width, video.height,
+             widescreen_strings[widescreen]);
 
     drs_skip_frame = true;
 }
@@ -1982,6 +1983,18 @@ void I_ShutdownGraphics(void)
     }
 
     UpdateGrab();
+
+    SDL_FreeSurface(argbbuffer);
+    SDL_FreeSurface(screenbuffer);
+    SDL_DestroyTexture(texture_upscaled);
+    SDL_DestroyTexture(texture);
+
+    if (!D_AllowEndDoom())
+    {
+        // ENDOOM will be skipped, so destroy the renderer and window now.
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(screen);
+    }
 }
 
 void I_InitGraphics(void)

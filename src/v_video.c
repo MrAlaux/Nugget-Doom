@@ -334,11 +334,11 @@ static void (*drawcolfunc)(const patch_column_t *patchcol);
         if ((unsigned int)patchcol->x >= (unsigned int)video.width            \
             || (unsigned int)patchcol->y1 >= (unsigned int)video.height)      \
         {                                                                     \
-            I_Error("DrawColumn" #NAME ": %i to %i at %i", patchcol->y1,      \
-                    patchcol->y2, patchcol->x);                               \
+            I_Error("%i to %i at %i", patchcol->y1, patchcol->y2,             \
+                    patchcol->x);                                             \
         }                                                                     \
                                                                               \
-        byte *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);       \
+        pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);    \
                                                                               \
         const fixed_t fracstep = patchcol->step;                              \
         fixed_t frac =                                                        \
@@ -741,13 +741,13 @@ void V_ShadeScreen(const int level) // [Nugget]
 {
     const byte *darkcolormap = &colormaps[0][level * 256];
 
-    byte *row = dest_screen;
+    pixel_t *row = dest_screen;
     int height = video.height;
 
     while (height--)
     {
         int width = video.width;
-        byte *col = row;
+        pixel_t *col = row;
 
         while (width--)
         {
@@ -829,7 +829,7 @@ void V_FillRect(int x, int y, int width, int height, byte color)
 
     ScaleClippedRect(&dstrect);
 
-    byte *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+    pixel_t *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
     while (dstrect.sh--)
     {
@@ -885,7 +885,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
                 int destx, int desty)
 {
     vrect_t srcrect, dstrect;
-    byte *src, *dest;
+    pixel_t *src, *dest;
     int usew, useh;
 
 #ifdef RANGECHECK
@@ -893,7 +893,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
         || srcy >= SCREENHEIGHT || destx + width < 0 || desty + height < 0
         || destx >= video.unscaledw || desty >= SCREENHEIGHT)
     {
-        I_Error("Bad V_CopyRect");
+        I_Error("Bad coordinates");
     }
 #endif
 
@@ -953,8 +953,8 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
 
 void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
 {
-    const byte *source;
-    byte *dest;
+    const pixel_t *source;
+    pixel_t *dest;
     vrect_t dstrect;
 
     dstrect.x = x;
@@ -983,7 +983,7 @@ void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
         int w;
         fixed_t xfrac, yfrac;
         int xtex, ytex;
-        byte *row;
+        pixel_t *row;
 
         yfrac = 0;
 
@@ -1009,7 +1009,7 @@ void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
 
 void V_TileBlock64(int line, int width, int height, const byte *src)
 {
-    byte *dest, *row;
+    pixel_t *dest, *row;
     fixed_t xfrac, yfrac;
     int xtex, ytex, h;
     vrect_t dstrect;
@@ -1055,14 +1055,14 @@ void V_TileBlock64(int line, int width, int height, const byte *src)
 // No return value
 //
 
-void V_GetBlock(int x, int y, int width, int height, byte *dest)
+void V_GetBlock(int x, int y, int width, int height, pixel_t *dest)
 {
-    byte *src;
+    pixel_t *src;
 
 #ifdef RANGECHECK
     if (x < 0 || x + width > video.width || y < 0 || y + height > video.height)
     {
-        I_Error("Bad V_GetBlock");
+        I_Error("Bad coordinates");
     }
 #endif
 
@@ -1078,14 +1078,14 @@ void V_GetBlock(int x, int y, int width, int height, byte *dest)
 
 // [FG] non hires-scaling variant of V_DrawBlock, used in disk icon drawing
 
-void V_PutBlock(int x, int y, int width, int height, byte *src)
+void V_PutBlock(int x, int y, int width, int height, pixel_t *src)
 {
-    byte *dest;
+    pixel_t *dest;
 
 #ifdef RANGECHECK
     if (x < 0 || x + width > video.width || y < 0 || y + height > video.height)
     {
-        I_Error("Bad V_PutBlock");
+        I_Error("Bad coordinates");
     }
 #endif
 
