@@ -198,9 +198,9 @@ void R_DrawColumnShadow(void)
     if (count <= 0) { return; }
 
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
+    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     do {
         *dest = sprite_shadows_tranmap[*dest << 8];

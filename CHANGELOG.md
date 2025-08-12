@@ -4,7 +4,8 @@ None.
 
 ## Changes
 
-None.
+- **Merged changes from Woof! post-15.2.0**, note:
+  - Maintained _Animated Health/Armor Count_ setting
 
 ## Bug Fixes
 
