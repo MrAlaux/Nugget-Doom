@@ -28,6 +28,7 @@
 #include "i_printf.h"
 #include "info.h"
 #include "m_random.h"
+#include "p_ambient.h"
 #include "p_inter.h"
 #include "p_map.h"
 #include "p_maputl.h"
@@ -992,6 +993,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->height = info->height;                                      // phares
   mobj->flags  = info->flags;
   mobj->flags2 = info->flags2;
+  mobj->flags_extra = info->flags_extra;
 
   // killough 8/23/98: no friends, bouncers, or touchy things in old demos
   if (demo_version < DV_MBF)
@@ -1005,7 +1007,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   if (!aggressive) // [Nugget] Custom Skill: use `aggressive`
     mobj->reactiontime = info->reactiontime;
 
-  mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
+  if (type != zmt_ambientsound)
+  {
+    mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
+  }
 
   // do not set the state with P_SetMobjState,
   // because action routines can not be called yet
@@ -1047,7 +1052,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->friction    = ORIG_FRICTION;                        // phares 3/17/98
 
   // [crispy] randomly flip corpse, blood and death animation sprites
-  if (mobj->flags2 & MF2_FLIPPABLE && !(mobj->flags & MF_SHOOTABLE))
+  if (mobj->flags_extra & MFX_MIRROREDCORPSE && !(mobj->flags & MF_SHOOTABLE))
   {
     if (Woof_Random() & 1)
       mobj->intflags |= MIF_FLIP;
@@ -1329,7 +1334,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
   int    i;
   mobj_t *mobj;
   fixed_t x, y, z;
-  int    musid = 0;
+  int id = 0;
 
   switch(mthing->type)
     {
@@ -1430,8 +1435,13 @@ void P_SpawnMapThing (mapthing_t* mthing)
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (mthing->type >= 14100 && mthing->type <= 14164)
   {
-      musid = mthing->type - 14100;
+      id = mthing->type - 14100;
       mthing->type = mobjinfo[MT_MUSICSOURCE].doomednum;
+  }
+  else if (mthing->type >= 14001 && mthing->type <= 14064)
+  {
+      id = mthing->type - 14000;
+      mthing->type = mobjinfo[zmt_ambientsound].doomednum;
   }
 
   // find which type to spawn
@@ -1547,7 +1557,11 @@ spawnit:
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (i == MT_MUSICSOURCE)
   {
-      mobj->health = 1000 + musid;
+      mobj->health = 1000 + id;
+  }
+  else if (i == zmt_ambientsound)
+  {
+      P_AddAmbientSoundThinker(mobj, id);
   }
 
   // [Nugget] Key blinking:
@@ -1616,7 +1630,7 @@ void P_SpawnBlood(fixed_t x,fixed_t y,fixed_t z,int damage,mobj_t *bleeder)
 
   if (bleeder->info->bloodcolor || idgaf)
   {
-    th->flags2 |= MF2_COLOREDBLOOD;
+    th->flags_extra |= MFX_COLOREDBLOOD;
     th->bloodcolor = V_BloodColor(bleeder->info->bloodcolor);
   }
 

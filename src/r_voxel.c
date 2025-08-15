@@ -683,6 +683,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 
 	vis->mobjflags = thing->flags;
 	vis->mobjflags2 = thing->flags2;
+	vis->mobjflags_extra = thing->flags_extra;
 	vis->scale = xscale;
 
 	vis->gx  = gx;
@@ -734,7 +735,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 
 			int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
 
-			spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+			spritelights = scalelight[CLAMP(lightnum, 0, LIGHTLEVELS-1)];
 		}
 
 		vis->colormap[0] = spritelights[index];
@@ -747,13 +748,12 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	// [Alaux] Lock crosshair on target
 	if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target)
 	{
-		HU_UpdateCrosshairLock
-		(
-			BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS),
-      // [Nugget] Removed `actualheight`
-			BETWEEN(0, viewheight - 1, (centeryfrac + FixedMul(viewz - gz - crosshair_target->height/2, xscale)) >> FRACBITS)
-		);
-
+		int x = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS;
+		// [Nugget] Removed `actualheight`
+		int y = (centeryfrac + FixedMul(viewz - gz - crosshair_target->height / 2, xscale)) >> FRACBITS;
+		x = clampi(x, 0, viewwidth - 1);
+		y = clampi(y, 0, viewheight - 1);
+		HU_UpdateCrosshairLock(x, y);
 		crosshair_target = NULL; // Don't update it again until next tic
 	}
 
@@ -894,7 +894,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 		const int lightindex = STRICTMODE(!diminishing_lighting)
 													 ? 0 : R_GetLightIndex(B_xscale);
 
-		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+		colormap[0] = scalelight[CLAMP(lightnum, 0, LIGHTLEVELS-1)][lightindex];
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
@@ -1138,7 +1138,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 		const int lightindex = STRICTMODE(!diminishing_lighting)
 													 ? 0 : R_GetLightIndex(midscale);
 
-		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+		colormap[0] = scalelight[CLAMP(lightnum, 0, LIGHTLEVELS-1)][lightindex];
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
@@ -1198,7 +1198,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			{
 				int i = (((uy - uy0) >> FRACBITS) * FixedDiv(FRACUNIT, midscale)) >> FRACBITS;
 
-				i = BETWEEN(0, len - 1, i);
+				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i],
 				           pix = colormap[spr->brightmap[src]][src];
@@ -1301,7 +1301,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 		spr->colormap[0] = new_colormap;
 	}
 
-	if ((spr->mobjflags2 & MF2_COLOREDBLOOD) && (spr->colormap[0] != NULL))
+	if ((spr->mobjflags_extra & MFX_COLOREDBLOOD) && (spr->colormap[0] != NULL))
 	{
 		static const byte * prev_trans = NULL, * prev_map = NULL;
 		const byte * trans = red2col[spr->color], * map = spr->colormap[0];

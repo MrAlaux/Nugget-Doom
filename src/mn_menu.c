@@ -1884,7 +1884,7 @@ static void M_EndGameResponse(int ch)
     quickSaveSlot = -1;
 
     currentMenu->lastOn = itemOn;
-    S_StopChannels();
+    S_EvictChannels();
     MN_ClearMenus();
     D_StartTitle();
 }
@@ -1941,7 +1941,7 @@ static void M_SizeDisplay(int choice)
         default:
             break;
     }
-    screenblocks = BETWEEN(3, maxscreenblocks, screenblocks);
+    screenblocks = CLAMP(screenblocks, 3, maxscreenblocks);
     R_SetViewSize(screenblocks /*, detailLevel obsolete -- killough */);
 
     MN_UpdateNughudItem(); // [Nugget] NUGHUD
@@ -2667,7 +2667,7 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (M_InputActivated(input_speed_up) && !D_CheckNetConnect() && !strictmode)
     {
         realtic_clock_rate += 10;
-        realtic_clock_rate = BETWEEN(10, 1000, realtic_clock_rate);
+        realtic_clock_rate = CLAMP(realtic_clock_rate, 10, 1000);
         displaymsg("Game Speed: %d", realtic_clock_rate);
         G_SetTimeScale();
         setrefreshneeded = true;
@@ -2677,7 +2677,7 @@ boolean M_ShortcutResponder(const event_t *ev)
         && !strictmode)
     {
         realtic_clock_rate -= 10;
-        realtic_clock_rate = BETWEEN(10, 1000, realtic_clock_rate);
+        realtic_clock_rate = CLAMP(realtic_clock_rate, 10, 1000);
         displaymsg("Game Speed: %d", realtic_clock_rate);
         G_SetTimeScale();
         setrefreshneeded = true;
@@ -3160,7 +3160,7 @@ static boolean MouseResponder(void)
         int dot = mouse_state_x - (rect->x + M_THRM_STEP + video.deltaw);
         int step = M_MAX_VOL * FRACUNIT / (rect->w - M_THRM_STEP * 3);
         int value = dot * step / FRACUNIT;
-        value = BETWEEN(0, M_MAX_VOL, value);
+        value = CLAMP(value, 0, M_MAX_VOL);
 
         current_item--;
         if (current_item->routine)

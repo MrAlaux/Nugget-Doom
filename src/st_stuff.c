@@ -40,6 +40,7 @@
 #include "m_misc.h"
 #include "m_random.h"
 #include "m_swap.h"
+#include "p_inter.h"
 #include "p_mobj.h"
 #include "p_user.h"
 #include "hu_crosshair.h"
@@ -381,6 +382,13 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 }
                 break;
 
+            case sbc_weaponnotowned:
+                if (cond->param >= 0 && cond->param < NUMWEAPONS)
+                {
+                    result &= !player->weaponowned[cond->param];
+                }
+                break;
+
             case sbc_weaponselected:
                 result &= player->readyweapon == cond->param;
                 break;
@@ -487,7 +495,7 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 result &= 7 < cond->param;
                 break;
 
-            case sbc_sessiontypeeequal:
+            case sbc_sessiontypeequal:
                 result &= currsessiontype == cond->param;
                 break;
 
@@ -509,7 +517,7 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 result &= (!!cond->param == false);
                 break;
 
-            case sbc_widgetmode:
+            case sbc_automapmode:
                 {
                     int enabled = 0;
                     if (cond->param & sbc_mode_overlay)
@@ -570,12 +578,142 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 }
                 break;
 
-            // [Nugget] NUGHUD
-            case sbc_weaponnotowned:
-                if (st_nughud && cond->param >= 0 && cond->param < NUMWEAPONS)
+            case sbc_healthgreaterequal:
+                result &= (player->health >= cond->param);
+                break;
+
+            case sbc_healthless:
+                result &= (player->health < cond->param);
+                break;
+
+            case sbc_healthgreaterequalpct:
+                if (maxhealth)
                 {
-                    result &= !player->weaponowned[cond->param];
+                    result &=
+                        ((player->health * 100 / maxhealth) >= cond->param);
                 }
+                break;
+
+            case sbc_healthlesspct:
+                if (maxhealth)
+                {
+                    result &=
+                        ((player->health * 100 / maxhealth) < cond->param);
+                }
+                break;
+
+            case sbc_armorgreaterequal:
+                result &= (player->armorpoints >= cond->param);
+                break;
+
+            case sbc_armorless:
+                result &= (player->armorpoints < cond->param);
+                break;
+
+            case sbc_armorgreaterequalpct:
+                if (max_armor)
+                {
+                    result &= ((player->armorpoints * 100 / max_armor)
+                               >= cond->param);
+                }
+                break;
+
+            case sbc_armorlesspct:
+                if (max_armor)
+                {
+                    result &=
+                        ((player->armorpoints * 100 / max_armor) < cond->param);
+                }
+                break;
+
+            case sbc_ammogreaterequal:
+                result &= (player->ammo[weaponinfo[player->readyweapon].ammo]
+                           >= cond->param);
+                break;
+
+            case sbc_ammoless:
+                result &= (player->ammo[weaponinfo[player->readyweapon].ammo]
+                           < cond->param);
+                break;
+
+            case sbc_ammogreaterequalpct:
+                {
+                    ammotype_t type = weaponinfo[player->readyweapon].ammo;
+                    int maxammo = player->maxammo[type];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[type] * 100 / maxammo)
+                                   >= cond->param);
+                    }
+                }
+                break;
+
+            case sbc_ammolesspct:
+                {
+                    ammotype_t type = weaponinfo[player->readyweapon].ammo;
+                    int maxammo = player->maxammo[type];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[type] * 100 / maxammo)
+                                   < cond->param);
+                    }
+                }
+                break;
+
+            case sbc_ammotypegreaterequal:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    result &= (player->ammo[cond->param2] >= cond->param);
+                }
+                break;
+
+            case sbc_ammotypeless:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    result &= (player->ammo[cond->param2] < cond->param);
+                }
+                break;
+
+            case sbc_ammotypegreaterequalpct:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    int maxammo = player->maxammo[cond->param2];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[cond->param2] * 100 / maxammo)
+                                   >= cond->param);
+                    }
+                }
+                break;
+
+            case sbc_ammotypelesspct:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    int maxammo = player->maxammo[cond->param2];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[cond->param2] * 100 / maxammo)
+                                   < cond->param);
+                    }
+                }
+                break;
+
+            case sbc_widescreenequal:
+                result &=
+                    ((cond->param == 1 && video.unscaledw > SCREENWIDTH)
+                     || (cond->param == 0 && video.unscaledw == SCREENWIDTH));
+                break;
+
+            case sbc_episodeequal:
+                result &= (gameepisode == cond->param);
+                break;
+
+            case sbc_levelgreaterequal:
+                result &= (gamemap >= cond->param);
+                break;
+
+            case sbc_levelless:
+                result &= (gamemap < cond->param);
                 break;
 
             case sbc_none:
@@ -602,7 +740,7 @@ static int SmoothCount(int shownval, int realval)
         const int sign = step < 0 ? -1 : 1;
 
         step = (abs(step) / 20) + 1;
-        step = BETWEEN(2, 8, step);
+        step = CLAMP(step, 2, 8);
 
         shownval += step * sign;
 
@@ -915,7 +1053,7 @@ static void UpdateNumber(sbarelem_t *elem, player_t *player)
     }
     else
     {
-        value = BETWEEN(0, max, value);
+        value = CLAMP(value, 0, max);
         numvalues = valglyphs = value != 0 ? ((int)log10(value) + 1) : 1;
     }
 
@@ -2823,8 +2961,6 @@ static void DrawNughudGraphics(void)
   }
 
   {
-    extern int maxhealth, max_armor;
-
     if (weaponinfo[plyr->readyweapon].ammo != am_noammo)
     {
       DrawNughudBar(
@@ -2887,7 +3023,7 @@ static void DrawNughudGraphics(void)
 
     if (nhammo[0])
     {
-      patch = nhammo[BETWEEN(0, 3, weaponinfo[plyr->readyweapon].ammo)];
+      patch = nhammo[CLAMP(weaponinfo[plyr->readyweapon].ammo, 0, 3)];
     }
     else {
       char namebuf[32];
@@ -2895,7 +3031,7 @@ static void DrawNughudGraphics(void)
 
       no_offsets = true;
 
-      switch (BETWEEN(0, 3, weaponinfo[plyr->readyweapon].ammo))
+      switch (CLAMP(weaponinfo[plyr->readyweapon].ammo, 0, 3))
       {
         case 0: M_snprintf(namebuf, sizeof(namebuf), big ? "AMMOA0" : "CLIPA0"); break;
         case 1: M_snprintf(namebuf, sizeof(namebuf), big ? "SBOXA0" : "SHELA0"); break;
@@ -2952,14 +3088,14 @@ static void DrawNughudGraphics(void)
 
     if (nharmor[0])
     {
-      patch = nharmor[BETWEEN(0, 2, plyr->armortype)];
+      patch = nharmor[CLAMP(plyr->armortype, 0, 2)];
     }
     else {
       char namebuf[32];
 
       no_offsets = true;
 
-      switch (BETWEEN(0, 2, plyr->armortype))
+      switch (CLAMP(plyr->armortype, 0, 2))
       {
         case 0: M_snprintf(namebuf, sizeof(namebuf), "BON2A0"); break;
         case 1: M_snprintf(namebuf, sizeof(namebuf), "ARM1A0"); break;
@@ -3489,7 +3625,7 @@ end_amnum:
 
     sbarcondition_t condition = {0};
 
-    condition.condition = sbc_sessiontypeeequal;
+    condition.condition = sbc_sessiontypeequal;
     condition.param = 2;
 
     array_push(elem.conditions, condition);
@@ -3650,7 +3786,7 @@ end_amnum:
 
     sbarcondition_t condition = {0};
 
-    condition.condition = sbc_widgetmode;
+    condition.condition = sbc_automapmode;
     condition.param = sbc_mode_automap | sbc_mode_overlay;
 
     array_push(elem.conditions, condition);

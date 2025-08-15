@@ -95,6 +95,7 @@ set(NUGGETDOOM_SOURCES
     net_server.c           net_server.h
     net_structrw.c         net_structrw.h
                            p_action.h
+    p_ambient.c            p_ambient.h
     p_ceilng.c
     p_doors.c
     p_enemy.c              p_enemy.h
@@ -131,6 +132,7 @@ set(NUGGETDOOM_SOURCES
     r_things.c             r_things.h
     r_voxel.c              r_voxel.h
     s_musinfo.c            s_musinfo.h
+    s_sndinfo.c            s_sndinfo.h
     s_sound.c              s_sound.h
     s_trakinfo.c           s_trakinfo.h
     sounds.c               sounds.h
@@ -203,6 +205,13 @@ target_link_libraries(nugget-doom PRIVATE
     spng
     sha1
     md5)
+
+target_compile_definitions(woof PUBLIC
+    $<$<CONFIG:Debug>:WOOF_DEBUG>
+    $<$<CONFIG:RelWithDebInfo>:WOOF_DEBUG>
+    $<$<CONFIG:Release>:WOOF_RELEASE>
+    $<$<CONFIG:MinSizeRel>:WOOF_RELEASE>
+)
 
 # Some platforms require standard libraries to be linked against.
 if(HAVE_LIBM)

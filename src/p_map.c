@@ -2004,7 +2004,7 @@ static boolean PTR_ShootTraverse(intercept_t *in)
           if (z < sector->floorheight ||
              (z > sector->ceilingheight && sector->ceilingpic != skyflatnum))
           {
-            z = BETWEEN(sector->floorheight, sector->ceilingheight, z);
+            z = CLAMP(z, sector->floorheight, sector->ceilingheight);
             frac = FixedDiv(z - shootz, FixedMul(aimslope, attackrange));
             x = trace.x + FixedMul (trace.dx, frac);
             y = trace.y + FixedMul (trace.dy, frac);
@@ -2678,7 +2678,7 @@ boolean PIT_ChangeSector(mobj_t *thing)
       thing->height = thing->radius = 0;
       if (thing->info->bloodcolor || idgaf)
       {
-        thing->flags2 |= MF2_COLOREDBLOOD;
+        thing->flags_extra |= MFX_COLOREDBLOOD;
         thing->bloodcolor = V_BloodColor(thing->info->bloodcolor);
       }
 
@@ -2742,7 +2742,7 @@ boolean PIT_ChangeSector(mobj_t *thing)
 
       if (thing->info->bloodcolor || idgaf)
       {
-        mo->flags2 |= MF2_COLOREDBLOOD;
+        mo->flags_extra |= MFX_COLOREDBLOOD;
         mo->bloodcolor = V_BloodColor(thing->info->bloodcolor);
       }
 

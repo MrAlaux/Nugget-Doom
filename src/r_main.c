@@ -331,7 +331,7 @@ static void ProcessFOVEffects(void)
           float step = zoomtarget - *target;
           const int sign = (step > 0) ? 1 : -1;
 
-          *target += BETWEEN(1, 16, fabs(step) / 3.0) * sign;
+          *target += CLAMP(fabs(step) / 3.0, 1, 16) * sign;
 
           if (   (sign > 0 && *target > zoomtarget)
               || (sign < 0 && *target < zoomtarget))
@@ -376,7 +376,7 @@ static void ProcessFOVEffects(void)
     }
   }
 
-  targetfov = BETWEEN(1.0f, 179.0f, targetfov);
+  targetfov = CLAMP(targetfov, 1.0f, 179.0f);
 
   if (r_fov != targetfov)
   {
@@ -629,7 +629,10 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     if (!(freecam.pitch = MAX(0, abs(freecam.pitch) - 4*ANG1) * ((freecam.pitch > 0) ? 1 : -1)))
     { freecam.centering = false; }
   }
-  else { freecam.pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, freecam.pitch + pitch); }
+  else {
+    freecam.pitch += pitch;
+    freecam.pitch  = CLAMP(freecam.pitch, -max_pitch_angle, max_pitch_angle);
+  }
 }
 
 // [Nugget] =================================================================/
@@ -1016,7 +1019,7 @@ void R_SmoothLight(void)
 int R_GetLightIndex(fixed_t scale)
 {
   const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
-  return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+  return clampi(index, 0, MAXLIGHTSCALE - 1);
 }
 
 static fixed_t viewpitch;
@@ -1168,15 +1171,16 @@ void R_ExecuteSetViewSize (void)
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
   }
 
-  // [Nugget] FOV-based sky stretching;
-  // we intentionally use `custom_fov` to disregard any FOV effects
-  if (custom_fov == FOV_DEFAULT)
-  {
-    skyiscalediff = FRACUNIT;
-  }
-  else {
-    skyiscalediff = tan(custom_fov * M_PI / 360.0) * FRACUNIT;
-  }
+  // [Nugget] FOV-based sky stretching /--------------------------------------
+
+  // We intentionally use `custom_fov` to disregard any FOV effects
+  skyiscalediff = (custom_fov == FOV_DEFAULT)
+                ? FRACUNIT
+                : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
+
+  R_UpdateStretchSkies();
+
+  // [Nugget] ---------------------------------------------------------------/
 
   for (i=0 ; i<viewwidth ; i++)
     {
@@ -1227,7 +1231,6 @@ void R_Init (void)
   R_SetViewSize(screenblocks);
   R_InitPlanes();
   R_InitLightTables();
-  R_InitSkyMap();
   R_InitTranslationTables();
   V_InitFlexTranTable();
 
@@ -1431,7 +1434,7 @@ void R_SetupFrame (player_t *player)
         && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
-      basepitch = BETWEEN(-max_pitch_angle, max_pitch_angle, basepitch);
+      basepitch = CLAMP(basepitch, -max_pitch_angle, max_pitch_angle);
     }
     else
     {
@@ -1622,7 +1625,7 @@ void R_SetupFrame (player_t *player)
       {
         fixed_t frac;
 
-        viewz  = BETWEEN(sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT, viewz);
+        viewz  = CLAMP(viewz, sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT);
         frac   = FixedDiv(viewz - z, FixedMul(slope, dist));
         viewx -= FixedMul(dx, frac);
         viewy -= FixedMul(dy, frac);

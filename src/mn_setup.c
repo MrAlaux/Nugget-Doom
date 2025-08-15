@@ -53,7 +53,7 @@
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_plane.h" // [FG] R_InitPlanes()
-#include "r_sky.h"   // [FG] R_InitSkyMap()
+#include "r_sky.h"   // [FG] R_UpdateStretchSkies()
 #include "r_voxel.h"
 #include "s_sound.h"
 #include "s_trakinfo.h"
@@ -397,7 +397,7 @@ static boolean ItemDisabled(int64_t flags)
         force_complevel != CL_NONE ? force_complevel : default_complevel;
 
     if ((flags & S_DISABLE)
-        || (flags & S_STRICT && (default_strictmode || force_strictmode))
+        || (flags & S_STRICT && strictmode)
         || (flags & S_BOOM && complevel < CL_BOOM)
         || (flags & S_MBF && complevel < CL_MBF)
         || (flags & S_VANILLA && complevel != CL_VANILLA)
@@ -1022,7 +1022,7 @@ static void DrawSetting(setup_menu_t *s, int accum_y)
             }
         }
 
-        int thrm_val = BETWEEN(min, max, value);
+        int thrm_val = CLAMP(value, min, max);
 
         byte *cr;
         if (ItemDisabled(flags))
@@ -2663,8 +2663,6 @@ setup_menu_t comp_settings1[] = {
      {"default_complevel"}, .strings_id = str_default_complevel,
      .action = UpdateDefaultCompatibilityLevel},
 
-    {"Strict Mode", S_ONOFF | S_LEVWARN, M_X, M_SPC, {"strictmode"}},
-
     MI_GAP,
 
     {"Compatibility-breaking Features", S_SKIP | S_TITLE, M_X, M_SPC},
@@ -2795,7 +2793,7 @@ static const char **GetResolutionScaleStrings(void)
         val += rs.step;
     }
 
-    resolution_scale = BETWEEN(0, i, resolution_scale);
+    resolution_scale = CLAMP(resolution_scale, 0, i);
 
     array_push(strings, "max");
 
@@ -2974,7 +2972,7 @@ static void SetSoundModule(void)
         return;
     }
 
-    S_StopChannels();
+    S_EvictChannels();
     I_SetSoundModule();
 }
 
@@ -3059,7 +3057,7 @@ static setup_menu_t gen_settings2[] = {
 static setup_menu_t sfx_settings1[] = {
 
     {"SFX Channels", S_THERMO, CNTR_X, M_THRM_SPC, {"snd_channels"},
-     .action = S_StopChannels},
+     .action = S_EvictChannels},
 
     {"Output Limiter", S_ONOFF, CNTR_X, M_SPC, {"snd_limiter"},
      .action = SetSoundModule},
@@ -3787,7 +3785,7 @@ static setup_menu_t gen_settings5[] = {
      .action = R_InitDrawFunctions},
 
     {"Stretch Short Skies", S_ONOFF, OFF_CNTR_X, M_SPC, {"stretchsky"},
-     .action = R_InitSkyMap},
+     .action = R_UpdateStretchSkies},
 
     {"Linear Sky Scrolling", S_ONOFF, OFF_CNTR_X, M_SPC, {"linearsky"},
      .action = R_InitPlanes},
@@ -5046,7 +5044,7 @@ static boolean ChangeEntry(menu_action_t action, int ch)
                 if ((min != UL && value < min) || (max != UL && value > max))
                 {
                     warn_about_changes(S_BADVAL);
-                    value = BETWEEN(min, max, value);
+                    value = CLAMP(value, min, max);
                 }
 
                 *def->location.i = value;
@@ -5639,7 +5637,7 @@ boolean MN_SetupMouseResponder(int x, int y)
 
         int step = (max - min) * FRACUNIT / (rect->w - M_THRM_STEP * 2);
         int value = dot * step / FRACUNIT + min;
-        value = BETWEEN(min, max, value);
+        value = CLAMP(value, min, max);
 
         if (value != *def->location.i)
         {
@@ -5953,7 +5951,6 @@ void MN_InitMenuStrings(void)
 
 void MN_SetupResetMenu(void)
 {
-    DisableItem(force_strictmode, comp_settings1, "strictmode");
     DisableItem(force_complevel != CL_NONE, comp_settings1, "default_complevel");
     DisableItem(M_ParmExists("-pistolstart"), comp_settings1, "pistolstart");
     DisableItem(M_ParmExists("-uncapped") || M_ParmExists("-nouncapped"),

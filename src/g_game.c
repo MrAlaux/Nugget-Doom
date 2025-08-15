@@ -513,8 +513,7 @@ boolean reset_inventory = false;
 
 static boolean  pistolstart, default_pistolstart;
 
-boolean         strictmode, default_strictmode;
-boolean         force_strictmode;
+boolean         strictmode;
 boolean         critical;
 
 // [crispy] store last cmd to track joins
@@ -1308,14 +1307,17 @@ static void G_DoLoadLevel(void)
   const int lastaction = gameaction;
   static int lastepisode = -1, lastmap = -1;
 
+  S_StopAmbientSounds();
+
   // Set the sky map.
   // First thing, we have a dummy sky texture name,
   //  a flat. The data is in the WAD only because
   //  we look for an actual index, instead of simply
   //  setting one.
 
-  skyflatnum = R_FlatNumForName ( SKYFLATNAME );
+  R_ClearLevelskies();
 
+  int skytexture;
   if (gamemapinfo && gamemapinfo->skytexture[0])
   {
     skytexture = R_TextureNumForName(gamemapinfo->skytexture);
@@ -1352,6 +1354,8 @@ static void G_DoLoadLevel(void)
         skytexture = R_TextureNumForName ("SKY4");
         break;
       }//jff 3/27/98 end sky setting fix
+
+  R_AddLevelsky(skytexture);
 
   levelstarttic = gametic;        // for time calculation
 
@@ -1415,8 +1419,6 @@ static void G_DoLoadLevel(void)
 
   MN_UpdateFreeLook(!mouselook && !padlook);
   HU_UpdateTurnFormat();
-
-  R_InitSkyMap(); // SKYDEFS flatmapping
 
   // [Woof!] Do not reset chosen player view across levels in multiplayer
   // demo playback. However, it must be reset when starting a new game.
@@ -2269,6 +2271,8 @@ static void G_DoCompleted(void)
 {
   int i;
 
+  S_StopAmbientSounds();
+
   //!
   // @category demo
   // @help
@@ -3065,6 +3069,8 @@ static void DoSaveGame(char *name)
 
   keyframe_rw = false; // [Nugget] Make sure endian-unsafe R/W is disabled
 
+  S_MarkSounds();
+
   description = savedescription;
 
   save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, 0);
@@ -3435,7 +3441,7 @@ static boolean DoLoadGame(boolean do_load_autosave)
   // [Nugget] /---------------------------------------------------------------
 
   // Was `extrakills`
-  if (saveg_nugget210 >= saveg_compat && saveg_compat > saveg_woof600)
+  if (saveg_woof600 < saveg_compat && saveg_compat <= saveg_nugget210)
   { saveg_read32(); }
 
   // Restore milestones
@@ -3445,7 +3451,7 @@ static boolean DoLoadGame(boolean do_load_autosave)
   // Restore custom-skill settings
   if (saveg_compat > saveg_nugget300)
   {
-    #define READ(x)                                      \
+    #define READ(x) \
       if ((save_p - savebuffer) <= (length - sizeof(x))) \
         x = saveg_read32()
 
@@ -4377,7 +4383,8 @@ void G_Ticker(void)
 
           if (speedchange)
           {
-            basespeed = BETWEEN(FRACUNIT, 40*FRACUNIT, basespeed + (FRACUNIT * speedchange));
+            basespeed += FRACUNIT * speedchange;
+            basespeed = CLAMP(basespeed, FRACUNIT, 40*FRACUNIT);
 
             const int scaledspeed = basespeed / FRACUNIT;
             displaymsg("Freecam Speed: %i unit%s", scaledspeed, (scaledspeed == 1) ? "" : "s");
@@ -4450,12 +4457,17 @@ void G_PlayerReborn(int player)
   int itemcount;
   int secretcount;
   int maxkilldiscount;
+  int num_visitedlevels;
+  level_t *visitedlevels;
+
 
   memcpy (frags, players[player].frags, sizeof frags);
   killcount = players[player].killcount;
   itemcount = players[player].itemcount;
   secretcount = players[player].secretcount;
   maxkilldiscount = players[player].maxkilldiscount;
+  num_visitedlevels = players[player].num_visitedlevels;
+  visitedlevels = players[player].visitedlevels;
 
   p = &players[player];
 
@@ -4471,6 +4483,8 @@ void G_PlayerReborn(int player)
   players[player].itemcount = itemcount;
   players[player].secretcount = secretcount;
   players[player].maxkilldiscount = maxkilldiscount;
+  players[player].num_visitedlevels = num_visitedlevels;
+  players[player].visitedlevels = visitedlevels;
 
   p->usedown = p->attackdown = true;  // don't do anything immediately
   p->playerstate = PST_LIVE;
@@ -5038,6 +5052,48 @@ static void G_BoomComp()
   comp[comp_reservedlineflag] = 0;
 }
 
+static void CheckDemoParams(boolean specified_complevel)
+{
+  const boolean use_recordfrom = (M_CheckParmWithArgs("-recordfrom", 2)
+                                  || M_CheckParmWithArgs("-recordfromto", 2));
+
+  if (use_recordfrom || M_CheckParmWithArgs("-record", 1))
+  {
+    //!
+    // @category demo
+    // @help
+    //
+    // Lifts strict mode restrictions according to DSDA rules.
+    //
+
+    strictmode = !M_ParmExists("-tas");
+
+    if (!specified_complevel)
+    {
+      I_Error("You must specify a compatibility level when recording a demo!\n"
+              "Example: %s -iwad DOOM.WAD -complevel ultimate -skill 4 -record demo",
+              PROJECT_SHORTNAME);
+    }
+
+    if (!use_recordfrom && !M_ParmExists("-skill") && !M_ParmExists("-uv")
+        && !M_ParmExists("-nm"))
+    {
+      I_Error("You must specify a skill level when recording a demo!\n"
+              "Example: %s -iwad DOOM.WAD -complevel ultimate -skill 4 -record demo",
+              PROJECT_SHORTNAME);
+    }
+
+    if (M_ParmExists("-pistolstart"))
+    {
+      I_Error("The -pistolstart option is not allowed when recording a demo!");
+    }
+  }
+  else
+  {
+    strictmode = false;
+  }
+}
+
 // killough 3/1/98: function to reload all the default parameter
 // settings before a new game begins
 
@@ -5135,6 +5191,8 @@ void G_ReloadDefaults(boolean keep_demover)
       }
     }
 
+    CheckDemoParams(p > 0);
+
     if (demover == DV_NONE)
     {
       demover = GetWadDemover();
@@ -5150,21 +5208,6 @@ void G_ReloadDefaults(boolean keep_demover)
       demo_version = demover;
       force_complevel = GetComplevel(demo_version);
     }
-  }
-
-  strictmode = default_strictmode;
-
-  //!
-  // @category demo
-  // @help
-  //
-  // Sets compatibility and cosmetic settings according to DSDA rules.
-  //
-
-  if (M_CheckParm("-strict"))
-  {
-    strictmode = true;
-    force_strictmode = true;
   }
 
   // [Nugget] /---------------------------------------------------------------
@@ -6309,8 +6352,6 @@ void G_BindCompVariables(void)
             "Default compatibility level (0 = Vanilla; 1 = Boom; 2 = MBF; 3 = MBF21)");
   M_BindBool("autostrafe50", &autostrafe50, NULL, false, ss_comp, wad_no,
              "Automatic strafe50 (SR50)");
-  M_BindBool("strictmode", &default_strictmode, &strictmode,
-             false, ss_comp, wad_no, "Strict mode");
   M_BindBool("hangsolid", &hangsolid, NULL, false, ss_comp, wad_no,
              "Enable walking under solid hanging bodies");
 

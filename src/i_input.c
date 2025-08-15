@@ -434,12 +434,6 @@ static void DisableGamepadEvents(void)
 static void I_ShutdownGamepad(void)
 {
     I_ShutdownRumble();
-
-    if (gamepad)
-    {
-        SDL_GameControllerSetPlayerIndex(gamepad, -1);
-    }
-
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
 }
 
@@ -459,6 +453,12 @@ void I_InitGamepad(void)
     {
         return;
     }
+
+#ifdef _WIN32
+    // Raw input is broken for XInput devices under Windows.
+    // https://github.com/libsdl-org/SDL/issues/13047
+    SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT, "0");
+#endif
 
     // Enable bluetooth gyro support for DualShock 4 and DualSense.
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
@@ -537,7 +537,6 @@ static void CloseGamepad(void)
     {
         I_ResetAllRumbleChannels();
         I_SetRumbleSupported(NULL);
-        SDL_GameControllerSetPlayerIndex(gamepad, -1);
         SDL_GameControllerClose(gamepad);
         gamepad = NULL;
         gamepad_instance_id = -1;
@@ -698,7 +697,7 @@ static float GetDeltaTime(const SDL_ControllerSensorEvent *csensor,
     const uint64_t sens_time = GetSensorTimeUS(csensor);
     const float dt = (sens_time - *last_time) * 1.0e-6f;
     *last_time = sens_time;
-    return BETWEEN(0.0f, 0.05f, dt);
+    return CLAMP(dt, 0.0f, 0.05f);
 }
 
 static void UpdateGyroState(const SDL_ControllerSensorEvent *csensor)

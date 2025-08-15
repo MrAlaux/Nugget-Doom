@@ -1163,7 +1163,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
 
     // [Nugget] -------------------------------------------------------------/
 
-    char kill_str[16], item_str[16], secret_str[16];
+    char kill_str[80], item_str[80], secret_str[80];
 
     statsformatfunc_t StatsFormatFunc = StatsFormatFuncs[
         // [Nugget]
@@ -1175,7 +1175,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
     StatsFormatFunc(item_str, sizeof(item_str), fullitemcount, totalitems);
     StatsFormatFunc(secret_str, sizeof(secret_str), fullsecretcount, totalsecret);
 
-    static char kill_str2[24], item_str2[24], secret_str2[24];
+    static char kill_str2[80], item_str2[80], secret_str2[80];
 
     memset(kill_str2,   0, sizeof(kill_str2));
     memset(item_str2,   0, sizeof(item_str2));
@@ -1231,7 +1231,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
               string + offset, sizeof(string) - offset, "%s", secret_str2
             );
         }
-  
+
         ST_AddLine(widget, string);
     }
     else

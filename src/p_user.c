@@ -506,7 +506,7 @@ void P_MovePlayer (player_t* player)
   if (!menuactive && !demoplayback && !player->centering)
   {
     player->pitch += cmd->pitch << FRACBITS;
-    player->pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, player->pitch);
+    player->pitch = CLAMP(player->pitch, -max_pitch_angle, max_pitch_angle);
     player->slope = PlayerSlope(player);
   }
 }
@@ -1092,7 +1092,8 @@ boolean P_EvaluateItemOwned(itemtype_t item, player_t *player)
             return player->powers[pw_ironfeet] != 0;
 
         case item_invulnerability:
-            return player->powers[pw_invulnerability] != 0;
+            return player->powers[pw_invulnerability]
+                   || (player->cheats & CF_GODMODE);
 
         case item_healthbonus:
         case item_stimpack:

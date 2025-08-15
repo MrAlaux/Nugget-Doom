@@ -221,6 +221,11 @@ void P_InitPicAnims (void)
                  animdefs[i].endname);
       }
 
+      if (lastanim->speed == 0)
+        I_Error ("%s to %s animation cannot have speed 0",
+                 animdefs[i].startname,
+                 animdefs[i].endname);
+
       lastanim++;
     }
   Z_ChangeTag (animdefs,PU_CACHE); //jff 3/23/98 allow table to be freed
@@ -2632,7 +2637,7 @@ void P_UpdateSpecials (void)
   // [crispy] draw fuzz effect independent of rendering frame rate
   R_SetFuzzPosTic();
 
-  R_UpdateSky();
+  R_UpdateSkies();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -2913,11 +2918,13 @@ void P_SpawnSpecials (void)
 
       case 271:   // Regular sky
       case 272:   // Same, only flipped
+      {
         // Pre-calculate sky color
-        R_GetSkyColor(texturetranslation[sides[*lines[i].sidenum].toptexture]);
+        skyindex_t skyindex = R_AddLevelskyFromLine(&sides[lines[i].sidenum[0]]);
         for (s = -1; (s = P_FindSectorFromLineTag(lines+i,s)) >= 0;)
-          sectors[s].floorsky = sectors[s].ceilingsky = i | PL_SKYFLAT;
+          sectors[s].floorsky = sectors[s].ceilingsky = skyindex | PL_SKYFLAT;
         break;
+      }
 
       case 2048: case 2049: case 2050:
       case 2051: case 2052: case 2053:
@@ -3124,8 +3131,24 @@ static void P_SpawnScrollers(void)
       int control = -1, accel = 0;         // no control sector or acceleration
       int special = l->special;
 
-      if (demo_compatibility && special != 48)
-        continue;
+      if (demo_compatibility)
+      {
+        // Allow all scrollers that do not break demo compatibility.
+        // The following are the original Boom scrollers that move Things
+        // across the floor, in their accelerative / displacement / normal
+        // variants.
+        // All other scrollers from Boom through ID24 retain compatibility.
+        switch (special)
+        {
+          case 216:
+          case 217:
+          case 247:
+          case 248:
+          case 252:
+          case 253:
+            continue;
+        }
+      }
 
       // killough 3/7/98: Types 245-249 are same as 250-254 except that the
       // first side's sector's heights cause scrolling when they change, and

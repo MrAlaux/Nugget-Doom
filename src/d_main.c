@@ -65,6 +65,7 @@
 #include "m_swap.h"
 #include "net_client.h"
 #include "net_dedicated.h"
+#include "p_ambient.h"
 #include "p_inter.h" // maxhealthbonus
 #include "p_map.h"   // MELEERANGE
 #include "p_mobj.h"
@@ -501,6 +502,8 @@ void D_AdvanceDemoLoop(void)
 
 void D_DoAdvanceDemo(void)
 {
+    S_StopAmbientSounds();
+
     players[consoleplayer].playerstate = PST_LIVE; // not reborn
     advancedemo = false;
     usergame = false; // no save / end game here
@@ -1403,6 +1406,10 @@ static void LoadIWadBase(void)
             W_AddBaseDir("freedoom1-all");
         }
     }
+    else if (local_gamemission == pack_rekkr)
+    {
+        W_AddBaseDir("rekkr-all");
+    }
     for (int i = 0; i < firstpwad; i++)
     {
         W_AddBaseDir(M_BaseName(wadfiles[i]));
@@ -1469,6 +1476,12 @@ static void AutoloadIWadDir(void (*AutoLoadFunc)(const char *path))
                         AutoLoadFunc(dir);
                         free(dir);
                     }
+                }
+                else if (local_gamemission == pack_rekkr)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "rekkr-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
                 }
             }
 
@@ -1581,19 +1594,21 @@ static void D_InitTables(void)
       case MT_CYBORG:
         continue;
     }
-    mobjinfo[i].flags2 |= MF2_FLIPPABLE;
+    mobjinfo[i].flags_extra |= MFX_MIRROREDCORPSE;
   }
 
-  mobjinfo[MT_PUFF].flags2 |= MF2_FLIPPABLE;
-  mobjinfo[MT_BLOOD].flags2 |= MF2_FLIPPABLE;
+  mobjinfo[MT_PUFF].flags_extra |= MFX_MIRROREDCORPSE;
+  mobjinfo[MT_BLOOD].flags_extra |= MFX_MIRROREDCORPSE;
 
   for (i = MT_MISC61; i <= MT_MISC69; ++i)
-     mobjinfo[i].flags2 |= MF2_FLIPPABLE;
+     mobjinfo[i].flags_extra |= MFX_MIRROREDCORPSE;
 
-  mobjinfo[MT_DOGS].flags2 |= MF2_FLIPPABLE;
+  mobjinfo[MT_DOGS].flags_extra |= MFX_MIRROREDCORPSE;
 
   for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; ++i)
     states[i].flags |= STATEF_SKILL5FAST;
+
+  P_InitAmbientSoundMobjInfo();
 }
 
 void D_SetMaxHealth(void)
@@ -2520,6 +2535,8 @@ void D_DoomMain(void)
     // Not loading a game
     startloadgame = -1;
   }
+
+  W_ProcessInWads("SNDINFO", S_ParseSndInfo, PROCESS_IWAD | PROCESS_PWAD);
 
   W_ProcessInWads("TRAKINFO", S_ParseTrakInfo, PROCESS_IWAD | PROCESS_PWAD);
   D_SetupDemoLoop();
