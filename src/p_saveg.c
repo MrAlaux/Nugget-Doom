@@ -969,7 +969,7 @@ static void saveg_read_player_t(player_t *str)
         str->maxkilldiscount = 0;
     }
 
-    if (saveg_compat > saveg_nugget320) // [Nugget]
+    if (saveg_compat > saveg_woof1300)
     {
         // [Woof!]: int num_visitedlevels;
         str->num_visitedlevels = saveg_read32();
@@ -2302,7 +2302,7 @@ void P_UnArchiveWorld (void)
       sec->lightingdata = 0;
       sec->soundtarget = 0;
 
-      if (saveg_compat > saveg_nugget400) // [Nugget]
+      if (saveg_compat > saveg_woof1500)
       {
         sec->floor_xoffs = saveg_read32();
         sec->floor_yoffs = saveg_read32();
@@ -2339,7 +2339,7 @@ void P_UnArchiveWorld (void)
       li->special = saveg_read16();
       li->tag = saveg_read16();
 
-      if (saveg_compat > saveg_nugget400) // [Nugget]
+      if (saveg_compat > saveg_woof1500)
       {
         li->angle = saveg_read32();
         li->frontmusic = saveg_read32();

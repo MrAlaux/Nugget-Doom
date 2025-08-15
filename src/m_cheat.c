@@ -613,7 +613,7 @@ static void cheat_turbo(char *buf)
 
   // Limit the scale; it gets kinda wonky at 255 already,
   // but going any further outright inverts movement
-  scale = BETWEEN(10, 255, scale);
+  scale = CLAMP(scale, 10, 255);
 
   displaymsg("Turbo Scale: %i%%", scale);
   forwardmove[0] = 0x19 * scale / 100;

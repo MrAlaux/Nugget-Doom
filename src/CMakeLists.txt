@@ -206,11 +206,11 @@ target_link_libraries(nugget-doom PRIVATE
     sha1
     md5)
 
-target_compile_definitions(woof PUBLIC
-    $<$<CONFIG:Debug>:WOOF_DEBUG>
-    $<$<CONFIG:RelWithDebInfo>:WOOF_DEBUG>
-    $<$<CONFIG:Release>:WOOF_RELEASE>
-    $<$<CONFIG:MinSizeRel>:WOOF_RELEASE>
+target_compile_definitions(nugget-doom PUBLIC
+    $<$<CONFIG:Debug>:NUGGETDOOM_DEBUG>
+    $<$<CONFIG:RelWithDebInfo>:NUGGETDOOM_DEBUG>
+    $<$<CONFIG:Release>:NUGGETDOOM_RELEASE>
+    $<$<CONFIG:MinSizeRel>:NUGGETDOOM_RELEASE>
 )
 
 # Some platforms require standard libraries to be linked against.

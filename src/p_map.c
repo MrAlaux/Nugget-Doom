@@ -2506,7 +2506,7 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
 
     if (z < sec->floorheight+FRACUNIT || sec->ceilingheight-FRACUNIT < z)
     {
-      z = BETWEEN(sec->floorheight+FRACUNIT, sec->ceilingheight-FRACUNIT, z);
+      z = CLAMP(z, sec->floorheight+FRACUNIT, sec->ceilingheight-FRACUNIT);
       frac = FixedDiv(z - shootz, FixedMul(aimslope, attackrange));
       x = trace.x + FixedMul(trace.dx, frac);
       y = trace.y + FixedMul(trace.dy, frac);

@@ -6,6 +6,7 @@ None.
 
 - **Merged changes from Woof! post-15.2.0**, note:
   - Maintained _Animated Health/Armor Count_ setting
+- **Improved sky stretching**
 
 ## Bug Fixes
 

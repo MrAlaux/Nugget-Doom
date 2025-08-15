@@ -1083,9 +1083,9 @@ void I_SetPalette(byte *palette)
             ((int) b * color_contrast / 100) + contrast_adjustment
         };
 
-        channels[0] = BETWEEN(0, 255, channels[0]);
-        channels[1] = BETWEEN(0, 255, channels[1]);
-        channels[2] = BETWEEN(0, 255, channels[2]);
+        channels[0] = CLAMP(channels[0], 0, 255);
+        channels[1] = CLAMP(channels[1], 0, 255);
+        channels[2] = CLAMP(channels[2], 0, 255);
 
         // [JN] Saturation floats, high and low.
         // If saturation has been modified (< 100), set high and low

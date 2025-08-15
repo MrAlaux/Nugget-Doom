@@ -1571,7 +1571,7 @@ void P_SegLengths(boolean contrast_only)
         }
 
         // [Nugget] Fake contrast
-        const fakecontrast_t fakecontrast = BETWEEN(strictmode, FAKECONTRAST_VANILLA, fake_contrast);
+        const fakecontrast_t fakecontrast = CLAMP(fake_contrast, strictmode, FAKECONTRAST_VANILLA);
 
         // [crispy] smoother fake contrast
         if (fakecontrast == FAKECONTRAST_SMOOTH) // [Nugget]

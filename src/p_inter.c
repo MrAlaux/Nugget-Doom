@@ -902,7 +902,7 @@ void P_NuggetGib(const mobj_t *const mo, const boolean crushed)
 
     if (mo->info->bloodcolor || idgaf)
     {
-      splat->flags2 |= MF2_COLOREDBLOOD;
+      splat->flags_extra |= MFX_COLOREDBLOOD;
       splat->bloodcolor = V_BloodColor(mo->info->bloodcolor);
     }
 

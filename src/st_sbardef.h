@@ -76,9 +76,6 @@ typedef enum
     sbc_levelgreaterequal,
     sbc_levelless,
 
-    // [Nugget]
-    sbc_weaponnotowned,
-
     sbc_max,
 } sbarconditiontype_t;
 

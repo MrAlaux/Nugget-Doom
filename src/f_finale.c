@@ -915,7 +915,7 @@ static void F_FancyCastTicker(void)
 
       casttics = caststate->tics;
       castflip = flipcorpses && state == info->deathstate
-                 && (info->flags2 & MF2_FLIPPABLE)
+                 && (info->flags_extra & MFX_MIRROREDCORPSE)
                  && (Woof_Random() & 1);
 
       sfxenum_t actionsound = F_SoundForAction(info, caststate);
@@ -1243,7 +1243,7 @@ static boolean F_CastResponder(event_t* ev)
 
   // [Nugget]: [crispy] flippable death sequence
   castflip = flipcorpses && castdeath
-             && (mobjinfo[castorder[castnum].type].flags2 & MF2_FLIPPABLE)
+             && (mobjinfo[castorder[castnum].type].flags_extra & MFX_MIRROREDCORPSE)
              && (Woof_Random() & 1);
         
   return true;

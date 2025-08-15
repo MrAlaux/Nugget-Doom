@@ -37,6 +37,9 @@ typedef struct
     fixed_t scalex,  scaley;
     fixed_t currx,   curry;
     fixed_t prevx,   prevy;
+
+    // [Nugget] Store original values
+    fixed_t orig_scaley, orig_mid;
 } skytex_t;
 
 typedef struct sky_s

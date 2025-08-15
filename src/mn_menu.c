@@ -665,7 +665,7 @@ static void M_CustomSkill(int choice)
       return;
   }
 
-  if (default_strictmode || force_strictmode)
+  if (strictmode)
   {
       M_StartMessage("Custom skill is disallowed\n"
                      "in strict mode.\n\n" PRESSKEY,

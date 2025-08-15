@@ -65,7 +65,8 @@ boolean breathing;
 // Flinching
 void P_SetFlinch(player_t *const player, int pitch)
 {
-  player->flinch = BETWEEN(-12*ANG1, 12*ANG1, player->flinch + pitch*ANG1/2);
+  player->flinch += pitch * ANG1/2;
+  player->flinch  = CLAMP(player->flinch, -12*ANG1, 12*ANG1);
 }
 
 // [Nugget] =================================================================/
@@ -597,7 +598,7 @@ void P_DeathThink (player_t* player)
 
           pitch = P_SlopeToPitch(slope);
 
-          pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, pitch);
+          pitch = CLAMP(pitch, -max_pitch_angle, max_pitch_angle);
         }
         else { pitch = 0; }
 
@@ -823,12 +824,12 @@ void P_PlayerThink (player_t* player)
                                    P_AproxDistance(player->mo->x - linetarget->x,
                                                    player->mo->y - linetarget->y));
 
-          slope = BETWEEN(P_GetLinetargetBottomSlope(),
-                          P_GetLinetargetTopSlope(),
-                          slope);
+          slope = CLAMP(slope,
+                        P_GetLinetargetBottomSlope(),
+                        P_GetLinetargetTopSlope());
 
           target_pitch = P_SlopeToPitch(slope);
-          target_pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, target_pitch);
+          target_pitch = CLAMP(target_pitch, -max_pitch_angle, max_pitch_angle);
         }
         else { target_pitch = player->pitch; }
       }

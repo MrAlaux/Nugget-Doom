@@ -78,6 +78,8 @@ static const char *sbw_names[] =
     [sbw_announce] = "announce_level_title",
     [sbw_chat] = "chat",
     [sbw_title] = "level_title",
+
+    [sbw_powers] = "powerup_timers", // [Nugget] Powerup timers
 };
 
 static boolean ParseSbarElem(json_t *json, sbarelem_t *out);
@@ -291,10 +293,10 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
             sbe_minimap_t *const minimap = calloc(1, sizeof(*minimap));
 
             minimap->width  = JS_GetNumberValue(json, "width");
-            minimap->width  = BETWEEN(32, 96, minimap->width);
+            minimap->width  = CLAMP(minimap->width, 32, 96);
 
             minimap->height = JS_GetNumberValue(json, "height");
-            minimap->height = BETWEEN(32, 96, minimap->height);
+            minimap->height = CLAMP(minimap->height, 32, 96);
 
             minimap->under_messages = JS_GetBooleanValue(json, "under_messages");
 

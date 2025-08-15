@@ -227,16 +227,16 @@ typedef enum
   // [Nugget] /---------------------------------------------------------------
 
   /*
-  saveg_woof1300,
-  saveg_woof1500,
   */
 
   saveg_nugget200,
   saveg_nugget210,
   saveg_nugget300, // Identified by "Nugget 2.4.0"
   saveg_nugget320,
+  saveg_woof1300 = saveg_nugget320,
   saveg_nugget330,
   saveg_nugget400,
+  saveg_woof1500 = saveg_nugget400,
 
   // [Nugget] ---------------------------------------------------------------/
 
