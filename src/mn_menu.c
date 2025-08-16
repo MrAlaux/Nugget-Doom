@@ -1836,14 +1836,14 @@ static void M_QuickLoad(void)
 {
     if (netgame && !demoplayback) // killough 5/26/98: add !demoplayback
     {
-        M_StartSound(sfx_swtchn);
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_StartMessage(s_QLOADNET, NULL, false); // Ty 03/27/98 - externalized
         return;
     }
 
     if (demorecording) // killough 5/26/98: exclude during demo recordings
     {
-        M_StartSound(sfx_swtchn);
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
         M_StartMessage("you can't quickload\n"
                        "while recording a demo!\n\n" PRESSKEY,
                        NULL, false); // killough 5/26/98: not externalized
@@ -3654,7 +3654,7 @@ void MN_StartControlPanel(void)
     G_ClearInput();
 
     M_PauseSound();
-    M_StartSound(sfx_swtchn);
+    M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
 }
 
 //
@@ -3813,8 +3813,9 @@ void M_Drawer(void)
         // [FG] at least one menu graphics lump is missing, draw alternative
         // text
         if (currentMenu->lumps_missing > 0
-            || (!name[0] && item->flags & MF_OPTLUMP
-                && (patch_lump < 0 || patch_priority < bigfont_priority))) // [Nugget]
+            // [Nugget] Use big font if loaded after patch
+            || (/*!name[0] &&*/ item->flags & MF_OPTLUMP
+                && (patch_lump < 0 || patch_priority < bigfont_priority)))
         {
             if (alttext)
             {
