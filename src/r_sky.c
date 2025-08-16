@@ -222,7 +222,7 @@ void R_StretchSky(int orig_skymid, int skyheight,
         return;
     }
 
-    // Stretch sky just as much as necessary for mouselook or lack thereof
+    // Stretch sky just as much as necessary for free look or lack thereof
     int skytop_target = stretchsky ? 200 : 100;
 
     // FOV-based sky stretching

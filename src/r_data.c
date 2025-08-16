@@ -54,6 +54,7 @@
 
 // [Nugget]
 #include "hu_crosshair.h"
+#include "r_draw.h"
 #include "st_widgets.h"
 
 // [Nugget] /-----------------------------------------------------------------
@@ -1045,7 +1046,8 @@ void R_InitColormaps(void)
   R_InvulMode();
 
   // [Nugget] Night-vision visor
-  if (!beta_emulation) {
+  if (!beta_emulation)
+  {
     for (i = 0;  i < numcolormaps;  i++)
     {
       // Guard against markers (empty lumps) among the actual colormaps
@@ -1255,7 +1257,9 @@ void R_InitData(void)
   if (hud_menu_shadows && hud_menu_shadows_filter_pct != 100)
   { R_GetGenericTranMap(hud_menu_shadows_filter_pct); }
 
-  // Sprite shadows are handled in `R_InitDrawFunctions()`
+  // Sprite shadows
+  if (sprite_shadows)
+  { R_InitShadowTranMap(); }
 
   // Message fadeout
   if (ST_MessageFadeoutOn())

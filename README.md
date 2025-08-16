@@ -42,9 +42,10 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
+- **Support for SSG in Doom 1** [p.f. Woof! 15.2.0]
 - **_Hitbox-based Hitscan Collision_** setting
-- **_"Direct + Auto"_ mode for Vertical Aiming**
-- **_Direct Vertical Aiming_ for melee attacks**
+- **_"Direct + Auto"_ mode for _Free Look_**
+- **Direct vertical aiming for melee attacks**
 - **_Move Over/Under Things_** setting [partially p.f. Crispy Doom, DSDA-Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>) [i.b. ZDoom]
@@ -245,12 +246,18 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 
 ### Miscellaneous
 
-- **Customizable skill level**, supporting all vanilla settings and a new one for duplicate monster spawns
+- **Reworked custom skill**:
+  - Considered skill #6, settable through the `SKILL` cheat
+  - _Thing Spawns_ setting
+  - _Duplicate Monsters_ setting
+  - _Slow Spawn-Cube Spitter_ setting
+  - _Restart [Current] Level_ options
+  - Settings are saved in the config file
   - Its menu item uses the `M_CSTSKL` graphic if found
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
-- **When dying with freelook enabled, the camera is pitched towards the killer**
+- **When dying with _Free Look_ enabled, the camera is pitched towards the killer**
 - **Extended character cast** [partially p.f. Crispy Doom]
   - _Turn_ buttons to rotate
   - _Run_ button to gib

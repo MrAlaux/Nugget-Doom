@@ -1,7 +1,7 @@
-include(WoofSettings)
+include(NuggetDoomSettings)
 
 add_library(netlib STATIC netlib.c netlib.h)
-target_woof_settings(netlib)
+target_nuggetdoom_settings(netlib)
 target_include_directories(netlib INTERFACE ".")
 
 if(WIN32)

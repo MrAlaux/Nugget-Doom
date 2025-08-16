@@ -579,7 +579,7 @@ void P_DeathThink (player_t* player)
           player->mo->angle -= ANG5;
 
       // [Nugget] Look at killer vertically
-      if ((mouselook || padlook))
+      if (freelook)
       {
         player->centering = false;
 
@@ -706,7 +706,7 @@ void P_PlayerThink (player_t* player)
       player->mo->flags &= ~MF_JUSTATTACKED;
     }
 
-  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  if (STRICTMODE(vertical_lockon) && !freelook)
   { player->centering = false; }
 
   // [crispy] center view
@@ -770,7 +770,7 @@ void P_PlayerThink (player_t* player)
       return;
     }
 
-  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  if (STRICTMODE(vertical_lockon) && !freelook)
   {
     if (player != &players[displayplayer])
     {

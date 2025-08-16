@@ -1430,7 +1430,7 @@ void R_SetupFrame (player_t *player)
     }
 
     if ((use_localview || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
-        && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
+        && raw_input && !player->centering && freelook) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
       basepitch = CLAMP(basepitch, -max_pitch_angle, max_pitch_angle);
@@ -1899,7 +1899,7 @@ void R_BindRenderVariables(void)
   BIND_NUM_GENERAL(extra_level_brightness, 0, -8, 8, "Level brightness"); // [Nugget] Broader light-level range
   BIND_NUM_GENERAL(fuzzmode, FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_ORIGINAL,
     "Partial Invisibility (0 = Blocky; 1 = Refraction; 2 = Shadow, 3 = Original)");
-  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
+  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for free look"); // [Nugget] Extended description
 
   // [Nugget] FOV-based sky stretching (CFG-only)
   M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,

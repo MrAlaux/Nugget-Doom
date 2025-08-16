@@ -505,17 +505,92 @@ static void DrawPatchColumnTRTL(const patch_column_t *patchcol)
 
 // [Nugget] /-----------------------------------------------------------------
 
-DRAW_COLUMN(TRTRTL, tranmap[(*dest << 8) + translation2[translation1[source[frac >> FRACBITS]]]])
+static void DrawPatchColumnTRTRTL(const patch_column_t *patchcol)
+{
+    int count = patchcol->y2 - patchcol->y1 + 1;
+    if (count <= 0)
+    {
+        return;
+    }
 
-DRAW_COLUMN(
-  Translucent2,
-  tranmap[
-    (*dest << 8)
-  + (translation2 ? translation2[translation1[source[frac >> FRACBITS]]] :
-     translation1 ?              translation1[source[frac >> FRACBITS]]  :
-                                              source[frac >> FRACBITS]   )
-  ]
-)
+#ifdef RANGECHECK
+    if ((unsigned int)patchcol->x >= (unsigned int)video.width
+        || (unsigned int)patchcol->y1 >= (unsigned int)video.height)
+    {
+        I_Error("%i to %i at %i", patchcol->y1, patchcol->y2, patchcol->x); 
+    }
+#endif
+
+    pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);
+    const fixed_t fracstep = patchcol->step;
+    fixed_t frac = patchcol->frac + ((patchcol->y1 * fracstep) & FRACMASK);
+    const byte *source = patchcol->source;
+
+    #define SRCPIXEL \
+      tranmap[(*dest << 8) + translation2[translation1[source[frac >> FRACBITS]]]]
+
+    while ((count -= 2) >= 0)
+    {
+        *dest = SRCPIXEL;
+        dest += linesize;
+        frac += fracstep;
+        *dest = SRCPIXEL;
+        dest += linesize;
+        frac += fracstep;
+    }
+    if (count & 1)
+    {
+        *dest = SRCPIXEL;
+    }
+
+    #undef SRCPIXEL
+}
+
+static void DrawPatchColumnTranslucent2(const patch_column_t *patchcol)
+{
+    int count = patchcol->y2 - patchcol->y1 + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned int)patchcol->x >= (unsigned int)video.width
+        || (unsigned int)patchcol->y1 >= (unsigned int)video.height)
+    {
+        I_Error("%i to %i at %i", patchcol->y1, patchcol->y2, patchcol->x); 
+    }
+#endif
+
+    pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);
+    const fixed_t fracstep = patchcol->step;
+    fixed_t frac = patchcol->frac + ((patchcol->y1 * fracstep) & FRACMASK);
+    const byte *source = patchcol->source;
+
+    #define SRCPIXEL \
+      tranmap[ \
+        (*dest << 8) \
+      + (translation2 ? translation2[translation1[source[frac >> FRACBITS]]] : \
+         translation1 ?              translation1[source[frac >> FRACBITS]]  : \
+                                                  source[frac >> FRACBITS]   ) \
+      ]
+
+    while ((count -= 2) >= 0)
+    {
+        *dest = SRCPIXEL;
+        dest += linesize;
+        frac += fracstep;
+        *dest = SRCPIXEL;
+        dest += linesize;
+        frac += fracstep;
+    }
+    if (count & 1)
+    {
+        *dest = SRCPIXEL;
+    }
+
+    #undef SRCPIXEL
+}
 
 // [Nugget] -----------------------------------------------------------------/
 

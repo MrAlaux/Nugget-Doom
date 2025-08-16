@@ -459,7 +459,7 @@ void P_UpdateDirectVerticalAiming(void);
 extern boolean checksight12;
 void P_UpdateCheckSight(void);
 
-void P_SetActualHeight(mobj_t *mobj);
+// [Nugget] Removed `actualheight`
 
 mobj_t *P_SubstNullMobj(mobj_t *mobj);
 void    P_RespawnSpecials(void);

@@ -156,6 +156,7 @@ extern boolean improved_weapon_toggles;
 extern boolean skip_ammoless_weapons;
 extern screenshotpalette_t screenshot_palette;
 extern boolean comp_longautoaim;
+extern boolean default_pistolstart;
 
 extern boolean nugget_devmode;
 

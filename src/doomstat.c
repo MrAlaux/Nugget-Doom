@@ -44,6 +44,10 @@ boolean modifiedgame;
 
 boolean pwad_help2;
 
+// [Nugget] SSG in Doom 1
+boolean doom1_ssg;
+boolean have_ssg;
+
 //-----------------------------------------------------------------------------
 
 // compatibility with old engines (monster behavior, metrics, etc.)
