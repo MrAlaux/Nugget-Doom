@@ -159,11 +159,12 @@ enum
     S_PCT =         (1u << 29), // Show % sign
     S_CENTER =      (1u << 30), // Centered
 
-    // [Nugget]
-    S_CRITICAL =    (1ull << 48), // Disable during non-casual play
-    S_RES =         (1ull << 49), // Report current resolution
-    S_FUNC2 =       (1ull << 50), // Like `S_FUNC`, but with confirmation
 }; 
+
+// [Nugget]
+#define S_CRITICAL (1ull << 48) // Disable during non-casual play
+#define S_RES      (1ull << 49) // Report current resolution
+#define S_FUNC2    (1ull << 50) // Like `S_FUNC`, but with confirmation
 
 // S_SHOWDESC  = the set of items whose description should be displayed
 // S_SHOWSET   = the set of items whose setting should be displayed
