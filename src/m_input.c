@@ -303,6 +303,7 @@ static const struct
     {KEYP_MINUS,     "num-"      },
     {KEYP_MULTIPLY,  "num*"      },
     {KEYP_PERIOD,    "num."      },
+    {KEYP_BACKSLASH, "num\\"     },
 };
 
 #define JOYB_LEN 16
@@ -761,14 +762,15 @@ void M_BindInputVariables(void)
     BIND_INPUT(input_weapontoggle, "Switch between the two most-preferred weapons with ammo");
     BIND_INPUT(input_lastweapon, "Switch to last used weapon");
 
+    BIND_INPUT(input_rewind, "Rewind");
     BIND_INPUT(input_menu_reloadlevel, "Restart current level/demo");
     BIND_INPUT(input_menu_nextlevel, "Go to next level");
+    BIND_INPUT(input_menu_prevlevel, "Go to previous level");
 
     BIND_INPUT(input_hud_timestats, "Toggle display of level stats and time");
 
     BIND_INPUT(input_savegame, "Save current game");
     BIND_INPUT(input_loadgame, "Load saved games");
-    BIND_INPUT(input_rewind, "Rewind"); // [Nugget]
 
     BIND_INPUT(input_soundvolume, "Bring up sound control panel");
     BIND_INPUT(input_hud, "Cycle through HUD layouts");

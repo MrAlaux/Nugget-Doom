@@ -35,8 +35,6 @@ struct mobj_s;
 // POV related.
 //
 
-#define MAX_PITCH_ANGLE (32 * ANG1)
-
 extern fixed_t  viewcos;
 extern fixed_t  viewsin;
 extern int      viewwindowx;
@@ -271,16 +269,16 @@ inline static angle_t LerpAngle(angle_t oangle, angle_t nangle)
     else if (nangle > oangle)
     {
         if (nangle - oangle < ANG270)
-            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle + (angle_t)((nangle - oangle) * FixedToDouble(fractionaltic));
         else // Wrapped around
-            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle - (angle_t)((oangle - nangle) * FixedToDouble(fractionaltic));
     }
     else // nangle < oangle
     {
         if (oangle - nangle < ANG270)
-            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle - (angle_t)((oangle - nangle) * FixedToDouble(fractionaltic));
         else // Wrapped around
-            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle + (angle_t)((nangle - oangle) * FixedToDouble(fractionaltic));
     }
 }
 

@@ -20,8 +20,9 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "st_stuff.h"
+
 #include <math.h>
-#include <stdlib.h>
 
 #include "am_map.h"
 #include "d_event.h"
@@ -40,6 +41,7 @@
 #include "m_misc.h"
 #include "m_random.h"
 #include "m_swap.h"
+#include "p_inter.h"
 #include "p_mobj.h"
 #include "p_user.h"
 #include "hu_crosshair.h"
@@ -232,7 +234,7 @@ static void UpdateNughudStacks(void);
 // graphics are drawn to a backing screen and blitted to the real screen
 static pixel_t *st_backing_screen = NULL;
 
-// [Alaux]
+// [Nugget] Animated health/armor count
 static boolean hud_animated_counts;
 
 static boolean sts_colored_numbers;
@@ -259,18 +261,19 @@ static statusbar_t *statusbar;
 
 static int st_cmd_x, st_cmd_y;
 
-typedef enum
-{
-    st_original,
-    st_wide
-} st_layout_t;
-
-static st_layout_t st_layout;
+int st_wide_shift;
 
 static patch_t **facepatches = NULL;
 static patch_t **facebackpatches = NULL;
 
 static int have_xdthfaces;
+
+boolean ST_PlayerInvulnerable(player_t *player)
+{
+    return (player->cheats & CF_GODMODE) ||
+        (player->powers[pw_invulnerability] > 4 * 32) ||
+        (player->powers[pw_invulnerability] & 8);
+}
 
 //
 // STATUS BAR CODE
@@ -381,6 +384,13 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 }
                 break;
 
+            case sbc_weaponnotowned:
+                if (cond->param >= 0 && cond->param < NUMWEAPONS)
+                {
+                    result &= !player->weaponowned[cond->param];
+                }
+                break;
+
             case sbc_weaponselected:
                 result &= player->readyweapon == cond->param;
                 break;
@@ -487,7 +497,7 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 result &= 7 < cond->param;
                 break;
 
-            case sbc_sessiontypeeequal:
+            case sbc_sessiontypeequal:
                 result &= currsessiontype == cond->param;
                 break;
 
@@ -509,7 +519,7 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 result &= (!!cond->param == false);
                 break;
 
-            case sbc_widgetmode:
+            case sbc_automapmode:
                 {
                     int enabled = 0;
                     if (cond->param & sbc_mode_overlay)
@@ -570,12 +580,142 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                 }
                 break;
 
-            // [Nugget] NUGHUD
-            case sbc_weaponnotowned:
-                if (st_nughud && cond->param >= 0 && cond->param < NUMWEAPONS)
+            case sbc_healthgreaterequal:
+                result &= (player->health >= cond->param);
+                break;
+
+            case sbc_healthless:
+                result &= (player->health < cond->param);
+                break;
+
+            case sbc_healthgreaterequalpct:
+                if (maxhealth)
                 {
-                    result &= !player->weaponowned[cond->param];
+                    result &=
+                        ((player->health * 100 / maxhealth) >= cond->param);
                 }
+                break;
+
+            case sbc_healthlesspct:
+                if (maxhealth)
+                {
+                    result &=
+                        ((player->health * 100 / maxhealth) < cond->param);
+                }
+                break;
+
+            case sbc_armorgreaterequal:
+                result &= (player->armorpoints >= cond->param);
+                break;
+
+            case sbc_armorless:
+                result &= (player->armorpoints < cond->param);
+                break;
+
+            case sbc_armorgreaterequalpct:
+                if (max_armor)
+                {
+                    result &= ((player->armorpoints * 100 / max_armor)
+                               >= cond->param);
+                }
+                break;
+
+            case sbc_armorlesspct:
+                if (max_armor)
+                {
+                    result &=
+                        ((player->armorpoints * 100 / max_armor) < cond->param);
+                }
+                break;
+
+            case sbc_ammogreaterequal:
+                result &= (player->ammo[weaponinfo[player->readyweapon].ammo]
+                           >= cond->param);
+                break;
+
+            case sbc_ammoless:
+                result &= (player->ammo[weaponinfo[player->readyweapon].ammo]
+                           < cond->param);
+                break;
+
+            case sbc_ammogreaterequalpct:
+                {
+                    ammotype_t type = weaponinfo[player->readyweapon].ammo;
+                    int maxammo = player->maxammo[type];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[type] * 100 / maxammo)
+                                   >= cond->param);
+                    }
+                }
+                break;
+
+            case sbc_ammolesspct:
+                {
+                    ammotype_t type = weaponinfo[player->readyweapon].ammo;
+                    int maxammo = player->maxammo[type];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[type] * 100 / maxammo)
+                                   < cond->param);
+                    }
+                }
+                break;
+
+            case sbc_ammotypegreaterequal:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    result &= (player->ammo[cond->param2] >= cond->param);
+                }
+                break;
+
+            case sbc_ammotypeless:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    result &= (player->ammo[cond->param2] < cond->param);
+                }
+                break;
+
+            case sbc_ammotypegreaterequalpct:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    int maxammo = player->maxammo[cond->param2];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[cond->param2] * 100 / maxammo)
+                                   >= cond->param);
+                    }
+                }
+                break;
+
+            case sbc_ammotypelesspct:
+                if (cond->param2 >= 0 && cond->param2 < NUMAMMO)
+                {
+                    int maxammo = player->maxammo[cond->param2];
+                    if (maxammo)
+                    {
+                        result &= ((player->ammo[cond->param2] * 100 / maxammo)
+                                   < cond->param);
+                    }
+                }
+                break;
+
+            case sbc_widescreenequal:
+                result &=
+                    ((cond->param == 1 && video.unscaledw > SCREENWIDTH)
+                     || (cond->param == 0 && video.unscaledw == SCREENWIDTH));
+                break;
+
+            case sbc_episodeequal:
+                result &= (gameepisode == cond->param);
+                break;
+
+            case sbc_levelgreaterequal:
+                result &= (gamemap >= cond->param);
+                break;
+
+            case sbc_levelless:
+                result &= (gamemap < cond->param);
                 break;
 
             case sbc_none:
@@ -588,23 +728,25 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
     return result;
 }
 
-// [Alaux]
+// [Nugget] Animated health/armor count
 static int SmoothCount(int shownval, int realval)
 {
     int step = realval - shownval;
 
-    // [Nugget] Disallowed in Strict Mode
     if (strictmode || !hud_animated_counts || !step)
     {
         return realval;
     }
     else
     {
-        int sign = step / abs(step);
-        step = BETWEEN(1, 7, abs(step) / 20);
-        shownval += (step + 1) * sign;
+        const int sign = step < 0 ? -1 : 1;
 
-        if ((sign > 0 && shownval > realval)
+        step = (abs(step) / 20) + 1;
+        step = CLAMP(step, 2, 8);
+
+        shownval += step * sign;
+
+        if (   (sign > 0 && shownval > realval)
             || (sign < 0 && shownval < realval))
         {
             shownval = realval;
@@ -622,6 +764,7 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
     switch (number->type)
     {
         case sbn_health:
+            // [Nugget] Animated health/armor count
             if (number->oldvalue == -1)
             {
                 number->oldvalue = player->health;
@@ -631,6 +774,7 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
             break;
 
         case sbn_armor:
+            // [Nugget] Animated health/armor count
             if (number->oldvalue == -1)
             {
                 number->oldvalue = player->armorpoints;
@@ -911,7 +1055,7 @@ static void UpdateNumber(sbarelem_t *elem, player_t *player)
     }
     else
     {
-        value = BETWEEN(0, max, value);
+        value = CLAMP(value, 0, max);
         numvalues = valglyphs = value != 0 ? ((int)log10(value) + 1) : 1;
     }
 
@@ -1041,8 +1185,7 @@ static void UpdateBoomColors(sbarelem_t *elem, player_t *player)
 
     sbe_number_t *number = elem->subtype.number;
 
-    boolean invul = (player->powers[pw_invulnerability]
-                     || player->cheats & CF_GODMODE);
+    boolean invul = ST_PlayerInvulnerable(player);
 
     crange_idx_e cr;
 
@@ -1361,6 +1504,7 @@ static void ResetElem(sbarelem_t *elem, player_t *player)
             }
             break;
 
+        // [Nugget] Animated health/armor count
         case sbe_number:
         case sbe_percent:
             elem->subtype.number->oldvalue = -1;
@@ -1430,17 +1574,18 @@ static void DrawPatchEx(int x, int y, int maxheight, sbaralignment_t alignment,
         y -= height;
     }
 
-    if (st_layout == st_wide
-        || (st_nughud && alignment & sbe_wide_force)) // [Nugget] NUGHUD
+    // [Nugget] NUGHUD
+    const int wide_shift = (st_nughud && alignment & sbe_wide_force)
+                         ? video.deltaw
+                         : st_wide_shift;
+
+    if (alignment & sbe_wide_left)
     {
-        if (alignment & sbe_wide_left)
-        {
-            x -= video.deltaw;
-        }
-        if (alignment & sbe_wide_right)
-        {
-            x += video.deltaw;
-        }
+        x -= wide_shift;
+    }
+    if (alignment & sbe_wide_right)
+    {
+        x += wide_shift;
     }
 
     byte *outr = colrngs[cr];
@@ -1794,7 +1939,7 @@ static void DrawSolidBackground(void)
     // [FG] calculate average color of the 16px left and right of the status bar
     const int vstep[][2] = { {0, 1}, {1, 2}, {2, ST_HEIGHT} };
 
-    patch_t *sbar = V_CachePatchName("STBAR", PU_CACHE);
+    patch_t *sbar = V_CachePatchName(W_CheckWidescreenPatch("STBAR"), PU_CACHE);
     // [FG] temporarily draw status bar to background buffer
     V_DrawPatch(-video.deltaw, 0, sbar);
 
@@ -1816,7 +1961,7 @@ static void DrawSolidBackground(void)
         {
             for (x = 0; x < depth; x++)
             {
-                byte *c = st_backing_screen + V_ScaleY(y) * video.pitch
+                pixel_t *c = st_backing_screen + V_ScaleY(y) * video.pitch
                           + V_ScaleX(x);
                 r += pal[3 * c[0] + 0];
                 g += pal[3 * c[0] + 1];
@@ -2464,9 +2609,9 @@ void WI_DrawWidgets(void)
 
 // [Nugget] /=================================================================
 
-boolean ST_GetLayout(void)
+int ST_GetWideShift(void)
 {
-  return (boolean) st_layout;
+  return st_wide_shift;
 }
 
 int ST_GetMessageFontHeight(void)
@@ -2717,8 +2862,8 @@ static sbaralignment_t NughudConvertAlignment(const int wide, const int align)
 
 static int NughudWideShift(const int wide)
 {
-  return   (abs(wide) == 2) ? video.deltaw             * (wide / 2)
-         : (abs(wide) == 1) ? video.deltaw * st_layout *  wide
+  return   (abs(wide) == 2) ? video.deltaw  * (wide / 2)
+         : (abs(wide) == 1) ? st_wide_shift *  wide
          :                    0;
 }
 
@@ -2819,8 +2964,6 @@ static void DrawNughudGraphics(void)
   }
 
   {
-    extern int maxhealth, max_armor;
-
     if (weaponinfo[plyr->readyweapon].ammo != am_noammo)
     {
       DrawNughudBar(
@@ -2883,7 +3026,7 @@ static void DrawNughudGraphics(void)
 
     if (nhammo[0])
     {
-      patch = nhammo[BETWEEN(0, 3, weaponinfo[plyr->readyweapon].ammo)];
+      patch = nhammo[CLAMP(weaponinfo[plyr->readyweapon].ammo, 0, 3)];
     }
     else {
       char namebuf[32];
@@ -2891,7 +3034,7 @@ static void DrawNughudGraphics(void)
 
       no_offsets = true;
 
-      switch (BETWEEN(0, 3, weaponinfo[plyr->readyweapon].ammo))
+      switch (CLAMP(weaponinfo[plyr->readyweapon].ammo, 0, 3))
       {
         case 0: M_snprintf(namebuf, sizeof(namebuf), big ? "AMMOA0" : "CLIPA0"); break;
         case 1: M_snprintf(namebuf, sizeof(namebuf), big ? "SBOXA0" : "SHELA0"); break;
@@ -2948,14 +3091,14 @@ static void DrawNughudGraphics(void)
 
     if (nharmor[0])
     {
-      patch = nharmor[BETWEEN(0, 2, plyr->armortype)];
+      patch = nharmor[CLAMP(plyr->armortype, 0, 2)];
     }
     else {
       char namebuf[32];
 
       no_offsets = true;
 
-      switch (BETWEEN(0, 2, plyr->armortype))
+      switch (CLAMP(plyr->armortype, 0, 2))
       {
         case 0: M_snprintf(namebuf, sizeof(namebuf), "BON2A0"); break;
         case 1: M_snprintf(namebuf, sizeof(namebuf), "ARM1A0"); break;
@@ -3485,7 +3628,7 @@ end_amnum:
 
     sbarcondition_t condition = {0};
 
-    condition.condition = sbc_sessiontypeeequal;
+    condition.condition = sbc_sessiontypeequal;
     condition.param = 2;
 
     array_push(elem.conditions, condition);
@@ -3646,7 +3789,7 @@ end_amnum:
 
     sbarcondition_t condition = {0};
 
-    condition.condition = sbc_widgetmode;
+    condition.condition = sbc_automapmode;
     condition.param = sbc_mode_automap | sbc_mode_overlay;
 
     array_push(elem.conditions, condition);
@@ -3742,8 +3885,8 @@ void ST_BindSTSVariables(void)
              true, ss_stat, wad_yes,
              "Replace second-to-last HUD with NUGHUD");
 
-  M_BindNum("st_layout", &st_layout, NULL,  st_wide, st_original, st_wide,
-             ss_stat, wad_no, "HUD layout");
+  M_BindNum("st_wide_shift", &st_wide_shift,
+            NULL, 40, 0, UL, ss_stat, wad_no, "HUD widescreen shift");
   M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
              false, ss_stat, wad_yes, "Colored numbers on the status bar");
   M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,
@@ -3752,8 +3895,6 @@ void ST_BindSTSVariables(void)
   M_BindBool("st_solidbackground", &st_solidbackground, NULL,
              false, ss_stat, wad_no,
              "Use solid-color borders for the status bar in widescreen mode");
-  M_BindBool("hud_animated_counts", &hud_animated_counts, NULL,
-            false, ss_stat, wad_no, "Animated health/armor counts");
   M_BindBool("hud_armor_type", &hud_armor_type, NULL, true, ss_none, wad_no,
              "Armor count is colored based on armor type");
 
@@ -3766,6 +3907,10 @@ void ST_BindSTSVariables(void)
   M_BindBool("hud_blink_keys", &hud_blink_keys, NULL,
              false, ss_stat, wad_yes,
              "Make missing keys blink when trying to trigger linedef actions");
+
+  M_BindBool("hud_animated_counts", &hud_animated_counts, NULL,
+            false, ss_stat, wad_no,
+            "Animated health/armor counts");
 
   // [Nugget] ---------------------------------------------------------------/
 

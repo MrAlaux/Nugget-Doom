@@ -22,6 +22,7 @@
 #include "m_json.h"
 #include "m_misc.h"
 #include "m_swap.h"
+#include "r_data.h"
 #include "r_defs.h"
 #include "v_fmt.h"
 #include "v_video.h"
@@ -42,6 +43,7 @@ static boolean ParseSbarCondition(json_t *json, sbarcondition_t *out)
     out->condition = JS_GetInteger(condition);
     out->param = JS_GetInteger(param);
 
+    out->param2 = JS_GetIntegerValue(json, "param2"); // optional parameter
     return true;
 }
 
@@ -62,6 +64,23 @@ static boolean ParseSbarFrame(json_t *json, sbarframe_t *out)
     out->duration = JS_GetNumber(duration) * TICRATE;
     return true;
 }
+
+static const char *sbw_names[] =
+{
+    [sbw_monsec] = "stat_totals",
+    [sbw_time] = "time",
+    [sbw_coord] = "coordinates",
+    [sbw_fps] = "fps_counter",
+    [sbw_rate] = "render_stats",
+    [sbw_cmd] = "command_history",
+    [sbw_speed] = "speedometer",
+    [sbw_message] = "message",
+    [sbw_announce] = "announce_level_title",
+    [sbw_chat] = "chat",
+    [sbw_title] = "level_title",
+
+    [sbw_powers] = "powerup_timers", // [Nugget] Powerup timers
+};
 
 static boolean ParseSbarElem(json_t *json, sbarelem_t *out);
 
@@ -85,6 +104,12 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
     if (tranmap)
     {
         out->tranmap = W_CacheLumpName(tranmap, PU_STATIC);
+    }
+
+    json_t *translucency = JS_GetObject(json, "translucency");
+    if (JS_IsBoolean(translucency) && JS_GetBoolean(translucency))
+    {
+        out->tranmap = main_tranmap;
     }
 
     const char *translation = JS_GetStringValue(json, "translation");
@@ -191,13 +216,28 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
                     free(widget);
                     return false;
                 }
+
                 json_t *type = JS_GetObject(json, "type");
-                if (!JS_IsNumber(type))
+                if (!JS_IsString(type))
                 {
                     free(widget);
                     return false;
                 }
-                widget->type = JS_GetInteger(type);
+                const char *name = JS_GetString(type);
+                int i;
+                for (i = 0; i < arrlen(sbw_names); ++i)
+                {
+                    if (!strcasecmp(name, sbw_names[i]))
+                    {
+                        widget->type = i;
+                        break;
+                    }
+                }
+                if (i == arrlen(sbw_names))
+                {
+                    free(widget);
+                    return false;
+                }
 
                 hudfont_t *font;
                 array_foreach(font, hudfonts)
@@ -253,10 +293,10 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
             sbe_minimap_t *const minimap = calloc(1, sizeof(*minimap));
 
             minimap->width  = JS_GetNumberValue(json, "width");
-            minimap->width  = BETWEEN(32, 96, minimap->width);
+            minimap->width  = CLAMP(minimap->width, 32, 96);
 
             minimap->height = JS_GetNumberValue(json, "height");
-            minimap->height = BETWEEN(32, 96, minimap->height);
+            minimap->height = CLAMP(minimap->height, 32, 96);
 
             minimap->under_messages = JS_GetBooleanValue(json, "under_messages");
 
@@ -280,7 +320,7 @@ static const char *sbe_names[] =
     [sbe_facebackground] = "facebackground",
     [sbe_number] = "number",
     [sbe_percent] = "percent",
-    [sbe_widget] = "widget",
+    [sbe_widget] = "component",
     [sbe_carousel] = "carousel"
 };
 

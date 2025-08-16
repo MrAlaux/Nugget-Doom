@@ -331,7 +331,7 @@ static void ProcessFOVEffects(void)
           float step = zoomtarget - *target;
           const int sign = (step > 0) ? 1 : -1;
 
-          *target += BETWEEN(1, 16, fabs(step) / 3.0) * sign;
+          *target += CLAMP(fabs(step) / 3.0, 1, 16) * sign;
 
           if (   (sign > 0 && *target > zoomtarget)
               || (sign < 0 && *target < zoomtarget))
@@ -376,7 +376,7 @@ static void ProcessFOVEffects(void)
     }
   }
 
-  targetfov = BETWEEN(1.0f, 179.0f, targetfov);
+  targetfov = CLAMP(targetfov, 1.0f, 179.0f);
 
   if (r_fov != targetfov)
   {
@@ -629,7 +629,10 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     if (!(freecam.pitch = MAX(0, abs(freecam.pitch) - 4*ANG1) * ((freecam.pitch > 0) ? 1 : -1)))
     { freecam.centering = false; }
   }
-  else { freecam.pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, freecam.pitch + pitch); }
+  else {
+    freecam.pitch += pitch;
+    freecam.pitch  = CLAMP(freecam.pitch, -max_pitch_angle, max_pitch_angle);
+  }
 }
 
 // [Nugget] =================================================================/
@@ -867,7 +870,7 @@ static void R_InitTextureMapping(void)
   //  xtoviewangle will give the smallest view angle
   //  that maps to x.
 
-  linearskyfactor = FIXED2DOUBLE(slopefrac) * ANG90;
+  linearskyfactor = FixedToDouble(slopefrac) * ANG90;
 
   for (x=0; x<=viewwidth; x++)
     {
@@ -1016,7 +1019,7 @@ void R_SmoothLight(void)
 int R_GetLightIndex(fixed_t scale)
 {
   const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
-  return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+  return clampi(index, 0, MAXLIGHTSCALE - 1);
 }
 
 static fixed_t viewpitch;
@@ -1168,15 +1171,16 @@ void R_ExecuteSetViewSize (void)
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
   }
 
-  // [Nugget] FOV-based sky stretching;
-  // we intentionally use `custom_fov` to disregard any FOV effects
-  if (custom_fov == FOV_DEFAULT)
-  {
-    skyiscalediff = FRACUNIT;
-  }
-  else {
-    skyiscalediff = tan(custom_fov * M_PI / 360.0) * FRACUNIT;
-  }
+  // [Nugget] FOV-based sky stretching /--------------------------------------
+
+  // We intentionally use `custom_fov` to disregard any FOV effects
+  skyiscalediff = (custom_fov == FOV_DEFAULT)
+                ? FRACUNIT
+                : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
+
+  R_UpdateStretchSkies();
+
+  // [Nugget] ---------------------------------------------------------------/
 
   for (i=0 ; i<viewwidth ; i++)
     {
@@ -1227,7 +1231,6 @@ void R_Init (void)
   R_SetViewSize(screenblocks);
   R_InitPlanes();
   R_InitLightTables();
-  R_InitSkyMap();
   R_InitTranslationTables();
   V_InitFlexTranTable();
 
@@ -1235,7 +1238,6 @@ void R_Init (void)
   R_SetFuzzColumnMode();
 
   colfunc = R_DrawColumn;
-  R_InitDrawFunctions();
 }
 
 //
@@ -1428,10 +1430,10 @@ void R_SetupFrame (player_t *player)
     }
 
     if ((use_localview || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
-        && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
+        && raw_input && !player->centering && freelook) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
-      basepitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, basepitch);
+      basepitch = CLAMP(basepitch, -max_pitch_angle, max_pitch_angle);
     }
     else
     {
@@ -1622,7 +1624,7 @@ void R_SetupFrame (player_t *player)
       {
         fixed_t frac;
 
-        viewz  = BETWEEN(sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT, viewz);
+        viewz  = CLAMP(viewz, sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT);
         frac   = FixedDiv(viewz - z, FixedMul(slope, dist));
         viewx -= FixedMul(dx, frac);
         viewy -= FixedMul(dy, frac);
@@ -1842,7 +1844,7 @@ void R_RenderPlayerView (player_t* player)
     int first_y = (viewheight % ph) / 2,
         first_x;
 
-    byte *const dest = I_VideoBuffer;
+    pixel_t *const dest = I_VideoBuffer;
 
     for (y = viewwindowy;  y < (viewwindowy + viewheight);)
     {
@@ -1895,7 +1897,9 @@ void R_InitAnyRes(void)
 void R_BindRenderVariables(void)
 {
   BIND_NUM_GENERAL(extra_level_brightness, 0, -8, 8, "Level brightness"); // [Nugget] Broader light-level range
-  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
+  BIND_NUM_GENERAL(fuzzmode, FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_ORIGINAL,
+    "Partial Invisibility (0 = Blocky; 1 = Refraction; 2 = Shadow, 3 = Original)");
+  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for free look"); // [Nugget] Extended description
 
   // [Nugget] FOV-based sky stretching (CFG-only)
   M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,
@@ -1990,7 +1994,9 @@ void R_BindRenderVariables(void)
              false, ss_none, wad_yes,
              "Disable the Killough-face easter egg");
 
-  BIND_NUM(screenblocks, 10, 3, UL, "Size of game-world screen");
+  M_BindNum("screenblocks", &screenblocks, NULL, 10, 3,
+            UL, ss_stat, wad_no, "Size of game-world screen");
+  BIND_NUM(default_max_pitch_angle, 32, 30, 60, "Maximum view pitch angle");
 
   M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
              "Translucency for some things");
@@ -2000,9 +2006,6 @@ void R_BindRenderVariables(void)
 
   M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
              "Randomly mirrored death animations");
-  M_BindNum("fuzzmode", &fuzzmode, NULL,
-            FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_SHADOW, ss_none, wad_no,
-            "Partial Invisibility (0 = Vanilla; 1 = Refraction; 2 = Shadow)");
 
   BIND_BOOL(draw_nearby_sprites, true,
     "Draw sprites overlapping into visible sectors");

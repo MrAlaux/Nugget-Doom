@@ -28,6 +28,7 @@
 #include "i_printf.h"
 #include "info.h"
 #include "m_random.h"
+#include "p_ambient.h"
 #include "p_inter.h"
 #include "p_map.h"
 #include "p_maputl.h"
@@ -38,7 +39,6 @@
 #include "r_defs.h"
 #include "r_main.h"
 #include "r_state.h"
-#include "r_things.h"
 #include "s_musinfo.h" // [crispy] S_ParseMusInfo()
 #include "s_sound.h"
 #include "sounds.h"
@@ -60,18 +60,24 @@ int bonuscount_cap;
 boolean comp_fuzzyblood;
 boolean comp_nonbleeders;
 
-int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+vertaim_t vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+int max_pitch_angle = 32 * ANG1, default_max_pitch_angle;
 
 void P_UpdateDirectVerticalAiming(void)
 {
   // [Nugget]
-  vertical_aiming = CRITICAL(mouselook || padlook) ? default_vertical_aiming : 0;
+  vertical_aiming = CRITICAL(freelook) ? default_vertical_aiming : 0;
+  max_pitch_angle = default_max_pitch_angle * ANG1;
 }
+
+// [Nugget] Removed `actualheight`
 
 //
 // P_SetMobjState
 // Returns true if the mobj is still present.
 //
+
+int setmobjstate_recursion = 0; // detects recursion
 
 boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
 {
@@ -81,12 +87,11 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
 
   // fast transition table
   statenum_t *seenstate = seenstate_tab;      // pointer to table
-  static int recursion;                       // detects recursion
   statenum_t i = state;                       // initial state
   boolean ret = true;                         // return value
   statenum_t* tempstate = NULL;               // for use with recursion
 
-  if (recursion++)                            // if recursion detected,
+  if (setmobjstate_recursion++)               // if recursion detected,
     seenstate = tempstate = Z_Calloc(num_states, sizeof(statenum_t), PU_STATIC, 0); // allocate state table
 
   do
@@ -108,8 +113,8 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
       // Modified handling.
       // Call action functions when the state is set
 
-      if (st->action.p1)
-	st->action.p1(mobj);
+      if (st->action.pm)
+	st->action.pm(mobj);
 
       seenstate[state] = 1 + st->nextstate;   // killough 4/9/98
 
@@ -120,7 +125,7 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
   if (ret && !mobj->tics)  // killough 4/9/98: detect state cycles
     displaymsg("Warning: State Cycle Detected");
 
-  if (!--recursion)
+  if (!--setmobjstate_recursion)
     for (;(state=seenstate[i]);i=state-1)
       seenstate[i] = 0;  // killough 4/9/98: erase memory of states
 
@@ -838,8 +843,8 @@ void P_MobjThinker (mobj_t* mobj)
     {
       P_XYMovement(mobj);
       mobj->intflags &= ~MIF_SCROLLING;
-      if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
-        return;       // mobj was removed
+      if (mobj->thinker.function.pm == P_RemoveMobjThinkerDelayed) // killough
+	return;       // mobj was removed
 
       oucheck = true; // [Nugget] Over/Under
     }
@@ -877,8 +882,8 @@ void P_MobjThinker (mobj_t* mobj)
       else
         P_ZMovement(mobj);
 
-      if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
-        return;       // mobj was removed
+      if (mobj->thinker.function.pm == P_RemoveMobjThinkerDelayed) // killough
+	return;       // mobj was removed
 
       oucheck = true; // [Nugget] Over/Under
     }
@@ -944,7 +949,7 @@ void P_MobjThinker (mobj_t* mobj)
       P_DamageMobj(mobj, NULL, NULL, 10000);
 
       // must have been removed
-      if (mobj->thinker.function.p1 != (actionf_p1)P_MobjThinker)
+      if (mobj->thinker.function.pm != P_MobjThinker)
         return;
     }
   }
@@ -976,7 +981,7 @@ void P_MobjThinker (mobj_t* mobj)
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
-  mobj_t *mobj = Z_Malloc(sizeof *mobj, PU_LEVEL, NULL);
+  mobj_t *mobj = arena_alloc(thinkers_arena, 1, mobj_t);
   mobjinfo_t *info = &mobjinfo[type];
   state_t    *st;
 
@@ -990,6 +995,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->height = info->height;                                      // phares
   mobj->flags  = info->flags;
   mobj->flags2 = info->flags2;
+  mobj->flags_extra = info->flags_extra;
 
   // killough 8/23/98: no friends, bouncers, or touchy things in old demos
   if (demo_version < DV_MBF)
@@ -1000,10 +1006,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   mobj->health = info->spawnhealth;
 
-  if (!aggressive) // [Nugget] Custom Skill: use `aggressive`
+  if (gameskill != sk_nightmare && !aggromonsters) // [Nugget] Custom skill
     mobj->reactiontime = info->reactiontime;
 
-  mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
+  if (type != zmt_ambientsound)
+  {
+    mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
+  }
 
   // do not set the state with P_SetMobjState,
   // because action routines can not be called yet
@@ -1018,6 +1027,17 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   // NULL head of sector list // phares 3/13/98
   mobj->touching_sectorlist = NULL;
 
+  // set subsector and/or block links
+
+  P_SetThingPosition(mobj);
+
+  mobj->dropoffz =           // killough 11/98: for tracking dropoffs
+  mobj->floorz   = mobj->subsector->sector->floorheight;
+  mobj->ceilingz = mobj->subsector->sector->ceilingheight;
+
+  mobj->z = z == ONFLOORZ ? mobj->floorz : z == ONCEILINGZ ?
+    mobj->ceilingz - mobj->height : z;
+
   // [AM] Do not interpolate on spawn.
   mobj->interp = false;
 
@@ -1026,6 +1046,23 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->oldy = mobj->y;
   mobj->oldz = mobj->z;
   mobj->oldangle = mobj->angle;
+
+  mobj->thinker.function.pm = P_MobjThinker;
+  mobj->above_thing = mobj->below_thing = 0;           // phares
+
+  // for Boom friction code
+  mobj->friction    = ORIG_FRICTION;                        // phares 3/17/98
+
+  // [crispy] randomly flip corpse, blood and death animation sprites
+  if (mobj->flags_extra & MFX_MIRROREDCORPSE && !(mobj->flags & MF_SHOOTABLE))
+  {
+    if (Woof_Random() & 1)
+      mobj->intflags |= MIF_FLIP;
+    else
+      mobj->intflags &= ~MIF_FLIP;
+  }
+
+  // [Nugget] Removed `actualheight`
 
   // [Nugget] /---------------------------------------------------------------
 
@@ -1039,34 +1076,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->tranmap = NULL;
 
   // [Nugget] ---------------------------------------------------------------/
-
-  // set subsector and/or block links
-
-  P_SetThingPosition(mobj);
-
-  mobj->dropoffz =           // killough 11/98: for tracking dropoffs
-  mobj->floorz   = mobj->subsector->sector->floorheight;
-  mobj->ceilingz = mobj->subsector->sector->ceilingheight;
-
-  mobj->z = z == ONFLOORZ ? mobj->floorz : z == ONCEILINGZ ?
-    mobj->ceilingz - mobj->height : z;
-
-  mobj->thinker.function.p1 = (actionf_p1)P_MobjThinker;
-  mobj->above_thing = mobj->below_thing = 0;           // phares
-
-  // for Boom friction code
-  mobj->friction    = ORIG_FRICTION;                        // phares 3/17/98
-
-  // [crispy] randomly flip corpse, blood and death animation sprites
-  if (mobj->flags2 & MF2_FLIPPABLE && !(mobj->flags & MF_SHOOTABLE))
-  {
-    if (Woof_Random() & 1)
-      mobj->intflags |= MIF_FLIP;
-    else
-      mobj->intflags &= ~MIF_FLIP;
-  }
-
-  // [Nugget] Removed `actualheight`
 
   P_AddThinker(&mobj->thinker);
 
@@ -1133,7 +1142,7 @@ void P_RemoveMobj (mobj_t *mobj)
 
   // free block
 
-  P_RemoveThinker(&mobj->thinker);
+  P_RemoveMobjThinker(mobj);
 }
 
 // Certain functions assume that a mobj_t pointer is non-NULL,
@@ -1327,7 +1336,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
   int    i;
   mobj_t *mobj;
   fixed_t x, y, z;
-  int    musid = 0;
+  int id = 0;
 
   switch(mthing->type)
     {
@@ -1403,7 +1412,8 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   // check for apropriate skill level
 
-  if (!coop_spawns && !netgame && mthing->options & MTF_NOTSINGLE)//jff "not single" thing flag
+  if (!coopspawns && !netgame
+      && mthing->options & MTF_NOTSINGLE) //jff "not single" thing flag
     return;
 
   //jff 3/30/98 implement "not deathmatch" thing flag
@@ -1413,7 +1423,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   //jff 3/30/98 implement "not cooperative" thing flag
 
-  if ((coop_spawns || netgame) && !deathmatch && mthing->options & MTF_NOTCOOP)
+  if ((coopspawns || netgame) && !deathmatch && mthing->options & MTF_NOTCOOP)
     return;
 
   // killough 11/98: simplify
@@ -1428,8 +1438,13 @@ void P_SpawnMapThing (mapthing_t* mthing)
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (mthing->type >= 14100 && mthing->type <= 14164)
   {
-      musid = mthing->type - 14100;
+      id = mthing->type - 14100;
       mthing->type = mobjinfo[MT_MUSICSOURCE].doomednum;
+  }
+  else if (mthing->type >= 14001 && mthing->type <= 14064)
+  {
+      id = mthing->type - 14000;
+      mthing->type = mobjinfo[zmt_ambientsound].doomednum;
   }
 
   // find which type to spawn
@@ -1538,14 +1553,18 @@ spawnit:
   if (mobj->flags & MF_COUNTITEM)
     totalitems++;
 
-  mobj->angle = ANG45 * (mthing->angle/45);
+  mobj->angle = (angle_t)ANG45 * (mthing->angle/45);
   if (mthing->options & MTF_AMBUSH)
     mobj->flags |= MF_AMBUSH;
 
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (i == MT_MUSICSOURCE)
   {
-      mobj->health = 1000 + musid;
+      mobj->health = 1000 + id;
+  }
+  else if (i == zmt_ambientsound)
+  {
+      P_AddAmbientSoundThinker(mobj, id);
   }
 
   // [Nugget] Key blinking:
@@ -1614,7 +1633,7 @@ void P_SpawnBlood(fixed_t x,fixed_t y,fixed_t z,int damage,mobj_t *bleeder)
 
   if (bleeder->info->bloodcolor || idgaf)
   {
-    th->flags2 |= MF2_COLOREDBLOOD;
+    th->flags_extra |= MFX_COLOREDBLOOD;
     th->bloodcolor = V_BloodColor(bleeder->info->bloodcolor);
   }
 
@@ -1970,7 +1989,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 
   mobj->friction = ORIG_FRICTION;
 
-  mobj->thinker.function.p1 = (actionf_p1) P_MobjThinker;
+  mobj->thinker.function.pm = P_MobjThinker;
   P_AddThinker(&mobj->thinker);
 
   return mobj;
