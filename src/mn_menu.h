@@ -83,6 +83,7 @@ void MN_DisableVoxelsRenderingItem(void);
 void MN_UpdateDynamicResolutionItem(void);
 void MN_DisableResolutionScaleItem(void);
 void MN_UpdateFpsLimitItem(void);
+void MN_UpdateWideShiftItem(boolean reset);
 
 typedef enum
 {

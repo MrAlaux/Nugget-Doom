@@ -454,21 +454,20 @@ static int pagetic;
 static const char *pagename;
 static demoloop_t demoloop_point;
 
-static int no_page_ticking; // [Nugget]
-
 //
 // D_PageTicker
 // Handles timing for warped projection
 //
 void D_PageTicker(void)
 {
-  // killough 12/98: don't advance internal demos if a single one is
+  if (menuactive && !netgame && menu_pause_demos)
+  {
+    return;
+  }
+
+  // killough 12/98: don't advance internal demos if a single one is 
   // being played. The only time this matters is when using -loadgame with
   // -fastdemo, -playdemo, or -timedemo, and a consistency error occurs.
-
-  // [Nugget]
-  if (!no_page_ticking || (no_page_ticking == 1 && !menuactive))
-    --pagetic;
 
   if (!singledemo && pagetic < 0)
     D_AdvanceDemo();
@@ -512,20 +511,12 @@ void D_DoAdvanceDemo(void)
     usergame = false; // no save / end game here
     paused = false;
     gameaction = ga_nothing;
+    gamestate = GS_DEMOSCREEN;
 
     D_AdvanceDemoLoop();
     switch (demoloop_point->type)
     {
         case TYPE_ART:
-            gamestate = GS_DEMOSCREEN;
-
-            // Needed to support the Doom 3: BFG Edition variant
-            if (W_CheckNumForName(demoloop_point->primary_lump) < 0
-                && !strcasecmp(demoloop_point->primary_lump, "TITLEPIC"))
-            {
-                M_CopyLumpName(demoloop_point->primary_lump, "DMENUPIC");
-            }
-
             if (W_CheckNumForName(demoloop_point->primary_lump) >= 0)
             {
                 pagename = demoloop_point->primary_lump;
@@ -535,24 +526,18 @@ void D_DoAdvanceDemo(void)
                 {
                     S_ChangeMusInfoMusic(music, false);
                 }
-                break;
             }
-            // fallthrough
+            break;
 
         case TYPE_DEMO:
-            gamestate = GS_DEMOSCREEN;
-
             if (W_CheckNumForName(demoloop_point->primary_lump) >= 0)
             {
                 G_DeferedPlayDemo(demoloop_point->primary_lump);
-                break;
             }
-            // fallthrough
+            break;
 
         default:
-            I_Printf(VB_WARNING,
-                     "D_DoAdvanceDemo: Invalid demoloop[%d] entry, skipping",
-                     demosequence);
+            I_Printf(VB_DEBUG, "D_DoAdvanceDemo: unhandled demoloop type");
             break;
     }
 }
@@ -1651,26 +1636,14 @@ void D_SetBloodColor(void)
 // killough 8/1/98: change back to ENDOOM
 
 typedef enum {
-  EXIT_SEQUENCE_OFF,          // Skip sound, skip ENDOOM.
-  EXIT_SEQUENCE_SOUND_ONLY,   // Play sound, skip ENDOOM.
-  EXIT_SEQUENCE_ENDOOM_ONLY,  // Skip sound, show ENDOOM.
-  EXIT_SEQUENCE_FULL          // Play sound, show ENDOOM.
-} exit_sequence_t;
+  ENDOOM_OFF,
+  ENDOOM_PWAD_ONLY,
+  ENDOOM_ALWAYS
+} endoom_t;
 
-static exit_sequence_t exit_sequence;
-static boolean endoom_pwad_only;
-
-boolean D_EndDoomEnabled(void)
-{
-  return (exit_sequence == EXIT_SEQUENCE_FULL
-          || exit_sequence == EXIT_SEQUENCE_ENDOOM_ONLY);
-}
-
-boolean D_QuitSoundEnabled(void)
-{
-  return (exit_sequence == EXIT_SEQUENCE_FULL
-          || exit_sequence == EXIT_SEQUENCE_SOUND_ONLY);
-}
+boolean quit_prompt;
+boolean quit_sound;
+static endoom_t show_endoom;
 
 static void D_ShowEndDoom(void)
 {
@@ -1689,12 +1662,13 @@ boolean D_AllowEndDoom(void)
     return false; // Alt-F4 or pressed the close button.
   }
 
-  if (!D_EndDoomEnabled())
+  if (show_endoom == ENDOOM_OFF)
   {
-    return false; // Exit sequence is set to "Off" or "Sound Only".
+    return false; // ENDOOM disabled.
   }
 
-  if (W_IsIWADLump(W_CheckNumForName("ENDOOM")) && endoom_pwad_only)
+  if (W_IsIWADLump(W_CheckNumForName("ENDOOM"))
+      && show_endoom == ENDOOM_PWAD_ONLY)
   {
     return false; // User prefers PWAD ENDOOM only.
   }
@@ -2860,9 +2834,10 @@ void D_DoomMain(void)
 
 void D_BindMiscVariables(void)
 {
-  BIND_NUM_GENERAL(exit_sequence, 0, 0, EXIT_SEQUENCE_FULL,
-    "Exit sequence (0 = Off; 1 = Sound Only; 2 = ENDOOM Only; 3 = Full)");
-  BIND_BOOL_GENERAL(endoom_pwad_only, false, "Show only ENDOOM from PWAD");
+  BIND_BOOL_GENERAL(quit_prompt, true, "Show quit prompt");
+  BIND_BOOL_GENERAL(quit_sound, false, "Play quit sound");
+  BIND_NUM_GENERAL(show_endoom, ENDOOM_OFF, ENDOOM_OFF, ENDOOM_ALWAYS,
+    "Show ENDOOM screen (0 = Off; 1 = PWAD Only; 2 = Always)");
   BIND_BOOL_GENERAL(demobar, false, "Show demo progress bar");
 
   // [Nugget] More wipes
@@ -2883,10 +2858,6 @@ void D_BindMiscVariables(void)
   M_BindBool("inter_ratio_stats", &inter_ratio_stats, NULL,
              false, ss_none, wad_yes,
              "Use ratios for stats in intermission screen");
-
-  M_BindNum("no_page_ticking", &no_page_ticking, NULL,
-            0, 0, 2, ss_misc, wad_no,
-            "Play internal demos (0 = Always; 1 = Not in menus; 2 = Never)");
 
   // [Nugget] ---------------------------------------------------------------/
 

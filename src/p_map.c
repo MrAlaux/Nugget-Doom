@@ -28,6 +28,7 @@
 #include "i_printf.h"
 #include "i_system.h"
 #include "info.h"
+#include "m_arena.h"
 #include "m_argv.h"
 #include "m_bbox.h"
 #include "m_misc.h"
@@ -97,6 +98,8 @@ int numspechit;
 
 // Temporary holder for thing_sectorlist threads
 msecnode_t *sector_list = NULL;                             // phares 3/16/98
+
+arena_t *msecnodes_arena;
 
 // [Nugget] /=================================================================
 
@@ -2844,7 +2847,7 @@ static msecnode_t *P_GetSecnode(void)
 
   return headsecnode ?
     node = headsecnode, headsecnode = node->m_snext, node :
-    Z_Malloc(sizeof *node, PU_LEVEL, NULL);
+    arena_alloc(msecnodes_arena, 1, msecnode_t);
 }
 
 // P_PutSecnode() returns a node to the freelist.

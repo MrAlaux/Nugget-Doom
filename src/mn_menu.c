@@ -37,6 +37,7 @@
 #include "doomtype.h"
 #include "dstrings.h"
 #include "g_game.h"
+#include "g_rewind.h"
 #include "g_umapinfo.h"
 #include "i_input.h"
 #include "i_printf.h"
@@ -51,6 +52,7 @@
 #include "mn_menu.h"
 #include "mn_internal.h"
 #include "mn_snapshot.h"
+#include "p_keyframe.h"
 #include "p_saveg.h"
 #include "r_defs.h"
 #include "r_draw.h"
@@ -111,6 +113,7 @@ static boolean mouse_active_thermo;
 static boolean options_active;
 static boolean customskill_active;
 
+boolean menu_pause_demos;
 backdrop_t menu_backdrop;
 
 int bigfont_priority = -1;
@@ -1588,7 +1591,7 @@ static void M_QuitResponse(int ch)
     {
         return;
     }
-    if (D_QuitSoundEnabled() &&
+    if (quit_sound &&
         (!netgame || demoplayback) && // killough 12/98
         !nosfxparm)                   // avoid delay if no sound card
     {
@@ -1605,12 +1608,8 @@ static void M_QuitResponse(int ch)
     I_SafeExit(0); // killough
 }
 
-boolean quick_quitgame;
-
 static void M_QuitDOOM(int choice)
 {
-    if (quick_quitgame) { I_SafeExit(0); } // [Nugget]
-
     static char endstring[160];
 
     // We pick index 0 which is language sensitive,
@@ -1626,7 +1625,14 @@ static void M_QuitDOOM(int choice)
                 *endmsg[gametic % (NUM_QUITMESSAGES - 1) + 1], s_DOSY);
     }
 
-    M_StartMessage(endstring, M_QuitResponse, true);
+    if (quit_prompt)
+    {
+        M_StartMessage(endstring, M_QuitResponse, true);
+    }
+    else
+    {
+        M_QuitResponse('y');
+    }
 }
 
 /////////////////////////////
@@ -2265,15 +2271,6 @@ static menu_t DisplayDef = {
     0
 };
 
-static menu_t MiscDef = {
-    generic_setup_end,
-    &SetupDef,
-    Generic_Setup,
-    MN_DrawMisc,
-    34, 5,
-    0
-};
-
 static menu_t HUDColDef = {
     generic_setup_end,
     &SetupDef,
@@ -2314,7 +2311,6 @@ void MN_SetNextMenuAlt(ss_types type)
         // [Nugget]
         &ViewDef,
         &DisplayDef,
-        &MiscDef,
         &HUDColDef,
         &MapKeysDef,
         &CheatKeysDef,
@@ -2729,8 +2725,11 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_quit)) // Quit DOOM
     {
-        M_PauseSound();
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        if (quit_prompt)
+        {
+            M_PauseSound();
+            M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        }
         M_QuitDOOM(0);
         return true;
     }
@@ -2866,6 +2865,11 @@ boolean M_ShortcutResponder(const event_t *ev)
         }
     }
 
+    if (M_InputActivated(input_rewind))
+    {
+        G_LoadAutoKeyframe();
+    }
+
     // [Nugget] /-------------------------------------------------------------
 
     if (M_InputActivated(input_crosshair))
@@ -2898,12 +2902,6 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (STRICTMODE(M_InputActivated(input_freecam)))
     {
         R_SetFreecamOn(!R_FreecamOn());
-    }
-
-    if (STRICTMODE(M_InputActivated(input_rewind)))
-    {
-        G_Rewind();
-        return true;
     }
 
     // [Nugget] -------------------------------------------------------------/

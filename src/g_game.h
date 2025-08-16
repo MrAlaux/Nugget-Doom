@@ -138,6 +138,8 @@ extern boolean um_pars;
 
 extern boolean secretexit;
 
+extern byte *demo_p;
+
 // [Nugget] ==================================================================
 
 extern boolean doom_weapon_toggles; // Global
@@ -166,16 +168,6 @@ extern int autosave_interval;
 
 boolean G_SavingPeriodicAutoSave(void);
 void G_SetAutoSaveCountdown(int value);
-
-// Rewind --------------------------------------------------------------------
-
-extern int rewind_interval;
-
-void G_SetRewindCountdown(int value);
-void G_EnableRewind(void);
-void G_Rewind(void);
-void G_ClearExcessKeyFrames(void);
-boolean G_KeyFrameRW(void);
 
 // Slow Motion ---------------------------------------------------------------
 

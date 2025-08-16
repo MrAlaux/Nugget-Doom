@@ -147,7 +147,7 @@ static boolean default_reset;
 #define MI_GAP_Y(y) \
     {NULL, S_SKIP, 0, (y)}
 
-static void DisableItem(boolean condition, setup_menu_t *menu, const char *item)
+static setup_menu_t *GetMenuItem(setup_menu_t *menu, const char *item)
 {
     while (!(menu->m_flags & S_END))
     {
@@ -157,16 +157,7 @@ static void DisableItem(boolean condition, setup_menu_t *menu, const char *item)
                  && !strcasecmp(menu->var.def->name, item))
                 || !strcasecmp(menu->m_text, item))
             {
-                if (condition)
-                {
-                    menu->m_flags |= S_DISABLE;
-                }
-                else
-                {
-                    menu->m_flags &= ~S_DISABLE;
-                }
-
-                return;
+                return menu;
             }
         }
 
@@ -176,27 +167,27 @@ static void DisableItem(boolean condition, setup_menu_t *menu, const char *item)
     I_Error("Item \"%s\" not found in menu", item);
 }
 
+static void DisableItem(boolean condition, setup_menu_t *menu, const char *item)
+{
+    setup_menu_t *menu_item = GetMenuItem(menu, item);
+
+    if (condition)
+    {
+        menu_item->m_flags |= S_DISABLE;
+    }
+    else
+    {
+        menu_item->m_flags &= ~S_DISABLE;
+    }
+}
+
 static void SetItemLimit(setup_menu_t *menu, const char *item, int min, int max)
 {
-    while (!(menu->m_flags & S_END))
-    {
-        if (!(menu->m_flags & (S_SKIP | S_RESET)))
-        {
-            if (((menu->m_flags & S_HASDEFPTR)
-                 && !strcasecmp(menu->var.def->name, item))
-                || !strcasecmp(menu->m_text, item))
-            {
-                default_t *def = menu->var.def;
-                def->limit.min = min;
-                def->limit.max = max;
-                return;
-            }
-        }
+    setup_menu_t *menu_item = GetMenuItem(menu, item);
 
-        menu++;
-    }
-
-    I_Error("Item \"%s\" not found in menu", item);
+    default_t *def = menu_item->var.def;
+    def->limit.min = min;
+    def->limit.max = max;
 }
 
 static void DisableItemsInternal(boolean condition, setup_menu_t *menu,
@@ -365,7 +356,6 @@ enum
     str_curve,
     str_center_weapon,
     str_screensize,
-    str_stlayout,
     str_show_widgets,
     str_show_adv_widgets,
     str_stats_format,
@@ -399,7 +389,7 @@ enum
     str_gyro_accel,
 
     str_default_complevel,
-    str_exit_sequence,
+    str_endoom,
     str_death_use_action,
     str_menu_backdrop, // [Nugget] Restored backdrop item
     str_widescreen,
@@ -423,7 +413,6 @@ enum
     str_fake_contrast,
     str_alt_interpic,
     str_s_clipping_dist,
-    str_page_ticking,
     str_thing_spawns,
 };
 
@@ -772,7 +761,15 @@ static void DrawSetupThermo(const setup_menu_t *s, int x, int y, int width,
         dot = size;
     }
 
-    int step = width * M_THRM_STEP * FRACUNIT / size;
+    int step;
+    if (size)
+    {
+        step = width * M_THRM_STEP * FRACUNIT / size;
+    }
+    else
+    {
+        step = 1;
+    }
 
     if (DrawIndicator)
     {
@@ -1551,6 +1548,7 @@ static setup_menu_t keys_settings2[] = {
 
 static setup_menu_t keys_settings3[] = {
     // [FG] reload current level / go to next level
+    {"Rewind",          S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_rewind},
     {"Reload Map/Demo", S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_menu_reloadlevel},
     {"Next Map",        S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_menu_nextlevel},
     {"Previous Map",    S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_menu_prevlevel},
@@ -1650,8 +1648,6 @@ static setup_menu_t keys_settings7[] =
     {"Zoom FOV",           S_NUM  |S_STRICT,            N_X, M_SPC, {"zoom_fov"}, .action = UpdateFOV},
     MI_GAP,
     {"Toggle Crosshair",   S_INPUT,                     N_X, M_SPC, {0}, m_scrn, input_crosshair},
-    MI_GAP,
-    {"Rewind",             S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_rewind},
 
     MI_GAP,
     {"Automap Keys", S_FUNC, N_X, M_SPC, .action = MN_MapKeys},
@@ -2166,10 +2162,6 @@ static void RefreshSolidBackground(void)
     ST_refreshBackground(); // [Nugget] NUGHUD
 }
 
-static const char *st_layout_strings[] = {
-    "Original", "Wide"
-};
-
 #define H_X_THRM8 (M_X_THRM8 - 14)
 #define H_X       (M_X - 14)
 
@@ -2183,8 +2175,8 @@ static setup_menu_t stat_settings1[] = {
     // [Nugget] NUGHUD
     {"Use NUGHUD", S_ONOFF, H_X, M_SPC, {"use_nughud"}},
 
-    {"Layout", S_CHOICE, H_X, M_SPC, {"st_layout"},
-     .strings_id = str_stlayout, .action = MoveMinimap}, // [Nugget] Minimap
+    {"Wide Shift", S_THERMO, H_X_THRM8, M_THRM_SPC, {"st_wide_shift"},
+     .append = "px", .action = MoveMinimap}, // [Nugget] Minimap
 
     MI_GAP,
 
@@ -2199,6 +2191,17 @@ static setup_menu_t stat_settings1[] = {
 
     MI_END
 };
+
+void MN_UpdateWideShiftItem(boolean reset)
+{
+    DisableItem(!video.deltaw, stat_settings1, "st_wide_shift");
+    SetItemLimit(stat_settings1, "st_wide_shift", 0, video.deltaw);
+    if (reset)
+    {
+        st_wide_shift = video.deltaw;
+    }
+    st_wide_shift = CLAMP(st_wide_shift, 0, video.deltaw);
+}
 
 // [Nugget] NUGHUD
 void MN_UpdateNughudItem(void)
@@ -3855,10 +3858,6 @@ static void SmoothLight(void)
 // [Nugget] Restored backdrop item
 static const char *menu_backdrop_strings[] = {"Off", "Dark", "Texture"};
 
-static const char *exit_sequence_strings[] = {
-    "Off", "Sound Only", "ENDOOM Only", "Full"
-};
-
 static const char *fuzzmode_strings[] = {
     "Blocky", "Refraction", "Shadow", "Original"
 };
@@ -3915,6 +3914,8 @@ static const char *screen_melt_strings[] = {"Off", "Melt", "Crossfade", "Fizzle"
 
 static const char *invul_mode_strings[] = {"Vanilla", "MBF", "Gray"};
 
+static const char *endoom_strings[] = {"Off", "PWAD Only", "Always"};
+
 static void UpdatePaletteItems(void); // [Nugget]
 
 // [Nugget] /-----------------------------------------------------------------
@@ -3929,7 +3930,6 @@ static void AutoSaveStuff(void)
 
 // [Nugget] -----------------------------------------------------------------/
 
-static void UpdatePwadEndoomItem(void);
 
 static setup_menu_t gen_settings6[] = {
 
@@ -3943,6 +3943,8 @@ static setup_menu_t gen_settings6[] = {
 
     {"Invulnerability effect", S_CHOICE | S_STRICT, OFF_CNTR_X, M_SPC,
      {"invul_mode"}, .strings_id = str_invul_mode, .action = R_InvulMode},
+
+    {"Pause Demos in Menu", S_ONOFF, OFF_CNTR_X, M_SPC, {"menu_pause_demos"}},
 
     {"Demo progress bar", S_ONOFF, OFF_CNTR_X, M_SPC, {"demobar"}},
 
@@ -3962,10 +3964,12 @@ static setup_menu_t gen_settings6[] = {
     {"Game speed", S_NUM | S_STRICT | S_PCT, OFF_CNTR_X, M_SPC,
      {"realtic_clock_rate"}, .action = G_SetTimeScale},
 
-    {"Exit Sequence", S_CHOICE, OFF_CNTR_X, M_SPC, {"exit_sequence"},
-    .strings_id = str_exit_sequence, .action = UpdatePwadEndoomItem},
+    {"Show Quit Prompt", S_ONOFF, OFF_CNTR_X, M_SPC, {"quit_prompt"}},
 
-    {"PWAD ENDOOM Only", S_ONOFF, OFF_CNTR_X, M_SPC, {"endoom_pwad_only"}},
+    {"Play Quit Sound", S_ONOFF, OFF_CNTR_X, M_SPC, {"quit_sound"}},
+
+    {"Show ENDOOM Screen", S_CHOICE, OFF_CNTR_X, M_SPC, {"show_endoom"},
+     .strings_id = str_endoom},
 
     MI_END
 };
@@ -3978,9 +3982,19 @@ static const char *over_under_strings[] = {
   "Off", "Player Only", "All Things", NULL
 };
 
+static const char *s_clipping_dist_strings[] = {
+  "Original", "Double", NULL
+};
+
+static void UpdateAutoSaveInterval(void)
+{
+  if (autosave_interval) { autosave_interval = MAX(30, autosave_interval); }
+
+  G_SetAutoSaveCountdown(autosave_interval * TICRATE);
+}
+
 static void MN_View(void);
 static void MN_Display(void);
-static void MN_Misc(void);
 
 #define N_X (M_X - 16)
 
@@ -4001,14 +4015,24 @@ setup_menu_t gen_settings7[] = {
     {"Invulnerability Colormap",   S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_invul_colormap"}},
 
   MI_GAP,
+  {"Miscellaneous", S_SKIP|S_TITLE, N_X, M_SPC},
+    {"Sound Hearing Distance",  S_CHOICE|S_STRICT, N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
+    {"One-Key Quick-Save/Load", S_ONOFF,           N_X, M_SPC, {"one_key_saveload"}},
+    {"Auto Save Interval",      S_NUM,             N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval, .append = "s"},
+
+  MI_GAP,
   {"View Options",          S_FUNC, N_X, M_SPC, .action = MN_View},
   {"Display Options",       S_FUNC, N_X, M_SPC, .action = MN_Display},
-  {"Miscellaneous Options", S_FUNC, N_X, M_SPC, .action = MN_Misc},
 
   MI_END
 };
 
 #undef N_X
+
+static void UpdateAutoSaveItems(void)
+{
+  DisableItem(!G_AutoSaveEnabled(), gen_settings7, "autosave_interval");
+}
 
 // Page 7: View (1) ----------------------------------------------------------
 
@@ -4042,7 +4066,7 @@ static const char *chasecam_strings[] = {
 
 static setup_menu_t view_settings1[] = {
 
-    {"View Height",                   S_NUM   |S_STRICT, N_X,       M_SPC,      {"viewheight_value"}, .action = ChangeViewHeight},
+    {"View Height",                   S_NUM   |S_STRICT, N_X,       M_SPC,      {"viewheight_value"}, .action = ChangeViewHeight, .append = "mu"},
     {"Vertical Target Lock-on",       S_ONOFF |S_STRICT, N_X,       M_SPC,      {"vertical_lockon"}, .action = ToggleVerticalLockon},
     {"Flinch upon",                   S_CHOICE|S_STRICT, N_X,       M_SPC,      {"flinching"}, .strings_id = str_flinching},
     {"Explosion Shake Effect",        S_ONOFF |S_STRICT, N_X,       M_SPC,      {"explosion_shake"}},
@@ -4051,8 +4075,8 @@ static setup_menu_t view_settings1[] = {
     MI_GAP,
     {"Death Camera",                  S_ONOFF |S_STRICT, N_X,       M_SPC,      {"death_camera"}},
     {"Chasecam",                      S_CHOICE|S_STRICT, N_X,       M_SPC,      {"chasecam_mode"}, .strings_id = str_chasecam},
-    {"Chasecam Distance",             S_THERMO|S_STRICT, N_X_THRM8, M_THRM_SPC, {"chasecam_distance"}},
-    {"Chasecam Height",               S_THERMO|S_STRICT, N_X_THRM8, M_THRM_SPC, {"chasecam_height"}},
+    {"Chasecam Distance",             S_THERMO|S_STRICT, N_X_THRM8, M_THRM_SPC, {"chasecam_distance"}, .append = "mu"},
+    {"Chasecam Height",               S_THERMO|S_STRICT, N_X_THRM8, M_THRM_SPC, {"chasecam_height"}, .append = "mu"},
 
     MI_END
 };
@@ -4191,86 +4215,6 @@ void MN_DrawDisplay(void)
     }
 }
 
-// Page 7: Misc (1) ----------------------------------------------------------
-
-static void UpdateAutoSaveInterval(void)
-{
-  if (autosave_interval) { autosave_interval = MAX(30, autosave_interval); }
-
-  G_SetAutoSaveCountdown(autosave_interval * TICRATE);
-}
-
-static void UpdateRewindInterval(void)
-{
-  G_EnableRewind();
-  G_SetRewindCountdown((rewind_interval * TICRATE) - ((leveltime - 1) % (rewind_interval * TICRATE)));
-}
-
-static void UpdateRewindDepth(void)
-{
-  G_EnableRewind();
-  G_ClearExcessKeyFrames();
-}
-
-static const char *s_clipping_dist_strings[] = {
-  "Original", "Double", NULL
-};
-
-static const char *page_ticking_strings[] = {
-  "Always", "Not In Menus", "Never", NULL
-};
-
-#define N_X (M_X - 28)
-
-static setup_menu_t misc_settings1[] = {
-
-    {"Sound Hearing Distance",  S_CHOICE|S_STRICT,            N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
-    {"One-Key Quick-Save/Load", S_ONOFF,                      N_X, M_SPC, {"one_key_saveload"}},
-    {"Auto Save Interval (S)",  S_NUM,                        N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
-    {"Rewind Interval (S)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
-    {"Rewind Depth",            S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
-    {"Rewind Timeout (MS)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_timeout"}, .action = G_EnableRewind},
-    {"Play Internal Demos",     S_CHOICE,                     N_X, M_SPC, {"no_page_ticking"}, .strings_id = str_page_ticking},
-    {"Quick \"Quit Game\"",     S_ONOFF,                      N_X, M_SPC, {"quick_quitgame"}},
-
-    MI_END
-};
-
-#undef N_X
-
-static void UpdateAutoSaveItems(void)
-{
-  DisableItem(!G_AutoSaveEnabled(), misc_settings1, "autosave_interval");
-}
-
-// Page 7: Misc --------------------------------------------------------------
-
-static setup_menu_t *misc_settings[] = { misc_settings1, NULL };
-
-static setup_tab_t misc_tabs[] = { {"Miscellaneous"}, {NULL} };
-
-static void MN_Misc(void)
-{
-    SetItemOn(set_item_on);
-    SetPageIndex(current_page);
-
-    MN_SetNextMenuAlt(ss_misc);
-    setup_screen = ss_misc;
-    current_page = GetPageIndex(misc_settings);
-    current_menu = misc_settings[current_page];
-    current_tabs = misc_tabs;
-    SetupMenuSecondary();
-}
-
-void MN_DrawMisc(void)
-{
-    DrawBackground("FLOOR4_6");
-    MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_GENERL", "General");
-    DrawTabs();
-    DrawInstructions();
-    DrawScreenItems(current_menu);
-}
-
 // [Nugget] -----------------------------------------------------------------/
 
 static setup_menu_t *gen_settings[] = {
@@ -4281,11 +4225,6 @@ static setup_menu_t *gen_settings[] = {
 
     NULL
 };
-
-static void UpdatePwadEndoomItem(void)
-{
-    DisableItem(!D_EndDoomEnabled(), gen_settings6, "endoom_pwad_only");
-}
 
 void MN_UpdateDynamicResolutionItem(void)
 {
@@ -4527,7 +4466,6 @@ static setup_menu_t **setup_screens[] = {
     // [Nugget]
     view_settings,
     display_settings,
-    misc_settings,
     hudcol_settings,
     mapkeys_settings,
     cheatkeys_settings,
@@ -4663,7 +4601,6 @@ static void ResetDefaultsSecondary(void)
         // [Nugget]
         ResetDefaults(ss_view);
         ResetDefaults(ss_display);
-        ResetDefaults(ss_misc);
         ResetDefaults(ss_hudcol);
         ResetDefaults(ss_mapkeys);
         ResetDefaults(ss_cheatkeys);
@@ -5924,7 +5861,6 @@ static const char **selectstrings[] = {
     [str_curve] = curve_strings,
     [str_center_weapon] = center_weapon_strings,
     [str_screensize] = NULL,
-    [str_stlayout] = st_layout_strings,
     [str_show_widgets] = show_widgets_strings,
     [str_show_adv_widgets] = show_adv_widgets_strings,
     [str_stats_format] = stats_format_strings,
@@ -5953,7 +5889,7 @@ static const char **selectstrings[] = {
     [str_gyro_sens] = NULL,
     [str_gyro_accel] = NULL,
     [str_default_complevel] = default_complevel_strings,
-    [str_exit_sequence] = exit_sequence_strings,
+    [str_endoom] = endoom_strings,
     [str_death_use_action] = death_use_action_strings,
     [str_menu_backdrop] = menu_backdrop_strings, // [Nugget] Restored backdrop item
     [str_widescreen] = widescreen_strings,
@@ -5977,7 +5913,6 @@ static const char **selectstrings[] = {
     [str_fake_contrast] = fake_contrast_strings,
     [str_alt_interpic] = alt_interpic_strings,
     [str_s_clipping_dist] = s_clipping_dist_strings,
-    [str_page_ticking] = page_ticking_strings,
     [str_thing_spawns] = thing_spawns_strings,
 };
 
@@ -6087,7 +6022,6 @@ void MN_SetupResetMenu(void)
     UpdateWeaponSlotItems();
     MN_UpdateEqualizerItems();
     UpdateGainItems();
-    UpdatePwadEndoomItem();
 
     // [Nugget] --------------------------------------------------------------
 
@@ -6103,6 +6037,8 @@ void MN_SetupResetMenu(void)
 void MN_BindMenuVariables(void)
 {
     BIND_NUM_MENU(resolution_scale, 0, UL);
+    BIND_BOOL_GENERAL(menu_pause_demos, false,
+        "Pause demo loop while menu is open");
     BIND_NUM_GENERAL(menu_backdrop, MENU_BG_DARK, MENU_BG_OFF, MENU_BG_TEXTURE,
         "Menu backdrop (0 = Off; 1 = Dark; 2 = Texture)");
 
@@ -6129,10 +6065,6 @@ void MN_BindMenuVariables(void)
     M_BindNum("hud_menu_shadows_filter_pct", &hud_menu_shadows_filter_pct, NULL,
               66, 0, 100, ss_none, wad_yes,
               "HUD/menu-shadows translucency percent");
-
-    M_BindBool("quick_quitgame", &quick_quitgame, NULL,
-               false, ss_misc, wad_no,
-               "Skip \"Quit Game\" prompt");
 
     // [Nugget] -------------------------------------------------------------/
 
