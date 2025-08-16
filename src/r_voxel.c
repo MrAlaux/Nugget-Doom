@@ -871,7 +871,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
-	const byte *colormap[2];
+	byte *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
 	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
@@ -1115,7 +1115,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
-	const byte *colormap[2];
+	byte *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
 	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
