@@ -207,34 +207,34 @@ void R_UpdateSkies(void)
 }
 
 // [Nugget] Reworked sky stretching
-void R_StretchSky(int orig_skymid, int skyheight,
+void R_StretchSky(fixed_t orig_skymid, fixed_t skyheight,
                   fixed_t *const skymid_p, fixed_t *const skyscaley_p)
 {
-    int skymid = orig_skymid;
+    fixed_t skymid = orig_skymid;
 
     if (skymid > 0) { skymid = (skymid - skyheight) % skyheight; }
 
-    const int skytop = skyheight + skymid;
+    const fixed_t skytop = skyheight + skymid;
 
-    if (skytop < 100)
+    if (skytop < 100<<FRACBITS)
     {
         // Assume the sky is supposed to loop visibly
         return;
     }
 
     // Stretch sky just as much as necessary for free look or lack thereof
-    int skytop_target = stretchsky ? 200 : 100;
+    fixed_t skytop_target = (stretchsky ? 200 : 100) << FRACBITS;
 
     // FOV-based sky stretching
     if (fov_stretchsky && skyiscalediff > FRACUNIT)
-    { skytop_target += 100 * (skyiscalediff - FRACUNIT) / FRACUNIT; }
+    { skytop_target += (fixed_t) 100 * (skyiscalediff - FRACUNIT); }
 
     if (skytop < skytop_target)
     {
-        const int skyheight_target = skytop_target - skymid;
+        const fixed_t skyheight_target = skytop_target - skymid;
 
-        *skymid_p = (int64_t) (skymid << FRACBITS) * skyheight / skyheight_target;
-        *skyscaley_p = *skyscaley_p * skyheight / skyheight_target;
+        *skymid_p = (FixedMul64(skymid, skyheight) << FRACBITS) / skyheight_target;
+        *skyscaley_p = FixedDiv(FixedMul(*skyscaley_p, skyheight), skyheight_target);
     }
 }
 
@@ -254,8 +254,8 @@ static void StretchSky(sky_t *sky)
     if (stretchsky || fov_stretchsky)
     {
         R_StretchSky(
-            sky->background.orig_mid >> FRACBITS,
-            textureheight[sky->background.texture] >> FRACBITS,
+            sky->background.orig_mid,
+            textureheight[sky->background.texture],
             &sky->background.mid,
             &sky->background.scaley
         );

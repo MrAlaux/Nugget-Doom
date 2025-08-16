@@ -38,7 +38,7 @@ extern boolean stretchsky;
 extern boolean fov_stretchsky; // [Nugget]
 
 // [Nugget] Reworked sky stretching
-void R_StretchSky(int orig_skymid, int skyheight,
+void R_StretchSky(fixed_t orig_skymid, fixed_t skyheight,
                   fixed_t *const skymid, fixed_t *const skyscaley);
 
 // [FG] linear horizontal sky scrolling

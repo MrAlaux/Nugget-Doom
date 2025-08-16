@@ -445,8 +445,8 @@ static void DrawSkyTex(visplane_t *pl, sky_t *sky, skytex_t *skytex)
     if ((stretchsky || fov_stretchsky) && sky->stretchable && side)
     {
         R_StretchSky(
-            dc_texturemid >> FRACBITS,
-            dc_texheight,
+            dc_texturemid,
+            textureheight[texture],
             &dc_texturemid,
             &dc_iscale
         );
