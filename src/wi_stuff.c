@@ -1659,7 +1659,7 @@ static void WI_updateDeathmatchStats(void)
 
             if (NextLocAnimation())
               WI_initShowNextLoc();
-            if ( gamemode == commercial)
+            else if (gamemode == commercial)
               WI_initNoState();
             else
               WI_initShowNextLoc();
@@ -1970,7 +1970,7 @@ static void WI_updateNetgameStats(void)
 
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
-                  if ( gamemode == commercial )
+                  else if (gamemode == commercial)
                     WI_initNoState();
                   else
                     WI_initShowNextLoc();

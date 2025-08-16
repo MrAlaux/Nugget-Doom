@@ -49,7 +49,7 @@
 
 byte *save_p;
 
-saveg_compat_t saveg_compat = saveg_woof600;
+saveg_compat_t saveg_compat;
 
 // Pad to 4-byte boundaries
 
@@ -73,7 +73,7 @@ inline static void saveg_write_pad(void)
 
     padding = (4 - ((intptr_t)save_p & 3)) & 3;
 
-    saveg_buffer_size(padding);
+    saveg_grow(padding);
     for (i=0; i<padding; ++i)
     {
         savep_putbyte(0);
@@ -2058,10 +2058,10 @@ static void saveg_read_ambient_t(ambient_t *str)
     str->active = saveg_read32();
 
     // float offset;
-    str->offset = (float)FIXED2DOUBLE(saveg_read32());
+    str->offset = (float)FixedToDouble(saveg_read32());
 
     // float last_offset;
-    str->last_offset = (float)FIXED2DOUBLE(saveg_read32());
+    str->last_offset = (float)FixedToDouble(saveg_read32());
 
     // int last_leveltime;
     str->last_leveltime = saveg_read32();
@@ -2308,10 +2308,10 @@ void P_UnArchiveWorld (void)
         sec->floor_yoffs = saveg_read32();
         sec->ceiling_xoffs = saveg_read32();
         sec->ceiling_yoffs = saveg_read32();
-        sec->base_floor_xoffs = sec->old_floor_xoffs = sec->floor_xoffs;
-        sec->base_floor_yoffs = sec->old_floor_yoffs = sec->floor_yoffs;
-        sec->base_ceiling_xoffs = sec->old_ceiling_xoffs = sec->ceiling_xoffs;
-        sec->base_ceiling_yoffs = sec->old_ceiling_yoffs = sec->ceiling_yoffs;
+        sec->old_floor_xoffs = sec->floor_xoffs;
+        sec->old_floor_yoffs = sec->floor_yoffs;
+        sec->old_ceiling_xoffs = sec->ceiling_xoffs;
+        sec->old_ceiling_yoffs = sec->ceiling_yoffs;
 
         sec->floor_rotation = saveg_read32();
         sec->ceiling_rotation = saveg_read32();
@@ -2355,9 +2355,8 @@ void P_UnArchiveWorld (void)
 
 	    si->textureoffset = saveg_read32();
 	    si->rowoffset = saveg_read32();
-	    // [crispy] smooth texture scrolling
-	    si->basetextureoffset = si->textureoffset;
-	    si->baserowoffset = si->rowoffset;
+            si->oldtextureoffset = si->textureoffset;
+            si->oldrowoffset = si->rowoffset;
 
             si->toptexture = saveg_read16();
             si->bottomtexture = saveg_read16();

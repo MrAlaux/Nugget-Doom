@@ -33,6 +33,7 @@
 #include "info.h"
 #include "m_argv.h"
 #include "m_bbox.h"
+#include "m_misc.h"
 #include "m_swap.h"
 #include "nano_bsp.h"
 #include "p_enemy.h"
@@ -334,13 +335,13 @@ void P_LoadSectors (int lump)
       // killough 3/7/98:
       ss->floor_xoffs = 0;
       ss->floor_yoffs = 0;      // floor and ceiling flats offsets
-      ss->old_floor_xoffs = ss->base_floor_xoffs = 0;
-      ss->old_floor_yoffs = ss->base_floor_yoffs = 0;
+      ss->old_floor_xoffs = ss->interp_floor_xoffs = 0;
+      ss->old_floor_yoffs = ss->interp_floor_yoffs = 0;
       ss->floor_rotation = 0;
       ss->ceiling_xoffs = 0;
       ss->ceiling_yoffs = 0;
-      ss->old_ceiling_xoffs = ss->base_ceiling_xoffs = 0;
-      ss->old_ceiling_yoffs = ss->base_ceiling_yoffs = 0;
+      ss->old_ceiling_xoffs = ss->interp_ceiling_xoffs = 0;
+      ss->old_ceiling_yoffs = ss->interp_ceiling_yoffs = 0;
       ss->ceiling_rotation = 0;
       ss->heightsec = -1;       // sector used to get floor and ceiling height
       ss->floorlightsec = -1;   // sector used to get floor lighting
@@ -679,8 +680,8 @@ void P_LoadSideDefs2(int lump)
       // [crispy] smooth texture scrolling
       sd->oldtextureoffset = sd->textureoffset;
       sd->oldrowoffset = sd->rowoffset;
-      sd->basetextureoffset = sd->textureoffset;
-      sd->baserowoffset = sd->rowoffset;
+      sd->interptextureoffset = sd->textureoffset;
+      sd->interprowoffset = sd->rowoffset;
       sd->oldgametic = -1;
 
       // killough 4/4/98: allow sidedef texture names to be overloaded
@@ -1733,7 +1734,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   //    W_Reload ();     killough 1/31/98: W_Reload obsolete
 
   // find map name
-  strcpy(lumpname, MapName(episode, map));
+  M_CopyLumpName(lumpname, MapName(episode, map));
 
   lumpnum = W_GetNumForName(lumpname);
 

@@ -40,10 +40,9 @@ struct mapentry_s;
 extern  boolean nomonsters; // checkparm of -nomonsters
 extern  boolean respawnparm;  // checkparm of -respawn
 extern  boolean fastparm; // checkparm of -fast
+extern  boolean pistolstart; // checkparm of -pistolstart
+extern  boolean coopspawns; // checkparm of -coop_spawns
 extern  boolean devparm;  // DEBUG: launched with -devparm
-
-// [Nugget]
-extern  boolean coopspawnsparm;
 
 extern  int screenblocks;     // killough 11/98
 
@@ -71,8 +70,15 @@ extern char *MapName(int e, int m);
 // Set if homebrew PWAD stuff has been added.
 extern  boolean modifiedgame;
 
+// [Nugget] SSG in Doom 1
+extern boolean doom1_ssg;
 extern boolean have_ssg;
-#define ALLOW_SSG (gamemode == commercial || CRITICAL(have_ssg))
+
+#define ALLOW_SSG (gamemode == commercial \
+                   || (CRITICAL(doom1_ssg && have_ssg))) // [Nugget] SSG in Doom 1
+
+extern boolean pwad_help2;
+
 
 // compatibility with old engines (monster behavior, metrics, etc.)
 extern int compatibility, default_compatibility;          // killough 1/31/98
@@ -202,18 +208,18 @@ extern  int             timelimit;
 // Nightmare mode flag, single player.
 extern  boolean         respawnmonsters;
 
-// [Nugget] /-----------------------------------------------------------------
+// [Nugget] Custom skill flags /----------------------------------------------
 
 enum { THINGSPAWNS_EASY, THINGSPAWNS_NORMAL, THINGSPAWNS_HARD };
-extern  int             thingspawns;
 
-extern  boolean         realnomonsters;
-extern  boolean         doubleammo;
-extern  boolean         halfdamage;
-extern  boolean         slowbrain;
-extern  boolean         fastmonsters;
-extern  boolean         aggressive;
-extern  boolean         x2monsters;
+extern int     thingspawns;
+extern boolean realnomonsters;
+extern boolean doubleammo;
+extern boolean halfplayerdamage;
+extern boolean slowbrain;
+extern boolean fastmonsters;
+extern boolean aggromonsters;
+extern boolean x2monsters;
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -226,8 +232,6 @@ extern boolean D_CheckNetConnect(void);
 // Flag: true only if started as net deathmatch.
 // An enum might handle altdeath/cooperative better.
 extern int deathmatch;
-
-extern boolean coop_spawns;
 
 // ------------------------------------------
 // Internal parameters for sound rendering.

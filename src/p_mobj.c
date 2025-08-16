@@ -39,7 +39,6 @@
 #include "r_defs.h"
 #include "r_main.h"
 #include "r_state.h"
-#include "r_things.h"
 #include "s_musinfo.h" // [crispy] S_ParseMusInfo()
 #include "s_sound.h"
 #include "sounds.h"
@@ -67,9 +66,11 @@ int max_pitch_angle = 32 * ANG1, default_max_pitch_angle;
 void P_UpdateDirectVerticalAiming(void)
 {
   // [Nugget]
-  vertical_aiming = CRITICAL(mouselook || padlook) ? default_vertical_aiming : 0;
+  vertical_aiming = CRITICAL(freelook) ? default_vertical_aiming : 0;
   max_pitch_angle = default_max_pitch_angle * ANG1;
 }
+
+// [Nugget] Removed `actualheight`
 
 //
 // P_SetMobjState
@@ -1004,7 +1005,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   mobj->health = info->spawnhealth;
 
-  if (!aggressive) // [Nugget] Custom Skill: use `aggressive`
+  if (gameskill != sk_nightmare && !aggromonsters) // [Nugget] Custom skill
     mobj->reactiontime = info->reactiontime;
 
   if (type != zmt_ambientsound)
@@ -1410,7 +1411,8 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   // check for apropriate skill level
 
-  if (!coop_spawns && !netgame && mthing->options & MTF_NOTSINGLE)//jff "not single" thing flag
+  if (!coopspawns && !netgame
+      && mthing->options & MTF_NOTSINGLE) //jff "not single" thing flag
     return;
 
   //jff 3/30/98 implement "not deathmatch" thing flag
@@ -1420,7 +1422,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   //jff 3/30/98 implement "not cooperative" thing flag
 
-  if ((coop_spawns || netgame) && !deathmatch && mthing->options & MTF_NOTCOOP)
+  if ((coopspawns || netgame) && !deathmatch && mthing->options & MTF_NOTCOOP)
     return;
 
   // killough 11/98: simplify

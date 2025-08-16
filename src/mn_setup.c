@@ -176,6 +176,43 @@ static void DisableItem(boolean condition, setup_menu_t *menu, const char *item)
     I_Error("Item \"%s\" not found in menu", item);
 }
 
+static void SetItemLimit(setup_menu_t *menu, const char *item, int min, int max)
+{
+    while (!(menu->m_flags & S_END))
+    {
+        if (!(menu->m_flags & (S_SKIP | S_RESET)))
+        {
+            if (((menu->m_flags & S_HASDEFPTR)
+                 && !strcasecmp(menu->var.def->name, item))
+                || !strcasecmp(menu->m_text, item))
+            {
+                default_t *def = menu->var.def;
+                def->limit.min = min;
+                def->limit.max = max;
+                return;
+            }
+        }
+
+        menu++;
+    }
+
+    I_Error("Item \"%s\" not found in menu", item);
+}
+
+static void DisableItemsInternal(boolean condition, setup_menu_t *menu,
+                                 const char *items[], int size)
+{
+    for (int i = 0; i < size; ++i)
+    {
+        DisableItem(condition, menu, items[i]);
+    }
+}
+
+#define DisableItems(condition, menu, ...)                                   \
+    DisableItemsInternal((condition), (menu), (const char *[]){__VA_ARGS__}, \
+                         sizeof((const char *[]){__VA_ARGS__})               \
+                             / sizeof(const char *))
+
 /////////////////////////////
 //
 // booleans for setup screens
@@ -361,7 +398,6 @@ enum
     str_gyro_sens,
     str_gyro_accel,
 
-    str_default_skill,
     str_default_complevel,
     str_exit_sequence,
     str_death_use_action,
@@ -370,6 +406,8 @@ enum
     // [Nugget] Removed `str_bobbing_pct`
     str_screen_melt,
     str_invul_mode,
+    str_skill,
+    str_freelook,
 
     // [Nugget] --------------------------------------------------------------
 
@@ -446,12 +484,16 @@ static boolean NextItemAvailable(setup_menu_t *s)
 
 static void BlinkingArrowLeft(setup_menu_t *s)
 {
+    int64_t flags = s->m_flags;
+
     if (!ItemSelected(s))
     {
+        if (flags & S_CENTER)
+        {
+            strcpy(menu_buffer, "  ");    
+        }
         return;
     }
-
-    int64_t flags = s->m_flags;
 
     if (menu_input == mouse_mode)
     {
@@ -476,12 +518,16 @@ static void BlinkingArrowLeft(setup_menu_t *s)
 
 static void BlinkingArrowRight(setup_menu_t *s)
 {
+    int64_t flags = s->m_flags;
+
     if (!ItemSelected(s))
     {
+        if (flags & S_CENTER)
+        {
+            strcat(menu_buffer, "  ");    
+        }
         return;
     }
-
-    int64_t flags = s->m_flags;
 
     if (menu_input == mouse_mode)
     {
@@ -604,7 +650,6 @@ static void DrawItem(setup_menu_t *s, int accum_y)
 
     menu_buffer[0] = '\0';
 
-    int w = 0;
     const char *text = s->m_text;
     const int color = GetItemColor(flags);
 
@@ -615,10 +660,9 @@ static void DrawItem(setup_menu_t *s, int accum_y)
 
     // killough 10/98: support left-justification:
     strcat(menu_buffer, text);
-    w = MN_GetPixelWidth(menu_buffer);
-    if (!(flags & S_LEFTJUST))
+    if (!(flags & (S_LEFTJUST | S_CENTER)))
     {
-        x -= (w + 4);
+        x -= (MN_GetPixelWidth(menu_buffer) + 4);
     }
 
     // [Nugget]
@@ -632,6 +676,12 @@ static void DrawItem(setup_menu_t *s, int accum_y)
     if (flags & S_THERMO)
     {
         y += M_THRM_TXT_OFFSET;
+    }
+
+    if (flags & S_CENTER)
+    {
+        BlinkingArrowRight(s);
+        x = (SCREENWIDTH  - MN_GetPixelWidth(menu_buffer)) / 2;
     }
 
     DrawMenuStringEx(flags, x, y, color);
@@ -2417,7 +2467,7 @@ void UpdateCrosshairItems(void) // [Nugget] Global
     DisableItem(
         !(hud_crosshair_on
           && (hud_crosshair_target || hud_crosshair_lockon)
-          && !(mouselook && vertical_aiming == VERTAIM_DIRECT)),
+          && !(freelook && vertical_aiming == VERTAIM_DIRECT)),
         stat_settings3, "hud_crosshair_indicators");
 
     DisableItem(
@@ -2665,16 +2715,10 @@ setup_menu_t comp_settings1[] = {
 
     MI_GAP,
 
-    {"Compatibility-breaking Features", S_SKIP | S_TITLE, M_X, M_SPC},
-
-    // [Nugget] Replaces `direct_vertical_aiming`
-    {"Vertical Aiming", S_CHOICE | S_STRICT, M_X, M_SPC,
-     {"vertical_aiming"}, .strings_id = str_vertical_aiming,
-     .action = P_UpdateDirectVerticalAiming},
-
     {"Auto Strafe 50", S_ONOFF | S_STRICT, M_X, M_SPC, {"autostrafe50"},
      .action = G_UpdateSideMove},
 
+    // [Nugget] Pistol-start menu item
     {"Pistol Start", S_ONOFF | S_STRICT, M_X, M_SPC, {"pistolstart"}},
 
     MI_GAP,
@@ -2695,6 +2739,10 @@ setup_menu_t comp_settings1[] = {
     {"Emulate INTERCEPTS overflow", S_ONOFF | S_VANILLA, M_X, M_SPC,
      {"emu_intercepts"}, .action = UpdateInterceptsEmuItem},
 
+    // [Nugget] SSG in Doom 1
+    {"Allow SSG in Doom 1", S_ONOFF | S_CRITICAL, M_X, M_SPC,
+     {"doom1_ssg"}},
+
     MI_RESET,
 
     MI_END
@@ -2705,6 +2753,12 @@ static void UpdateInterceptsEmuItem(void)
     DisableItem((force_complevel == CL_VANILLA || default_complevel == CL_VANILLA)
                     && overflow[emu_intercepts].enabled,
                 comp_settings1, "blockmapfix");
+}
+
+// [Nugget] SSG in Doom 1
+void MN_UpdateDoom1SSGItem(void)
+{
+    DisableItem(!have_ssg, comp_settings1, "doom1_ssg");
 }
 
 static setup_menu_t *comp_settings[] = {comp_settings1, NULL};
@@ -3279,11 +3333,26 @@ void MN_DrawEqualizer(void)
     DrawScreenItems(current_menu);
 }
 
-void MN_UpdateFreeLook(boolean condition)
+typedef enum
+{
+  FREELOOK_OFF,         // Free look disabled.
+  FREELOOK_AUTO_AIM,    // Free look enabled with traditional auto-aiming.
+  FREELOOK_DIRECT_AIM,  // Free look enabled with direct vertical aiming.
+
+  FREELOOK_DIRECTAUTO_AIM, // [Nugget] Free look enabled with direct + auto vertical aiming
+
+  NUM_FREELOOK // [Nugget] 
+} freelook_mode_t;
+
+static freelook_mode_t freelook_mode;
+
+static const char *free_look_strings[] = {"Off", "Auto-Aim", "Direct Aim", "Direct+Auto Aim"};
+
+void MN_UpdateFreeLook(void)
 {
     P_UpdateDirectVerticalAiming();
 
-    if (condition)
+    if (!freelook)
     {
         for (int i = 0; i < MAXPLAYERS; ++i)
         {
@@ -3297,14 +3366,33 @@ void MN_UpdateFreeLook(boolean condition)
     UpdateCrosshairItems(); // [Nugget]
 }
 
-void MN_UpdateMouseLook(void)
+static void UpdateFreeLookMode(void)
 {
-    MN_UpdateFreeLook(!mouselook);
-}
+    switch (freelook_mode)
+    {
+        // [Nugget] Extended vertical aiming
 
-void MN_UpdatePadLook(void)
-{
-    MN_UpdateFreeLook(!padlook);
+        case FREELOOK_OFF:
+            freelook = false;
+            default_vertical_aiming = VERTAIM_AUTO;
+            break;
+        case FREELOOK_AUTO_AIM:
+            freelook = true;
+            default_vertical_aiming = VERTAIM_AUTO;
+            break;
+        case FREELOOK_DIRECT_AIM:
+            freelook = true;
+            default_vertical_aiming = VERTAIM_DIRECT;
+            break;
+        case FREELOOK_DIRECTAUTO_AIM:
+            freelook = true;
+            default_vertical_aiming = VERTAIM_DIRECTAUTO;
+            break;
+
+        default: break;
+    }
+
+    MN_UpdateFreeLook();
 }
 
 #define MOUSE_ACCEL_STRINGS_SIZE (40 + 1)
@@ -3348,8 +3436,8 @@ static setup_menu_t gen_settings3[] = {
     // [FG] double click to "use"
     {"Double-Click to \"Use\"", S_ONOFF, CNTR_X, M_SPC, {"dclick_use"}},
 
-    {"Free Look", S_ONOFF, CNTR_X, M_SPC, {"mouselook"},
-     .action = MN_UpdateMouseLook},
+    {"Free Look", S_CHOICE, CNTR_X, M_SPC, {"freelook_mode"},
+     .strings_id = str_freelook, .action = UpdateFreeLookMode},
 
     // [FG] invert vertical axis
     {"Invert Look", S_ONOFF, CNTR_X, M_SPC, {"mouse_y_invert"},
@@ -3418,8 +3506,8 @@ static setup_menu_t gen_settings4[] = {
 
     MI_GAP_Y(2),
 
-     {"Free Look", S_ONOFF, CNTR_X, M_SPC, {"padlook"},
-     .action = MN_UpdatePadLook},
+    {"Free Look", S_CHOICE, CNTR_X, M_SPC, {"freelook_mode"},
+     .strings_id = str_freelook, .action = UpdateFreeLookMode},
 
     {"Invert Look", S_ONOFF, CNTR_X, M_SPC, {"joy_invert_look"},
      .action = I_ResetGamepad},
@@ -3443,6 +3531,22 @@ static setup_menu_t gen_settings4[] = {
 
     MI_END
 };
+
+void MN_InitFreeLook(void)
+{
+    if (strictmode)
+    {
+        DisableItem(true, gen_settings3, "freelook_mode");
+        DisableItem(true, gen_settings4, "freelook_mode");
+    }
+    if (demorecording || (netgame && !solonet))
+    {
+        SetItemLimit(gen_settings3, "freelook_mode", FREELOOK_OFF,
+                     FREELOOK_AUTO_AIM);
+        SetItemLimit(gen_settings4, "freelook_mode", FREELOOK_OFF,
+                     FREELOOK_AUTO_AIM);
+    }
+}
 
 static const char *movement_type_strings[] = {
     "Normalized", "Faster Diagonals"
@@ -3555,19 +3659,17 @@ static void UpdateGamepadItems(void)
     DisableItem(!gamepad, gen_settings4, "Advanced Options");
     DisableItem(!gamepad || !I_GyroSupported(), gen_settings4, "Gyro Options");
     DisableItem(!gamepad || !I_RumbleSupported(), gen_settings4, "joy_rumble");
-    DisableItem(!gamepad || (!sticks && !gyro), gen_settings4, "padlook");
-    DisableItem(condition, gen_settings4, "joy_invert_look");
-    DisableItem(condition, gen_settings4, "joy_movement_inner_deadzone");
-    DisableItem(condition, gen_settings4, "joy_camera_inner_deadzone");
-    DisableItem(condition, gen_settings4, "joy_turn_speed");
-    DisableItem(condition, gen_settings4, "joy_look_speed");
+    DisableItem(!gamepad || (!sticks && !gyro) || strictmode, gen_settings4,
+        "freelook_mode");
+    DisableItems(condition, gen_settings4, "joy_invert_look",
+        "joy_movement_inner_deadzone", "joy_camera_inner_deadzone",
+        "joy_turn_speed", "joy_look_speed");
 
     DisableItem(!gamepad, padadv_settings1, "joy_stick_layout");
     DisableItem(!flick, padadv_settings1, "joy_flick_time");
-    DisableItem(condition, padadv_settings1, "joy_movement_type");
-    DisableItem(condition, padadv_settings1, "joy_forward_sensitivity");
-    DisableItem(condition, padadv_settings1, "joy_strafe_sensitivity");
-    DisableItem(condition, padadv_settings1, "joy_outer_turn_speed");
+    DisableItems(condition, padadv_settings1, "joy_movement_type",
+        "joy_forward_sensitivity", "joy_strafe_sensitivity",
+        "joy_outer_turn_speed");
     DisableItem(!ramp, padadv_settings1, "joy_outer_ramp_time");
     DisableItem(condition, padadv_settings1, "joy_camera_curve");
 }
@@ -3576,7 +3678,7 @@ static void UpdateGyroItems(void);
 
 static void UpdateGyroAiming(void)
 {
-    UpdateGamepadItems(); // Update "Gyro Options" and padlook.
+    UpdateGamepadItems(); // Update "Gyro Options" and freelook.
     UpdateGyroItems();
     I_SetSensorsEnabled(I_GyroEnabled());
     I_ResetGamepad();
@@ -3781,8 +3883,7 @@ static setup_menu_t gen_settings5[] = {
     {"Bounded Voxel Rendering", S_ONOFF|S_STRICT, OFF_CNTR_X, M_SPC,
      {"bounded_voxels_rendering"}, .action = VX_SetVoxelRenderingMode},
 
-    {"Brightmaps", S_ONOFF | S_STRICT, OFF_CNTR_X, M_SPC, {"brightmaps"},
-     .action = R_InitDrawFunctions},
+    {"Brightmaps", S_ONOFF | S_STRICT, OFF_CNTR_X, M_SPC, {"brightmaps"}},
 
     {"Stretch Short Skies", S_ONOFF, OFF_CNTR_X, M_SPC, {"stretchsky"},
      .action = R_UpdateStretchSkies},
@@ -3805,11 +3906,6 @@ static setup_menu_t gen_settings5[] = {
     // [Nugget] -------------------------------------------------------------/
 
     MI_END
-};
-
-const char *default_skill_strings[] = {
-    // dummy first option because defaultskill is 1-based
-    "", "ITYTD", "HNTR", "HMP", "UV", "NM", "Custom" // [Nugget] Custom Skill
 };
 
 static const char *death_use_action_strings[] = {"default", "last save",
@@ -3865,9 +3961,6 @@ static setup_menu_t gen_settings6[] = {
 
     {"Game speed", S_NUM | S_STRICT | S_PCT, OFF_CNTR_X, M_SPC,
      {"realtic_clock_rate"}, .action = G_SetTimeScale},
-
-    {"Default Skill", S_CHOICE | S_LEVWARN, OFF_CNTR_X, M_SPC,
-     {"default_skill"}, .strings_id = str_default_skill},
 
     {"Exit Sequence", S_CHOICE, OFF_CNTR_X, M_SPC, {"exit_sequence"},
     .strings_id = str_exit_sequence, .action = UpdatePwadEndoomItem},
@@ -3932,7 +4025,7 @@ static void ChangeViewHeight(void)
 
 static void ToggleVerticalLockon(void)
 {
-  if (!(vertical_lockon || mouselook || padlook))
+  if (!(vertical_lockon || freelook))
   { players[displayplayer].centering = true; }
 }
 
@@ -4254,6 +4347,25 @@ void MN_General(int choice)
     current_menu = gen_settings[current_page];
     current_tabs = gen_tabs;
     SetupMenu();
+
+    // [Nugget] Extended vertical aiming
+
+    if (freelook && vertical_aiming == VERTAIM_DIRECTAUTO)
+    {
+        freelook_mode = FREELOOK_DIRECTAUTO_AIM;
+    }
+    else if (freelook && vertical_aiming == VERTAIM_DIRECT)
+    {
+        freelook_mode = FREELOOK_DIRECT_AIM;
+    }
+    else if (freelook && vertical_aiming == VERTAIM_AUTO)
+    {
+        freelook_mode = FREELOOK_AUTO_AIM;
+    }
+    else
+    {
+        freelook_mode = FREELOOK_OFF;
+    }
 }
 
 // The drawing part of the General Setup initialization. Draw the
@@ -4286,7 +4398,12 @@ void MN_DrawGeneral(void)
     }
 }
 
-// [Nugget] Custom Skill menu /===============================================
+// [Nugget] Reworked custom skill /===========================================
+
+const char *skill_strings[] = {
+    "I'm too young to die", "Hey, not too rough", "Hurt me plenty",
+    "Ultra-Violence", "NIGHTMARE!", "Custom"
+};
 
 static const char *thing_spawns_strings[] = {
   "Easy", "Normal", "Hard"
@@ -4349,9 +4466,9 @@ static setup_menu_t *customskill_settings[] = {customskill_settings1, NULL};
 
 void MN_CustomSkill(void)
 {
-    MN_SetNextMenuAlt(ss_skill);
-    setup_screen = ss_skill;
-    current_page = GetPageIndex(customskill_settings);
+    MN_SetNextMenuAlt(ss_cskill);
+    setup_screen = ss_cskill;
+    current_page = 0;
     current_menu = customskill_settings[current_page];
     current_tabs = NULL;
     SetupMenu();
@@ -4359,8 +4476,9 @@ void MN_CustomSkill(void)
 
 void MN_DrawCustomSkill(void)
 {
-    DrawBackground("FLOOR4_6"); // Draw background
+    DrawBackground("FLOOR4_6");
     MN_DrawTitle(M_X_CENTER, M_Y_TITLE, "M_CSTSKL", "Custom Skill");
+
     DrawInstructions();
     DrawScreenItems(current_menu);
 }
@@ -4404,6 +4522,7 @@ static setup_menu_t **setup_screens[] = {
     eq_settings,
     padadv_settings,
     gyro_settings,
+    customskill_settings,
 
     // [Nugget]
     view_settings,
@@ -4412,7 +4531,6 @@ static setup_menu_t **setup_screens[] = {
     hudcol_settings,
     mapkeys_settings,
     cheatkeys_settings,
-    customskill_settings, // Custom Skill menu
 };
 
 // [FG] save the index of the current screen in the first page's S_END element's
@@ -5253,7 +5371,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
        current_item->m_flags |= S_HILITE;
     }
 
-    if ((current_item->m_flags & S_FUNC) && action == MENU_ENTER)
+    if ((current_item->m_flags & (S_FUNC | S_CENTER)) && action == MENU_ENTER)
     {
         if (ItemDisabled(current_item->m_flags))
         {
@@ -5796,70 +5914,71 @@ void MN_DrawTitle(int x, int y, const char *patch, const char *alttext)
 }
 
 static const char **selectstrings[] = {
-    NULL, // str_empty
-    layout_strings,
-    flick_snap_strings,
-    NULL, // str_ms_time
-    NULL, // str_movement_sensitivity
-    movement_type_strings,
-    percent_strings,
-    curve_strings,
-    center_weapon_strings,
-    NULL, // str_screensize
-    st_layout_strings,
-    show_widgets_strings,
-    show_adv_widgets_strings,
-    stats_format_strings,
-    crosshair_strings,
-    crosshair_target_strings,
-    hudcolor_strings,
-    secretmessage_strings,
-    overlay_strings,
-    automap_preset_strings,
-    automap_keyed_door_strings,
-    fuzzmode_strings,
-    weapon_slots_activation_strings,
-    weapon_slots_selection_strings,
-    NULL, // str_weapon_slots
-    NULL, // str_resolution_scale
-    NULL, // str_midi_player
-    gamma_strings,
-    sound_module_strings,
-    extra_music_strings,
-    NULL, // str_resampler
-    equalizer_preset_strings,
-    NULL, // str_mouse_accel
-    NULL, // str_gamepad_device
-    gyro_space_strings,
-    gyro_action_strings,
-    NULL, // str_gyro_sens
-    NULL, // str_gyro_accel
-    default_skill_strings,
-    default_complevel_strings,
-    exit_sequence_strings,
-    death_use_action_strings,
-    menu_backdrop_strings, // [Nugget] Restored backdrop item
-    widescreen_strings,
+    [str_empty] = NULL,
+    [str_layout] = layout_strings,
+    [str_flick_snap] = flick_snap_strings,
+    [str_ms_time] = NULL,
+    [str_movement_sensitivity] = NULL,
+    [str_movement_type] = movement_type_strings,
+    [str_percent] = percent_strings,
+    [str_curve] = curve_strings,
+    [str_center_weapon] = center_weapon_strings,
+    [str_screensize] = NULL,
+    [str_stlayout] = st_layout_strings,
+    [str_show_widgets] = show_widgets_strings,
+    [str_show_adv_widgets] = show_adv_widgets_strings,
+    [str_stats_format] = stats_format_strings,
+    [str_crosshair] = crosshair_strings,
+    [str_crosshair_target] = crosshair_target_strings,
+    [str_hudcolor] = hudcolor_strings,
+    [str_secretmessage] = secretmessage_strings,
+    [str_overlay] = overlay_strings,
+    [str_automap_preset] = automap_preset_strings,
+    [str_automap_keyed_door] = automap_keyed_door_strings,
+    [str_fuzzmode] = fuzzmode_strings,
+    [str_weapon_slots_activation] = weapon_slots_activation_strings,
+    [str_weapon_slots_selection] = weapon_slots_selection_strings,
+    [str_weapon_slots] = NULL,
+    [str_resolution_scale] = NULL,
+    [str_midi_player] = NULL,
+    [str_gamma] = gamma_strings,
+    [str_sound_module] = sound_module_strings,
+    [str_extra_music] = extra_music_strings,
+    [str_resampler] = NULL,
+    [str_equalizer_preset] = equalizer_preset_strings,
+    [str_mouse_accel] = NULL,
+    [str_gamepad_device] = NULL,
+    [str_gyro_space] = gyro_space_strings,
+    [str_gyro_action] = gyro_action_strings,
+    [str_gyro_sens] = NULL,
+    [str_gyro_accel] = NULL,
+    [str_default_complevel] = default_complevel_strings,
+    [str_exit_sequence] = exit_sequence_strings,
+    [str_death_use_action] = death_use_action_strings,
+    [str_menu_backdrop] = menu_backdrop_strings, // [Nugget] Restored backdrop item
+    [str_widescreen] = widescreen_strings,
     // [Nugget] Removed unused `bobbing_pct_strings`
-    screen_melt_strings,
-    invul_mode_strings,
+    [str_screen_melt] = screen_melt_strings,
+    [str_invul_mode] = invul_mode_strings,
+    [str_skill] = skill_strings,
+    [str_freelook] = free_look_strings,
 
     // [Nugget] --------------------------------------------------------------
 
-    bobbing_style_strings,
-    force_carousel_strings,
-    crosshair_lockon_strings,
-    vertical_aiming_strings,
-    over_under_strings,
-    flinching_strings,
-    chasecam_strings,
-    sprite_shadows_strings,
-    thing_lighting_strings,
-    fake_contrast_strings,
-    alt_interpic_strings,
-    s_clipping_dist_strings,
-    page_ticking_strings,
-    thing_spawns_strings,
+    [str_bobbing_style] = bobbing_style_strings,
+    [str_force_carousel] = force_carousel_strings,
+    [str_crosshair_lockon] = crosshair_lockon_strings,
+    [str_vertical_aiming] = vertical_aiming_strings,
+    [str_over_under] = over_under_strings,
+    [str_flinching] = flinching_strings,
+    [str_chasecam] = chasecam_strings,
+    [str_sprite_shadows] = sprite_shadows_strings,
+    [str_thing_lighting] = thing_lighting_strings,
+    [str_fake_contrast] = fake_contrast_strings,
+    [str_alt_interpic] = alt_interpic_strings,
+    [str_s_clipping_dist] = s_clipping_dist_strings,
+    [str_page_ticking] = page_ticking_strings,
+    [str_thing_spawns] = thing_spawns_strings,
 };
 
 static const char **GetStrings(int id)
@@ -5952,7 +6071,6 @@ void MN_InitMenuStrings(void)
 void MN_SetupResetMenu(void)
 {
     DisableItem(force_complevel != CL_NONE, comp_settings1, "default_complevel");
-    DisableItem(M_ParmExists("-pistolstart"), comp_settings1, "pistolstart");
     DisableItem(M_ParmExists("-uncapped") || M_ParmExists("-nouncapped"),
                 gen_settings1, "uncapped");
     DisableItem(deh_set_blood_color, enem_settings1, "colored_blood");
@@ -5977,13 +6095,14 @@ void MN_SetupResetMenu(void)
                 enem_settings1, "extra_gibbing");
 
     UpdatePaletteItems();
+    MN_UpdateDoom1SSGItem();
     MN_UpdateImprovedWeaponTogglesItem();
     MN_UpdateNughudItem(); // NUGHUD
 }
 
 void MN_BindMenuVariables(void)
 {
-    BIND_NUM(resolution_scale, 0, 0, UL, "Position of resolution scale slider (do not modify)");
+    BIND_NUM_MENU(resolution_scale, 0, UL);
     BIND_NUM_GENERAL(menu_backdrop, MENU_BG_DARK, MENU_BG_OFF, MENU_BG_TEXTURE,
         "Menu backdrop (0 = Off; 1 = Dark; 2 = Texture)");
 
@@ -6019,4 +6138,8 @@ void MN_BindMenuVariables(void)
 
     BIND_NUM_GENERAL(menu_help, MENU_HELP_AUTO, MENU_HELP_OFF, MENU_HELP_PAD,
         "Menu help (0 = Off; 1 = Auto; 2 = Always Keyboard; 3 = Always Gamepad)");
+
+    // [Nugget] Removed custom skill items
+
+    BIND_NUM_MENU(freelook_mode, FREELOOK_OFF, NUM_FREELOOK-1); // [Nugget]
 }

@@ -48,15 +48,25 @@ void P_UnArchiveMap(void);
 extern byte *save_p, *savebuffer;
 extern size_t savegamesize;
 
-// Check for overrun and realloc if necessary -- Lee Killough 1/22/98
-inline static void saveg_buffer_size(size_t size)
+inline static boolean saveg_check_size(size_t size)
 {
     size_t offset = save_p - savebuffer;
-
     if (offset + size <= savegamesize)
+    {
+        return true;
+    }
+    return false;
+}
+
+// Check for overrun and realloc if necessary -- Lee Killough 1/22/98
+inline static void saveg_grow(size_t size)
+{
+    if (saveg_check_size(size))
     {
         return;
     }
+
+    size_t offset = save_p - savebuffer;
 
     while (offset + size > savegamesize)
     {
@@ -76,13 +86,13 @@ inline static void savep_putbyte(byte value)
 
 inline static void saveg_write8(byte value)
 {
-    saveg_buffer_size(sizeof(byte));
+    saveg_grow(sizeof(byte));
     savep_putbyte(value);
 }
 
 inline static void saveg_write16(short value)
 {
-    saveg_buffer_size(sizeof(int16_t));
+    saveg_grow(sizeof(int16_t));
 
     // [Nugget] Rewind
     if (G_KeyFrameRW())
@@ -99,7 +109,7 @@ inline static void saveg_write16(short value)
 
 inline static void saveg_write32(int value)
 {
-    saveg_buffer_size(sizeof(int32_t));
+    saveg_grow(sizeof(int32_t));
 
     // [Nugget] Rewind
     if (G_KeyFrameRW())
@@ -118,7 +128,7 @@ inline static void saveg_write32(int value)
 
 inline static void saveg_write64(int64_t value)
 {
-    saveg_buffer_size(sizeof(int64_t));
+    saveg_grow(sizeof(int64_t));
 
     // [Nugget] Rewind
     if (G_KeyFrameRW())
@@ -220,6 +230,7 @@ inline static int64_t saveg_read64(void)
 
 typedef enum
 {
+  saveg_indetermined = -1,
   saveg_mbf,
   saveg_woof510,
   saveg_woof600,

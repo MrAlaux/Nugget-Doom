@@ -1,33 +1,35 @@
-include(CheckLibraryExists)
-include(CheckIncludeFile)
-include(CheckSymbolExists)
-include(CheckCSourceCompiles)
+cmake_minimum_required(VERSION 3.15...4.0)
 
-# Adds the cmake directory to the CMake include path.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+option(WITH_FLUIDSYNTH "Use FluidSynth if available" OFF)
+if(WITH_FLUIDSYNTH)
+    list(APPEND VCPKG_MANIFEST_FEATURES "fluidsynth")
+endif()
 
 # X_VCPKG_APPLOCAL_DEPS_INSTALL automatically installs dependencies.
 set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
 
-cmake_minimum_required(VERSION 3.15)
+# Adds the cmake directory to the CMake include path.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project("Nugget Doom"
+project(
+    "Nugget Doom"
     VERSION 4.4.0
-    DESCRIPTION "Nugget Doom 4.4.0"
     HOMEPAGE_URL "https://github.com/MrAlaux/Nugget-Doom"
-    LANGUAGES C)
+    LANGUAGES C CXX
+)
 
 set(CMAKE_C_STANDARD 99)
 
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
-      STRING "Choose the type of build." FORCE)
-  # Set the possible values of build type for cmake-gui
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+    message(STATUS
+        "Setting build type to '${default_build_type}' as none was specified.")
+    set(CMAKE_BUILD_TYPE
+        "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+        "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 # Prevent in-tree builds.
@@ -44,11 +46,17 @@ set(PROJECT_SHORTNAME "nugget-doom")
 set(BASE_PK3 "nugget-doom.pk3")
 set(NUGGETDOOM_ICON "nugget-doom.ico")
 set(SETUP_ICON "setup.ico")
-set(PROJECT_VERSION_RC "${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0") # ${PROJECT_VERSION_TWEAK}
+set(PROJECT_VERSION_RC
+    "${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0")
 
 # Toggle-able defines added at compile-time.
 option(NUGGETDOOM_RANGECHECK "Enable bounds-checking of performance-sensitive functions" ON)
 option(NUGGETDOOM_STRICT "Prefer original MBF code paths over demo compatiblity with PrBoom+" OFF)
+
+include(CheckLibraryExists)
+include(CheckIncludeFile)
+include(CheckSymbolExists)
+include(CheckCSourceCompiles)
 
 # Compiler environment requirements.
 check_library_exists(m pow "" HAVE_LIBM)
@@ -56,7 +64,8 @@ check_include_file("dirent.h" HAVE_DIRENT_H)
 check_symbol_exists(strcasecmp "strings.h" HAVE_DECL_STRCASECMP)
 check_symbol_exists(strncasecmp "strings.h" HAVE_DECL_STRNCASECMP)
 check_symbol_exists(getpwuid "unistd.h;sys/types.h;pwd.h" HAVE_GETPWUID)
-check_c_source_compiles("
+check_c_source_compiles(
+    "
     #include <windows.h>
     int main()
     {
@@ -64,28 +73,30 @@ check_c_source_compiles("
                               TIMER_ALL_ACCESS);
         return 0;
     }
-  "
-  HAVE_HIGH_RES_TIMER
+    "
+    HAVE_HIGH_RES_TIMER
 )
-check_c_source_compiles("
+check_c_source_compiles(
+    "
     #include <immintrin.h>
     int main()
     {
         int tmp = _div64(4, 2, NULL);
         return 0;
     }
-  "
-  HAVE__DIV64
+    "
+    HAVE__DIV64
 )
-check_c_source_compiles("
+check_c_source_compiles(
+    "
     typedef float vec __attribute__((ext_vector_type(4)));
     int main()
     {
         vec a = (vec){0, 1, 2, 3};
         return 0;
     }
-  "
-  HAVE_EXT_VECTOR_TYPE
+    "
+    HAVE_EXT_VECTOR_TYPE
 )
 
 option(CMAKE_FIND_PACKAGE_PREFER_CONFIG
@@ -95,7 +106,6 @@ set(CMAKE_FIND_FRAMEWORK NEVER)
 
 # Library requirements.
 find_package(SDL2 2.0.18 REQUIRED)
-find_package(SDL2_net REQUIRED)
 find_package(OpenAL REQUIRED)
 find_package(libebur128 REQUIRED)
 find_package(SndFile 1.0.29 REQUIRED)
@@ -109,10 +119,6 @@ endif()
 
 if(OPENAL_VERSION_STRING VERSION_GREATER_EQUAL "1.22.0")
     set(HAVE_AL_BUFFER_CALLBACK TRUE)
-endif()
-
-if(NOT TARGET SDL2_net::SDL2_net)
-    add_library(SDL2_net::SDL2_net ALIAS SDL2_net::SDL2_net-static)
 endif()
 
 if(SndFile_VERSION VERSION_GREATER_EQUAL "1.1.0")
@@ -145,19 +151,14 @@ configure_file(config.h.in config.h)
 
 if(WIN32)
     install(FILES COPYING DESTINATION . RENAME COPYING.txt)
-    install(FILES README.md DESTINATION .)
-    install(DIRECTORY examples/ DESTINATION docs/examples)
     if(FluidSynth_FOUND)
         install(DIRECTORY soundfonts/ DESTINATION soundfonts)
     endif()
 else()
     install(FILES COPYING DESTINATION "share/doc/${PROJECT_SHORTNAME}")
-    install(FILES README.md DESTINATION "share/doc/${PROJECT_SHORTNAME}")
-    if(EXISTS "${CMAKE_SOURCE_DIR}/examples")
-        install(DIRECTORY examples/ DESTINATION "share/doc/${PROJECT_SHORTNAME}/examples")
-    endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/soundfonts" AND FluidSynth_FOUND)
-        install(DIRECTORY soundfonts/ DESTINATION "share/${PROJECT_SHORTNAME}/soundfonts")
+        install(DIRECTORY soundfonts/
+            DESTINATION "share/${PROJECT_SHORTNAME}/soundfonts")
     endif()
 endif()
 
@@ -191,7 +192,7 @@ elseif(LINUX)
 
             execute_process(COMMAND
                 ${CMAKE_COMMAND} -E env
-                OUTPUT=${CPACK_PACKAGE_FILE_NAME}.appimage
+                OUTPUT=${CPACK_PACKAGE_FILE_NAME}.AppImage
                 VERSION=$<IF:$<BOOL:${CPACK_PACKAGE_VERSION}>,${CPACK_PACKAGE_VERSION},0.1.0>
                 ${LINUXDEPLOY_EXECUTABLE}
                 --appimage-extract-and-run
@@ -200,6 +201,40 @@ elseif(LINUX)
                 --desktop-file=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/applications/io.github.MrAlaux.Nugget-Doom.desktop
                 --icon-file=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps/nugget-doom.png
                 --output=appimage)
+        ]])
+    elseif(APPLE)
+        set(CPACK_GENERATOR External)
+        set(CPACK_EXTERNAL_ENABLE_STAGING YES)
+        set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+        set(CPACK_EXTERNAL_PACKAGE_SCRIPT "${PROJECT_BINARY_DIR}/macbundle-generate.cmake")
+        set(CPACK_SYSTEM_NAME "mac")
+        set(CPACK_BUILD_DIR "${PROJECT_BINARY_DIR}")
+
+        file(GENERATE
+            OUTPUT "${PROJECT_BINARY_DIR}/macbundle-generate.cmake"
+            CONTENT [[
+                set(CPACK_OUTPUT_DIR "${CPACK_BUILD_DIR}/${CPACK_PACKAGE_FILE_NAME}")
+                file(MAKE_DIRECTORY ${CPACK_OUTPUT_DIR})
+
+                file(COPY_FILE
+                    $<TARGET_FILE:nugget-doom>
+                    ${CPACK_OUTPUT_DIR}/nugget-doom)
+                file(COPY_FILE
+                    $<TARGET_FILE:nugget-doom-setup>
+                    ${CPACK_OUTPUT_DIR}/nugget-doom-setup)
+
+                file(COPY_FILE
+                    ${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/nugget-doom/nugget-doom.pk3
+                    ${CPACK_OUTPUT_DIR}/nugget-doom.pk3)
+                file(COPY
+                    ${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/nugget-doom/soundfonts
+                    DESTINATION ${CPACK_OUTPUT_DIR})
+
+                file(CONFIGURE
+                    OUTPUT ${CPACK_OUTPUT_DIR}/Troubleshooting.txt
+                    CONTENT "If you are getting errors like 'libzip.5.5.dylib cant be opened because Apple cannot check it for malicious software.' Run the following command in the nugget-doom folder:\n\nxattr -dr com.apple.quarantine path/to/folder")
+
+                execute_process(COMMAND zip -r ${CPACK_PACKAGE_FILE_NAME}.zip ${CPACK_PACKAGE_FILE_NAME})
             ]])
 else()
     set(CPACK_GENERATOR TGZ)
@@ -219,5 +254,5 @@ add_subdirectory(textscreen)
 add_subdirectory(third-party)
 add_subdirectory(src)
 add_subdirectory(setup)
-add_subdirectory(docs)
 add_subdirectory(man)
+add_subdirectory(netlib)

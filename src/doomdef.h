@@ -233,6 +233,7 @@ typedef enum {
   ss_eq,
   ss_padadv,
   ss_gyro,
+  ss_cskill,
 
   // [Nugget]
   ss_view,
@@ -241,7 +242,6 @@ typedef enum {
   ss_hudcol,
   ss_mapkeys,
   ss_cheatkeys,
-  ss_skill, // Custom Skill menu
 
   ss_max
 } ss_types;

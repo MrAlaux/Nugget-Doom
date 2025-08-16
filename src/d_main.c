@@ -142,14 +142,19 @@ boolean devparm;        // started game with -devparm
 boolean clnomonsters;   // checkparm of -nomonsters
 boolean clrespawnparm;  // checkparm of -respawn
 boolean clfastparm;     // checkparm of -fast
+boolean clpistolstart;  // checkparm of -pistolstart
+boolean clcoopspawns;   // checkparm of -coop_spawns
 // jff 1/24/98 end definition of command line version of play mode switches
+
+// [Nugget] Custom skill: moved settings elsewhere
 
 boolean nomonsters;     // working -nomonsters
 boolean respawnparm;    // working -respawn
 boolean fastparm;       // working -fast
+boolean pistolstart;    // working -pistolstart
+boolean coopspawns;     // working -coop_spawns
 
-// [Nugget]
-boolean coopspawnsparm = false;
+// [Nugget] Custom skill: moved settings elsewhere
 
 boolean singletics = false; // debug flag to cancel adaptiveness
 
@@ -174,8 +179,6 @@ int organize_savefiles;
 // [Nugget]
 const char *savegame_dir = NULL;
 const char *screenshot_dir = NULL;
-
-boolean coop_spawns = false;
 
 static boolean demobar;
 
@@ -1710,6 +1713,7 @@ static void D_EndDoom(void)
 // [FG] fast-forward demo to the desired map
 int playback_warp = -1;
 
+// [Nugget] SSG in Doom 1
 // [FG] check for SSG assets
 static boolean CheckHaveSSG (void)
 {
@@ -2062,6 +2066,23 @@ void D_DoomMain(void)
 
   fastparm = clfastparm = M_CheckParm ("-fast");
   // jff 1/24/98 end of set to both working and command line value
+
+  //!
+  // @category game
+  // @help
+  //
+  // Enables automatic pistol starts on each level.
+  //
+
+  pistolstart = clpistolstart = M_CheckParm("-pistolstart");
+
+  //!
+  // @category game
+  //
+  // Start single player game with items spawns as in cooperative netgame.
+  //
+
+  coopspawns = clcoopspawns = M_CheckParm("-coop_spawns");
 
   //!
   // @vanilla
@@ -2536,6 +2557,9 @@ void D_DoomMain(void)
     startloadgame = -1;
   }
 
+  // Allows PWAD HELP2 screen for DOOM 1 wads (using Ultimate Doom IWAD).
+  pwad_help2 = gamemode == retail && W_IsWADLump(W_CheckNumForName("HELP2"));
+
   W_ProcessInWads("SNDINFO", S_ParseSndInfo, PROCESS_IWAD | PROCESS_PWAD);
 
   W_ProcessInWads("TRAKINFO", S_ParseTrakInfo, PROCESS_IWAD | PROCESS_PWAD);
@@ -2602,19 +2626,10 @@ void D_DoomMain(void)
       I_Printf(VB_INFO, "External statistics registered.");
     }
 
+  // [Nugget] SSG in Doom 1
   // [FG] check for SSG assets
   have_ssg = CheckHaveSSG();
-
-  //!
-  // @category game
-  //
-  // Start single player game with items spawns as in cooperative netgame.
-  //
-
-  if (M_ParmExists("-coop_spawns"))
-    {
-      coopspawnsparm = true;
-    }
+  MN_UpdateDoom1SSGItem();
 
   //!
   // @arg <min:sec>
@@ -2768,6 +2783,7 @@ void D_DoomMain(void)
   I_InitKeyboard();
 
   MN_InitMenuStrings();
+  MN_InitFreeLook();
 
   // Auto save slot is 255 for -loadgame command.
   if (startloadgame == 255 && !demorecording && gameaction != ga_playdemo
