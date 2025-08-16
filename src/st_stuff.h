@@ -31,7 +31,6 @@ struct player_s;
 
 // [Nugget]
 enum keyblink_e;
-struct player_s;
 
 // [Nugget] /=================================================================
 
@@ -43,7 +42,7 @@ extern boolean comp_godface;
 extern boolean comp_unusedpals;
 extern int force_carousel;
 
-boolean ST_GetLayout(void);
+int ST_GetWideShift(void);
 int ST_GetMessageFontHeight(void);
 boolean ST_IconAvailable(const int i);
 boolean ST_GetNughudOn(void);

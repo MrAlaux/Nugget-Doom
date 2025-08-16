@@ -93,9 +93,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **_Auto Save Interval_** setting, for periodic auto saves
-- **Rewinding** [i.b. DSDA-Doom]
-- **_Play Internal Demos_** setting, to control whether or not to play demos built into WADs
-- **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]

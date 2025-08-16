@@ -94,15 +94,6 @@ inline static void saveg_write16(short value)
 {
     saveg_grow(sizeof(int16_t));
 
-    // [Nugget] Rewind
-    if (G_KeyFrameRW())
-    {
-      memcpy(save_p, &value, sizeof(int16_t));
-      save_p += sizeof(int16_t);
-
-      return;
-    }
-
     savep_putbyte(value & 0xff);
     savep_putbyte((value >> 8) & 0xff);
 }
@@ -110,15 +101,6 @@ inline static void saveg_write16(short value)
 inline static void saveg_write32(int value)
 {
     saveg_grow(sizeof(int32_t));
-
-    // [Nugget] Rewind
-    if (G_KeyFrameRW())
-    {
-      memcpy(save_p, &value, sizeof(int32_t));
-      save_p += sizeof(int32_t);
-
-      return;
-    }
 
     savep_putbyte(value & 0xff);
     savep_putbyte((value >> 8) & 0xff);
@@ -129,15 +111,6 @@ inline static void saveg_write32(int value)
 inline static void saveg_write64(int64_t value)
 {
     saveg_grow(sizeof(int64_t));
-
-    // [Nugget] Rewind
-    if (G_KeyFrameRW())
-    {
-      memcpy(save_p, &value, sizeof(int64_t));
-      save_p += sizeof(int64_t);
-
-      return;
-    }
 
     savep_putbyte(value & 0xff);
     savep_putbyte((value >> 8) & 0xff);
@@ -158,15 +131,6 @@ inline static short saveg_read16(void)
 {
     int result;
 
-    // [Nugget] Rewind
-    if (G_KeyFrameRW())
-    {
-      memcpy(&result, save_p, sizeof(int16_t));
-      save_p += sizeof(int16_t);
-
-      return result;
-    }
-
     result = saveg_read8();
     result |= saveg_read8() << 8;
 
@@ -176,15 +140,6 @@ inline static short saveg_read16(void)
 inline static int saveg_read32(void)
 {
     int result;
-
-    // [Nugget] Rewind
-    if (G_KeyFrameRW())
-    {
-      memcpy(&result, save_p, sizeof(int32_t));
-      save_p += sizeof(int32_t);
-
-      return result;
-    }
 
     result = saveg_read8();
     result |= saveg_read8() << 8;
@@ -197,15 +152,6 @@ inline static int saveg_read32(void)
 inline static int64_t saveg_read64(void)
 {
     int64_t result;
-
-    // [Nugget] Rewind
-    if (G_KeyFrameRW())
-    {
-      memcpy(&result, save_p, sizeof(int64_t));
-      save_p += sizeof(int64_t);
-
-      return result;
-    }
 
     result =  (int64_t)(saveg_read8());
     result |= (int64_t)(saveg_read8()) << 8;

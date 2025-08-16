@@ -238,7 +238,6 @@ typedef enum {
   // [Nugget]
   ss_view,
   ss_display,
-  ss_misc,
   ss_hudcol,
   ss_mapkeys,
   ss_cheatkeys,

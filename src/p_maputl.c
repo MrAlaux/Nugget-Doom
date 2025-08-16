@@ -551,8 +551,6 @@ intercept_t *intercepts;
 int num_intercepts = 0;
 static intercept_t *intercept_p;
 
-static size_t num_intercepts; // [Nugget] Extracted from `check_intercept()`
-
 // [Nugget] /-----------------------------------------------------------------
 
 static intercept_t *saved_intercepts;

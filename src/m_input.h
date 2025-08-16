@@ -149,8 +149,6 @@ enum
     input_chasecam,
     input_freecam,
 
-    input_rewind,
-
     input_map_blink, // Highlight points of interest
     input_map_tagfinder, // Tag Finder from PrBoomX
     input_map_teleport, // Teleport to Automap pointer

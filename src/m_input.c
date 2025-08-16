@@ -771,7 +771,6 @@ void M_BindInputVariables(void)
 
     BIND_INPUT(input_savegame, "Save current game");
     BIND_INPUT(input_loadgame, "Load saved games");
-    BIND_INPUT(input_rewind, "Rewind"); // [Nugget]
 
     BIND_INPUT(input_soundvolume, "Bring up sound control panel");
     BIND_INPUT(input_hud, "Cycle through HUD layouts");

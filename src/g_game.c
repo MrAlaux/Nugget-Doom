@@ -160,28 +160,6 @@ void G_SetAutoSaveCountdown(int value)
   autosave_countdown = value;
 }
 
-// Rewind --------------------------------------------------------------------
-
-int rewind_interval;
-static int rewind_depth;
-static int rewind_timeout;
-
-static boolean keyframe_rw = false;
-
-static boolean rewind_on = true;
-static int rewind_countdown = 0;
-
-typedef struct keyframe_s
-{
-  struct keyframe_s *prev, *next;
-  byte *frame;
-  size_t length;
-} keyframe_t;
-
-static keyframe_t *keyframe_list_head = NULL, *keyframe_list_tail = NULL;
-
-static int keyframe_index = -1;
-
 // Slow Motion ---------------------------------------------------------------
 
 static boolean slow_motion = false;
@@ -1304,7 +1282,6 @@ static void G_DoLoadLevel(void)
   int i;
 
   // [Nugget]
-  const int lastaction = gameaction;
   static int lastepisode = -1, lastmap = -1;
 
   S_StopAmbientSounds();
@@ -1364,8 +1341,7 @@ static void G_DoLoadLevel(void)
   if (!demo_compatibility && demo_version < DV_MBF)   // killough 9/29/98
     basetic = gametic;
 
-  if (wipegamestate == GS_LEVEL
-      && lastaction != ga_rewind) // [Nugget] Rewind
+  if (wipegamestate == GS_LEVEL)
     wipegamestate = -1;             // force a wipe
 
   gamestate = GS_LEVEL;
@@ -1396,7 +1372,7 @@ static void G_DoLoadLevel(void)
   else
   // ID24 exit line specials
   // [crispy] pistol start
-  if ((reset_inventory || CRITICAL(pistolstart)) && lastaction != ga_rewind) // [Nugget] Rewind
+  if (reset_inventory || CRITICAL(pistolstart))
   {
     for (int player = 0; player < MAXPLAYERS; player++)
     {
@@ -1408,14 +1384,7 @@ static void G_DoLoadLevel(void)
     reset_inventory = false;
   }
 
-  // [Nugget] Rewind: skip level setup if rewinding within the same map
-  if (lastaction == ga_rewind
-      && lastepisode == gameepisode && lastmap == gamemap)
-  {
-    S_Start(); // Stop sounds
-  }
-  else
-    P_SetupLevel (gameepisode, gamemap, 0, gameskill);
+  P_SetupLevel (gameepisode, gamemap, 0, gameskill);
 
   G_ResetRewind();
   MN_UpdateFreeLook();
@@ -1435,16 +1404,12 @@ static void G_DoLoadLevel(void)
   death_use_state = DEATH_USE_STATE_INACTIVE;
 
   // clear cmd building stuff
-  // [Nugget] Rewind: unless we just rewound
-  if (lastaction != ga_rewind)
-  {
-    memset (gamekeydown, 0, sizeof(gamekeydown));
-    G_ClearInput();
-    sendpause = sendsave = paused = false;
-    // [FG] array size!
-    memset (mousebuttons, 0, sizeof(mousebuttons));
-    memset (joybuttons, 0, sizeof(joybuttons));
-  }
+  memset (gamekeydown, 0, sizeof(gamekeydown));
+  G_ClearInput();
+  sendpause = sendsave = paused = false;
+  // [FG] array size!
+  memset (mousebuttons, 0, sizeof(mousebuttons));
+  memset (joybuttons, 0, sizeof(joybuttons));
 
   //jff 4/26/98 wake up the status bar in case were coming out of a DM demo
   // killough 5/13/98: in case netdemo has consoleplayer other than green
@@ -1467,9 +1432,6 @@ static void G_DoLoadLevel(void)
 
   // Periodic auto save
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
-
-  // Rewind
-  G_SetRewindCountdown(0);
 
   // Hide messages (but don't delete them outright)
   ST_HideMessages();
@@ -3061,8 +3023,6 @@ static uint64_t G_Signature(int sig_epi, int sig_map)
 
 static void DoSaveGame(char *name)
 {
-  keyframe_rw = false; // [Nugget] Make sure endian-unsafe R/W is disabled
-
   S_MarkSounds();
 
   save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, 0);
@@ -3248,8 +3208,6 @@ static void G_DoSaveAutoSave(void)
 
 static boolean DoLoadGame(boolean do_load_autosave)
 {
-  keyframe_rw = false; // [Nugget] Make sure endian-unsafe R/W is disabled
-
   I_SetFastdemoTimer(false);
 
   // [crispy] loaded game must always be single player.
@@ -3516,12 +3474,6 @@ static boolean DoLoadGame(boolean do_load_autosave)
   // we already have a save (the one we just loaded), so reset the countdown
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
 
-  // [Nugget] Rewind:
-  // Just like with `G_DoRewind`,
-  // this is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
-  G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
-
   if (setsizeneeded)
     R_ExecuteSetViewSize();
 
@@ -3625,421 +3577,6 @@ static void CheckSaveAutoSave(void)
   }
 }
 
-// [Nugget] Rewind /----------------------------------------------------------
-
-void G_SetRewindCountdown(int value)
-{
-  rewind_countdown = value;
-}
-
-static void G_SaveKeyFrame(void)
-{
-  const int start_time = I_GetTimeMS();
-
-  S_MarkSounds();
-
-  save_p = savebuffer = Z_Malloc(savegamesize, PU_STATIC, 0);
-
-  saveg_compat = saveg_current;
-
-  keyframe_rw = true;
-
-  saveg_write8(demo_version);
-
-  // killough 2/14/98: save old compatibility flag:
-  saveg_write8(compatibility);
-
-  saveg_write8(gameskill);
-  saveg_write8(gameepisode);
-  saveg_write8(gamemap);
-
-  {
-      int i;
-      for (i = 0; i < MAXPLAYERS; i++)
-      {
-          saveg_write8(playeringame[i]);
-      }
-      for (; i < MIN_MAXPLAYERS; i++) // killough 2/28/98
-      {
-          saveg_write8(0);
-      }
-  }
-
-  saveg_write8(idmusnum);               // jff 3/17/98 save idmus state
-
-  saveg_grow(G_GameOptionSize());
-  save_p = G_WriteOptions(save_p);    // killough 3/1/98: save game options
-
-  // [FG] fix copy size and pointer progression
-  saveg_write32(leveltime); //killough 11/98: save entire word
-
-  // killough 11/98: save revenant tracer state
-  saveg_write8((gametic-basetic) & 255);
-
-  P_ArchivePlayers();
-  P_ArchiveWorld();
-  P_ArchiveThinkers();
-  P_ArchiveSpecials();
-  P_ArchiveRNG();    // killough 1/18/98: save RNG information
-  P_ArchiveMap();    // killough 1/22/98: save automap information
-
-  saveg_write8(0xe6);   // consistancy marker
-
-  // [FG] save total time for all completed levels
-  saveg_write32(totalleveltimes);
-
-  // save lump name for current MUSINFO item
-  saveg_grow(8);
-  if (musinfo.current_item > 0)
-    M_CopyLumpName((char*)save_p, lumpinfo[musinfo.current_item].name);
-  else
-    memset(save_p, 0, 8);
-  save_p += 8;
-
-  // save max_kill_requirement
-  saveg_write32(max_kill_requirement);
-
-  // [Nugget] /===============================================================
-
-  // Save milestones
-  saveg_grow(sizeof(complete_milestones));
-  saveg_write_enum(complete_milestones);
-
-  // Save custom-skill settings ----------------------------------------------
-
-  saveg_grow(sizeof(customskill));
-
-  saveg_write32(customskill.things);
-  saveg_write32(customskill.coopspawns);
-  saveg_write32(customskill.nomonsters);
-  saveg_write32(customskill.doubleammo);
-  saveg_write32(customskill.halfplayerdamage);
-  saveg_write32(customskill.slowbrain);
-  saveg_write32(customskill.fast);
-  saveg_write32(customskill.respawn);
-  saveg_write32(customskill.aggromonsters);
-  saveg_write32(customskill.x2monsters);
-
-  saveg_grow(sizeof(initial_loadout));
-
-  saveg_write32(initial_loadout.mohealth);
-  saveg_write32(initial_loadout.health);
-  saveg_write32(initial_loadout.armorpoints);
-  saveg_write32(initial_loadout.armortype);
-  saveg_write32(initial_loadout.backpack);
-  saveg_write_enum(initial_loadout.readyweapon);
-  saveg_write_enum(initial_loadout.lastweapon);
-
-  for (int i = 0;  i < NUMWEAPONS;  i++)
-  { saveg_write32(initial_loadout.weaponowned[i]); }
-
-  for (int i = 0;  i < NUMAMMO;  i++)
-  { saveg_write32(initial_loadout.ammo[i]); }
-
-  for (int i = 0;  i < NUMAMMO;  i++)
-  { saveg_write32(initial_loadout.maxammo[i]); }
-
-  // [Nugget] ===============================================================/
-
-  keyframe_rw = false;
-
-  const int length = save_p - savebuffer;
-
-  if (!keyframe_list_head)
-  {
-    keyframe_list_head =
-    keyframe_list_tail = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
-
-    keyframe_list_tail->prev = NULL;
-  }
-  else
-  {
-    keyframe_list_tail->next = Z_Malloc(sizeof(keyframe_t), PU_STATIC, NULL);
-
-    keyframe_list_tail->next->prev = keyframe_list_tail;
-    keyframe_list_tail = keyframe_list_tail->next;
-  }
-
-  keyframe_list_tail->next = NULL;
-
-  keyframe_list_tail->frame = Z_Malloc(length, PU_STATIC, NULL);
-
-  memcpy(keyframe_list_tail->frame, savebuffer, length);
-
-  keyframe_list_tail->length = length;
-
-  if (rewind_depth == ++keyframe_index)
-  {
-    Z_Free(keyframe_list_head->frame);
-
-    keyframe_list_head = keyframe_list_head->next;
-    Z_Free(keyframe_list_head->prev);
-
-    keyframe_list_head->prev = NULL;
-
-    keyframe_index--;
-  }
-
-  if (rewind_timeout && (rewind_timeout < (I_GetTimeMS() - start_time)))
-  {
-    displaymsg("Slow key-framing: storing stopped");
-    rewind_on = false;
-  }
-
-  G_SetRewindCountdown(rewind_interval * TICRATE);
-
-  Z_Free(savebuffer);
-  savebuffer = save_p = NULL;
-
-  drs_skip_frame = true;
-}
-
-static void G_DoRewind(void)
-{
-  static int last_rewind_time = 0;
-
-  if ((0 <= keyframe_index - 1)
-      && (gametic - last_rewind_time <= 21)) // 0.6 seconds
-  {
-    keyframe_index--;
-
-    Z_Free(keyframe_list_tail->frame);
-
-    keyframe_list_tail = keyframe_list_tail->prev;
-    Z_Free(keyframe_list_tail->next);
-    keyframe_list_tail->next = NULL;
-  }
-
-  last_rewind_time = gametic;
-
-  I_SetFastdemoTimer(false);
-
-  // [crispy] loaded game must always be single player.
-  // Needed for ability to use a further game loading, as well as
-  // cheat codes and other single player only specifics.
-  netdemo = false;
-  netgame = false;
-  solonet = false;
-  deathmatch = false;
-
-  const int oldsavegamesize = savegamesize;
-
-  savegamesize = keyframe_list_tail->length;
-
-  save_p = savebuffer = keyframe_list_tail->frame;
-
-  saveg_compat = saveg_current;
-
-  keyframe_rw = true;
-
-  demo_version = saveg_read8(); // [Nugget] saveg_woof510 < saveg_compat
-
-  // killough 2/14/98: load compatibility mode
-  compatibility = saveg_read8();
-
-  gameskill = saveg_read8();
-  gameepisode = saveg_read8();
-  gamemap = saveg_read8();
-  gamemapinfo = G_LookupMapinfo(gameepisode, gamemap);
-
-  for (int i = 0; i < MAXPLAYERS; i++)
-  {
-      playeringame[i] = saveg_read8();
-  }
-  save_p += MIN_MAXPLAYERS - MAXPLAYERS; // killough 2/28/98
-
-  // jff 3/17/98 restore idmus music
-  // jff 3/18/98 account for unsigned byte
-  // killough 11/98: simplify
-  idmusnum = *(signed char *) save_p++;
-
-  /* cph 2001/05/23 - Must read options before we set up the level */
-  // [Nugget] Removed `temp_p`
-  if (mbf21)
-    G_ReadOptionsMBF21(save_p);
-  else
-    G_ReadOptions(save_p);
-
-  // load a base level
-  G_InitNew(gameskill, gameepisode, gamemap);
-
-  // killough 3/1/98: Read game options
-  // killough 11/98: move down to here
-  /* cph - MBF needs to reread the savegame options because G_InitNew
-   * rereads the WAD options. The demo playback code does this too. */
-  if (mbf21)
-    save_p = G_ReadOptionsMBF21(save_p);
-  else
-    save_p = G_ReadOptions(save_p);
-
-  // get the times
-  // killough 11/98: save entire word
-  // [FG] fix copy size and pointer progression
-  leveltime = saveg_read32();
-
-  // killough 11/98: load revenant tracer state
-  basetic = gametic - (int) *save_p++;
-
-  // dearchive all the modifications
-  P_MapStart();
-  P_UnArchivePlayers();
-  P_UnArchiveWorld();
-  P_UnArchiveThinkers();
-  P_UnArchiveSpecials();
-  P_UnArchiveRNG();    // killough 1/18/98: load RNG information
-  P_UnArchiveMap();    // killough 1/22/98: load automap information
-  P_MapEnd();
-
-  if (saveg_read8() != 0xe6)
-    I_Error("Bad key frame.");
-
-  // [FG] restore total time for all completed levels
-  if (saveg_check_size(sizeof(totalleveltimes)))
-  {
-      totalleveltimes = saveg_read32();
-  }
-
-  // restore MUSINFO music
-  if (saveg_check_size(8))
-  {
-      char lump[9] = {0};
-      for (int i = 0; i < 8; ++i)
-      {
-          lump[i] = saveg_read8();
-      }
-      int lumpnum = W_CheckNumForName(lump);
-
-      if (lump[0] && lumpnum >= 0)
-      {
-          musinfo.mapthing = NULL;
-          musinfo.lastmapthing = NULL;
-          musinfo.tics = 0;
-          musinfo.current_item = lumpnum;
-          musinfo.from_savegame = true;
-          S_ChangeMusInfoMusic(lumpnum, true);
-      }
-  }
-
-  // restore max_kill_requirement
-  if (saveg_check_size(sizeof(max_kill_requirement)))
-  {
-      max_kill_requirement = saveg_read32(); // [Nugget] saveg_compat > saveg_nugget210
-  }
-
-  // [Nugget] /---------------------------------------------------------------
-
-  // Restore milestones
-  if (saveg_check_size(sizeof(complete_milestones)))
-  { complete_milestones = saveg_read_enum(); }
-
-  // Restore custom-skill settings
-  if (saveg_check_size(sizeof(customskill)))
-  {
-      #define READ(x) \
-          if (saveg_check_size(sizeof(x))) \
-              x = saveg_read32()
-
-      READ(customskill.things);
-      READ(customskill.coopspawns);
-      READ(customskill.nomonsters);
-      READ(customskill.doubleammo);
-      READ(customskill.halfplayerdamage);
-      READ(customskill.slowbrain);
-      READ(customskill.fast);
-      READ(customskill.respawn);
-      READ(customskill.aggromonsters);
-      READ(customskill.x2monsters);
-
-      if (gameskill == sk_custom) { G_SetSkillParms(sk_custom); }
-
-      if (saveg_check_size(sizeof(initial_loadout)))
-      {
-          initial_loadout.mohealth    = saveg_read32();
-          initial_loadout.health      = saveg_read32();
-          initial_loadout.armorpoints = saveg_read32();
-          initial_loadout.armortype   = saveg_read32();
-          initial_loadout.backpack    = saveg_read32();
-          initial_loadout.readyweapon = saveg_read_enum();
-          initial_loadout.lastweapon  = saveg_read_enum();
-
-          for (int i = 0;  i < NUMWEAPONS;  i++)
-          { initial_loadout.weaponowned[i] = saveg_read32(); }
-
-          for (int i = 0;  i < NUMAMMO;  i++)
-          { initial_loadout.ammo[i] = saveg_read32(); }
-
-          for (int i = 0;  i < NUMAMMO;  i++)
-          { initial_loadout.maxammo[i] = saveg_read32(); }
-      }
-
-      #undef READ
-  }
-
-  // [Nugget] ---------------------------------------------------------------/
-  
-  keyframe_rw = false;
-
-  savegamesize = oldsavegamesize;
-
-  if (setsizeneeded) { R_ExecuteSetViewSize(); }
-
-  R_FillBackScreen(); // draw the pattern into the back screen
-
-  displaymsg("Restored key frame %i", keyframe_index);
-
-  // This is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
-  G_SetRewindCountdown((rewind_interval * TICRATE) + 1);
-
-  ST_Start();
-}
-
-void G_EnableRewind(void)
-{
-  rewind_on = true;
-}
-
-void G_Rewind(void)
-{
-  if (!casual_play) { return; }
-
-  G_EnableRewind();
-
-  if (0 <= keyframe_index)
-  { gameaction = ga_rewind; }
-  else
-  { displaymsg("No key frame found"); }
-}
-
-void G_ClearExcessKeyFrames(void)
-{
-  while (rewind_depth <= keyframe_index)
-  {
-    Z_Free(keyframe_list_head->frame);
-
-    if (keyframe_list_head->next)
-    {
-      keyframe_list_head = keyframe_list_head->next;
-      Z_Free(keyframe_list_head->prev);
-
-      keyframe_list_head->prev = NULL;
-    }
-    else {
-      Z_Free(keyframe_list_head);
-      keyframe_list_head = keyframe_list_tail = NULL;
-    }
-
-    keyframe_index--;
-  }
-}
-
-boolean G_KeyFrameRW(void)
-{
-  return keyframe_rw;
-}
-
-// [Nugget] -----------------------------------------------------------------/
-
 boolean clean_screenshot;
 
 screenshotpalette_t screenshot_palette; // [Nugget]
@@ -4133,10 +3670,6 @@ void G_Ticker(void)
       case ga_saveautosave:
 	G_DoSaveAutoSave();
 	break;
-      // [Nugget] Rewind
-      case ga_rewind:
-	G_DoRewind();
-	break;
       default:  // killough 9/29/98
 	gameaction = ga_nothing;
 	break;
@@ -4160,19 +3693,6 @@ void G_Ticker(void)
   }
 
   CheckSaveAutoSave();
-
-  // [Nugget] Rewind
-  if (CASUALPLAY(rewind_depth && rewind_on)
-      && gamestate == GS_LEVEL && oldleveltime < leveltime
-      && players[consoleplayer].playerstate != PST_DEAD)
-  {
-    if (--rewind_countdown <= 0)
-    { G_SaveKeyFrame(); }
-  }
-  else if (!CASUALPLAY(rewind_depth) || gamestate != GS_LEVEL)
-  {
-    rewind_countdown = 0;
-  }
 
   // killough 10/6/98: allow games to be saved during demo
   // playback, by the playback user (not by demo itself)
@@ -6316,24 +5836,12 @@ void G_BindGameVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindNum("autosave_interval", &autosave_interval, NULL,
-            0, 0, 600, ss_misc, wad_no,
+            0, 0, 600, ss_gen, wad_no,
             "Interval between periodic auto saves, in seconds (0 = Off)");
 
   M_BindBool("one_key_saveload", &one_key_saveload, NULL,
-             false, ss_misc, wad_no,
+             false, ss_gen, wad_no,
              "One-key quick-saving/loading");
-
-  M_BindNum("rewind_interval", &rewind_interval, NULL,
-            1, 1, 600, ss_misc, wad_no,
-            "Interval between rewind key-frames, in seconds");
-
-  M_BindNum("rewind_depth", &rewind_depth, NULL,
-            60, 0, 3000, ss_misc, wad_no,
-            "Number of rewind key-frames to be stored (0 = No rewinding)");
-
-  M_BindNum("rewind_timeout", &rewind_timeout, NULL,
-            10, 0, 25, ss_misc, wad_no,
-            "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
 }
 
 void G_BindEnemVariables(void)

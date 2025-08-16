@@ -947,7 +947,7 @@ static void F_FancyCastTicker(void)
   {
     oldstate = caststate;
 
-    if (caststate->action.p1 == (actionf_p1) A_RandomJump)
+    if (caststate->action.pm == A_RandomJump)
     {
       if (Woof_Random() < caststate->misc2)
       {

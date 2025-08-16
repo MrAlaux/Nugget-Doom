@@ -555,12 +555,6 @@ static void DoResurrect(void)
   if (plyr->mo)
     plyr->mo->health = god_health;  // Ty 03/09/98 - deh
   plyr->health = god_health;
-
-  // [Nugget] Rewind;
-  // This is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
-  if (leveltime)
-  { G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE))); }
 }
 
 // Resurrection cheat adapted from Crispy's IDDQD
@@ -790,7 +784,7 @@ static void cheat_reveal_keyxx(int key)
   do {
     th = th->next;
 
-    if (th->function.p1 == (actionf_p1) P_MobjThinker)
+    if (th->function.pm == P_MobjThinker)
     {
       mobj_t *mobj = (mobj_t *) th;
 
@@ -1123,7 +1117,7 @@ static void cheat_notarget(void)
     // [crispy] let mobjs forget their target and tracer
     for (thinker_t *th = thinkercap.next;  th != &thinkercap;  th = th->next)
     {
-      if (th->function.p1 == (actionf_p1) P_MobjThinker)
+      if (th->function.pm == P_MobjThinker)
       {
         mobj_t *const mo = (mobj_t *) th;
 

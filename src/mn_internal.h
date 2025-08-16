@@ -111,7 +111,6 @@ void MN_DrawCustomSkill(void);
 
 void MN_DrawView(void);
 void MN_DrawDisplay(void);
-void MN_DrawMisc(void);
 void MN_DrawHUDCol(void);
 void MN_DrawMapKeys(void);
 void MN_DrawCheatKeys(void);

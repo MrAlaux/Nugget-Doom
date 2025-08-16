@@ -33,6 +33,9 @@
 #include "s_sound.h"
 #include "sounds.h"
 
+// [Nugget]
+#include "st_stuff.h"
+
 ///////////////////////////////////////////////////////////////
 //
 // Door action routines, called once per tick
