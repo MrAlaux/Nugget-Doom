@@ -1951,7 +1951,7 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
 
 mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenum)
 {
-  mobj_t *const mobj = Z_Malloc(sizeof(*mobj), PU_LEVEL, NULL);
+  mobj_t *const mobj = arena_alloc(thinkers_arena, 1, mobj_t);
 
   static mobjinfo_t info = {0};
 

@@ -448,7 +448,8 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     // [Nugget] Removed `actualheight`
 
-    // [Nugget]
+    // [Nugget] --------------------------------------------------------------
+
     if (saveg_compat > saveg_nugget330)
     {
       // Alt. sprites
@@ -470,7 +471,7 @@ static void saveg_read_mobj_t(mobj_t *str)
       str->isvisual = false;
     }
 
-    str->tranmap = NULL; // [Nugget]
+    str->tranmap = NULL;
 }
 
 static void saveg_write_mobj_t(mobj_t *str)
@@ -643,15 +644,14 @@ static void saveg_write_mobj_t(mobj_t *str)
 
     // [Nugget] --------------------------------------------------------------
 
-    // [Nugget] Alt. sprites
+    // Alt. sprites
     saveg_write32(str->altsprite); // int altsprite;
     saveg_write32(str->altframe);  // int altframe;
 
-    // [Nugget] Alt. states
+    // Alt. states
     saveg_writep(str->altstate); // altstate_t *altstate;
     saveg_write32(str->alttics); // int        alttics;
 
-    // [Nugget]
     saveg_write32(str->isvisual); // boolean isvisual;
 }
 
@@ -2621,7 +2621,8 @@ void P_UnArchiveThinkers (void)
       P_SetThingPosition (mobj);
 
       // [Nugget]
-      if (mobj->isvisual) {
+      if (mobj->isvisual)
+      {
         static mobjinfo_t info = {0};
         mobj->info = &info;
       }
