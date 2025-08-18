@@ -92,11 +92,23 @@ static int fpslimit; // when uncapped, limit framerate to this value
 static boolean fullscreen;
 static boolean exclusive_fullscreen;
 static boolean change_display_resolution;
-static int widescreen, default_widescreen;
 static boolean vga_porch_flash; // emulate VGA "porch" behaviour
 static boolean smooth_scaling;
 static int video_display = 0; // display index
 static boolean disk_icon; // killough 10/98
+
+typedef enum
+{
+    RATIO_ORIG,
+    RATIO_AUTO,
+    RATIO_16_10,
+    RATIO_16_9,
+    RATIO_21_9,
+    RATIO_32_9,
+    NUM_RATIOS
+} aspect_ratio_mode_t;
+
+static aspect_ratio_mode_t widescreen, default_widescreen;
 
 // [Nugget] /-----------------------------------------------------------------
 
@@ -521,7 +533,7 @@ static void ProcessEvent(SDL_Event *ev)
             break;
 
         case SDL_QUIT:
-            disable_endoom = true;
+            fast_exit = true;
             I_SafeExit(0);
             break;
 
@@ -925,7 +937,7 @@ void I_FinishUpdate(void)
 // I_ReadScreen
 //
 
-void I_ReadScreen(byte *dst)
+void I_ReadScreen(pixel_t *dst)
 {
     V_GetBlock(0, 0, video.width, video.height, dst);
 }
@@ -1083,9 +1095,9 @@ void I_SetPalette(byte *palette)
             ((int) b * color_contrast / 100) + contrast_adjustment
         };
 
-        channels[0] = BETWEEN(0, 255, channels[0]);
-        channels[1] = BETWEEN(0, 255, channels[1]);
-        channels[2] = BETWEEN(0, 255, channels[2]);
+        channels[0] = CLAMP(channels[0], 0, 255);
+        channels[1] = CLAMP(channels[1], 0, 255);
+        channels[2] = CLAMP(channels[2], 0, 255);
 
         // [JN] Saturation floats, high and low.
         // If saturation has been modified (< 100), set high and low
@@ -1180,7 +1192,7 @@ boolean I_WritePNGfile(char *filename)
     // [FG] allocate memory for screenshot image
     int pitch = rect.w * 3;
     int size = rect.h * pitch;
-    byte *pixels = malloc(size);
+    pixel_t *pixels = malloc(size);
 
     SDL_RenderReadPixels(renderer, &rect, SDL_PIXELFORMAT_RGB24, pixels, pitch);
 
@@ -1344,7 +1356,7 @@ static double CurrentAspectRatio(void)
 
     double aspect_ratio = (double)w / (double)h;
 
-    aspect_ratio = BETWEEN(ASPECT_RATIO_MIN, ASPECT_RATIO_MAX, aspect_ratio);
+    aspect_ratio = CLAMP(aspect_ratio, ASPECT_RATIO_MIN, ASPECT_RATIO_MAX);
 
     return aspect_ratio;
 }
@@ -1389,7 +1401,8 @@ static void ResetResolution(int height, boolean reset_pitch)
         AM_ResetScreenSize();
     }
 
-    I_Printf(VB_DEBUG, "ResetResolution: %dx%d", video.width, video.height);
+    I_Printf(VB_DEBUG, "ResetResolution: %dx%d (%s)", video.width, video.height,
+             widescreen_strings[widescreen]);
 
     drs_skip_frame = true;
 }
@@ -1870,7 +1883,7 @@ static int GetCurrentVideoHeight(void)
     }
 
     current_video_height =
-        BETWEEN(SCREENHEIGHT, max_height_adjusted, current_video_height);
+        CLAMP(current_video_height, SCREENHEIGHT, max_height_adjusted);
 
     return current_video_height;
 }
@@ -1965,6 +1978,13 @@ void I_ResetScreen(void)
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
+
+    static aspect_ratio_mode_t oldwidescreen;
+    if (oldwidescreen != widescreen)
+    {
+        MN_UpdateWideShiftItem(true);
+        oldwidescreen = widescreen;
+    }
 }
 
 void I_ShutdownGraphics(void)
@@ -1982,6 +2002,18 @@ void I_ShutdownGraphics(void)
     }
 
     UpdateGrab();
+
+    SDL_FreeSurface(argbbuffer);
+    SDL_FreeSurface(screenbuffer);
+    SDL_DestroyTexture(texture_upscaled);
+    SDL_DestroyTexture(texture);
+
+    if (!D_AllowEndDoom())
+    {
+        // ENDOOM will be skipped, so destroy the renderer and window now.
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(screen);
+    }
 }
 
 void I_InitGraphics(void)
@@ -1998,6 +2030,8 @@ void I_InitGraphics(void)
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
+
+    MN_UpdateWideShiftItem(false);
 
     // Mouse motion is based on SDL_GetRelativeMouseState() values only.
     SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);

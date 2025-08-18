@@ -557,7 +557,7 @@ static boolean UpdateAnimation(void)
 
                 case Frame_RandomDuration:
                     tics = M_Random() % frame->maxduration;
-                    tics = BETWEEN(frame->duration, frame->maxduration, tics);
+                    tics = CLAMP(tics, frame->duration, frame->maxduration);
                     break;
 
                 default:
@@ -755,7 +755,8 @@ void WI_slamBackground(void)
 
     const char *name = WI_getBackgroundName(); // [Nugget] Factored out
 
-    V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
+    V_DrawPatchFullScreen(
+      V_CachePatchName(W_CheckWidescreenPatch(name), PU_CACHE));
 }
 
 // ====================================================================
@@ -1658,7 +1659,7 @@ static void WI_updateDeathmatchStats(void)
 
             if (NextLocAnimation())
               WI_initShowNextLoc();
-            if ( gamemode == commercial)
+            else if (gamemode == commercial)
               WI_initNoState();
             else
               WI_initShowNextLoc();
@@ -1969,7 +1970,7 @@ static void WI_updateNetgameStats(void)
 
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
-                  if ( gamemode == commercial )
+                  else if (gamemode == commercial)
                     WI_initNoState();
                   else
                     WI_initShowNextLoc();

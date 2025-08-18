@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "d_player.h"
 #include "i_system.h"
 #include "m_io.h"
 #include "m_config.h"

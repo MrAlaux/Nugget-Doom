@@ -496,7 +496,7 @@ static void ParseStandardProperty(scanner_t *s, mapentry_t *mape)
         {
             mape->flags &= ~MapInfo_BossActionClear;
             int type, special, tag;
-            for (type = 0; arrlen(actor_names); ++type)
+            for (type = 0; type < arrlen(actor_names); ++type)
             {
                 if (!strcasecmp(SC_GetString(s), actor_names[type]))
                 {
@@ -516,7 +516,9 @@ static void ParseStandardProperty(scanner_t *s, mapentry_t *mape)
             tag = SC_GetNumber(s);
             // allow no 0-tag specials here, unless a level exit.
             if (tag != 0 || special == 11 || special == 51 || special == 52
-                || special == 124)
+                || special == 124 || special == 2069 || special == 2070
+                || special == 2071 || special == 2072 || special == 2073
+                || special == 2074)
             {
                 bossaction_t bossaction = {type, special, tag};
                 array_push(mape->bossactions, bossaction);
@@ -583,12 +585,12 @@ void G_ParseMapInfo(int lumpnum)
             else if (!strcasecmp(parsed.mapname, "E1M8"))
             {
                 parsed.flags |= MapInfo_EndGameArt;
-                strcpy(parsed.endpic, gamemode == retail ? "CREDIT" : "HELP2");
+                M_CopyLumpName(parsed.endpic, gamemode == retail && !pwad_help2 ? "CREDIT" : "HELP2");
             }
             else if (!strcasecmp(parsed.mapname, "E2M8"))
             {
                 parsed.flags |= MapInfo_EndGameArt;
-                strcpy(parsed.endpic, "VICTORY2");
+                M_CopyLumpName(parsed.endpic, "VICTORY2");
             }
             else if (!strcasecmp(parsed.mapname, "E3M8"))
             {
@@ -597,14 +599,14 @@ void G_ParseMapInfo(int lumpnum)
             else if (!strcasecmp(parsed.mapname, "E4M8"))
             {
                 parsed.flags |= MapInfo_EndGameArt;
-                strcpy(parsed.endpic, "ENDPIC");
+                M_CopyLumpName(parsed.endpic, "ENDPIC");
             }
             else
             {
                 int ep, map;
                 if (G_ValidateMapName(parsed.mapname, &ep, &map))
                 {
-                    strcpy(parsed.nextmap, MapName(ep, map + 1));
+                    M_CopyLumpName(parsed.nextmap, MapName(ep, map + 1));
                 }
             }
         }
@@ -670,7 +672,7 @@ boolean G_ValidateMapName(const char *mapname, int *episode, int *map)
         {
             return false;
         }
-        strcpy(lumpname, MapName(e, m));
+        M_CopyLumpName(lumpname, MapName(e, m));
     }
     else
     {
@@ -678,7 +680,7 @@ boolean G_ValidateMapName(const char *mapname, int *episode, int *map)
         {
             return false;
         }
-        strcpy(lumpname, MapName(e = 1, m));
+        M_CopyLumpName(lumpname, MapName(e = 1, m));
     }
 
     if (episode)

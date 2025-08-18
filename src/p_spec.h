@@ -22,6 +22,7 @@
 #include "d_think.h"
 #include "doomdef.h"
 #include "doomtype.h"
+#include "m_arena.h"
 #include "m_fixed.h"
 
 struct line_s;
@@ -614,7 +615,7 @@ typedef struct platlist {
 
 // p_ceilng
 
-typedef struct
+typedef struct vldoor_s
 {
   thinker_t thinker;
   vldoor_e type;
@@ -671,7 +672,7 @@ typedef struct ceilinglist {
 
 // p_floor
 
-typedef struct
+typedef struct floormove_s
 {
   thinker_t thinker;
   floor_e type;
@@ -685,7 +686,7 @@ typedef struct
   fixed_t speed;
 } floormove_t;
 
-typedef struct
+typedef struct elevator_s
 {
   thinker_t thinker;
   elevator_e type;
@@ -764,8 +765,10 @@ extern  int levelTimeCount;
 extern button_t buttonlist[MAXBUTTONS];
 
 extern platlist_t *activeplats;        // killough 2/14/98
+extern struct arena_s *activeplats_arena;
 
 extern ceilinglist_t *activeceilings;  // jff 2/22/98
+extern struct arena_s *activeceilings_arena;
 
 ////////////////////////////////////////////////////////////////
 //
@@ -947,6 +950,11 @@ int EV_DoGenDoor(struct line_s *line);
 
 int EV_DoGenLockedDoor(struct line_s *line);
 
+// misc
+
+void EV_ChangeMusic(struct line_s *line, int side);
+void EV_RotateOffsetFlat(struct line_s *line, struct sector_s *sector);
+
 ////////////////////////////////////////////////////////////////
 //
 // Linedef and sector special thinker spawning
@@ -968,7 +976,7 @@ void P_UpdateSpecials(void);
 boolean P_UseSpecialLine(struct mobj_s *thing, struct line_s *line, int side,
                          boolean bossaction);
 
-void P_ShootSpecialLine(struct mobj_s *thing, struct line_s *line);
+void P_ShootSpecialLine(struct mobj_s *thing, struct line_s *line, int side);
 
 void P_CrossSpecialLine(struct line_s *, int side, struct mobj_s *thing,
                         boolean bossaction); // killough 11/98
