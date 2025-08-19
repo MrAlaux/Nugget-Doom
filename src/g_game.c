@@ -3422,9 +3422,7 @@ static boolean DoLoadGame(boolean do_load_autosave)
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
 
   // [Nugget] Rewind:
-  // Just like with `G_DoRewind`,
-  // this is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
+  // This is called before the countdown decrement in `G_Ticker()`, so add 1 to keep it aligned
   G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
 
   if (setsizeneeded)
@@ -3865,9 +3863,7 @@ static void G_DoRewind(void)
 
   displaymsg("Restored key frame %i", keyframe_index);
 
-  // This is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
-  G_SetRewindCountdown((rewind_interval * TICRATE) + 1);
+  G_SetRewindCountdown(rewind_interval * TICRATE);
 
   ST_Start();
 }
