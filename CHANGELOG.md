@@ -4,7 +4,7 @@ None.
 
 ## Changes
 
-None.
+- **Reduced sensitivity of _Vertical Target Lock-on_**
 
 ## Bug Fixes
 

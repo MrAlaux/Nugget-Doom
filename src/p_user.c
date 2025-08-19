@@ -819,27 +819,26 @@ void P_PlayerThink (player_t* player)
         overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
       }
 
-      if (linetarget) { lock_time = 21; } // 0.6s
-
       fixed_t target_pitch = 0;
 
-      if (lock_time)
+      if (linetarget)
       {
-        if (linetarget)
-        {
-          fixed_t slope = FixedDiv(linetarget->z - player->mo->z,
-                                   P_AproxDistance(player->mo->x - linetarget->x,
-                                                   player->mo->y - linetarget->y));
+        lock_time = TICRATE * 3/5; // 0.6s
 
-          slope = BETWEEN(P_GetLinetargetBottomSlope(),
-                          P_GetLinetargetTopSlope(),
-                          slope);
+        fixed_t slope = FixedDiv(linetarget->z - player->mo->z,
+                                 P_AproxDistance(player->mo->x - linetarget->x,
+                                                 player->mo->y - linetarget->y));
 
-          target_pitch = P_SlopeToPitch(slope);
-          target_pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, target_pitch);
-        }
-        else { target_pitch = player->pitch; }
+        slope = BETWEEN(P_GetLinetargetBottomSlope(),
+                        P_GetLinetargetTopSlope(),
+                        slope);
+
+        target_pitch = P_SlopeToPitch(slope);
+        target_pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, target_pitch);
       }
+      else if (lock_time) { target_pitch = player->pitch; }
+
+      if (abs(target_pitch) < 8*ANG1) { target_pitch = 0; }
 
       const fixed_t step = MAX(ANG1, abs(player->pitch - target_pitch) / 4);
 
