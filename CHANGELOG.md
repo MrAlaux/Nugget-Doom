@@ -12,6 +12,7 @@ None.
   - Removed `no_page_ticking` in favor of Woof's `menu_pause_demos`
   - Removed `quick_quitgame` in favor of Woof's `quit_prompt`
 - **Improved sky stretching**
+- **Reduced sensitivity of _Vertical Target Lock-on_**
 
 ## Bug Fixes
 
