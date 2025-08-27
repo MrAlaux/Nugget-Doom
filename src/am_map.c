@@ -735,8 +735,8 @@ static void AM_initScreenSize(void)
   {
     int x = mm_x + video.deltaw;
 
-    x += (abs(mm_ws) == 2) ? video.deltaw                  * (mm_ws / 2)
-       : (abs(mm_ws) == 1) ? video.deltaw * ST_GetLayout() *  mm_ws
+    x += (abs(mm_ws) == 2) ? video.deltaw      * (mm_ws / 2)
+       : (abs(mm_ws) == 1) ? ST_GetWideShift() *  mm_ws
        :                     0;
 
     f_x = V_ScaleX(x);
@@ -858,10 +858,10 @@ void AM_Start()
 
   static int last_automap = -1,
              last_messages = -1,
-             last_layout = -1;
+             last_wide_shift = -1;
 
   const int messages_height = ST_GetNumMessageLines();
-  const boolean layout = ST_GetLayout();
+  const boolean wide_shift = ST_GetWideShift();
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -870,7 +870,7 @@ void AM_Start()
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode
       || last_automap != automapactive || last_messages != messages_height
-      || last_layout != layout)
+      || last_wide_shift != wide_shift)
   {
     AM_LevelInit();
 
@@ -881,7 +881,7 @@ void AM_Start()
     lastepisode = gameepisode;
     last_automap = automapactive;
     last_messages = messages_height;
-    last_layout = layout;
+    last_wide_shift = wide_shift;
   }
   else
   {
@@ -1497,7 +1497,7 @@ static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   int h = f_h;
-  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
   while (h--)
   {
     memset(src, color, f_w);
@@ -1758,7 +1758,7 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 
   // [Nugget] ---------------------------------------------------------------/
 
-   byte *dest = &I_VideoBuffer[y * video.pitch + x];
+   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;

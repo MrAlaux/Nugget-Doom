@@ -34,6 +34,7 @@
 #include "m_config.h"
 #include "m_input.h"
 #include "m_misc.h"
+#include "mn_menu.h"
 #include "p_mobj.h"
 #include "p_spec.h"
 #include "r_main.h"
@@ -405,7 +406,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
     }
 }
 
-static char announce_string[HU_MAXLINELENGTH];
+static char announce_string[HU_MAXLINELENGTH], author_string[HU_MAXLINELENGTH];
 
 static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
 {
@@ -435,6 +436,7 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
     }
     else if (player->secretmessage)
     {
+        author_string[0] = '\0';
         state = announce_secret;
         widget->duration_left = widget->duration;
         M_snprintf(string, sizeof(string), GOLD_S "%s" ORIG_S,
@@ -445,6 +447,10 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
     if (widget->duration_left > 0)
     {
         ST_AddLine(widget, string);
+        if (author_string[0])
+        {
+            ST_AddLine(widget, author_string);
+        }
         --widget->duration_left;
 
         // [Nugget] Message fadeout
@@ -922,16 +928,23 @@ void ST_ResetTitle(void)
                '0' + hudcolor_titl, string);
 
     announce_string[0] = '\0';
+    author_string[0] = '\0';
     if (hud_map_announce && leveltime == 0)
     {
         if (gamemapinfo && gamemapinfo->author)
         {
             M_snprintf(announce_string, sizeof(announce_string), "%s by %s",
                        string, gamemapinfo->author);
+            if (MN_StringWidth(announce_string) > SCREENWIDTH) 
+            {
+                M_StringCopy(announce_string, string, sizeof(announce_string));
+                M_snprintf(author_string, sizeof(author_string), "by %s",
+                           gamemapinfo->author);
+            }
         }
         else
         {
-            M_snprintf(announce_string, sizeof(announce_string), "%s", string);
+            M_StringCopy(announce_string, string, sizeof(announce_string));
         }
     }
 }
@@ -1150,7 +1163,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
 
     // [Nugget] -------------------------------------------------------------/
 
-    char kill_str[16], item_str[16], secret_str[16];
+    char kill_str[80], item_str[80], secret_str[80];
 
     statsformatfunc_t StatsFormatFunc = StatsFormatFuncs[
         // [Nugget]
@@ -1162,7 +1175,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
     StatsFormatFunc(item_str, sizeof(item_str), fullitemcount, totalitems);
     StatsFormatFunc(secret_str, sizeof(secret_str), fullsecretcount, totalsecret);
 
-    static char kill_str2[24], item_str2[24], secret_str2[24];
+    static char kill_str2[80], item_str2[80], secret_str2[80];
 
     memset(kill_str2,   0, sizeof(kill_str2));
     memset(item_str2,   0, sizeof(item_str2));
@@ -1218,7 +1231,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
               string + offset, sizeof(string) - offset, "%s", secret_str2
             );
         }
-  
+
         ST_AddLine(widget, string);
     }
     else
@@ -1285,7 +1298,7 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
 {
     ST_ClearLines(widget);
 
-    if (!WidgetEnabled(hud_level_time))
+    if (!WidgetEnabled(hud_level_time) && !player->btuse_tics)
     {
         return;
     }
@@ -1296,37 +1309,34 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
 
     int offset = 0;
 
-    // [Nugget] Colors
-
-    if (time_scale != 100)
+    if (WidgetEnabled(hud_level_time))
     {
-        offset +=
-            M_snprintf(string, sizeof(string), "\x1b%c%d%% ",
-                       '0'+hudcolor_time_scale, time_scale);
+        // [Nugget] Colors
+
+        if (time_scale != 100)
+        {
+            offset +=
+                M_snprintf(string, sizeof(string), "\x1b%c%d%% ",
+                           '0'+hudcolor_time_scale, time_scale);
+        }
+
+        if (levelTimer == true)
+        {
+            const int time = levelTimeCount / TICRATE;
+
+            offset += M_snprintf(string + offset, sizeof(string) - offset,
+                                 BROWN_S "%d:%02d ", time / 60, time % 60);
+        }
+        else if (totalleveltimes)
+        {
+            const int time = (totalleveltimes + leveltime) / TICRATE;
+
+            offset += M_snprintf(string + offset, sizeof(string) - offset,
+                                 "\x1b%c%d:%02d ", '0'+hudcolor_total_time, time / 60, time % 60);
+        }
     }
 
-    if (levelTimer == true)
-    {
-        const int time = levelTimeCount / TICRATE;
-
-        offset += M_snprintf(string + offset, sizeof(string) - offset,
-                             BROWN_S "%d:%02d ", time / 60, time % 60);
-    }
-    else if (totalleveltimes)
-    {
-        const int time = (totalleveltimes + leveltime) / TICRATE;
-
-        offset += M_snprintf(string + offset, sizeof(string) - offset,
-                             "\x1b%c%d:%02d ", '0'+hudcolor_total_time, time / 60, time % 60);
-    }
-
-    if (!player->btuse_tics)
-    {
-        M_snprintf(string + offset, sizeof(string) - offset,
-                   "\x1b%c%d:%05.2f\t", '0'+hudcolor_time, leveltime / TICRATE / 60,
-                   (float)(leveltime % (60 * TICRATE)) / TICRATE);
-    }
-    else
+    if (player->btuse_tics)
     {
         const int type = player->eventtype;
 
@@ -1337,7 +1347,12 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
                    type == TIMER_KEYPICKUP ? 'K' : type == TIMER_TELEPORT ? 'T' : 'U',
                    player->btuse / TICRATE / 60, 
                    (float)(player->btuse % (60 * TICRATE)) / TICRATE);
-        player->btuse_tics--;
+    }
+    else
+    {
+        M_snprintf(string + offset, sizeof(string) - offset,
+                   "\x1b%c%d:%05.2f\t", '0'+hudcolor_time, leveltime / TICRATE / 60,
+                   (float)(leveltime % (60 * TICRATE)) / TICRATE);
     }
 
     ST_AddLine(widget, string);
@@ -1401,9 +1416,9 @@ static void UpdateSpeed(sbe_widget_t *widget, player_t *player)
     static const char *units[] = {"ups", "km/h", "mph"};
     const int type = speedometer - 1;
     const mobj_t *mo = player->mo;
-    const double dx = FIXED2DOUBLE(mo->x - mo->oldx);
-    const double dy = FIXED2DOUBLE(mo->y - mo->oldy);
-    const double dz = FIXED2DOUBLE(mo->z - mo->oldz);
+    const double dx = FixedToDouble(mo->x - mo->oldx);
+    const double dy = FixedToDouble(mo->y - mo->oldy);
+    const double dz = FixedToDouble(mo->z - mo->oldz);
     const double speed = sqrt(dx * dx + dy * dy + dz * dz) * factor[type];
 
     static char string[60];
