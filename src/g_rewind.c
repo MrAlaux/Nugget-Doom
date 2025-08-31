@@ -18,6 +18,10 @@
 #include "i_timer.h"
 #include "m_config.h"
 
+// [Nugget]
+#include "r_main.h"
+#include "st_stuff.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -190,6 +194,21 @@ void G_LoadAutoKeyframe(void)
         G_ClearInput();
         break;
     }
+
+    // [Nugget] --------------------------------------------------------------
+
+    // Slow Motion
+    G_ResetSlowMotion();
+
+    // Clear visual effects
+    R_ClearFOVFX();
+    R_ClearShake();
+
+    // Freecam
+    R_UpdateFreecamMobj(NULL);
+
+    // Animated health/armor counts
+    ST_Start();
 }
 
 void G_ResetRewind(void)
