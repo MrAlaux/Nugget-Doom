@@ -1545,8 +1545,13 @@ static void ResetStatusBar(void)
 static boolean draw_shadow = false; // [Nugget] HUD/menu shadows
 
 // [Nugget] Extended to accept two colorings
-static void DrawPatchEx(int x, int y, int maxheight, sbaralignment_t alignment,
-                        patch_t *patch, crange_idx_e cr, crange_idx_e cr2, byte *tl)
+
+#define DrawPatch(x, y, c, mh, a, p, cr, tl) \
+  DrawPatchEx(x, y, c, mh, a, p, cr, CR_NONE, tl)
+
+static void DrawPatchEx(int x, int y, crop_t crop, int maxheight,
+                        sbaralignment_t alignment, patch_t *patch,
+                        crange_idx_e cr, crange_idx_e cr2, byte *tl)
 {
     if (!patch)
     {
@@ -1559,6 +1564,10 @@ static void DrawPatchEx(int x, int y, int maxheight, sbaralignment_t alignment,
     if (alignment & sbe_h_middle)
     {
         x = x - width / 2 + SHORT(patch->leftoffset);
+        if (crop.midoffset)
+        {
+            x += width / 2 + crop.midoffset;
+        }
     }
     else if (alignment & sbe_h_right)
     {
@@ -1599,39 +1608,35 @@ static void DrawPatchEx(int x, int y, int maxheight, sbaralignment_t alignment,
     {
         if (tl)
         {
-            V_DrawPatchTRTRTLSH(x, y, patch, outr, outr2, tl);
+            V_DrawPatchTRTRTLSH(x, y, crop, patch, outr, outr2, tl);
         }
         else
         {
-            V_DrawPatchTRTRSH(x, y, patch, outr, outr2);
+            V_DrawPatchTRTRSH(x, y, crop, patch, outr, outr2);
         }
     }
     else if (outr || outr2)
     {
         if (tl)
         {
-            V_DrawPatchTRTLSH(x, y, patch, outr2 ? outr2 : outr, tl);
+            V_DrawPatchTRTLSH(x, y, crop, patch, outr2 ? outr2 : outr, tl);
         }
         else
         {
-            V_DrawPatchTranslatedSH(x, y, patch, outr2 ? outr2 : outr);
+            V_DrawPatchTRSH(x, y, crop, patch, outr2 ? outr2 : outr);
         }
     }
     else if (tl)
     {
-        V_DrawPatchTLSH(x, y, patch, tl);
+        V_DrawPatchTLSH(x, y, crop, patch, tl);
     }
     else
     {
-        V_DrawPatchTranslatedSH(x, y, patch, outr2 ? outr2 : outr);
+        V_DrawPatchTRSH(x, y, crop, patch, outr2 ? outr2 : outr);
     }
 
     V_ToggleShadows(true);
 }
-
-// [Nugget]
-#define DrawPatch(x, y, mh, a, p, cr, tl) \
-  DrawPatchEx(x, y, mh, a, p, cr, CR_NONE, tl)
 
 static void DrawGlyphNumber(int x, int y, sbarelem_t *elem, patch_t *glyph)
 {
@@ -1662,8 +1667,9 @@ static void DrawGlyphNumber(int x, int y, sbarelem_t *elem, patch_t *glyph)
 
     if (glyph)
     {
-        DrawPatch(x + number->xoffset, y, font->maxheight, elem->alignment,
-                  glyph, elem->crboom == CR_NONE ? elem->cr : elem->crboom,
+        DrawPatch(x + number->xoffset, y, (crop_t){0}, font->maxheight,
+                  elem->alignment, glyph,
+                  elem->crboom == CR_NONE ? elem->cr : elem->crboom,
                   elem->tranmap);
     }
 
@@ -1717,8 +1723,8 @@ static void DrawGlyphLine(int x, int y, sbarelem_t *elem, widgetline_t *line,
                          : elem->tranmap;
 
         // [Nugget] Message flash
-        DrawPatchEx(x + line->xoffset, y, font->maxheight, elem->alignment, glyph,
-                    elem->cr, line->flash ? CR_BRIGHT : CR_NONE, tl);
+        DrawPatchEx(x + line->xoffset, y, (crop_t){0}, font->maxheight,
+                    elem->alignment, glyph, elem->cr, line->flash ? CR_BRIGHT : CR_NONE, tl);
     }
 
     if (elem->alignment & sbe_h_middle)
@@ -1864,14 +1870,15 @@ static void DrawElem(int x, int y, sbarelem_t *elem, player_t *player)
         case sbe_graphic:
             {
                 sbe_graphic_t *graphic = elem->subtype.graphic;
-                DrawPatch(x, y, 0, elem->alignment, graphic->patch, elem->cr,
-                          elem->tranmap);
+                DrawPatch(x, y, graphic->crop, 0, elem->alignment,
+                          graphic->patch, elem->cr, elem->tranmap);
             }
             break;
 
         case sbe_facebackground:
             {
-                DrawPatch(x, y, 0, elem->alignment,
+                sbe_facebackground_t *facebackground = elem->subtype.facebackground;
+                DrawPatch(x, y, facebackground->crop, 0, elem->alignment,
                           facebackpatches[displayplayer], elem->cr,
                           elem->tranmap);
             }
@@ -1880,7 +1887,7 @@ static void DrawElem(int x, int y, sbarelem_t *elem, player_t *player)
         case sbe_face:
             {
                 sbe_face_t *face = elem->subtype.face;
-                DrawPatch(x, y, 0, elem->alignment,
+                DrawPatch(x, y, face->crop, 0, elem->alignment,
                           facepatches[face->faceindex], elem->cr,
                           elem->tranmap);
             }
@@ -1891,8 +1898,8 @@ static void DrawElem(int x, int y, sbarelem_t *elem, player_t *player)
                 sbe_animation_t *animation = elem->subtype.animation;
                 patch_t *patch =
                     animation->frames[animation->frame_index].patch;
-                DrawPatch(x, y, 0, elem->alignment, patch, elem->cr,
-                          elem->tranmap);
+                DrawPatch(x, y, (crop_t){0}, 0, elem->alignment, patch,
+                          elem->cr, elem->tranmap);
             }
             break;
 
@@ -3886,7 +3893,7 @@ void ST_BindSTSVariables(void)
              "Replace second-to-last HUD with NUGHUD");
 
   M_BindNum("st_wide_shift", &st_wide_shift,
-            NULL, 40, 0, UL, ss_stat, wad_no, "HUD widescreen shift");
+            NULL, -1, -1, UL, ss_stat, wad_no, "HUD widescreen shift (-1 = Default)");
   M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
              false, ss_stat, wad_yes, "Colored numbers on the status bar");
   M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,

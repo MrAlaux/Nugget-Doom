@@ -113,8 +113,8 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
       // Modified handling.
       // Call action functions when the state is set
 
-      if (st->action.pm)
-	st->action.pm(mobj);
+      if (st->action.p1)
+	st->action.p1(mobj);
 
       seenstate[state] = 1 + st->nextstate;   // killough 4/9/98
 
@@ -843,7 +843,7 @@ void P_MobjThinker (mobj_t* mobj)
     {
       P_XYMovement(mobj);
       mobj->intflags &= ~MIF_SCROLLING;
-      if (mobj->thinker.function.pm == P_RemoveMobjThinkerDelayed) // killough
+      if (mobj->thinker.function.p1 == P_RemoveMobjThinkerDelayed) // killough
 	return;       // mobj was removed
 
       oucheck = true; // [Nugget] Over/Under
@@ -882,7 +882,7 @@ void P_MobjThinker (mobj_t* mobj)
       else
         P_ZMovement(mobj);
 
-      if (mobj->thinker.function.pm == P_RemoveMobjThinkerDelayed) // killough
+      if (mobj->thinker.function.p1 == P_RemoveMobjThinkerDelayed) // killough
 	return;       // mobj was removed
 
       oucheck = true; // [Nugget] Over/Under
@@ -949,7 +949,7 @@ void P_MobjThinker (mobj_t* mobj)
       P_DamageMobj(mobj, NULL, NULL, 10000);
 
       // must have been removed
-      if (mobj->thinker.function.pm != P_MobjThinker)
+      if (mobj->thinker.function.p1 != P_MobjThinker)
         return;
     }
   }
@@ -1006,7 +1006,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   mobj->health = info->spawnhealth;
 
-  if (gameskill != sk_nightmare && !aggromonsters) // [Nugget] Custom skill
+  if (gameskill != sk_nightmare && !aggromonsters)
     mobj->reactiontime = info->reactiontime;
 
   if (type != zmt_ambientsound)
@@ -1047,7 +1047,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->oldz = mobj->z;
   mobj->oldangle = mobj->angle;
 
-  mobj->thinker.function.pm = P_MobjThinker;
+  mobj->thinker.function.p1 = P_MobjThinker;
   mobj->above_thing = mobj->below_thing = 0;           // phares
 
   // for Boom friction code
@@ -1064,18 +1064,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   // [Nugget] Removed `actualheight`
 
-  // [Nugget] /---------------------------------------------------------------
-
+  // [Nugget]
   mobj->altsprite = mobj->altframe = -1; // Alt. sprites
-
-  // Alt. states
-  mobj->altstate = NULL;
-  mobj->alttics  = -1; 
-
-  mobj->isvisual = false;
-  mobj->tranmap = NULL;
-
-  // [Nugget] ---------------------------------------------------------------/
+  mobj->alttics = -1; // Alt. states
 
   P_AddThinker(&mobj->thinker);
 
@@ -1943,7 +1934,14 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
     mobj->altsprite = state->sprite;
     mobj->altframe = state->frame;
 
-    if (statenum == AS_TRAIL2) { mobj->flags |= MF_TRANSLUCENT; }
+    if (state->gentranmap_pct > 0)
+    {
+      mobj->gentranmap = R_GetGenericTranMap(state->gentranmap_pct);
+    }
+    else if (state->gentranmap_pct == -1)
+    {
+      mobj->gentranmap = NULL;
+    }
 
     statenum = state->nextstate;
   } while (!mobj->alttics);
@@ -1989,7 +1987,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 
   mobj->friction = ORIG_FRICTION;
 
-  mobj->thinker.function.pm = P_MobjThinker;
+  mobj->thinker.function.p1 = P_MobjThinker;
   P_AddThinker(&mobj->thinker);
 
   return mobj;
@@ -2039,7 +2037,7 @@ void P_RunFlakers(void)
 
     flake->flags |= MF_NOGRAVITY|MF_TRANSLUCENT;
     flake->intflags |= MIF_FLAKE;
-    flake->tranmap = R_GetGenericTranMap(40);
+    flake->gentranmap = R_GetGenericTranMap(40);
 
     const fixed_t momz = FRACUNIT + (dist / 3000);
 

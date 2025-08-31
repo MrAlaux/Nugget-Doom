@@ -44,6 +44,7 @@ set(NUGGETDOOM_SOURCES
     i_main.c
     i_mbfsound.c
     i_midimusic.c
+    i_minimp3.c
                            i_oalcommon.h
     i_oalequalizer.c       i_oalequalizer.h
     i_oalmusic.c
@@ -186,20 +187,22 @@ endif()
 
 target_link_libraries(
     nugget-doom
-    PRIVATE ${SDL2_LIBRARIES}
+    PRIVATE SDL3::SDL3
             OpenAL::OpenAL
             libebur128::libebur128
             SndFile::sndfile
             yyjson::yyjson
-            opl
-            textscreen
+            pffft::pffft
+            miniz::miniz
             netlib
-            pffft
-            miniz
+            md5
             spng
             sha1
-            md5
+            opl
+            textscreen
 )
+
+target_include_directories(nugget-doom PRIVATE "${MINIMP3_INCLUDE_DIRS}/minimp3")
 
 # Some platforms require standard libraries to be linked against.
 if(HAVE_LIBM)
@@ -211,9 +214,7 @@ if(HAVE_AL_BUFFER_CALLBACK)
 endif()
 
 if(WIN32)
-    target_include_directories(nugget-doom PRIVATE "../win32")
     target_link_libraries(nugget-doom PRIVATE winmm shlwapi)
-    target_sources(nugget-doom PRIVATE ../win32/win_opendir.c ../win32/win_opendir.h)
 endif()
 
 if(APPLE)
@@ -225,17 +226,17 @@ if(APPLE)
     )
 endif()
 
-if(ALSA_FOUND)
+if(HAVE_ALSA)
     target_include_directories(nugget-doom PRIVATE ${ALSA_INCLUDE_DIR})
     target_link_libraries(nugget-doom PRIVATE ALSA::ALSA)
 endif()
 
-if(FluidSynth_FOUND)
+if(HAVE_FLUIDSYNTH)
     target_sources(nugget-doom PRIVATE i_flmusic.c)
     target_link_libraries(nugget-doom PRIVATE FluidSynth::libfluidsynth)
 endif()
 
-if(libxmp_FOUND)
+if(HAVE_LIBXMP)
     target_sources(nugget-doom PRIVATE i_xmp.c)
     target_link_libraries(nugget-doom PRIVATE libxmp::xmp)
 endif()
@@ -285,7 +286,7 @@ target_nuggetdoom_settings(nugget-doom-setup)
 target_include_directories(nugget-doom-setup PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../")
 target_link_libraries(
   nugget-doom-setup
-  PRIVATE ${SDL2_LIBRARIES}
+  PRIVATE SDL3::SDL3
           textscreen
           setup
           netlib

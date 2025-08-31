@@ -1026,7 +1026,7 @@ void S_SetSfxVolume(int volume)
 
 static extra_music_t extra_music;
 
-static int current_musicnum = -1;
+int current_musicnum = -1;
 
 void S_ChangeMusic(int musicnum, int looping)
 {
@@ -1236,6 +1236,9 @@ void S_Start(void)
         return;
     }
 
+    // [crispy] reset musinfo data at the start of a new map
+    memset(&musinfo, 0, sizeof(musinfo));
+
     // start new music for the level
     mus_paused = 0;
 
@@ -1268,9 +1271,6 @@ void S_Start(void)
                           mus_runnin - mus_e1m1);
         }
     }
-
-    // [crispy] reset musinfo data at the start of a new map
-    memset(&musinfo, 0, sizeof(musinfo));
 
     S_ChangeMusic(mnum, true);
 }

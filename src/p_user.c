@@ -71,10 +71,6 @@ void P_SetFlinch(player_t *const player, int pitch)
 
 // [Nugget] =================================================================/
 
-// Index of the special effects (INVUL inverse) map.
-
-#define INVERSECOLORMAP 32
-
 //
 // Movement.
 //

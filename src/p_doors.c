@@ -52,7 +52,7 @@
 // jff 02/08/98 all cases with labels beginning with gen added to support
 // generalized line type behaviors.
 
-void T_VerticalDoor (vldoor_t *door)
+static void T_VerticalDoor(vldoor_t *door)
 {
   result_e  res;
 
@@ -239,6 +239,11 @@ void T_VerticalDoor (vldoor_t *door)
     }
 }
 
+void T_VerticalDoorAdapter(mobj_t *mobj)
+{
+    T_VerticalDoor((vldoor_t *)mobj);
+}
+
 ///////////////////////////////////////////////////////////////
 //
 // Door linedef handlers
@@ -334,7 +339,7 @@ int EV_DoDoor(line_t *line, vldoor_e type)
       P_AddThinker(&door->thinker);
       sec->ceilingdata = door; //jff 2/22/98
 
-      door->thinker.function.pt = (actionf_pt)T_VerticalDoor;
+      door->thinker.function.p1 = T_VerticalDoorAdapter;
       door->sector = sec;
       door->type = type;
       door->topwait = VDOORWAIT;
@@ -504,7 +509,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
      * mess up non-T_VerticalDoor actions.
      */
     if (demo_version < DV_MBF21
-        || door->thinker.function.pt == (actionf_pt)T_VerticalDoor)
+        || door->thinker.function.p1 == T_VerticalDoorAdapter)
     {
       /* cph - we are writing outval to door->direction iff it is non-zero */
       signed int outval = 0;
@@ -513,7 +518,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
        * monster is trying to open a closing door - so change direction
        * DEMOSYNC: we only read door->direction now if it really is a door.
        */
-      if (door->thinker.function.pt == (actionf_pt)T_VerticalDoor
+      if (door->thinker.function.p1 == T_VerticalDoorAdapter
           && door->direction == -1)
       {
         outval = 1; /* go back up */
@@ -544,11 +549,11 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
        */
       if (outval)
       {
-        if (door->thinker.function.pt == (actionf_pt)T_VerticalDoor)
+        if (door->thinker.function.p1 == T_VerticalDoorAdapter)
         {
           door->direction = outval;
         }
-        else if (door->thinker.function.pt == (actionf_pt)T_PlatRaise)
+        else if (door->thinker.function.p1 == T_PlatRaiseAdapter)
         {
           plat_t *p = (plat_t *)door;
           p->wait = outval;
@@ -590,7 +595,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
   door = arena_alloc(thinkers_arena, 1, vldoor_t);
   P_AddThinker (&door->thinker);
   sec->ceilingdata = door; //jff 2/22/98
-  door->thinker.function.pt = (actionf_pt)T_VerticalDoor;
+  door->thinker.function.p1 = T_VerticalDoorAdapter;
   door->sector = sec;
   door->direction = 1;
   door->speed = VDOORSPEED;
@@ -664,7 +669,7 @@ void P_SpawnDoorCloseIn30 (sector_t* sec)
   sec->ceilingdata = door; //jff 2/22/98
   sec->special = 0;
 
-  door->thinker.function.pt = (actionf_pt)T_VerticalDoor;
+  door->thinker.function.p1 = T_VerticalDoorAdapter;
   door->sector = sec;
   door->direction = 0;
   door->type = doorNormal;
@@ -694,7 +699,7 @@ void P_SpawnDoorRaiseIn5Mins(sector_t *sec, int secnum)
   sec->ceilingdata = door; //jff 2/22/98
   sec->special = 0;
 
-  door->thinker.function.pt = (actionf_pt)T_VerticalDoor;
+  door->thinker.function.p1 = T_VerticalDoorAdapter;
   door->sector = sec;
   door->direction = 2;
   door->type = raiseIn5Mins;

@@ -197,15 +197,15 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     if (cr && elem->tranmap)
     {
-        V_DrawPatchTRTLSH(x, y, patch, cr, elem->tranmap);
+        V_DrawPatchTRTLSH(x, y, (crop_t){0}, patch, cr, elem->tranmap);
     }
     else if (elem->tranmap)
     {
-        V_DrawPatchTLSH(x, y, patch, elem->tranmap);
+        V_DrawPatchTLSH(x, y, (crop_t){0}, patch, elem->tranmap);
     }
     else
     {
-        V_DrawPatchTranslatedSH(x, y, patch, cr);
+        V_DrawPatchTRSH(x, y, (crop_t){0}, patch, cr);
     }
 }
 
