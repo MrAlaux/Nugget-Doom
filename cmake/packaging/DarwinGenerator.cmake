@@ -4,22 +4,22 @@ file(MAKE_DIRECTORY ${packaged_dir})
 
 file(
     COPY_FILE
-    ${staging_dir}/${CPACK_BIN_DIR}/woof
-    ${packaged_dir}/woof
+    ${staging_dir}/${CPACK_BIN_DIR}/nugget-doom
+    ${packaged_dir}/nugget-doom
 )
 file(
     COPY_FILE
-    ${staging_dir}/${CPACK_BIN_DIR}/woof-setup
-    ${packaged_dir}/woof-setup
+    ${staging_dir}/${CPACK_BIN_DIR}/nugget-doom-setup
+    ${packaged_dir}/nugget-doom-setup
 )
 
 file(
     COPY_FILE
-    ${staging_dir}/share/woof/woof.pk3
-    ${packaged_dir}/woof.pk3
+    ${staging_dir}/share/nugget-doom/nugget-doom.pk3
+    ${packaged_dir}/nugget-doom.pk3
 )
 file(
-    COPY ${staging_dir}/share/woof/soundfonts
+    COPY ${staging_dir}/share/nugget-doom/soundfonts
     DESTINATION ${packaged_dir}
 )
 
@@ -28,7 +28,7 @@ file(
     "${packaged_dir}/Troubleshooting.txt"
     CONTENT
     "If you are getting errors like 'libzip.5.5.dylib cant be opened because Apple cannot check it for malicious software.'\n"
-    "Run the following command in the woof folder:\n\n"
+    "Run the following command in the nugget-doom folder:\n\n"
     "xattr -dr com.apple.quarantine path/to/folder\n"
 )
 

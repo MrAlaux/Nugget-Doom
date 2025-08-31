@@ -1068,7 +1068,7 @@ static boolean P_LookForAnyTargets(mobj_t *const actor, const boolean force)
 
   while ((currentthinker = currentthinker->next) != &thinkercap)
   {
-    if (currentthinker->function.pm == P_MobjThinker)
+    if (currentthinker->function.p1 == P_MobjThinker)
     {
       mobj_t *const mo = (mobj_t *) currentthinker;
 

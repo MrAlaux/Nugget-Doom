@@ -784,7 +784,7 @@ static void cheat_reveal_keyxx(int key)
   do {
     th = th->next;
 
-    if (th->function.pm == P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
     {
       mobj_t *mobj = (mobj_t *) th;
 
@@ -1117,7 +1117,7 @@ static void cheat_notarget(void)
     // [crispy] let mobjs forget their target and tracer
     for (thinker_t *th = thinkercap.next;  th != &thinkercap;  th = th->next)
     {
-      if (th->function.pm == P_MobjThinker)
+      if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *const mo = (mobj_t *) th;
 

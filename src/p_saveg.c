@@ -471,7 +471,7 @@ static void saveg_read_mobj_t(mobj_t *str)
       str->isvisual = false;
     }
 
-    str->tranmap = NULL;
+    str->gentranmap = NULL;
 }
 
 static void saveg_write_mobj_t(mobj_t *str)

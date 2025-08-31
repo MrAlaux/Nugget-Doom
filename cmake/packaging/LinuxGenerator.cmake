@@ -32,7 +32,7 @@ execute_process(
         LINUXDEPLOY_OUTPUT_VERSION=${CPACK_PACKAGE_VERSION} NO_STRIP=1
         ${LINUXDEPLOY_EXECUTABLE} --appimage-extract-and-run
         --appdir=${CPACK_TEMPORARY_DIRECTORY}
-        --executable=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/${CPACK_BIN_DIR}/woof
-        --desktop-file=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/applications/io.github.fabiangreffrath.woof.desktop
-        --icon-file=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps/woof.png
+        --executable=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/${CPACK_BIN_DIR}/nugget-doom
+        --desktop-file=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/applications/io.github.MrAlaux.Nugget-Doom.desktop
+        --icon-file=${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps/nugget-doom.png
         --output=appimage)

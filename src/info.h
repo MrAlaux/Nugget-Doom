@@ -1581,6 +1581,7 @@ typedef struct {
   int            frame;
   int            tics;
   altstatenum_t  nextstate;
+  signed char    gentranmap_pct;
 } altstate_t;
 
 extern altstate_t altstates[NUMALTSTATES];

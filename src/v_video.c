@@ -870,7 +870,7 @@ void V_DrawPatchTRTR(int x, int y, crop_t crop, patch_t *patch,
 
 // [Nugget] /-----------------------------------------------------------------
 
-void V_DrawPatchTRTRTL(int x, int y, struct patch_s *patch,
+void V_DrawPatchTRTRTL(int x, int y, crop_t crop, struct patch_s *patch,
                        byte *outr1, byte *outr2, byte *tl)
 {
     x += video.deltaw;
@@ -880,10 +880,10 @@ void V_DrawPatchTRTRTL(int x, int y, struct patch_s *patch,
     tranmap = tl;
     drawcolfunc = DrawPatchColumnTRTRTL;
 
-    DrawPatchInternal(x, y, patch, false);
+    DrawPatchInternal(x, y, crop, patch, false);
 }
 
-void V_DrawPatchTranslucent2(int x, int y, struct patch_s *patch, boolean flipped,
+void V_DrawPatchTranslucent2(int x, int y, crop_t crop, struct patch_s *patch, boolean flipped,
                              byte *outr1, byte *outr2, byte *tmap)
 {
     x += video.deltaw;
@@ -900,10 +900,10 @@ void V_DrawPatchTranslucent2(int x, int y, struct patch_s *patch, boolean flippe
     drawcolfunc = DrawPatchColumnTranslucent2;
     tranmap = tmap;
 
-    DrawPatchInternal(x, y, patch, flipped);
+    DrawPatchInternal(x, y, crop, patch, flipped);
 }
 
-void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
+void V_DrawPatchShadowed(int x, int y, crop_t crop, struct patch_s *patch, boolean flipped,
                          byte *outr1, byte *outr2, byte *tmap)
 {
     if (hud_menu_shadows && drawshadows)
@@ -911,7 +911,7 @@ void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
       drawingshadow = true;
 
       V_DrawPatchTranslucent2(
-        x + 1, y + 1, patch, flipped, cr_allblack, NULL, shadow_tranmap
+        x + 1, y + 1, crop, patch, flipped, cr_allblack, NULL, shadow_tranmap
       );
 
       drawingshadow = false;
@@ -921,11 +921,11 @@ void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
     {
       if (tmap)
       {
-        V_DrawPatchTRTRTL(x, y, patch, outr1, outr2, tmap);
+        V_DrawPatchTRTRTL(x, y, crop, patch, outr1, outr2, tmap);
       }
       else
       {
-        V_DrawPatchTRTR(x, y, patch, outr1, outr2);
+        V_DrawPatchTRTR(x, y, crop, patch, outr1, outr2);
       }
     }
     else if (outr1 || outr2)
@@ -934,16 +934,16 @@ void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
 
       if (tmap)
       {
-        V_DrawPatchTRTL(x, y, patch, outr, tmap);
+        V_DrawPatchTRTL(x, y, crop, patch, outr, tmap);
       }
       else
       {
-        V_DrawPatchTranslated(x, y, patch, outr);
+        V_DrawPatchTR(x, y, crop, patch, outr);
       }
     }
     else if (tmap)
     {
-      V_DrawPatchTL(x, y, patch, tmap);
+      V_DrawPatchTL(x, y, crop, patch, tmap);
     }
     else if (flipped)
     {

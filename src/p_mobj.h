@@ -408,7 +408,7 @@ typedef struct mobj_s
     int                 alttics;
 
     boolean             isvisual;
-    byte                *tranmap;
+    byte                *gentranmap;
 } mobj_t;
 
 // External declarations (fomerly in p_local.h) -- killough 5/2/98
