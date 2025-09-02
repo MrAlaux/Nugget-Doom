@@ -152,13 +152,16 @@ boolean R_SpriteShadowsOn(void)
   return sprite_shadows_on;
 }
 
-int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y)
-{
+int R_GetLightLevelInPoint(
+  const fixed_t x,
+  const fixed_t y,
+  const boolean force_mbf
+) {
   int lightlevel;
 
   sector_t *const sector = R_PointInSubsector(x, y)->sector;
 
-  if (demo_version > DV_BOOM)
+  if (demo_version > DV_BOOM || force_mbf)
   {
     sector_t tempsector;
     int floorlightlevel, ceilinglightlevel;

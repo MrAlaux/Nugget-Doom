@@ -170,7 +170,7 @@ extern boolean have_crouch_sprites;
 
 fixed_t R_GetNughudViewPitch(void);
 boolean R_SpriteShadowsOn(void);
-int R_GetLightLevelInPoint(const fixed_t x, const fixed_t y);
+int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
 
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)

@@ -26,6 +26,9 @@
 
 // [Nugget] /=================================================================
 
+// Thing lighting
+int R_CalculateHitboxLightNum(fixed_t x, fixed_t y, fixed_t radius, boolean force_mbf);
+
 typedef struct actualspriteheight_s
 {
   int lump;

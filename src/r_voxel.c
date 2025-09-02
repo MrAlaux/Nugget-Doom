@@ -722,17 +722,8 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 		// [Nugget] Thing lighting
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
 		{
-			int lightlevel = 0;
-
-			for (int i = 0;  i < 9;  i++)
-			{
-				const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
-											gy = vis->gy + (thing->radius * ((i / 3) - 1));
-
-				lightlevel += R_GetLightLevelInPoint(gx, gy);
-			}
-
-			int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
+			const int lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
+			                   + extralight;
 
 			spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
 		}
@@ -888,7 +879,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-		int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
+		int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
 								 + extralight;
 
 		const int lightindex = STRICTMODE(!diminishing_lighting)
@@ -1132,7 +1123,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-		int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
+		int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
 								 + extralight;
 
 		const int lightindex = STRICTMODE(!diminishing_lighting)
@@ -1395,6 +1386,9 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
 
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
   { thing.flags |= MF_SHADOW; }
+
+  // Thing lighting: use the player's radius
+  thing.radius = players[displayplayer].mo->radius;
 
   // Albeit unused, `R_ProjectVoxel()` accesses `heightsec`
   sector_t sector = {0};

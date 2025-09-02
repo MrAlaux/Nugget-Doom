@@ -53,6 +53,37 @@
 #include "st_stuff.h"
 #include "wi_stuff.h"
 
+// [Nugget] Thing lighting
+int R_CalculateHitboxLightNum(
+  const fixed_t x,
+  const fixed_t y,
+  const fixed_t radius,
+  const boolean force_mbf
+) {
+  int lightlevel = 0;
+
+  for (int i = 0;  i < 9;  i++)
+  {
+    fixed_t gx, gy;
+
+    if (i < 8)
+    {
+      const int fineangle = ((angle_t) ANG45 * i) >> ANGLETOFINESHIFT;
+
+      gx = x + FixedMul(radius, finecosine[fineangle]);
+      gy = y + FixedMul(radius,   finesine[fineangle]);
+    }
+    else {
+      gx = x;
+      gy = y;
+    }
+
+    lightlevel += R_GetLightLevelInPoint(gx, gy, force_mbf);
+  }
+
+  return (lightlevel / 9) >> LIGHTSEGSHIFT;
+}
+
 #define MINZ        (FRACUNIT*4)
 #define MAXZ        (FRACUNIT*8192)
 #define BASEYCENTER 100
@@ -598,7 +629,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum = (R_GetLightLevelInPoint(gx, gy) >> LIGHTSEGSHIFT)
+        int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
                      + extralight;
 
         dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][pcl_lightindex];
@@ -858,17 +889,8 @@ static void R_ProjectSprite (mobj_t* thing)
       // [Nugget] Thing lighting
       if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
       {
-        int lightlevel = 0;
-
-        for (int i = 0;  i < 9;  i++)
-        {
-          const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
-                        gy = vis->gy + (thing->radius * ((i / 3) - 1));
-
-          lightlevel += R_GetLightLevelInPoint(gx, gy);
-        }
-
-        int lightnum = ((lightlevel / 9) >> LIGHTSEGSHIFT) + extralight;
+        const int lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
+                           + extralight;
 
         spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
       }
@@ -1277,21 +1299,8 @@ void R_DrawPlayerSprites(void)
   // [Nugget] Thing lighting
   if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
   {
-    int lightlevel = 0;
-
-    for (int i = 0;  i < 9;  i++)
-    {
-      const fixed_t gx = viewx + (viewplayer->mo->radius * ((i % 3) - 1)),
-                    gy = viewy + (viewplayer->mo->radius * ((i / 3) - 1));
-
-      sector_t *const sector = R_PointInSubsector(gx, gy)->sector;
-
-      R_FakeFlat(sector, &tmpsec, &floorlightlevel, &ceilinglightlevel, 0);
-
-      lightlevel += floorlightlevel + ceilinglightlevel;
-    }
-
-    lightnum = ((lightlevel / 9) >> (LIGHTSEGSHIFT+1)) + extralight;
+    lightnum = R_CalculateHitboxLightNum(viewx, viewy, viewplayer->mo->radius, true)
+             + extralight;
   }
   else
   {
