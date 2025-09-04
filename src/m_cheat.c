@@ -156,7 +156,8 @@ static void cheat_resurrect(void);
 static void cheat_fly(void);
 static void cheat_normalexit(void); // Emulate normal level exit
 static void cheat_secretexit(void); // Emulate secret level exit
-static void cheat_turbo(char *buf);
+static void cheat_turbo(void);
+static void cheat_turbox(char *buf);
 
 // Summon a mobj
 static void cheat_summon(void);
@@ -184,6 +185,7 @@ static void cheat_boomcan(void);     // Explosive hitscan
 
 static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
 static void cheat_dimlight(void);
+static void cheat_fovsky(void);
 static void cheat_castcall(void);
 
 static void cheat_cheese(void);
@@ -430,7 +432,8 @@ struct cheat_s cheat[] = {
   {"idfly",      NULL, not_net | not_demo, {.v = cheat_fly}            },
   {"nextmap",    NULL, not_net | not_demo, {.v = cheat_normalexit}     },
   {"nextsecret", NULL, not_net | not_demo, {.v = cheat_secretexit}     },
-  {"turbo",      NULL, not_net | not_demo, {.s = cheat_turbo},      -3 },
+  {"turbo",      NULL, not_net | not_demo, {.v = cheat_turbo},         },
+  {"turbo",      NULL, not_net | not_demo, {.s = cheat_turbox},     -3 },
 
   {"summon",  NULL, not_net | not_demo, {.v = cheat_summon}      }, // Summon "Menu"
   {"summone", NULL, not_net | not_demo, {.v = cheat_summone0}    }, // Summon Enemy "Menu"
@@ -459,6 +462,7 @@ struct cheat_s cheat[] = {
 
   {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
   {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
+  {"fovsky",     NULL, not_net | not_demo, {.v = cheat_fovsky}   },
   {"castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
 
   {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
@@ -599,9 +603,14 @@ static void cheat_secretexit(void)
   G_SecretExitLevel();
 }
 
-static void cheat_turbo(char *buf)
+static void cheat_turbo(void)
 {
-  int scale = 200;
+  displaymsg("Turbo: Enter speed scale");
+}
+
+static void cheat_turbox(char *buf)
+{
+  int scale;
 
   if (!isdigit(buf[0]) || !isdigit(buf[1]) || !isdigit(buf[2]))
   {
@@ -609,17 +618,20 @@ static void cheat_turbo(char *buf)
     return;
   }
 
-  scale = (buf[0]-'0')*100 + (buf[1]-'0')*10 + buf[2]-'0';
+  scale = (buf[0] - '0') * 100
+        + (buf[1] - '0') * 10
+        + (buf[2] - '0');
 
   // Limit the scale; it gets kinda wonky at 255 already,
   // but going any further outright inverts movement
   scale = BETWEEN(10, 255, scale);
 
-  displaymsg("Turbo Scale: %i%%", scale);
   forwardmove[0] = 0x19 * scale / 100;
   forwardmove[1] = 0x32 * scale / 100;
      sidemove[0] = 0x18 * scale / 100;
      sidemove[1] = 0x28 * scale / 100;
+
+  displaymsg("Turbo Scale: %i%%", scale);
 }
 
 // Summoning -----------------------------------------------------------------
@@ -953,6 +965,16 @@ static void cheat_dimlight(void)
 
   diminishing_lighting = !diminishing_lighting;
   displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
+}
+
+static void cheat_fovsky(void)
+{
+  if (!nugget_devmode) { return; }
+
+  extern boolean fov_stretchsky;
+
+  fov_stretchsky = !fov_stretchsky;
+  displaymsg("FOV Stretching %s", fov_stretchsky ? "ON" : "OFF");
 }
 
 static void cheat_castcall(void)

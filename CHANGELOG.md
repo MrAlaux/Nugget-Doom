@@ -1,11 +1,12 @@
 ## New Features
 
-None.
+- `FOVSKY` developer cheat
 
 ## Changes
 
 - **Improved _Hitbox Thing Lighting_**
 - **Reduced sensitivity of _Vertical Target Lock-on_**
+- **Made `TURBO` cheat display a help message**
 
 ## Bug Fixes
 
