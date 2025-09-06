@@ -463,12 +463,7 @@ static void DrawSkyTex(visplane_t *pl, sky_t *sky, skytex_t *skytex)
     // [Nugget] Reworked sky stretching
     if ((stretchsky || fov_stretchsky) && sky->stretchable && side)
     {
-        R_StretchSky(
-            dc_texturemid,
-            textureheight[texture],
-            &dc_texturemid,
-            &dc_iscale
-        );
+        R_StretchSky(skytex, &dc_texturemid, &dc_iscale);
     }
 
     angle_t an = viewangle + deltax;

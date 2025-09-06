@@ -207,10 +207,17 @@ void R_UpdateSkies(void)
 }
 
 // [Nugget] Reworked sky stretching
-void R_StretchSky(fixed_t orig_skymid, fixed_t skyheight,
-                  fixed_t *const skymid_p, fixed_t *const skyscaley_p)
+void R_StretchSky(skytex_t *const skytex, fixed_t *const skymid_p, fixed_t *const skyscaley_p)
 {
-    fixed_t skymid = orig_skymid;
+    const fixed_t skyheight = FixedDiv(textureheight[skytex->texture], skytex->orig_scaley);
+
+    if (skyheight < 100<<FRACBITS)
+    {
+        // Assume the sky is supposed to loop visibly
+        return;
+    }
+
+    fixed_t skymid = skytex->orig_mid;
 
     if (skymid > 0) { skymid = (skymid - skyheight) % skyheight; }
 
@@ -253,12 +260,7 @@ static void StretchSky(sky_t *sky)
 
     if (stretchsky || fov_stretchsky)
     {
-        R_StretchSky(
-            sky->background.orig_mid,
-            textureheight[sky->background.texture],
-            &sky->background.mid,
-            &sky->background.scaley
-        );
+        R_StretchSky(&sky->background, &sky->background.mid, &sky->background.scaley);
     }
 }
 
