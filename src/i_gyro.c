@@ -85,6 +85,10 @@ typedef enum
     ACTION_DISABLE,
     ACTION_ENABLE,
     ACTION_INVERT,
+    ACTION_RESET,
+    ACTION_RESET_DISABLE,
+    ACTION_RESET_ENABLE,
+    ACTION_RESET_INVERT,
 } action_t;
 
 static boolean gyro_enable;
@@ -104,6 +108,11 @@ static fixed_t gyro_calibration_a;
 static fixed_t gyro_calibration_x;
 static fixed_t gyro_calibration_y;
 static fixed_t gyro_calibration_z;
+
+#define GYRO_TICS 7 // 200 ms
+static boolean gyro_tap;
+static boolean gyro_press;
+static int gyro_time;
 
 float gyro_axes[NUM_GYRO_AXES];
 
@@ -209,10 +218,10 @@ static void PostProcessCalibration(void)
     }
 
     motion.accel_magnitude = cal.accel_sum / cal.accel_count;
-    motion.accel_magnitude = BETWEEN(0.0f, 2.0f, motion.accel_magnitude);
+    motion.accel_magnitude = CLAMP(motion.accel_magnitude, 0.0f, 2.0f);
 
     motion.gyro_offset = vec_scale(cal.gyro_sum, 1.0f / cal.gyro_count);
-    motion.gyro_offset = vec_clamp(-1.0f, 1.0f, motion.gyro_offset);
+    motion.gyro_offset = vec_clamp(motion.gyro_offset, -1.0f, 1.0f);
 
     SaveCalibration();
 
@@ -278,6 +287,53 @@ void I_SetStickMoving(boolean condition)
     motion.stick_moving = condition;
 }
 
+static void ResetCameraPress(void)
+{
+    if (M_InputGameActive(input_gyro))
+    {
+        if (!gyro_press)
+        {
+            players[consoleplayer].centering = true;
+            gyro_press = true;
+        }
+    }
+    else
+    {
+        gyro_press = false;
+    }
+}
+
+static void ResetCameraTap(void)
+{
+    if (M_InputGameActive(input_gyro))
+    {
+        if (!gyro_tap && !gyro_press)
+        {
+            gyro_time = I_GetTime();
+            gyro_tap = true;
+            gyro_press = true;
+        }
+        else if (gyro_tap && gyro_press && I_GetTime() - gyro_time > GYRO_TICS)
+        {
+            gyro_tap = false;
+        }
+    }
+    else
+    {
+        gyro_press = false;
+
+        if (gyro_tap)
+        {
+            if (I_GetTime() - gyro_time <= GYRO_TICS)
+            {
+                players[consoleplayer].centering = true;
+            }
+
+            gyro_tap = false;
+        }
+    }
+}
+
 static boolean GyroActive(void)
 {
     // Camera stick action has priority over gyro button action.
@@ -304,6 +360,22 @@ static boolean GyroActive(void)
         case ACTION_ENABLE:
             return M_InputGameActive(input_gyro);
 
+        case ACTION_RESET_DISABLE:
+            ResetCameraTap();
+            return !M_InputGameActive(input_gyro);
+
+        case ACTION_RESET_ENABLE:
+            ResetCameraTap();
+            return M_InputGameActive(input_gyro);
+
+        case ACTION_RESET:
+            ResetCameraPress();
+            break;
+
+        case ACTION_RESET_INVERT:
+            ResetCameraTap();
+            break;
+
         default:
             break;
     }
@@ -321,7 +393,7 @@ void I_CalcGyroAxes(boolean strafe)
     {
         gyro_axes[GYRO_TURN] = !strafe ? RAD2TIC(gyro_axes[GYRO_TURN]) : 0.0f;
 
-        if (padlook)
+        if (freelook)
         {
             gyro_axes[GYRO_LOOK] = RAD2TIC(gyro_axes[GYRO_LOOK]);
 
@@ -335,7 +407,8 @@ void I_CalcGyroAxes(boolean strafe)
             gyro_axes[GYRO_LOOK] = 0.0f;
         }
 
-        if (motion.button_action == ACTION_INVERT
+        if ((motion.button_action == ACTION_INVERT
+             || motion.button_action == ACTION_RESET_INVERT)
             && M_InputGameActive(input_gyro))
         {
             gyro_axes[GYRO_TURN] = -gyro_axes[GYRO_TURN];
@@ -372,7 +445,7 @@ static void AccelerateGyro_Full(void)
     else
     {
         accel = magnitude / denom;
-        accel = BETWEEN(0.0f, 1.0f, accel);
+        accel = CLAMP(accel, 0.0f, 1.0f);
     }
     const float no_accel = (1.0f - accel);
 
@@ -410,9 +483,9 @@ static void GetSmoothedGyro(float smooth_factor, float *smooth_pitch,
     motion.yaw_samples[motion.index] = motion.gyro.y * smooth_factor;
 
     const float delta_time =
-        BETWEEN(1.0e-6f, motion.smooth_time, motion.delta_time);
+        CLAMP(motion.delta_time, 1.0e-6f, motion.smooth_time);
     int max_samples = lroundf((float)motion.smooth_time / delta_time);
-    max_samples = BETWEEN(1, NUM_SAMPLES, max_samples);
+    max_samples = CLAMP(max_samples, 1, NUM_SAMPLES);
 
     *smooth_pitch = motion.pitch_samples[motion.index] / max_samples;
     *smooth_yaw = motion.yaw_samples[motion.index] / max_samples;
@@ -436,7 +509,7 @@ static float GetRawFactorGyro(float magnitude)
     else
     {
         const float raw_factor = (magnitude - motion.lower_smooth) / denom;
-        return BETWEEN(0.0f, 1.0f, raw_factor);
+        return CLAMP(raw_factor, 0.0f, 1.0f);
     }
 }
 
@@ -467,7 +540,7 @@ static float raw[2];
 void I_GetRawGyroScaleMenu(float *scale, float *limit)
 {
     const float deg_per_sec = LENGTH_F(raw[0], raw[1]) * 180.0f / PI_F;
-    *scale = BETWEEN(0.0f, 50.0f, deg_per_sec) / 50.0f;
+    *scale = CLAMP(deg_per_sec, 0.0f, 50.0f) / 50.0f;
     *limit = gyro_smooth_threshold / 500.0f;
 }
 
@@ -566,7 +639,7 @@ static void CalcGravityVector_Full(void)
     // Calculate correction rate.
     float still_or_shaky = (motion.shakiness - SHAKINESS_MIN_THRESH)
                            / (SHAKINESS_MAX_THRESH - SHAKINESS_MIN_THRESH);
-    still_or_shaky = BETWEEN(0.0f, 1.0f, still_or_shaky);
+    still_or_shaky = CLAMP(still_or_shaky, 0.0f, 1.0f);
     float correction_rate =
         COR_STILL_RATE + (COR_SHAKY_RATE - COR_STILL_RATE) * still_or_shaky;
 
@@ -578,7 +651,7 @@ static void CalcGravityVector_Full(void)
         const float gravity_delta_magnitude = vec_length(gravity_delta);
         float close_factor = (gravity_delta_magnitude - COR_GYRO_MIN_THRESH)
                              / (COR_GYRO_MAX_THRESH - COR_GYRO_MIN_THRESH);
-        close_factor = BETWEEN(0.0f, 1.0f, close_factor);
+        close_factor = CLAMP(close_factor, 0.0f, 1.0f);
         correction_rate = correction_limit
                           + (correction_rate - correction_limit) * close_factor;
     }
@@ -606,7 +679,7 @@ static float GetDeltaTime(void)
     const uint64_t current_time = I_GetTimeUS();
     float delta_time = (current_time - motion.last_time) * 1.0e-6f;
     motion.last_time = current_time;
-    return BETWEEN(0.0f, 0.05f, delta_time);
+    return CLAMP(delta_time, 0.0f, 0.05f);
 }
 
 //
@@ -682,6 +755,9 @@ void I_ResetGyro(void)
     motion.index = 0;
     memset(motion.pitch_samples, 0, sizeof(motion.pitch_samples));
     memset(motion.yaw_samples, 0, sizeof(motion.yaw_samples));
+    gyro_tap = false;
+    gyro_press = false;
+    gyro_time = 0;
 }
 
 void I_UpdateGyroSteadying(void)
@@ -745,9 +821,10 @@ void I_BindGyroVaribales(void)
         ROLL_ON, ROLL_OFF, ROLL_INVERT,
         "Local gyro space uses roll (0 = Off; 1 = On; 2 = Invert)");
     BIND_NUM_GYRO(gyro_button_action,
-        ACTION_ENABLE, ACTION_NONE, ACTION_INVERT,
+        ACTION_ENABLE, ACTION_NONE, ACTION_RESET_INVERT,
         "Gyro button action (0 = None; 1 = Disable Gyro; 2 = Enable Gyro; "
-        "3 = Invert)");
+        "3 = Invert Gyro; 4 = Reset Camera; 5 = Reset / Disable Gyro; "
+        "6 = Reset / Enable Gyro; 7 = Reset / Invert Gyro)");
     BIND_NUM_GYRO(gyro_stick_action,
         ACTION_NONE, ACTION_NONE, ACTION_ENABLE,
         "Camera stick action (0 = None; 1 = Disable Gyro; 2 = Enable Gyro)");

@@ -35,8 +35,6 @@ struct mobj_s;
 // POV related.
 //
 
-#define MAX_PITCH_ANGLE (32 * ANG1)
-
 extern fixed_t  viewcos;
 extern fixed_t  viewsin;
 extern int      viewwindowx;
@@ -79,9 +77,18 @@ extern int MAXLIGHTZ;
 extern int LIGHTZSHIFT;
 
 // killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
-extern lighttable_t **(*scalelight);
-extern lighttable_t **(*zlight);
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
+
+// updated thanks to Rum-and-Raisin Doom, Ethan Watson
+extern int* scalelightoffset;
+extern int* scalelightindex;
+extern int* zlightoffset;
+extern int* zlightindex;
+extern int* planezlightoffset;
+extern int  planezlightindex;
+extern int* walllightoffset;
+extern int  walllightindex;
+
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
 extern boolean setsmoothlight;
@@ -89,6 +96,7 @@ void R_SmoothLight(void);
 
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
+extern int           fixedcolormapindex;
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
@@ -170,7 +178,14 @@ extern boolean have_crouch_sprites;
 
 fixed_t R_GetNughudViewPitch(void);
 boolean R_SpriteShadowsOn(void);
-int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
+
+void R_GetLightLevelAndTintInPoint(
+  fixed_t x,
+  fixed_t y,
+  boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
+);
 
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
@@ -271,16 +286,16 @@ inline static angle_t LerpAngle(angle_t oangle, angle_t nangle)
     else if (nangle > oangle)
     {
         if (nangle - oangle < ANG270)
-            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle + (angle_t)((nangle - oangle) * FixedToDouble(fractionaltic));
         else // Wrapped around
-            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle - (angle_t)((oangle - nangle) * FixedToDouble(fractionaltic));
     }
     else // nangle < oangle
     {
         if (oangle - nangle < ANG270)
-            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle - (angle_t)((oangle - nangle) * FixedToDouble(fractionaltic));
         else // Wrapped around
-            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle + (angle_t)((nangle - oangle) * FixedToDouble(fractionaltic));
     }
 }
 

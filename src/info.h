@@ -24,6 +24,7 @@
 
 // Needed for action function pointer handling.
 #include "d_think.h"
+#include "doomtype.h"
 
 #define MAXSTATEARGS 8
 
@@ -1261,6 +1262,7 @@ typedef struct
   statenum_t  nextstate;    // linked list pointer to next state or zero
   long        misc1, misc2; // used for psprite positioning
   long        args[MAXSTATEARGS]; // [XA] mbf21 args
+  byte       *tranmap; // ID24
   int         flags;
 } state_t;
 
@@ -1519,6 +1521,7 @@ typedef struct
     int meleerange;
 
     // [Woof!]
+    int flags_extra;  // Woof!-exclusive extension
     int bloodcolor;   // [FG] colored blood and gibs
     // DEHEXTRA
     mobjtype_t droppeditem; // mobj to drop after death
@@ -1539,11 +1542,16 @@ extern int num_sprites;
 extern mobjinfo_t* mobjinfo;
 extern int num_mobj_types;
 
-extern char *altsprnames[]; // [Nugget] Alt. sprites
+// ZDoom
+#define ZMT_UNDEFINED -2
+extern int zmt_ambientsound;
 
 // [Nugget] ==================================================================
 
-// Alt. sprites
+// Alt. sprites --------------------------------------------------------------
+
+extern char *altsprnames[];
+
 typedef enum {
   ASPR_NULL = -1,
 
@@ -1573,10 +1581,11 @@ typedef struct {
   int            frame;
   int            tics;
   altstatenum_t  nextstate;
+  signed char    gentranmap_pct;
 } altstate_t;
 
 extern altstate_t altstates[NUMALTSTATES];
-  
+
 #endif
 
 //----------------------------------------------------------------------------

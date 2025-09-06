@@ -31,12 +31,15 @@
 #include "i_printf.h"
 #include "i_system.h"
 #include "info.h"
+#include "m_arena.h"
 #include "m_argv.h"
 #include "m_bbox.h"
+#include "m_misc.h"
 #include "m_swap.h"
 #include "nano_bsp.h"
 #include "p_enemy.h"
 #include "p_extnodes.h"
+#include "p_keyframe.h"
 #include "p_map.h"
 #include "p_maputl.h"
 #include "p_mobj.h"
@@ -45,6 +48,7 @@
 #include "p_tick.h"
 #include "r_data.h"
 #include "r_defs.h"
+#include "r_sky.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "r_things.h"
@@ -97,14 +101,15 @@ side_t   *sides;
 int       bmapwidth, bmapheight;  // size in mapblocks
 
 // killough 3/1/98: remove blockmap limit internally:
-long      *blockmap;              // was short -- killough
+int32_t      *blockmap;           // was short -- killough
 
 // offsets in blockmap are from here
-long      *blockmaplump;          // was short -- killough
+int32_t      *blockmaplump;       // was short -- killough
 
 fixed_t   bmaporgx, bmaporgy;     // origin of block map
 
 mobj_t    **blocklinks;           // for thing chains
+int       blocklinks_size;
 
 boolean   skipblstart;  // MaxW: Skip initial blocklist short
 
@@ -226,7 +231,7 @@ void P_LoadSegs (int lump)
       // Andrey Budko: check for wrong indexes
       if ((unsigned)ldef->sidenum[side] >= (unsigned)numsides)
       {
-        I_Error("P_LoadSegs: linedef %d for seg %d references a non-existent sidedef %d",
+        I_Error("linedef %d for seg %d references a non-existent sidedef %d",
                 linedef, i, (unsigned)ldef->sidenum[side]);
       }
 
@@ -333,12 +338,14 @@ void P_LoadSectors (int lump)
       // killough 3/7/98:
       ss->floor_xoffs = 0;
       ss->floor_yoffs = 0;      // floor and ceiling flats offsets
-      ss->old_floor_xoffs = ss->base_floor_xoffs = 0;
-      ss->old_floor_yoffs = ss->base_floor_yoffs = 0;
+      ss->old_floor_xoffs = ss->interp_floor_xoffs = 0;
+      ss->old_floor_yoffs = ss->interp_floor_yoffs = 0;
+      ss->floor_rotation = 0;
       ss->ceiling_xoffs = 0;
       ss->ceiling_yoffs = 0;
-      ss->old_ceiling_xoffs = ss->base_ceiling_xoffs = 0;
-      ss->old_ceiling_yoffs = ss->base_ceiling_yoffs = 0;
+      ss->old_ceiling_xoffs = ss->interp_ceiling_xoffs = 0;
+      ss->old_ceiling_yoffs = ss->interp_ceiling_yoffs = 0;
+      ss->ceiling_rotation = 0;
       ss->heightsec = -1;       // sector used to get floor and ceiling height
       ss->floorlightsec = -1;   // sector used to get floor lighting
       // killough 3/7/98: end changes
@@ -346,11 +353,12 @@ void P_LoadSectors (int lump)
       // killough 4/11/98 sector used to get ceiling lighting:
       ss->ceilinglightsec = -1;
 
+      // ID24 per-sector colormap
       // killough 4/4/98: colormaps:
-      ss->bottommap = ss->midmap = ss->topmap = 0;
+      ss->tint = ss->bottommap = ss->midmap = ss->topmap = 0;
 
       // killough 10/98: sky textures coming from sidedefs:
-      ss->sky = 0;
+      ss->floorsky = ss->ceilingsky = 0;
 
       // [AM] Sector interpolation.  Even if we're
       //      not running uncapped, the renderer still
@@ -554,6 +562,8 @@ void P_LoadLineDefs (int lump)
       v2 = ld->v2 = &vertexes[(unsigned short)SHORT(mld->v2)];
       ld->dx = v2->x - v1->x;
       ld->dy = v2->y - v1->y;
+      ld->angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y,
+                                  lines[i].v2->x, lines[i].v2->y);
 
       ld->tranlump = -1;   // killough 4/11/98: no translucency by default
 
@@ -674,8 +684,8 @@ void P_LoadSideDefs2(int lump)
       // [crispy] smooth texture scrolling
       sd->oldtextureoffset = sd->textureoffset;
       sd->oldrowoffset = sd->rowoffset;
-      sd->basetextureoffset = sd->textureoffset;
-      sd->baserowoffset = sd->rowoffset;
+      sd->interptextureoffset = sd->textureoffset;
+      sd->interprowoffset = sd->rowoffset;
       sd->oldgametic = -1;
 
       // killough 4/4/98: allow sidedef texture names to be overloaded
@@ -685,6 +695,106 @@ void P_LoadSideDefs2(int lump)
       sd->sector = sec = &sectors[SHORT(msd->sector)];
       switch (sd->special)
         {
+        case 2057: case 2058: case 2059: case 2060: case 2061: case 2062:
+        case 2063: case 2064: case 2065: case 2066: case 2067: case 2068:
+        case 2087: case 2088: case 2089: case 2090: case 2091: case 2092:
+        case 2093: case 2094: case 2095: case 2096: case 2097: case 2098:
+        {
+          // All of the W1, WR, S1, SR, G1, GR activations can be triggered from
+          // the back sidedef (reading the front bottom texture) and triggered
+          // from the front sidedef (reading the front upper texture).
+          for (int j = 0; j < numlines; j++)
+          {
+            if (lines[j].sidenum[0] == i)
+            {
+              // Back triggered
+              if ((lines[j].backmusic = W_CheckNumForName(msd->bottomtexture)) < 0)
+              {
+                lines[j].backmusic = 0;
+                sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+              }
+              else
+              {
+                sd->bottomtexture = 0;
+              }
+
+              // Front triggered
+              if ((lines[j].frontmusic = W_CheckNumForName(msd->toptexture)) < 0)
+              {
+                lines[j].frontmusic = 0;
+                sd->toptexture = R_TextureNumForName(msd->toptexture);
+              }
+              else
+              {
+                sd->toptexture = 0;
+              }
+            }
+          }
+          sd->midtexture = R_TextureNumForName(msd->midtexture);
+          break;
+        }
+
+        case 2075:
+        // Sector tinting
+        {
+          for (int j = 0; j < numlines; j++)
+          {
+            if (lines[j].sidenum[0] == i)
+            {
+              // Front triggered
+              if ((lines[j].fronttint = R_ColormapNumForName(msd->toptexture)) < 0)
+              {
+                lines[j].fronttint = 0;
+                sd->toptexture = R_TextureNumForName(msd->toptexture);
+              }
+              else
+              {
+                sd->toptexture = 0;
+              }
+            }
+          }
+          sd->midtexture = R_TextureNumForName(msd->midtexture);
+          sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+          break;
+        }
+
+        case 2076: case 2077: case 2078: case 2079: case 2080: case 2081:
+        // Sector tinting
+        // All of the W1, WR, S1, SR, G1, GR activations can be triggered from
+        // the back sidedef (reading the front bottom texture) and triggered
+        // from the front sidedef (reading the front upper texture).
+        {
+          for (int j = 0; j < numlines; j++)
+          {
+            if (lines[j].sidenum[0] == i)
+            {
+              // Back triggered
+              if ((lines[j].backtint = R_ColormapNumForName(msd->bottomtexture)) < 0)
+              {
+                lines[j].backtint = 0;
+                sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+              }
+              else
+              {
+                sd->bottomtexture = 0;
+              }
+
+              // Front triggered
+              if ((lines[j].fronttint = R_ColormapNumForName(msd->toptexture)) < 0)
+              {
+                lines[j].fronttint = 0;
+                sd->toptexture = R_TextureNumForName(msd->toptexture);
+              }
+              else
+              {
+                sd->toptexture = 0;
+              }
+            }
+          }
+          sd->midtexture = R_TextureNumForName(msd->midtexture);
+          break;
+        }
+
         case 242:                       // variable colormap via 242 linedef
           sd->bottomtexture =
             (sec->bottommap =   R_ColormapNumForName(msd->bottomtexture)) < 0 ?
@@ -1209,8 +1319,8 @@ static void P_SetSkipBlockStart(void)
   for(y = 0; y < bmapheight; y++)
     for(x = 0; x < bmapwidth; x++)
     {
-      long *list;
-      long *blockoffset;
+      int32_t *list;
+      int32_t *blockoffset;
 
       blockoffset = blockmaplump + y * bmapwidth + x + 4;
 
@@ -1283,10 +1393,10 @@ boolean P_LoadBlockMap (int lump)
     }
 
   // clear out mobj chains
-  count = sizeof(*blocklinks)* bmapwidth*bmapheight;
-  blocklinks = Z_Malloc (count,PU_LEVEL, 0);
-  memset (blocklinks, 0, count);
-  blockmap = blockmaplump+4;
+  blocklinks_size = sizeof(*blocklinks) * bmapwidth * bmapheight;
+  blocklinks = Z_Malloc(blocklinks_size, PU_LEVEL, 0);
+  memset(blocklinks, 0, blocklinks_size);
+  blockmap = blockmaplump + 4;
 
   return ret;
 }
@@ -1306,7 +1416,7 @@ static void AddLineToSector(sector_t *s, line_t *l)
   *s->lines++ = l;
 }
 
-void P_DegenMobjThinker(void *p)
+void P_DegenMobjThinker(mobj_t *mobj)
 {
   // no-op
 }
@@ -1365,7 +1475,7 @@ int P_GroupLines (void)
       sector->soundorg.y =
           sector->blockbox[BOXTOP] / 2 + sector->blockbox[BOXBOTTOM] / 2;
 
-      sector->soundorg.thinker.function.p1 = (actionf_p1)P_DegenMobjThinker;
+      sector->soundorg.thinker.function.p1 = P_DegenMobjThinker;
 
       // adjust bounding box to map blocks
       block = (sector->blockbox[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
@@ -1527,7 +1637,7 @@ void P_SegLengths(boolean contrast_only)
         }
 
         // [Nugget] Fake contrast
-        const fakecontrast_t fakecontrast = BETWEEN(strictmode, FAKECONTRAST_VANILLA, fake_contrast);
+        const fakecontrast_t fakecontrast = CLAMP(fake_contrast, strictmode, FAKECONTRAST_VANILLA);
 
         // [crispy] smoother fake contrast
         if (fakecontrast == FAKECONTRAST_SMOOTH) // [Nugget]
@@ -1681,6 +1791,9 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   S_Start();
 
   Z_FreeTag(PU_LEVEL);
+  M_ArenaClear(thinkers_arena);
+  M_ArenaClear(msecnodes_arena);
+
   Z_FreeTag(PU_CACHE);
 
   P_InitThinkers();
@@ -1689,7 +1802,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   //    W_Reload ();     killough 1/31/98: W_Reload obsolete
 
   // find map name
-  strcpy(lumpname, MapName(episode, map));
+  M_CopyLumpName(lumpname, MapName(episode, map));
 
   lumpnum = W_GetNumForName(lumpname);
 
@@ -1783,6 +1896,9 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
 
   // clear special respawning que
   iquehead = iquetail = 0;
+
+  // SKYDEFS flatmapping needs to be loaded before 271/272 transfers
+  R_InitSkyMap();
 
   // set up world state
   P_SpawnSpecials();
@@ -1881,6 +1997,13 @@ void P_Init (void)
   R_InitSprites(namelist);
 
   Z_Free(namelist);
+
+  #define SIZE_MB(x) ((x) * 1024 * 1024)
+  thinkers_arena = M_ArenaInit(SIZE_MB(256), SIZE_MB(2));
+  msecnodes_arena = M_ArenaInit(SIZE_MB(32), SIZE_MB(1));
+  activeceilings_arena = M_ArenaInit(SIZE_MB(32), SIZE_MB(1));
+  activeplats_arena = M_ArenaInit(SIZE_MB(32), SIZE_MB(1));
+  #undef SIZE_MB
 }
 
 //----------------------------------------------------------------------------

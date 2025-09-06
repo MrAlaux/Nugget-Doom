@@ -27,7 +27,7 @@
 // [Nugget] /=================================================================
 
 // Thing lighting
-int R_CalculateHitboxLightNum(fixed_t x, fixed_t y, fixed_t radius, boolean force_mbf);
+int R_CalculateHitboxLightLevel(fixed_t x, fixed_t y, fixed_t radius, boolean force_mbf);
 
 typedef struct actualspriteheight_s
 {
@@ -55,8 +55,6 @@ extern fixed_t pspritescale;
 extern fixed_t pspriteiscale;
 
 extern boolean flipcorpses;
-
-extern lighttable_t **spritelights;
 
 extern boolean draw_nearby_sprites;
 
