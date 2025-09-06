@@ -1067,6 +1067,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   // [Nugget]
   mobj->altsprite = mobj->altframe = -1; // Alt. sprites
   mobj->alttics = -1; // Alt. states
+  mobj->gentranmap_pct = -1;
 
   P_AddThinker(&mobj->thinker);
 
@@ -1285,7 +1286,7 @@ void P_SpawnPlayer (mapthing_t* mthing)
   p->extralight    = 0;
   p->fixedcolormap = 0;
   // [Nugget] Adjustable viewheight
-  p->viewheight = (!strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT);
+  p->viewheight = !strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT;
 
   p->momx = p->momy = 0;   // killough 10/98: initialize bobbing to 0.
 
@@ -1936,10 +1937,12 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
 
     if (state->gentranmap_pct > 0)
     {
-      mobj->gentranmap = R_GetGenericTranMap(state->gentranmap_pct);
+      mobj->gentranmap_pct = state->gentranmap_pct;
+      mobj->gentranmap = R_GetGenericTranMap(mobj->gentranmap_pct);
     }
     else if (state->gentranmap_pct == -1)
     {
+      mobj->gentranmap_pct = state->gentranmap_pct;
       mobj->gentranmap = NULL;
     }
 
@@ -1968,6 +1971,8 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
   mobj->type = mobj->tics = -1;
 
   mobj->info = &info;
+
+  mobj->gentranmap_pct = -1;
 
   mobj->isvisual = true;
 
@@ -2002,9 +2007,64 @@ typedef struct flaker_s {
 
 flaker_t *flakers = NULL;
 
+static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
+{
+  fixed_t vx, vy, vz;
+
+  if (prespawn)
+  {
+    const player_t *const player = &players[displayplayer];
+
+    vx = player->mo->x;
+    vy = player->mo->y;
+    vz = player->mo->z + player->viewheight;
+  }
+  else {
+    vx = viewx;
+    vy = viewy;
+    vz = viewz;
+  }
+
+  const fixed_t dist = P_AproxDistance(vx - flaker->x, vy - flaker->y);
+
+  if (dist > 4096*FRACUNIT) { return; }
+
+  if (prespawn)
+  {
+    if (M_Random() & 3) { return; }
+  }
+  else if (M_Random() != 4) { return; }
+
+  const fixed_t x = flaker->x + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2,
+                y = flaker->y + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2;
+
+  if (R_PointInSubsector(x, y)->sector != flaker->sector) { return; }
+
+  fixed_t z = MIN(flaker->z, vz + 1024*FRACUNIT);
+
+  if (prespawn)
+  { z -= ((int64_t) z - flaker->sector->floorheight) * Woof_Random() / 255; }
+
+  mobj_t *const flake = P_SpawnVisualMobj(x, y, z, AS_FLAKE1);
+
+  flake->flags |= MF_NOGRAVITY;
+  flake->intflags |= MIF_FLAKE;
+
+  flake->gentranmap_pct = 40;
+  flake->gentranmap = R_GetGenericTranMap(flake->gentranmap_pct);
+
+  const fixed_t momz = FRACUNIT + (dist / 3000);
+
+  flake->momz = -(momz + (momz * Woof_Random() / 255));
+
+  flake->alttics = 28 + (z - flaker->sector->floorheight) / -flake->momz;
+}
+
 void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const sector_t *sector)
 {
   array_push(flakers, ((flaker_t) { x, y, z, sector }));
+
+  if (flakes) { SpawnFlake(&flakers[array_size(flakers) - 1], true); }
 }
 
 void P_ClearFlakers(void)
@@ -2021,29 +2081,7 @@ void P_RunFlakers(void)
   const flaker_t *flaker;
   array_foreach(flaker, flakers)
   {
-    const fixed_t dist = P_AproxDistance(viewx - flaker->x, viewy - flaker->y);
-
-    if (dist > 4096*FRACUNIT) { continue; }
-
-    if (M_Random() != 4) { continue; }
-
-    const fixed_t x = flaker->x + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2,
-                  y = flaker->y + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2,
-                  z = MIN(flaker->z, viewz + 1024*FRACUNIT);
-
-    if (R_PointInSubsector(x, y)->sector != flaker->sector) { continue; }
-
-    mobj_t *const flake = P_SpawnVisualMobj(x, y, z, AS_FLAKE1);
-
-    flake->flags |= MF_NOGRAVITY|MF_TRANSLUCENT;
-    flake->intflags |= MIF_FLAKE;
-    flake->gentranmap = R_GetGenericTranMap(40);
-
-    const fixed_t momz = FRACUNIT + (dist / 3000);
-
-    flake->momz = -(momz + (momz * Woof_Random() / 255));
-
-    flake->alttics = 28 + (z - flaker->sector->floorheight) / -flake->momz;
+    SpawnFlake(flaker, false);
   }
 }
 

@@ -183,9 +183,6 @@ typedef enum
 
   // [Nugget] /---------------------------------------------------------------
 
-  /*
-  */
-
   saveg_nugget200,
   saveg_nugget210,
   saveg_nugget300, // Identified by "Nugget 2.4.0"

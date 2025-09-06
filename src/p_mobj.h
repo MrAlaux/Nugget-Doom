@@ -409,6 +409,7 @@ typedef struct mobj_s
 
     boolean             isvisual;
     byte                *gentranmap;
+    signed char         gentranmap_pct;
 } mobj_t;
 
 // External declarations (fomerly in p_local.h) -- killough 5/2/98

@@ -471,7 +471,13 @@ static void saveg_read_mobj_t(mobj_t *str)
       str->isvisual = false;
     }
 
-    str->gentranmap = NULL;
+    if (saveg_compat > saveg_nugget400)
+    {
+      str->gentranmap_pct = saveg_read8(); // signed char gentranmap_pct;
+    }
+    else {
+      str->gentranmap_pct = -1;
+    }
 }
 
 static void saveg_write_mobj_t(mobj_t *str)
@@ -653,6 +659,7 @@ static void saveg_write_mobj_t(mobj_t *str)
     saveg_write32(str->alttics); // int        alttics;
 
     saveg_write32(str->isvisual); // boolean isvisual;
+    saveg_write8(str->gentranmap_pct); // signed char gentranmap_pct;
 }
 
 //
@@ -2469,7 +2476,7 @@ void P_ArchiveThinkers (void)
           mobj->player = (player_t *)((mobj->player-players) + 1);
 
         // [Nugget] Alt. states
-        mobj->altstate = (altstate_t *) (mobj->altstate - altstates);
+        if (mobj->altstate) { mobj->altstate = (altstate_t *) (mobj->altstate - altstates); }
 
         saveg_write8(tc_mobj);
         saveg_write_pad();
@@ -2621,8 +2628,16 @@ void P_UnArchiveThinkers (void)
       if (mobj->player)
         (mobj->player = &players[(size_t) mobj->player - 1]) -> mo = mobj;
 
-      // [Nugget] Alt. states
-      mobj->altstate = altstates + (size_t) mobj->altstate;
+      // [Nugget] /-----------------------------------------------------------
+
+      // Alt. states
+      if (mobj->altstate) { mobj->altstate = altstates + (size_t) mobj->altstate; }
+
+      mobj->gentranmap = (mobj->gentranmap_pct >= 0)
+                       ? R_GetGenericTranMap(mobj->gentranmap_pct)
+                       : NULL;
+
+      // [Nugget] -----------------------------------------------------------/
 
       P_SetThingPosition (mobj);
 

@@ -1277,7 +1277,7 @@ void R_InitData(void)
   if (hud_crosshair_tran_pct != 100)
   { R_GetGenericTranMap(hud_crosshair_tran_pct); }
 
-  R_GetGenericTranMap(25); // Hitscan trails
+  R_GetGenericTranMap(15); // Hitscan trails
 }
 
 //

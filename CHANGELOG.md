@@ -14,10 +14,12 @@
 - **Improved sky stretching**
 - **Improved _Hitbox Thing Lighting_**
 - **Reduced sensitivity of _Vertical Target Lock-on_**
+- **Reduced opacity of hitscan trails**
 - **Made `TURBO` cheat display a help message**
 
 ## Bug Fixes
 
 - **Crash when changing _[HUD] Wide Shift_ without loading into a map since launching the game**
+- **Hitscan trails becoming opaque when loading saves**
 - **_Hitbox Thing Lighting_ not applying to weapon voxels**
 - **_Vertical Target Lock-on_ menu item not being disabled when _Free Look_ were enabled**

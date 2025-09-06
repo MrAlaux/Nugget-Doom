@@ -954,7 +954,8 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   else
 
   // ID24 per-state tranmap
-  if (thing->state && thing->state->tranmap)
+  // [Nugget] Visual mobjs' dummy state causes issues; don't check for those
+  if (!thing->isvisual && thing->state && thing->state->tranmap)
   {
     vis->tranmap = thing->state->tranmap;
   }
@@ -989,11 +990,12 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] Sprite shadows -------------------------------------------------
 
-  if (!(R_SpriteShadowsOn()
-        && (xscale > FRACUNIT/4)
-        && !(frame & FF_FULLBRIGHT)
-        && !(   (thing->flags & (MF_SHADOW|MF_TRANSLUCENT))
-             || (thing->flags & MF_SPAWNCEILING && thing->flags & MF_NOGRAVITY))))
+  if (   !R_SpriteShadowsOn()
+      || (xscale <= FRACUNIT/4)
+      || (frame & FF_FULLBRIGHT)
+      || (thing->flags & MF_SHADOW)
+      || vis->tranmap
+      || (thing->flags & MF_SPAWNCEILING && thing->flags & MF_NOGRAVITY))
   {
     return;
   }
@@ -1089,8 +1091,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   if (shadow_vis->x1 > shadow_x1)
   { shadow_vis->startfrac += shadow_vis->xiscale * (shadow_vis->x1 - shadow_x1); }
-
-  shadow_vis->mobjflags |= MF_TRANSLUCENT;
 
   // Thing lighting: set true to make per-column lighting not apply to shadows
   shadow_vis->fullbright = true;

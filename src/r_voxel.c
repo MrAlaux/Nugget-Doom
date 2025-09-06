@@ -1434,9 +1434,6 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   thing.sprite = psp->state->sprite;
   thing.frame  = psp->state->frame;
 
-  if (translucent)
-  { thing.gentranmap = R_GetGenericTranMap(pspr_translucency_pct); }
-
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
   { thing.flags |= MF_SHADOW; }
 
