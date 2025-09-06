@@ -410,7 +410,6 @@ typedef struct vissprite_s
 
   // [Nugget]
   fixed_t xscale, yscale;
-  byte *gentranmap;
   boolean fullbright;
   boolean flipped;
   boolean no_perc; // Thing lighting
