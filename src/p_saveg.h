@@ -71,7 +71,8 @@ typedef enum saveg_compat_e
   saveg_nugget300, // Identified by "Nugget 2.4.0"
   saveg_nugget320,
   saveg_nugget330,
-  saveg_current, // saveg_nugget400
+  saveg_nugget400,
+  saveg_current, // saveg_nugget450
 } saveg_compat_t;
 
 extern saveg_compat_t saveg_compat;

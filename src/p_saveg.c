@@ -557,7 +557,8 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     // [Nugget] Removed `actualheight`
 
-    // [Nugget]
+    // [Nugget] --------------------------------------------------------------
+
     if (saveg_compat > saveg_nugget330)
     {
       // Alt. sprites
@@ -579,7 +580,13 @@ static void saveg_read_mobj_t(mobj_t *str)
       str->isvisual = false;
     }
 
-    str->tranmap = NULL; // [Nugget]
+    if (saveg_compat > saveg_nugget400)
+    {
+      str->gentranmap_pct = saveg_read8(); // signed char gentranmap_pct;
+    }
+    else {
+      str->gentranmap_pct = -1;
+    }
 }
 
 static void saveg_write_mobj_t(mobj_t *str)
@@ -748,16 +755,16 @@ static void saveg_write_mobj_t(mobj_t *str)
 
     // [Nugget] --------------------------------------------------------------
 
-    // [Nugget] Alt. sprites
+    // Alt. sprites
     saveg_write32(str->altsprite); // int altsprite;
     saveg_write32(str->altframe);  // int altframe;
 
-    // [Nugget] Alt. states
+    // Alt. states
     saveg_writep(str->altstate); // altstate_t *altstate;
     saveg_write32(str->alttics); // int        alttics;
 
-    // [Nugget]
     saveg_write32(str->isvisual); // boolean isvisual;
+    saveg_write8(str->gentranmap_pct); // signed char gentranmap_pct;
 }
 
 //
@@ -2542,8 +2549,16 @@ void P_UnArchiveThinkers (void)
       if (mobj->player)
         (mobj->player = &players[(size_t) mobj->player - 1]) -> mo = mobj;
 
-      // [Nugget] Alt. states
+      // [Nugget] /-----------------------------------------------------------
+
+      // Alt. states
       if (mobj->altstate) { mobj->altstate = altstates + (size_t) mobj->altstate; }
+
+      mobj->gentranmap = (mobj->gentranmap_pct >= 0)
+                       ? R_GetGenericTranMap(mobj->gentranmap_pct)
+                       : NULL;
+
+      // [Nugget] -----------------------------------------------------------/
 
       P_SetThingPosition (mobj);
 

@@ -909,7 +909,7 @@ static void R_ProjectSprite (mobj_t* thing)
   if (vis->brightmap == nobrightmap)
     vis->brightmap = R_BrightmapForSprite(sprite);
 
-  vis->tranmap = thing->tranmap; // [Nugget]
+  vis->tranmap = thing->gentranmap; // [Nugget]
 
   // [Alaux] Lock crosshair on target
   if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target
@@ -930,11 +930,12 @@ static void R_ProjectSprite (mobj_t* thing)
 
   // [Nugget] Sprite shadows -------------------------------------------------
 
-  if (!(R_SpriteShadowsOn()
-        && (xscale > FRACUNIT/4)
-        && !(frame & FF_FULLBRIGHT)
-        && !(   (thing->flags & (MF_SHADOW|MF_TRANSLUCENT))
-             || (thing->flags & MF_SPAWNCEILING && thing->flags & MF_NOGRAVITY))))
+  if (   !R_SpriteShadowsOn()
+      || (xscale <= FRACUNIT/4)
+      || (frame & FF_FULLBRIGHT)
+      || (thing->flags & (MF_SHADOW|MF_TRANSLUCENT))
+      || thing->gentranmap
+      || (thing->flags & MF_SPAWNCEILING && thing->flags & MF_NOGRAVITY))
   {
     return;
   }

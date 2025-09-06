@@ -1036,7 +1036,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->alttics  = -1; 
 
   mobj->isvisual = false;
-  mobj->tranmap = NULL;
+  mobj->gentranmap = NULL;
+  mobj->gentranmap_pct = -1;
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -1924,7 +1925,11 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
     mobj->altsprite = state->sprite;
     mobj->altframe = state->frame;
 
-    if (statenum == AS_TRAIL2) { mobj->tranmap = R_GetGenericTranMap(15); }
+    if (statenum == AS_TRAIL2)
+    {
+      mobj->gentranmap_pct = 15;
+      mobj->gentranmap = R_GetGenericTranMap(mobj->gentranmap_pct);
+    }
 
     statenum = state->nextstate;
   } while (!mobj->alttics);
@@ -1951,6 +1956,8 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
   mobj->type = mobj->tics = -1;
 
   mobj->info = &info;
+
+  mobj->gentranmap_pct = -1;
 
   mobj->isvisual = true;
 
@@ -2027,7 +2034,9 @@ static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
 
   flake->flags |= MF_NOGRAVITY;
   flake->intflags |= MIF_FLAKE;
-  flake->tranmap = R_GetGenericTranMap(40);
+
+  flake->gentranmap_pct = 40;
+  flake->gentranmap = R_GetGenericTranMap(flake->gentranmap_pct);
 
   const fixed_t momz = FRACUNIT + (dist / 3000);
 
