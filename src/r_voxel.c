@@ -737,20 +737,9 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 		// [Nugget] Thing lighting
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
 		{
-			int lightlevel = 0;
+			const int lightlevel = R_CalculateHitboxLightLevel(vis->gx, vis->gy, thing->radius, false);
 
-			for (int i = 0;	 i < 9;	 i++)
-			{
-				const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
-				              gy = vis->gy + (thing->radius * ((i / 3) - 1));
-
-				int temp;
-				R_GetLightLevelAndTintInPoint(gx, gy, &temp, NULL);
-
-				lightlevel += temp;
-			}
-
-			lightnum = (lightlevel / 9) >> LIGHTSEGSHIFT;
+			lightnum = lightlevel >> LIGHTSEGSHIFT;
 		}
 		else
 		{
@@ -920,7 +909,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 		int lightnum, tint;
 
-		R_GetLightLevelAndTintInPoint(gx, gy, &lightnum, &tint);
+		R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
 		lightnum = spr->fullbright
 		         ? LIGHTLEVELS-1
@@ -1176,7 +1165,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 		int lightnum, tint;
 
-		R_GetLightLevelAndTintInPoint(gx, gy, &lightnum, &tint);
+		R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
 		lightnum = spr->fullbright
 		         ? LIGHTLEVELS-1
@@ -1451,7 +1440,12 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
   { thing.flags |= MF_SHADOW; }
 
-  thing.subsector = R_PointInSubsector(viewx, viewy);
+  const mobj_t *const playermo = players[displayplayer].mo;
+
+  thing.subsector = playermo->subsector;
+
+  // Thing lighting: use the player's radius
+  thing.radius = playermo->radius;
 
   return VX_ProjectVoxel(&thing, lightlevel_override);
 }

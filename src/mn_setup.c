@@ -3338,6 +3338,8 @@ static freelook_mode_t freelook_mode;
 
 static const char *free_look_strings[] = {"Off", "Auto-Aim", "Direct Aim", "Direct+Auto Aim"};
 
+static void UpdateVerticalLockonItem(void); // [Nugget]
+
 void MN_UpdateFreeLook(void)
 {
     P_UpdateDirectVerticalAiming();
@@ -3353,7 +3355,9 @@ void MN_UpdateFreeLook(void)
         }
     }
 
-    UpdateCrosshairItems(); // [Nugget]
+    // [Nugget]
+    UpdateVerticalLockonItem();
+    UpdateCrosshairItems();
 }
 
 static void UpdateFreeLookMode(void)
@@ -3903,9 +3907,9 @@ static const char *invul_mode_strings[] = {"Vanilla", "MBF", "Gray"};
 
 static const char *endoom_strings[] = {"Off", "PWAD Only", "Always"};
 
-static void UpdatePaletteItems(void); // [Nugget]
-
 // [Nugget] /-----------------------------------------------------------------
+
+static void UpdatePaletteItems(void);
 
 static void UpdateAutoSaveItems(void);
 
@@ -4239,13 +4243,19 @@ void MN_DisableVoxelsRenderingItem(void)
     UpdateVoxelRenderingModeItem(); // [Nugget] Voxel rendering mode
 }
 
-// [Nugget] Voxel rendering mode
+// [Nugget] /-----------------------------------------------------------------
+
+// Voxel rendering mode
 static void UpdateVoxelRenderingModeItem(void)
 {
     DisableItem(!voxels_rendering, gen_settings5, "bounded_voxels_rendering");
 }
 
-// [Nugget]
+static void UpdateVerticalLockonItem(void)
+{
+  DisableItem(freelook, view_settings1, "vertical_lockon");
+}
+
 static void UpdatePaletteItems(void)
 {
   DisableItem(!palette_changes, display_settings1, "no_menu_tint");
@@ -4255,6 +4265,8 @@ static void UpdatePaletteItems(void)
   DisableItem(!palette_changes, display_settings1, "bonuscount_cap");
   DisableItem(!palette_changes, gen_settings7, "a11y_invul_colormap");
 }
+
+// [Nugget] -----------------------------------------------------------------/
 
 void MN_Trans(void) // To reset translucency after setting it in menu
 {
@@ -6015,6 +6027,7 @@ void MN_SetupResetMenu(void)
     DisableItem(!(extra_gibbing[EXGIB_FIST] || extra_gibbing[EXGIB_CSAW] || extra_gibbing[EXGIB_SSG]),
                 enem_settings1, "extra_gibbing");
 
+    UpdateVerticalLockonItem();
     UpdatePaletteItems();
     MN_UpdateDoom1SSGItem();
     MN_UpdateImprovedWeaponTogglesItem();

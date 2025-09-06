@@ -53,6 +53,40 @@
 #include "st_stuff.h"
 #include "wi_stuff.h"
 
+// [Nugget] Thing lighting
+int R_CalculateHitboxLightLevel(
+  const fixed_t x,
+  const fixed_t y,
+  const fixed_t radius,
+  const boolean force_mbf
+) {
+  int lightlevel = 0;
+
+  for (int i = 0;  i < 9;  i++)
+  {
+    fixed_t gx, gy;
+
+    if (i < 8)
+    {
+      const int fineangle = ((angle_t) ANG45 * i) >> ANGLETOFINESHIFT;
+
+      gx = x + FixedMul(radius, finecosine[fineangle]);
+      gy = y + FixedMul(radius,   finesine[fineangle]);
+    }
+    else {
+      gx = x;
+      gy = y;
+    }
+
+    int temp;
+    R_GetLightLevelAndTintInPoint(gx, gy, force_mbf, &temp, NULL);
+
+    lightlevel += temp;
+  }
+
+  return lightlevel / 9;
+}
+
 #define MINZ        (FRACUNIT*4)
 #define MAXZ        (FRACUNIT*8192)
 #define BASEYCENTER 100
@@ -597,7 +631,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
         int lightnum, tint;
 
-        R_GetLightLevelAndTintInPoint(gx, gy, &lightnum, &tint);
+        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
         lightnum = vis->fullbright
                  ? LIGHTLEVELS-1
@@ -892,20 +926,9 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
     // [Nugget] Thing lighting
     if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
     {
-      int lightlevel = 0;
+      const int lightlevel = R_CalculateHitboxLightLevel(vis->gx, vis->gy, thing->radius, false);
 
-      for (int i = 0;  i < 9;  i++)
-      {
-        const fixed_t gx = vis->gx + (thing->radius * ((i % 3) - 1)),
-                      gy = vis->gy + (thing->radius * ((i / 3) - 1));
-
-        int temp;
-        R_GetLightLevelAndTintInPoint(gx, gy, &temp, NULL);
-
-        lightlevel += temp;
-      }
-
-      lightnum = (lightlevel / 9) >> LIGHTSEGSHIFT;
+      lightnum = lightlevel >> LIGHTSEGSHIFT;
     }
     else
     {
@@ -1372,19 +1395,7 @@ void R_DrawPlayerSprites(void)
 
   if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
   {
-    for (int i = 0;  i < 9;  i++)
-    {
-      const fixed_t gx = viewx + (viewplayer->mo->radius * ((i % 3) - 1)),
-                    gy = viewy + (viewplayer->mo->radius * ((i / 3) - 1));
-
-      sector_t *const sector = R_PointInSubsector(gx, gy)->sector;
-
-      R_FakeFlat(sector, &tmpsec, &floorlightlevel, &ceilinglightlevel, 0);
-
-      lightlevel += floorlightlevel + ceilinglightlevel;
-    }
-
-    lightlevel = (lightlevel / 9) / 2;
+    lightlevel = R_CalculateHitboxLightLevel(viewx, viewy, viewplayer->mo->radius, true);
   }
   else
   {

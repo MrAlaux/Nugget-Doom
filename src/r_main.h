@@ -182,6 +182,7 @@ boolean R_SpriteShadowsOn(void);
 void R_GetLightLevelAndTintInPoint(
   fixed_t x,
   fixed_t y,
+  boolean force_mbf,
   int *const lightlevel_p,
   int *const tint_p
 );

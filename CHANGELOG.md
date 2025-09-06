@@ -1,6 +1,6 @@
 ## New Features
 
-None.
+- `FOVSKY` developer cheat
 
 ## Changes
 
@@ -12,8 +12,12 @@ None.
   - Removed `no_page_ticking` in favor of Woof's `menu_pause_demos`
   - Removed `quick_quitgame` in favor of Woof's `quit_prompt`
 - **Improved sky stretching**
+- **Improved _Hitbox Thing Lighting_**
 - **Reduced sensitivity of _Vertical Target Lock-on_**
+- **Made `TURBO` cheat display a help message**
 
 ## Bug Fixes
 
 - **Crash when changing _[HUD] Wide Shift_ without loading into a map since launching the game**
+- **_Hitbox Thing Lighting_ not applying to weapon voxels**
+- **_Vertical Target Lock-on_ menu item not being disabled when _Free Look_ were enabled**

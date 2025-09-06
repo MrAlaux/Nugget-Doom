@@ -160,8 +160,9 @@ boolean R_SpriteShadowsOn(void)
 }
 
 void R_GetLightLevelAndTintInPoint(
-  fixed_t x,
-  fixed_t y,
+  const fixed_t x,
+  const fixed_t y,
+  const boolean force_mbf,
   int *const lightlevel_p,
   int *const tint_p
 ) {
@@ -171,7 +172,7 @@ void R_GetLightLevelAndTintInPoint(
   {
     int lightlevel;
 
-    if (demo_version >= DV_MBF)
+    if (demo_version >= DV_MBF || force_mbf)
     {
       sector_t tempsector;
       int floorlightlevel, ceilinglightlevel;

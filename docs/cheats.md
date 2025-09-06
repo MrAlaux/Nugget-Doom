@@ -187,6 +187,9 @@ Toggle faux-demo mode, which emulates the condition of demo/net play (disables s
 `DIMLIGHT`  
 Toggle diminishing lighting.
 
+`FOVSKY`  
+Toggle FOV-based sky stretching.
+
 `CASTCALL`  
 Enter the character cast call.
 
