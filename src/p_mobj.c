@@ -1924,7 +1924,7 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
     mobj->altsprite = state->sprite;
     mobj->altframe = state->frame;
 
-    if (statenum == AS_TRAIL2) { mobj->flags |= MF_TRANSLUCENT; }
+    if (statenum == AS_TRAIL2) { mobj->tranmap = R_GetGenericTranMap(40); }
 
     statenum = state->nextstate;
   } while (!mobj->alttics);
@@ -2018,9 +2018,8 @@ void P_RunFlakers(void)
 
     mobj_t *const flake = P_SpawnVisualMobj(x, y, z, AS_FLAKE1);
 
-    flake->flags |= MF_NOGRAVITY|MF_TRANSLUCENT;
+    flake->flags |= MF_NOGRAVITY;
     flake->intflags |= MIF_FLAKE;
-    flake->tranmap = R_GetGenericTranMap(40);
 
     const fixed_t momz = FRACUNIT + (dist / 3000);
 

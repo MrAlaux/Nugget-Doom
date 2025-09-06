@@ -563,14 +563,20 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         dc_translation = translationtables - 256 +
           ((vis->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
       }
+
+    // [Nugget]
+    else if (STRICTMODE(vis->tranmap))
+    {
+      colfunc = R_DrawTLColumn;
+      tranmap = vis->tranmap;
+    }
+
     else
       if (translucency && !(strictmode && demo_compatibility)
           && vis->mobjflags & MF_TRANSLUCENT) // phares
         {
           colfunc = R_DrawTLColumn;
           tranmap = main_tranmap;       // killough 4/11/98
-
-          if (vis->tranmap) { tranmap = vis->tranmap; } // [Nugget]
         }
       else
         colfunc = R_DrawColumn;         // killough 3/14/98, 4/11/98
@@ -1025,8 +1031,6 @@ static void R_ProjectSprite (mobj_t* thing)
   if (shadow_vis->x1 > shadow_x1)
   { shadow_vis->startfrac += shadow_vis->xiscale * (shadow_vis->x1 - shadow_x1); }
 
-  shadow_vis->mobjflags |= MF_TRANSLUCENT;
-
   // Thing lighting: set true to make per-column lighting not apply to shadows
   shadow_vis->fullbright = true;
 }
@@ -1204,7 +1208,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // store information in a vissprite
   vis = &avis;
-  vis->mobjflags = translucent ? MF_TRANSLUCENT : 0; // [Nugget] Translucent flashes
+  vis->mobjflags = 0;
   vis->mobjflags2 = 0;
 
   // killough 12/98: fix psprite positioning problem

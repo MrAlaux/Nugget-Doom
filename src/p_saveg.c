@@ -2424,7 +2424,7 @@ void P_ArchiveThinkers (void)
           mobj->player = (player_t *)((mobj->player-players) + 1);
 
         // [Nugget] Alt. states
-        mobj->altstate = (altstate_t *) (mobj->altstate - altstates);
+        if (mobj->altstate) { mobj->altstate = (altstate_t *) (mobj->altstate - altstates); }
 
         saveg_write8(tc_mobj);
         saveg_write_pad();
@@ -2543,7 +2543,7 @@ void P_UnArchiveThinkers (void)
         (mobj->player = &players[(size_t) mobj->player - 1]) -> mo = mobj;
 
       // [Nugget] Alt. states
-      mobj->altstate = altstates + (size_t) mobj->altstate;
+      if (mobj->altstate) { mobj->altstate = altstates + (size_t) mobj->altstate; }
 
       P_SetThingPosition (mobj);
 

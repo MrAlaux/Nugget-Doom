@@ -202,7 +202,7 @@ void P_SpawnHitscanTrail(fixed_t x, fixed_t y, fixed_t z,
     puff->alttics += (P_AproxDistance(xdist, ydist) >> FRACBITS) / 128;
 
     puff->flags |= MF_NOGRAVITY;
-    puff->tranmap = R_GetGenericTranMap(25);
+    puff->tranmap = R_GetGenericTranMap(15);
   }
 }
 
