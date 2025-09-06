@@ -53,9 +53,10 @@ static const char *params[] = {
 "-levelstat",
 "-longtics",
 "-shorttics",
-"-strict",
-"-cdrom", // [Nugged] Restored `-cdrom` parm
+"-tas",
 "-nogui",
+
+"-cdrom", // [Nugged] Restored `-cdrom` parm
 };
 
 static const char *params_with_args[] = {
@@ -137,8 +138,7 @@ Demo options: \n\
   -record <demo>    Record a demo named demo.lmp.\n\
   -shorttics        Play with low turning resolution to emulate demo\n\
                     recording.\n\
-  -strict           Sets compatibility and cosmetic settings according to DSDA\n\
-                    rules.\n\
+  -tas              Lifts strict mode restrictions according to DSDA rules.\n\
 \n\
 Compatibility: \n\
   -cl <version>         Alias to -complevel.\n\

@@ -152,8 +152,8 @@ void P_StartButton
                                : (mobj_t *)&line->frontsector->soundorg;
       return;
     }
-
-  I_Error("P_StartButton: no button slots left!");
+    
+  I_Error("no button slots left!");
 }
 
 //
@@ -455,6 +455,13 @@ P_UseSpecialLine
         P_ChangeSwitchTexture(line,0);
       return true;
 
+    // S1 - Exit to the next map and reset inventory.
+    case 2070:
+      if (demo_version < DV_ID24)
+        return false;
+      reset_inventory = true;
+      // fallthrough
+
     case 11:
       // Exit level
 
@@ -534,6 +541,13 @@ P_UseSpecialLine
       if (EV_DoDoor(line,doorClose))
         P_ChangeSwitchTexture(line,0);
       return true;
+
+    // SR - Exit to the secret map and reset inventory.
+    case 2073:
+      if (demo_version < DV_ID24)
+        return false;
+      reset_inventory = true;
+      // fallthrough
 
     case 51:
       // Secret EXIT
@@ -624,6 +638,26 @@ P_UseSpecialLine
       if (EV_DoFloor(line,raiseFloor512))
         P_ChangeSwitchTexture(line,0);
       return true;
+
+    // ID24 Music Changers
+    case 2059: case 2065: case 2089: case 2095:
+    case 2060: case 2066: case 2090: case 2096:
+      EV_ChangeMusic(line, side);
+      return true;
+
+    case 2078:
+      line->special = 0;
+      // fallthrough
+
+    case 2079:
+    {
+      int colormap_index = side ? line->backtint : line->fronttint;
+      for (int s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
+      {
+        sectors[s].tint = colormap_index;
+      }
+      break;
+    }
 
       // killough 1/31/98: factored out compatibility check;
       // added inner switch, relaxed check to demo_compatibility

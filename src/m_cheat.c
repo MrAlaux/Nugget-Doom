@@ -559,12 +559,6 @@ static void DoResurrect(void)
   if (plyr->mo)
     plyr->mo->health = god_health;  // Ty 03/09/98 - deh
   plyr->health = god_health;
-
-  // [Nugget] Rewind;
-  // This is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
-  if (leveltime)
-  { G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE))); }
 }
 
 // Resurrection cheat adapted from Crispy's IDDQD
@@ -624,7 +618,7 @@ static void cheat_turbox(char *buf)
 
   // Limit the scale; it gets kinda wonky at 255 already,
   // but going any further outright inverts movement
-  scale = BETWEEN(10, 255, scale);
+  scale = CLAMP(scale, 10, 255);
 
   forwardmove[0] = 0x19 * scale / 100;
   forwardmove[1] = 0x32 * scale / 100;
@@ -802,7 +796,7 @@ static void cheat_reveal_keyxx(int key)
   do {
     th = th->next;
 
-    if (th->function.p1 == (actionf_p1) P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
     {
       mobj_t *mobj = (mobj_t *) th;
 
@@ -1145,7 +1139,7 @@ static void cheat_notarget(void)
     // [crispy] let mobjs forget their target and tracer
     for (thinker_t *th = thinkercap.next;  th != &thinkercap;  th = th->next)
     {
-      if (th->function.p1 == (actionf_p1) P_MobjThinker)
+      if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *const mo = (mobj_t *) th;
 
@@ -1428,7 +1422,7 @@ static void cheat_friction(void)
 
 static void cheat_skill0(void)
 {
-  displaymsg("Skill: %s", default_skill_strings[gameskill + 1]);
+  displaymsg("Skill: %s", skill_strings[gameskill]);
 }
 
 static void cheat_skill(char *buf)
@@ -1438,7 +1432,7 @@ static void cheat_skill(char *buf)
   if (skill >= 1 && skill <= 5 + casual_play) // [Nugget] Custom Skill
   {
     gameskill = skill - 1;
-    displaymsg("Next Level Skill: %s", default_skill_strings[gameskill + 1]);
+    displaymsg("Next Level Skill: %s", skill_strings[gameskill]);
 
     G_SetSkillParms(gameskill); // [Nugget]
   }
@@ -1486,7 +1480,7 @@ static void cheat_massacre(void)    // jff 2/01/98 kill all monsters
   P_MapStart();
   do
     while ((currentthinker=currentthinker->next)!=&thinkercap)
-      if (currentthinker->function.p1 == (actionf_p1)P_MobjThinker &&
+      if (currentthinker->function.p1 == P_MobjThinker &&
 	  !(((mobj_t *) currentthinker)->flags & mask) && // killough 7/20/98
 	  (((mobj_t *) currentthinker)->flags & MF_COUNTKILL ||
 	   ((mobj_t *) currentthinker)->type == MT_SKULL))
@@ -1557,6 +1551,12 @@ static void cheat_spechits(void)
           continue;
         }
 
+      // do not trigger any ID24 actions
+      if (lines[i].special >= 2048 && lines[i].special <= 2098)
+      {
+        continue;
+      }
+
       // [crispy] special without tag --> DR linedef type
       // do not change door direction if it is already moving
       if (lines[i].tag == 0 &&
@@ -1568,7 +1568,7 @@ static void cheat_spechits(void)
       }
 
       P_CrossSpecialLine(&lines[i], 0, plyr->mo, false);
-      P_ShootSpecialLine(plyr->mo, &lines[i]);
+      P_ShootSpecialLine(plyr->mo, &lines[i], 0);
       P_UseSpecialLine(plyr->mo, &lines[i], 0, false);
 
       speciallines++;
@@ -1586,7 +1586,7 @@ static void cheat_spechits(void)
 
     for (th = thinkercap.next ; th != &thinkercap ; th = th->next)
     {
-      if (th->function.p1 == (actionf_p1)P_MobjThinker)
+      if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *mo = (mobj_t *) th;
 
@@ -1736,7 +1736,7 @@ static void cheat_cycle_mobj(mobj_t **last_mobj, int *last_count,
   do
   {
     th = th->next;
-    if (th->function.p1 == (actionf_p1)P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
     {
       mobj_t *mobj;
 
