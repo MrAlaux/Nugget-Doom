@@ -240,6 +240,9 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
                 int i;
                 for (i = 0; i < arrlen(sbw_names); ++i)
                 {
+                    // [Nugget]
+                    if (!sbw_names[i]) { continue; }
+
                     if (!strcasecmp(name, sbw_names[i]))
                     {
                         widget->type = i;
