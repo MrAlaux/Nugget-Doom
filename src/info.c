@@ -5021,15 +5021,13 @@ altstate_t altstates[NUMALTSTATES] = {
   { ASPR_NULL, -1, -1, AS_NULL },
 
   #define DUR 2
-  #define TRAN 25
-  { ASPR_NGTR,  0|FF_FULLBRIGHT,   3, AS_TRAIL2       },
-  { ASPR_NGTR,  1,               DUR, AS_TRAIL3, TRAN },
-  { ASPR_NGTR,  2,               DUR, AS_TRAIL4       },
-  { ASPR_NGTR,  3,               DUR, AS_TRAIL5       },
-  { ASPR_NGTR,  4,               DUR, AS_TRAIL6       },
-  { ASPR_NGTR,  5,               DUR, AS_TRAIL7       },
-  { ASPR_NGTR,  6,               DUR, AS_NULL         },
-  #undef TRAN
+  { ASPR_NGTR,  0|FF_FULLBRIGHT,   3, AS_TRAIL2     },
+  { ASPR_NGTR,  1,               DUR, AS_TRAIL3, 15 },
+  { ASPR_NGTR,  2,               DUR, AS_TRAIL4     },
+  { ASPR_NGTR,  3,               DUR, AS_TRAIL5     },
+  { ASPR_NGTR,  4,               DUR, AS_TRAIL6     },
+  { ASPR_NGTR,  5,               DUR, AS_TRAIL7     },
+  { ASPR_NGTR,  6,               DUR, AS_NULL       },
   #undef DUR
 
   { ASPR_NGFL, 0, -1, AS_NULL },
