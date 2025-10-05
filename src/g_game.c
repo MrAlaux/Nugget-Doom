@@ -6397,7 +6397,7 @@ void G_BindWeapVariables(void)
 
   M_BindNum("pspr_translucency_pct", &pspr_translucency_pct, NULL,
             100, 0, 100, ss_weap, wad_yes,
-            "Weapon-flash translucency percent");
+            "Weapon-flash opacity percent");
 
   // (CFG-only)
   M_BindBool("sx_fix", &sx_fix, NULL,

@@ -69,9 +69,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Backdrop for all menus_** setting
 - **_No Palette Tint in Menus_** setting [i.b. Crispy Doom]
 - **_HUD/Menu Shadows_** setting [i.b. CRL]
-  - Translucency level determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR
+  - Opacity level determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR
 - **_Sprite Shadows_** setting [i.b. Doom Retro]
-  - Translucency level determined by the CFG-only `sprite_shadows_tran_pct` CVAR
+  - Opacity level determined by the CFG-only `sprite_shadows_tran_pct` CVAR
 - **_Thing Lighting Mode_** setting
   - _Hitbox_ suggested by [@fragglet](https://github.com/fragglet)
   - _Per-column_ inspired by PSX Hexen
@@ -122,7 +122,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Bob While Switching_** setting
 - **_Weapon Inertia_** settings [by _ceski_]
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
-- **_[Weapon] Flash Translucency_** setting [i.b. Crispy Doom]
+- **_[Weapon] Flash Opacity_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting (CFG-only: `sx_fix`)
   - In vanilla Doom, weapon sprites are centered with an offset of one unit to the right;
@@ -134,7 +134,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **SBARDEF:**
   - Chat hack to move it vertically based on the height of the message list
 - **Crosshair:**
-  - Translucency setting
+  - Opacity setting
   - Vertical-only target lock-on
   - Horizontal-autoaim indicators
   - Option to account for fuzzy targets [i.b. From Doom With Love]

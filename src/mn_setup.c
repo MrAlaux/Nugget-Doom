@@ -2014,7 +2014,7 @@ static setup_menu_t weap_settings5[] =
     {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
     {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
     {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
-    {"Flash Translucency",        S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
 
   MI_END
 };
@@ -2233,7 +2233,7 @@ static setup_menu_t stat_settings3[] = {
      .strings_id = str_crosshair, .action = HU_StartCrosshair},
 
     // [Nugget] Translucent crosshair
-    {"Translucency", S_THERMO | S_ACTION | S_PCT, H_X_THRM8 - 13, M_THRM_SPC,
+    {"Opacity", S_THERMO | S_ACTION | S_PCT, H_X_THRM8 - 13, M_THRM_SPC,
      {"hud_crosshair_tran_pct"}, .action = CrosshairTrans},
 
     {"Color By Player Health", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_health"}},
@@ -5975,7 +5975,7 @@ void MN_BindMenuVariables(void)
     // (CFG-only)
     M_BindNum("hud_menu_shadows_filter_pct", &hud_menu_shadows_filter_pct, NULL,
               66, 0, 100, ss_none, wad_yes,
-              "HUD/menu-shadows translucency percent");
+              "HUD/menu-shadows opacity percent");
 
     M_BindBool("quick_quitgame", &quick_quitgame, NULL,
                false, ss_misc, wad_no,

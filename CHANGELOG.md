@@ -11,6 +11,7 @@
 - **Reduced opacity of hitscan trails**
 - **Replaced _Weapon Inertia_ toggle with the scale values themselves**
 - **Made `TURBO` cheat display a help message**
+- **Replaced "translucency" with "opacity" in setting descriptions where prudent**
 
 ## Bug Fixes
 

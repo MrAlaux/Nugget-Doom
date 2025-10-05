@@ -1927,7 +1927,7 @@ void R_BindRenderVariables(void)
   // (CFG-only)
   M_BindNum("sprite_shadows_tran_pct", &sprite_shadows_tran_pct, NULL,
             50, 0, 100, ss_none, wad_yes,
-            "Sprite-shadows translucency percent");
+            "Sprite-shadows opacity percent");
 
   M_BindNum("thing_lighting_mode", &thing_lighting_mode, NULL,
             THINGLIGHTING_ORIGIN, THINGLIGHTING_ORIGIN, NUM_THINGLIGHTING-1, ss_display, wad_yes,
