@@ -942,7 +942,7 @@ static void R_ProjectSprite (mobj_t* thing)
 
   fixed_t floorheight, shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
 
-  floorheight = R_PointInSubsector(interpx, interpy)->sector->floorheight;
+  floorheight = R_PointInSubsector(interpx, interpy)->sector->interpfloorheight;
 
   if (viewz < floorheight + FRACUNIT) { return; }
 

@@ -17,6 +17,7 @@
 
 - **Crash when changing _[HUD] Layout_ without loading into a map since launching the game**
 - **Translucent weapon flashes and hitscan trails not being translucent if _Sprite Translucency_ were disabled**
+- **Sprite shadows not interpolating on moving floors**
 - **Hitscan trails becoming opaque when loading saves**
 - **Keyframe time becoming misaligned when rewinding**
 - **_Hitbox Thing Lighting_ not applying to weapon voxels**
