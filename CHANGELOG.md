@@ -1,12 +1,15 @@
 ## New Features
 
+- **Dedicated _Weapon Inertia_ scale value for firing**
 - `FOVSKY` developer cheat
 
 ## Changes
 
 - **Improved _Hitbox Thing Lighting_**
+- **Smoothened the transitions between idling and firing with _Weapon Inertia_ enabled**
 - **Reduced sensitivity of _Vertical Target Lock-on_**
 - **Reduced opacity of hitscan trails**
+- **Replaced _Weapon Inertia_ toggle with the scale values themselves**
 - **Made `TURBO` cheat display a help message**
 
 ## Bug Fixes

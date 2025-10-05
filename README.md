@@ -120,9 +120,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Bobbing Styles_** selection [p.f. Zandronum]
 - **_Weapon Bob Speed_** setting
 - **_Bob While Switching_** setting
-- **_Weapon Inertia_** setting [by _ceski_]
-  - Scale determined by the CFG-only `weapon_inertia_scale_pct` CVAR
-  - Application while firing determined by the CFG-only `weapon_inertia_fire` CVAR
+- **_Weapon Inertia_** settings [by _ceski_]
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
 - **_[Weapon] Flash Translucency_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**

@@ -56,9 +56,8 @@ boolean always_bob;
 bobstyle_t bobbing_style;
 int weapon_bobbing_speed_pct;
 boolean switch_bob;
-boolean weapon_inertia;
 int weapon_inertia_scale_pct;
-boolean weapon_inertia_fire;
+int weapon_inertia_fire_scale_pct;
 boolean weaponsquat;
 boolean sx_fix;
 boolean comp_nomeleesnap;
@@ -224,11 +223,9 @@ static void P_BringUpWeapon(player_t *player)
     psp->sy2 = psp->oldsy2 = psp->sy;
   }
 
-  // [Nugget]: [crispy] squat down weapon sprite
-  psp->dy = 0;
-  // [Nugget] Reset offsets for weapon inertia
-  psp->wix = 0;
-  psp->wiy = 0;
+  // [Nugget]
+  psp->dy = 0; // [crispy] squat down weapon sprite
+  psp->wix = psp->wiy = 0; // Reset offsets for weapon inertia
 
   P_SetPsprite(player, ps_weapon, newstate);
 }
@@ -1442,14 +1439,27 @@ void P_SetupPsprites(player_t *player)
 
 // [Nugget - ceski] Weapon Inertia /------------------------------------------
 
-#define EASE_SCALE(x, y) (FRACUNIT - (FixedDiv(FixedMul(FixedDiv((x) << FRACBITS, (y) << FRACBITS), (fixed_t) weapon_inertia_scale), FRACUNIT)))
+#define ORIG_WEAPON_INERTIA_SCALE 60000
+
+#define EASE_SCALE(x, y, scale) (FRACUNIT - (FixedDiv(FixedMul(FixedDiv((x) << FRACBITS, (y) << FRACBITS), scale), FRACUNIT)))
 #define EASE_OUT(x, y) ((x) - FixedMul((x), FixedMul((y), (y))))
+
 #define MAX_DELTA (SCREENWIDTH << FRACBITS)
 
-fixed_t weapon_inertia_scale;
+static boolean weapon_inertia = false;
 
-static void WeaponInertiaHorizontal(player_t* player, pspdef_t *psp)
+boolean P_WeaponInertiaOn(void)
 {
+  return weapon_inertia;
+}
+
+static fixed_t weapon_inertia_scale, weapon_inertia_fire_scale;
+
+static void WeaponInertiaHorizontal(
+  const player_t *const player,
+  pspdef_t *const psp,
+  const fixed_t scale
+) {
   angle_t angle;
   boolean clockwise;
 
@@ -1471,8 +1481,8 @@ static void WeaponInertiaHorizontal(player_t* player, pspdef_t *psp)
   angle >>= ANGLETOFINESHIFT;
   if (angle > 0)
   {
-    const fixed_t scale = EASE_SCALE(angle, FINEANGLES);
-    fixed_t delta = EASE_OUT(MAX_DELTA, scale);
+    const fixed_t escale = EASE_SCALE(angle, FINEANGLES, scale);
+    fixed_t delta = EASE_OUT(MAX_DELTA, escale);
     delta = MIN(delta, MAX_DELTA);
     psp->wix += clockwise ? -delta : delta;
   }
@@ -1485,14 +1495,17 @@ static void WeaponInertiaHorizontal(player_t* player, pspdef_t *psp)
   }
 }
 
-static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
-{
+static void WeaponInertiaVertical(
+  const player_t *const player,
+  pspdef_t *const psp,
+  const fixed_t scale
+) {
   const fixed_t pitch = (player->pitch - player->oldpitch) >> ANGLETOFINESHIFT;
 
   if (pitch != 0)
   {
-    const fixed_t scale = EASE_SCALE(abs(pitch), FINEANGLES);
-    fixed_t delta = EASE_OUT(MAX_DELTA, scale);
+    const fixed_t escale = EASE_SCALE(abs(pitch), FINEANGLES, scale);
+    fixed_t delta = EASE_OUT(MAX_DELTA, escale);
     delta = MIN(delta, MAX_DELTA);
     psp->wiy += pitch < 0 ? -delta : delta;
   }
@@ -1532,26 +1545,40 @@ static void WeaponInertiaVertical(player_t* player, pspdef_t *psp)
   }
 }
 
-static void P_NuggetWeaponInertia(player_t *player, pspdef_t *psp)
-{
-  if (STRICTMODE(weapon_inertia) && weapon_inertia_scale)
+static void P_NuggetWeaponInertia(
+  const player_t *const player,
+  pspdef_t *const psp
+) {
+  weapon_inertia = !strictmode && (weapon_inertia_scale || weapon_inertia_fire_scale);
+
+  if (weapon_inertia)
   {
-    if (!psp->state || (player->attackdown && !weapon_inertia_fire))
+    if (!psp->state)
     {
-      psp->wix = 0;
-      psp->wiy = 0;
+      psp->wix = psp->wiy = 0;
       return;
     }
 
-    WeaponInertiaHorizontal(player, psp);
+    const fixed_t scale = player->attackdown ? weapon_inertia_fire_scale
+                                             : weapon_inertia_scale;
+
+    WeaponInertiaHorizontal(player, psp, scale);
 
     if (mouselook || padlook || player->pitch || psp->wiy)
-      WeaponInertiaVertical(player, psp);
+      WeaponInertiaVertical(player, psp, scale);
   }
+}
+
+void P_NuggetSetWeaponInertiaScale(void)
+{
+  weapon_inertia_scale      = weapon_inertia_scale_pct      * ORIG_WEAPON_INERTIA_SCALE / 100;
+  weapon_inertia_fire_scale = weapon_inertia_fire_scale_pct * ORIG_WEAPON_INERTIA_SCALE / 100;
 }
 
 void P_NuggetResetWeaponInertia(void)
 {
+  P_NuggetSetWeaponInertiaScale();
+
   if (gamestate == GS_LEVEL && playeringame[displayplayer])
   {
     pspdef_t *psp = &players[displayplayer].psprites[ps_weapon];

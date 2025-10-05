@@ -1361,7 +1361,7 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   fixed_t x = sx2,
           y = sy2 - 32*FRACUNIT;
 
-  if (STRICTMODE(weapon_inertia))
+  if (P_WeaponInertiaOn())
   {
     x += wix / 2;
 

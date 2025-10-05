@@ -1487,32 +1487,23 @@ spawnit:
   // [Nugget] Custom Skill: duplicate monster spawns
   if (duplicatespawns)
   {
-    const int offset = abs(mobj->x - mobj->y) % 8;
-    const fixed_t dist = (mobj->radius * 2) + (mobj->info->speed << FRACBITS);
     boolean stuck = true;
 
-    const fixed_t xoffsets[8] = {
-      -dist,     0, dist,
-      -dist,        dist,
-      -dist,     0, dist
-    };
+    mobj->flags |= MF_TELEPORT; // Don't interact with specials while checking bounds
 
-    const fixed_t yoffsets[8] = {
-      dist,  dist,  dist,
-         0,            0,
-     -dist, -dist, -dist
-    };
-
-    mobj->flags |= MF_TELEPORT; // Don't interact with specials
+    const int offset = abs(mobj->x - mobj->y) % 8;
+    const fixed_t dist = (mobj->radius * 2) + (mobj->info->speed << FRACBITS);
 
     for (int j = 0;  j < 8;  j++)
     {
-      const int side = (j + offset) % 8;
-      const fixed_t xofs = xoffsets[side],
-                    yofs = yoffsets[side];
+      int k = (j + offset) % 8;
 
-      if (!Check_Sides(mobj, mobj->x + xofs, mobj->y + yofs)
-          && P_TryMove(mobj, mobj->x + xofs, mobj->y + yofs, false))
+      if (k >= 4) { k++; } // Don't check inside the original monster
+
+      const fixed_t xx = mobj->x + (dist *  ((k % 3) - 1)),
+                    yy = mobj->y + (dist * -((k / 3) - 1));
+
+      if (!Check_Sides(mobj, xx, yy) && P_TryMove(mobj, xx, yy, false))
       {
         stuck = false;
         break;
@@ -1899,7 +1890,7 @@ int P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta)
 
 // [Nugget] ==================================================================
 
-// [Nugget] Alt. states
+// Alt. states
 void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
 {
   if (statenum == -1)
@@ -1909,8 +1900,6 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
     return;
   }
 
-  altstate_t *state;
-
   do {
     if (statenum == AS_NULL)
     {
@@ -1919,7 +1908,8 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
       break;
     }
 
-    state = &altstates[statenum];
+    altstate_t *const state = &altstates[statenum];
+
     mobj->altstate = state;
     mobj->alttics = state->tics;
     mobj->altsprite = state->sprite;
@@ -1971,9 +1961,9 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
   mobj->ceilingz = mobj->subsector->sector->ceilingheight;
 
   mobj->oldz =
-  mobj->z    =   (z == ONFLOORZ)   ? mobj->floorz
-               : (z == ONCEILINGZ) ? mobj->ceilingz - mobj->height
-               :                     z;
+  mobj->z    = (z == ONFLOORZ)   ? mobj->floorz
+             : (z == ONCEILINGZ) ? mobj->ceilingz - mobj->height
+             :                     z;
 
   mobj->friction = ORIG_FRICTION;
 
@@ -2045,7 +2035,7 @@ static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
   flake->alttics = 28 + (z - flaker->sector->floorheight) / -flake->momz;
 }
 
-void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const sector_t *sector)
+void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const sector_t *const sector)
 {
   array_push(flakers, ((flaker_t) { x, y, z, sector }));
 

@@ -1997,11 +1997,6 @@ static const char *force_carousel_strings[] = {
   "Off", "Off Player", "Always"
 };
 
-static void NuggetResetWeaponInertia(void)
-{
-  P_NuggetResetWeaponInertia();
-}
-
 void WeaponFlashTrans(void)
 {
     R_GetGenericTranMap(pspr_translucency_pct);
@@ -2011,12 +2006,14 @@ static setup_menu_t weap_settings5[] =
 {
   {"Nugget - Cosmetic", S_SKIP|S_TITLE, W_X, M_SPC},
 
-    {"Bobbing Style",             S_CHOICE|S_STRICT, W_X, M_SPC, {"bobbing_style"}, .strings_id = str_bobbing_style},
+    {"Bobbing Style",             S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"bobbing_style"}, .strings_id = str_bobbing_style},
+    {"Bob While Switching",       S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"switch_bob"}},
+    {"Weapon Squat Upon Landing", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"weaponsquat"}},
+    {"Force Weapon Carousel",     S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"force_carousel"}, .strings_id = str_force_carousel},
+    MI_GAP,
     {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
-    {"Bob While Switching",       S_ONOFF |S_STRICT, W_X, M_SPC, {"switch_bob"}},
-    {"Weapon Inertia",            S_ONOFF |S_STRICT, W_X, M_SPC, {"weapon_inertia"}, .action = NuggetResetWeaponInertia},
-    {"Weapon Squat Upon Landing", S_ONOFF |S_STRICT, W_X, M_SPC, {"weaponsquat"}},
-    {"Force Weapon Carousel",     S_CHOICE|S_STRICT, W_X, M_SPC, {"force_carousel"}, .strings_id = str_force_carousel},
+    {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
     {"Flash Translucency",        S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
 
   MI_END

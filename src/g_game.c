@@ -6383,18 +6383,13 @@ void G_BindWeapVariables(void)
              false, ss_weap, wad_yes,
              "Bob weapon while switching it");
 
-  M_BindBool("weapon_inertia", &weapon_inertia, NULL,
-             false, ss_weap, wad_yes,
-             "Weapon inertia");
-
   M_BindNum("weapon_inertia_scale_pct", &weapon_inertia_scale_pct, NULL,
-            100, -200, 200, ss_weap, wad_yes,
+            0, -200, 200, ss_weap, wad_yes,
             "Weapon-inertia scale percent");
 
-  // (CFG-only)
-  M_BindBool("weapon_inertia_fire", &weapon_inertia_fire, NULL,
-             true, ss_none, wad_yes,
-             "Apply weapon inertia while firing");
+  M_BindNum("weapon_inertia_fire_scale_pct", &weapon_inertia_fire_scale_pct, NULL,
+            0, -200, 200, ss_weap, wad_yes,
+            "Weapon-inertia scale percent while firing");
 
   M_BindBool("weaponsquat", &weaponsquat, NULL,
              false, ss_weap, wad_yes,

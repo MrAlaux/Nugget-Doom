@@ -1190,7 +1190,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   tx = sx2 - 160*FRACUNIT; // [FG] centered weapon sprite
 
   // [Nugget] Weapon inertia | Flip levels
-  if (STRICTMODE(weapon_inertia))
+  if (P_WeaponInertiaOn())
   { tx += flip_levels ? -wix : wix; }
 
   tx -= spriteoffset[lump];
@@ -1217,7 +1217,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
                     (sy2 - spritetopoffset[lump]); // [FG] centered weapon sprite
 
   // [Nugget]
-  vis->texturemid += (STRICTMODE(weapon_inertia) ? -wiy : 0) // Weapon inertia
+  vis->texturemid += (P_WeaponInertiaOn() ? -wiy : 0) // Weapon inertia
                    + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
 
   vis->x1 = x1 < 0 ? 0 : x1;
