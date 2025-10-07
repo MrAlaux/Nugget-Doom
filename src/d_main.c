@@ -2800,11 +2800,12 @@ void D_DoomMain(void)
 
   D_StartGameLoop();
 
-  D_UpdateCasualPlay(); // [Nugget]
+  // [Nugget] /---------------------------------------------------------------
 
-  weapon_inertia_scale = weapon_inertia_scale_pct * ORIG_WEAPON_INERTIA_SCALE / 100; // [Nugget] Weapon inertia
+  D_UpdateCasualPlay();
 
-  // [Nugget]
+  P_NuggetSetWeaponInertiaScale();
+
   if (casual_play && !fail_safe)
   {
     time_t curtime = time(NULL);
@@ -2819,6 +2820,8 @@ void D_DoomMain(void)
       else if (curtm->tm_mon == 11 && curtm->tm_mday == 25) {  flakes = allow_flakes = true; }
     }
   }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   for (;;)
     {

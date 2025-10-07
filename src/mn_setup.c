@@ -2043,11 +2043,6 @@ static const char *force_carousel_strings[] = {
   "Off", "Off Player", "Always"
 };
 
-static void NuggetResetWeaponInertia(void)
-{
-  P_NuggetResetWeaponInertia();
-}
-
 void WeaponFlashTrans(void)
 {
     R_GetGenericTranMap(pspr_translucency_pct);
@@ -2057,13 +2052,15 @@ static setup_menu_t weap_settings5[] =
 {
   {"Nugget - Cosmetic", S_SKIP|S_TITLE, W_X, M_SPC},
 
-    {"Bobbing Style",             S_CHOICE|S_STRICT, W_X, M_SPC, {"bobbing_style"}, .strings_id = str_bobbing_style},
+    {"Bobbing Style",             S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"bobbing_style"}, .strings_id = str_bobbing_style},
+    {"Bob While Switching",       S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"switch_bob"}},
+    {"Weapon Squat Upon Landing", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"weaponsquat"}},
+    {"Force Weapon Carousel",     S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"force_carousel"}, .strings_id = str_force_carousel},
+    MI_GAP,
     {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
-    {"Bob While Switching",       S_ONOFF |S_STRICT, W_X, M_SPC, {"switch_bob"}},
-    {"Weapon Inertia",            S_ONOFF |S_STRICT, W_X, M_SPC, {"weapon_inertia"}, .action = NuggetResetWeaponInertia},
-    {"Weapon Squat Upon Landing", S_ONOFF |S_STRICT, W_X, M_SPC, {"weaponsquat"}},
-    {"Force Weapon Carousel",     S_CHOICE|S_STRICT, W_X, M_SPC, {"force_carousel"}, .strings_id = str_force_carousel},
-    {"Flash Translucency",        S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
 
   MI_END
 };
@@ -2286,7 +2283,7 @@ static setup_menu_t stat_settings3[] = {
      .strings_id = str_crosshair, .action = HU_StartCrosshair},
 
     // [Nugget] Translucent crosshair
-    {"Translucency", S_THERMO | S_ACTION | S_PCT, H_X_THRM8 - 13, M_THRM_SPC,
+    {"Opacity", S_THERMO | S_ACTION | S_PCT, H_X_THRM8 - 13, M_THRM_SPC,
      {"hud_crosshair_tran_pct"}, .action = CrosshairTrans},
 
     {"Color By Player Health", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_health"}},
@@ -6064,7 +6061,7 @@ void MN_BindMenuVariables(void)
     // (CFG-only)
     M_BindNum("hud_menu_shadows_filter_pct", &hud_menu_shadows_filter_pct, NULL,
               66, 0, 100, ss_none, wad_yes,
-              "HUD/menu-shadows translucency percent");
+              "HUD/menu-shadows opacity percent");
 
     // [Nugget] -------------------------------------------------------------/
 

@@ -3950,7 +3950,7 @@ void ST_BindSTSVariables(void)
   // [Nugget] Translucent crosshair
   M_BindNum("hud_crosshair_tran_pct", &hud_crosshair_tran_pct, NULL,
             100, 0, 100, ss_stat, wad_no,
-            "Crosshair translucency percent");
+            "Crosshair opacity percent");
 
   M_BindBool("hud_crosshair_health", &hud_crosshair_health, NULL,
              false, ss_stat, wad_no, "Change crosshair color based on player health");

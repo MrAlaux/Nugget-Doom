@@ -1002,7 +1002,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   fixed_t floorheight, shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
 
-  floorheight = R_PointInSubsector(interpx, interpy)->sector->floorheight;
+  floorheight = R_PointInSubsector(interpx, interpy)->sector->interpfloorheight;
 
   if (viewz < floorheight + FRACUNIT) { return; }
 
@@ -1228,7 +1228,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, boolean translucent) 
   tx = sx2 - 160*FRACUNIT; // [FG] centered weapon sprite
 
   // [Nugget] Weapon inertia | Flip levels
-  if (STRICTMODE(weapon_inertia))
+  if (P_WeaponInertiaOn())
   { tx += flip_levels ? -wix : wix; }
 
   tx -= spriteoffset[lump];
@@ -1256,7 +1256,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, boolean translucent) 
                     (sy2 - spritetopoffset[lump]); // [FG] centered weapon sprite
 
   // [Nugget]
-  vis->texturemid += (STRICTMODE(weapon_inertia) ? -wiy : 0) // Weapon inertia
+  vis->texturemid += (P_WeaponInertiaOn() ? -wiy : 0) // Weapon inertia
                    + MIN(0, R_GetFOVFX(FOVFX_ZOOM) * FRACUNIT/2); // Lower weapon based on zoom
 
   vis->x1 = x1 < 0 ? 0 : x1;
