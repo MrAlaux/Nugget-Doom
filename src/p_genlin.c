@@ -99,7 +99,7 @@ manual_floor:
 
     // new floor thinker
     rtn = 1;
-    floor = arena_alloc(thinkers_arena, 1, floormove_t);
+    floor = arena_alloc(thinkers_arena, floormove_t);
     P_AddThinker (&floor->thinker);
     sec->floordata = floor;
     floor->thinker.function.p1 = T_MoveFloorAdapter;
@@ -302,7 +302,7 @@ manual_ceiling:
 
     // new ceiling thinker
     rtn = 1;
-    ceiling = arena_alloc(thinkers_arena, 1, ceiling_t);
+    ceiling = arena_alloc(thinkers_arena, ceiling_t);
     P_AddThinker (&ceiling->thinker);
     sec->ceilingdata = ceiling; //jff 2/22/98
     ceiling->thinker.function.p1 = T_MoveCeilingAdapter;
@@ -483,7 +483,7 @@ int EV_DoGenLift
   // Activate all <type> plats that are in_stasis
 
   if (Targ==LnF2HnF)
-    P_ActivateInStasis(line->tag);
+    P_ActivateInStasis(line->args[0]);
         
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
@@ -513,14 +513,14 @@ manual_lift:
       
     // Setup the plat thinker
     rtn = 1;
-    plat = arena_alloc(thinkers_arena, 1, plat_t);
+    plat = arena_alloc(thinkers_arena, plat_t);
     P_AddThinker(&plat->thinker);
               
     plat->sector = sec;
     plat->sector->floordata = plat;
     plat->thinker.function.p1 = T_PlatRaiseAdapter;
     plat->crush = false;
-    plat->tag = line->tag;
+    plat->tag = line->args[0];
 
     plat->type = genLift;
     plat->high = sec->floorheight;
@@ -673,7 +673,7 @@ manual_stair:
       
     // new floor thinker
     rtn = 1;
-    floor = arena_alloc(thinkers_arena, 1, floormove_t);
+    floor = arena_alloc(thinkers_arena, floormove_t);
     P_AddThinker (&floor->thinker);
     sec->floordata = floor;
     floor->thinker.function.p1 = T_MoveFloorAdapter;
@@ -775,7 +775,7 @@ manual_stair:
 
         sec = tsec;
         secnum = newsecnum;
-        floor = arena_alloc(thinkers_arena, 1, floormove_t);
+        floor = arena_alloc(thinkers_arena, floormove_t);
 
         P_AddThinker (&floor->thinker);
 
@@ -859,7 +859,7 @@ manual_crusher:
 
     // new ceiling thinker
     rtn = 1;
-    ceiling = arena_alloc(thinkers_arena, 1, ceiling_t);
+    ceiling = arena_alloc(thinkers_arena, ceiling_t);
     P_AddThinker (&ceiling->thinker);
     sec->ceilingdata = ceiling; //jff 2/22/98
     ceiling->thinker.function.p1 = T_MoveCeilingAdapter;
@@ -954,7 +954,7 @@ manual_locked:
   
     // new door thinker
     rtn = 1;
-    door = arena_alloc(thinkers_arena, 1, vldoor_t);
+    door = arena_alloc(thinkers_arena, vldoor_t);
     P_AddThinker (&door->thinker);
     sec->ceilingdata = door; //jff 2/22/98
 
@@ -968,7 +968,7 @@ manual_locked:
 
     // killough 10/98: implement gradual lighting
     door->lighttag = !STRICTMODE_COMP(comp_doorlight) && (line->special&6) == 6 && 
-      line->special > GenLockedBase ? line->tag : 0;
+      line->special > GenLockedBase ? line->args[0] : 0;
 
     // setup speed of door motion
     switch(Sped)
@@ -1062,7 +1062,7 @@ manual_door:
   
     // new door thinker
     rtn = 1;
-    door = arena_alloc(thinkers_arena, 1, vldoor_t);
+    door = arena_alloc(thinkers_arena, vldoor_t);
     P_AddThinker (&door->thinker);
     sec->ceilingdata = door; //jff 2/22/98
 
@@ -1107,7 +1107,7 @@ manual_door:
 
     // killough 10/98: implement gradual lighting
     door->lighttag = !STRICTMODE_COMP(comp_doorlight) && (line->special&6) == 6 && 
-      line->special > GenLockedBase ? line->tag : 0;
+      line->special > GenLockedBase ? line->args[0] : 0;
 
     // set kind of door, whether it opens then close, opens, closes etc.
     // assign target heights accordingly
@@ -1206,4 +1206,3 @@ manual_door:
 //
 //
 //----------------------------------------------------------------------------
-          

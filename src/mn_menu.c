@@ -65,6 +65,7 @@
 #include "v_fmt.h"
 #include "v_video.h"
 #include "w_wad.h"
+#include "wi_stuff.h"
 #include "z_zone.h"
 
 // [Nugget]
@@ -2553,11 +2554,7 @@ void M_Init(void)
         replace = M_StringReplace(string, "dos", platform);
 
 #if defined(_WIN32)
-#  if defined(WIN_LAUNCHER)
-        string = M_StringReplace(replace, "prompt", "console");
-#  else
         string = M_StringReplace(replace, "prompt", "desktop");
-#  endif
 #else
         if (isatty(STDOUT_FILENO))
         {
@@ -2612,6 +2609,15 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (menuactive || chat_on)
     {
         return false;
+    }
+
+    if (M_InputActivated(input_netgame_stats))
+    {
+        if (gamestate == GS_LEVEL && (netgame || deathmatch))
+        {
+            wi_overlay = !wi_overlay;
+            return true;
+        }
     }
 
     if (M_InputActivated(input_autorun)) // Autorun

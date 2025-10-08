@@ -121,6 +121,7 @@ set(NUGGETDOOM_SOURCES
     p_switch.c
     p_telept.c
     p_tick.c               p_tick.h
+    p_udmf.c               p_udmf.h
     p_user.c               p_user.h
     r_bmaps.c              r_bmaps.h
     r_bsp.c                r_bsp.h

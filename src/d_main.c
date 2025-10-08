@@ -395,6 +395,9 @@ void D_Display (void)
     if (gametic) { ST_Drawer(); }
   }
 
+  if (wi_overlay)
+    WI_drawOverlayStats();
+
   // draw pause pic
   if (paused)
     {
@@ -581,30 +584,27 @@ const char *D_DoomExeName(void)
 // Calculate the path to the directory for autoloaded WADs/DEHs.
 // Creates the directory as necessary.
 
-typedef struct {
-    const char *dir;
-    char *(*func)(void);
-    boolean createdir;
-} basedir_t;
-
-static basedir_t basedirs[] = {
+static constructed_dir_t basedirs[] = {
 #if !defined(_WIN32)
-    {"../share/" PROJECT_SHORTNAME, D_DoomExeDir, false},
+    {D_DoomExeDir, "../share/" PROJECT_SHORTNAME},
 #endif
-    {NULL, D_DoomPrefDir, true},
-#if !defined(_WIN32) || defined(_WIN32_WCE)
-    {NULL, D_DoomExeDir, false},
-#endif
+    {D_DoomPrefDir, NULL, NULL, true},
+    {D_DoomExeDir, NULL, D_DoomPrefDir},
 };
 
 static void LoadBaseFile(void)
 {
     for (int i = 0; i < arrlen(basedirs); ++i)
     {
-        basedir_t d = basedirs[i];
+        constructed_dir_t d = basedirs[i];
         boolean result = false;
 
-        if (d.dir && d.func)
+        if (d.check_func && d.func && d.check_func() == d.func())
+        {
+            continue;
+        }
+
+        if (d.func && d.dir)
         {
             char *s = M_StringJoin(d.func(), DIR_SEPARATOR_S, d.dir);
             result = W_InitBaseFile(s);
@@ -663,9 +663,14 @@ static void PrepareAutoloadPaths(void)
 
     for (int i = 0; i < arrlen(basedirs); i++)
     {
-        basedir_t d = basedirs[i];
+        constructed_dir_t d = basedirs[i];
 
-        if (d.dir && d.func)
+        if (d.check_func && d.func && d.check_func() == d.func())
+        {
+            continue;
+        }
+
+        if (d.func && d.dir)
         {
             array_push(autoload_paths,
                        M_StringJoin(d.func(), DIR_SEPARATOR_S, d.dir,
@@ -682,7 +687,7 @@ static void PrepareAutoloadPaths(void)
                                                     "autoload"));
         }
 
-        if (d.createdir)
+        if (d.makedir)
         {
             M_MakeDirectory(autoload_paths[i]);
         }

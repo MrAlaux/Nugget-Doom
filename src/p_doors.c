@@ -335,7 +335,7 @@ int EV_DoDoor(line_t *line, vldoor_e type)
 
       // new door thinker
       rtn = 1;
-      door = arena_alloc(thinkers_arena, 1, vldoor_t);
+      door = arena_alloc(thinkers_arena, vldoor_t);
       P_AddThinker(&door->thinker);
       sec->ceilingdata = door; //jff 2/22/98
 
@@ -592,7 +592,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
     }
 
   // new door thinker
-  door = arena_alloc(thinkers_arena, 1, vldoor_t);
+  door = arena_alloc(thinkers_arena, vldoor_t);
   P_AddThinker (&door->thinker);
   sec->ceilingdata = door; //jff 2/22/98
   door->thinker.function.p1 = T_VerticalDoorAdapter;
@@ -603,7 +603,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
   door->line = line; // jff 1/31/98 remember line that triggered us
 
   // killough 10/98: use gradual lighting changes if nonzero tag given
-  door->lighttag = STRICTMODE_COMP(comp_doorlight) ? 0 : line->tag; // killough 10/98
+  door->lighttag = STRICTMODE_COMP(comp_doorlight) ? 0 : line->args[0]; // killough 10/98
 
   // set the type of door from the activating linedef type
   switch(line->special)
@@ -662,7 +662,7 @@ int EV_VerticalDoor(line_t *line, mobj_t *thing)
 
 void P_SpawnDoorCloseIn30 (sector_t* sec)
 {
-  vldoor_t *door = arena_alloc(thinkers_arena, 1, vldoor_t);
+  vldoor_t *door = arena_alloc(thinkers_arena, vldoor_t);
 
   P_AddThinker (&door->thinker);
 
@@ -692,7 +692,7 @@ void P_SpawnDoorRaiseIn5Mins(sector_t *sec, int secnum)
 {
   vldoor_t* door;
 
-  door = arena_alloc(thinkers_arena, 1, vldoor_t);
+  door = arena_alloc(thinkers_arena, vldoor_t);
 
   P_AddThinker (&door->thinker);
 

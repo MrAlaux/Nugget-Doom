@@ -688,8 +688,8 @@ void P_NightmareRespawn(mobj_t* mobj)
   mobj_t*      mo;
   mapthing_t*  mthing;
 
-  x = mobj->spawnpoint.x << FRACBITS;
-  y = mobj->spawnpoint.y << FRACBITS;
+  x = mobj->spawnpoint.x;
+  y = mobj->spawnpoint.y;
 
   // haleyjd: stupid nightmare respawning bug fix
   //
@@ -981,7 +981,7 @@ void P_MobjThinker (mobj_t* mobj)
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
-  mobj_t *mobj = arena_alloc(thinkers_arena, 1, mobj_t);
+  mobj_t *mobj = arena_alloc(thinkers_arena, mobj_t);
   mobjinfo_t *info = &mobjinfo[type];
   state_t    *st;
 
@@ -1035,8 +1035,18 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->floorz   = mobj->subsector->sector->floorheight;
   mobj->ceilingz = mobj->subsector->sector->ceilingheight;
 
-  mobj->z = z == ONFLOORZ ? mobj->floorz : z == ONCEILINGZ ?
-    mobj->ceilingz - mobj->height : z;
+  if (z == ONFLOORZ)
+  {
+    mobj->z = mobj->floorz;
+  }
+  else if (z == ONCEILINGZ)
+  {
+    mobj->z = mobj->ceilingz - mobj->height;
+  }
+  else
+  {
+    mobj->z = z;
+  }
 
   // [AM] Do not interpolate on spawn.
   mobj->interp = false;
@@ -1212,8 +1222,8 @@ void P_RespawnSpecials (void)
 
   mthing = &itemrespawnque[iquetail];
 
-  x = mthing->x << FRACBITS;
-  y = mthing->y << FRACBITS;
+  x = mthing->x;
+  y = mthing->y;
 
   // spawn a teleport fog at the new spot
 
@@ -1262,8 +1272,8 @@ void P_SpawnPlayer (mapthing_t* mthing)
   if (p->playerstate == PST_REBORN)
     G_PlayerReborn (mthing->type-1);
 
-  x    = mthing->x << FRACBITS;
-  y    = mthing->y << FRACBITS;
+  x    = mthing->x;
+  y    = mthing->y;
   z    = ONFLOORZ;
   mobj = P_SpawnMobj (x,y,z, MT_PLAYER);
 
@@ -1350,7 +1360,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   if (demo_compatibility || 
       (demo_version >= DV_MBF && mthing->options & MTF_RESERVED))
-    mthing->options &= MTF_EASY|MTF_NORMAL|MTF_HARD|MTF_AMBUSH|MTF_NOTSINGLE;
+    mthing->options &= MTF_SKILL1|MTF_SKILL2|MTF_SKILL3|MTF_SKILL4|MTF_SKILL5|MTF_AMBUSH|MTF_NOTSINGLE;
 
   // count deathmatch start positions
 
@@ -1420,12 +1430,16 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   // killough 11/98: simplify
   // [Nugget] Custom Skill: use `thingspawns`
-  if ((gameskill == sk_none && demo_compatibility) ||
-      (thingspawns == THINGSPAWNS_EASY ?
-      !(mthing->options & MTF_EASY) :
-      thingspawns == THINGSPAWNS_HARD ?
-      !(mthing->options & MTF_HARD) : !(mthing->options & MTF_NORMAL)))
+  if ((gameskill == sk_none && demo_compatibility)
+      || (!(mthing->options & MTF_SKILL1) && thingspawns == THINGSPAWNS_BABY)
+      || (!(mthing->options & MTF_SKILL2) && thingspawns == THINGSPAWNS_EASY)
+      || (!(mthing->options & MTF_SKILL3) && thingspawns == THINGSPAWNS_MEDIUM)
+      || (!(mthing->options & MTF_SKILL4) && thingspawns == THINGSPAWNS_HARD)
+      || (!(mthing->options & MTF_SKILL5) && thingspawns == THINGSPAWNS_NIGHTMARE)
+    )
+  {
     return;
+  }
 
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (mthing->type >= 14100 && mthing->type <= 14164)
@@ -1469,8 +1483,8 @@ void P_SpawnMapThing (mapthing_t* mthing)
   // spawn it
 spawnit:
 
-  x = mthing->x << FRACBITS;
-  y = mthing->y << FRACBITS;
+  x = mthing->x;
+  y = mthing->y;
 
   z = mobjinfo[i].flags & MF_SPAWNCEILING ? ONCEILINGZ : ONFLOORZ;
 
@@ -1489,6 +1503,16 @@ spawnit:
       mobj->flags |= MF_FRIEND;            // killough 10/98:
       P_UpdateThinker(&mobj->thinker);     // transfer friendliness flag
     }
+
+  // UDMF thing height
+  if (z == ONFLOORZ)
+  {
+    mobj->z += mthing->height;
+  }
+  else if (z == ONCEILINGZ)
+  {
+    mobj->z -= mthing->height;
+  }
 
   // [Nugget] Custom Skill: duplicate monster spawns
   if (duplicatespawns)
@@ -1942,7 +1966,7 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
 
 mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenum)
 {
-  mobj_t *const mobj = arena_alloc(thinkers_arena, 1, mobj_t);
+  mobj_t *const mobj = arena_alloc(thinkers_arena, mobj_t);
 
   static mobjinfo_t info = {0};
 

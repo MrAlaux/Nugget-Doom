@@ -90,7 +90,7 @@ check_symbol_exists(getpwuid "unistd.h;sys/types.h;pwd.h" HAVE_GETPWUID)
 check_c_source_compiles(
     "
     #include <immintrin.h>
-    int main()
+    int main(void)
     {
         int tmp = _div64(4, 2, NULL);
         return 0;
@@ -101,7 +101,7 @@ check_c_source_compiles(
 check_c_source_compiles(
     "
     typedef float vec __attribute__((ext_vector_type(4)));
-    int main()
+    int main(void)
     {
         vec a = (vec){0, 1, 2, 3};
         return 0;
@@ -124,6 +124,21 @@ endif()
 if(ALSA_FOUND)
     set(HAVE_ALSA TRUE)
 endif()
+
+set(CMAKE_REQUIRED_LIBRARIES SDL3::SDL3)
+check_c_source_compiles(
+    "
+    #include <SDL3/SDL.h>
+    int main(void)
+    {
+        SDL_Texture *texture;
+        SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_PIXELART);
+        return 0;
+    }
+    "
+    HAVE_SCALEMODE_PIXELART
+)
+unset(CMAKE_REQUIRED_LIBRARIES)
 
 if(OPENAL_VERSION_STRING VERSION_GREATER_EQUAL "1.22.0")
     set(HAVE_AL_BUFFER_CALLBACK TRUE)
@@ -175,7 +190,7 @@ endif()
 if(WIN32)
     install(FILES COPYING DESTINATION . RENAME COPYING.txt)
     if(HAVE_FLUIDSYNTH)
-        install(DIRECTORY soundfonts/ DESTINATION soundfonts)
+        install(DIRECTORY DESTINATION soundfonts)
     endif()
 else()
     install(FILES COPYING DESTINATION "share/doc/${PROJECT_SHORTNAME}")

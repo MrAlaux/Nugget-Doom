@@ -56,6 +56,7 @@ static int fl_chorus_depth;
 static int fl_chorus_level;
 static int fl_chorus_nr;
 static int fl_chorus_speed;
+static int fl_note_cut;
 
 static fluid_synth_t *synth = NULL;
 static fluid_settings_t *settings = NULL;
@@ -142,6 +143,19 @@ static void GetSoundFonts(void)
         return;
     }
 
+#if defined(_WIN32)
+    const char *sys = M_getenv("SystemRoot");
+    char *path = M_StringJoin(sys, "\\System32\\drivers\\gm.dls");
+    if (M_FileExistsNotDir(path))
+    {
+        array_push(soundfonts, path);
+    }
+    else
+    {
+        free(path);
+    }
+#endif
+
     if (strlen(soundfont_dirs) > 0)
     {
         // Split into individual dirs within the list.
@@ -173,14 +187,6 @@ static void GetSoundFonts(void)
     }
     else
     {
-        typedef struct
-        {
-            char *(*func)(void);
-            const char *dir;
-            char *(*check_func)(void);
-            boolean makedir;
-        } constructed_dir_t;
-
         const constructed_dir_t constructed_dirs[] = {
             {D_DoomPrefDir, "soundfonts", NULL, true},
             {D_DoomExeDir, "soundfonts", D_DoomPrefDir},
@@ -274,6 +280,7 @@ static boolean I_FL_InitStream(int device)
     fluid_settings_setstr(settings, "synth.midi-bank-select", "gs");
     fluid_settings_setint(settings, "synth.reverb.active", fl_reverb);
     fluid_settings_setint(settings, "synth.chorus.active", fl_chorus);
+    fluid_settings_setint(settings, "synth.note-cut", fl_note_cut);
 
     if (fl_reverb)
     {
@@ -523,6 +530,9 @@ static void I_FL_BindVariables(void)
         "[FluidSynth] Chorus voice count");
     BIND_NUM(fl_chorus_speed, 36, 10, 500,
         "[FluidSynth] Chorus modulation speed");
+    BIND_NUM(fl_note_cut, 1, 0, 2,
+        "[FluidSynth] Note cut mode for compatibility with "
+        "MS GS Wavetable Synth (0 = Off; 1 = Drums; 2 = All)");
 }
 
 static const char *I_FL_MusicFormat(void)
