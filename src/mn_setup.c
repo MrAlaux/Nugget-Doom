@@ -4342,7 +4342,7 @@ const char *skill_strings[] = {
 };
 
 static const char *thing_spawns_strings[] = {
-  "Easy", "Normal", "Hard"
+  "ITYTD", "HNTR", "HMP", "UV", "NM"
 };
 
 static void StartCustomSkill(const int mode)

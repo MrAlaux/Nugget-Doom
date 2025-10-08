@@ -363,8 +363,7 @@ void G_SetSkillParms(const skill_t skill)
     x2monsters       = customskill.x2monsters;
   }
   else {
-    thingspawns = (skill == sk_baby || skill == sk_easy)      ? THINGSPAWNS_EASY :
-                  (skill == sk_hard || skill == sk_nightmare) ? THINGSPAWNS_HARD : THINGSPAWNS_NORMAL;
+    thingspawns = skill;
 
     coopspawns       = clcoopspawns;
     realnomonsters   = nomonsters;
@@ -5785,8 +5784,8 @@ void G_BindGameVariables(void)
   // [Nugget] Custom Skill /--------------------------------------------------
 
   M_BindNum("custom_skill_things", &custom_skill_things, NULL,
-            2, 0, 2, ss_cskill, wad_yes,
-            "Custom Skill: thing spawns (0 = Easy; 1 = Normal; 2 = Hard)");
+            THINGSPAWNS_HARD, THINGSPAWNS_BABY, THINGSPAWNS_NIGHTMARE, ss_cskill, wad_yes,
+            "Custom Skill: thing spawns (0 = ITYTD; 1 = HNTR; 2 = HMP; 3 = UV; 4 = NM)");
 
   M_BindBool("custom_skill_coopspawns", &custom_skill_coopspawns, NULL,
             0, ss_cskill, wad_yes,

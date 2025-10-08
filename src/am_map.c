@@ -1431,7 +1431,7 @@ void AM_Ticker (void)
       {
         const line_t *const l = subsec->sector->lines[i];
 
-        if (l && l->tag > 0)
+        if (l && l->args[0] > 0)
         {
           if (l->v1 && l->v2)
           {
@@ -1445,7 +1445,7 @@ void AM_Ticker (void)
 
             if (dist < min_distance) {
               min_distance = dist;
-              min_tag = l->tag;
+              min_tag = l->args[0];
             }
           }
         }
@@ -2090,7 +2090,7 @@ static int AM_isTagFinderLine(const line_t *const line)
       ret |= 0x1;
     }
 
-    if (line->tag > 0 && (line->tag == magic_tag || (magic_sector && (line->tag == magic_sector->tag))))
+    if (line->args[0] > 0 && (line->args[0] == magic_tag || (magic_sector && (line->args[0] == magic_sector->tag))))
     {
       ret |= 0x2;
     }

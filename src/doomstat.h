@@ -210,7 +210,13 @@ extern  boolean         respawnmonsters;
 
 // [Nugget] Custom skill flags /----------------------------------------------
 
-enum { THINGSPAWNS_EASY, THINGSPAWNS_NORMAL, THINGSPAWNS_HARD };
+enum {
+  THINGSPAWNS_BABY,
+  THINGSPAWNS_EASY,
+  THINGSPAWNS_MEDIUM,
+  THINGSPAWNS_HARD,
+  THINGSPAWNS_NIGHTMARE
+};
 
 extern int     thingspawns;
 extern boolean realnomonsters;
