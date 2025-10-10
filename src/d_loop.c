@@ -34,7 +34,7 @@
 #include "net_io.h"
 #include "net_loop.h"
 #include "net_query.h"
-#include "net_sdl.h"
+#include "net_netlib.h"
 #include "net_server.h"
 #include "s_sound.h"
 
@@ -427,7 +427,7 @@ void D_StartNetGame(net_gamesettings_t *settings,
 
     if (ticdup < 1)
     {
-        I_Error("D_StartNetGame: invalid ticdup value (%d)", ticdup);
+        I_Error("invalid ticdup value (%d)", ticdup);
     }
 
     // TODO: Message disabled until we fix new_sync.
@@ -460,7 +460,7 @@ boolean D_InitNetGame(net_connect_data_t *connect_data)
     {
         NET_SV_Init();
         NET_SV_AddModule(&net_loop_server_module);
-        NET_SV_AddModule(&net_sdl_module);
+        NET_SV_AddModule(&netlib_module);
         NET_SV_RegisterWithMaster();
 
         net_loop_client_module.InitClient();
@@ -502,8 +502,8 @@ boolean D_InitNetGame(net_connect_data_t *connect_data)
 
         if (i > 0)
         {
-            net_sdl_module.InitClient();
-            addr = net_sdl_module.ResolveAddress(myargv[i + 1]);
+            netlib_module.InitClient();
+            addr = netlib_module.ResolveAddress(myargv[i + 1]);
             NET_ReferenceAddress(addr);
 
             if (addr == NULL)
@@ -522,7 +522,7 @@ boolean D_InitNetGame(net_connect_data_t *connect_data)
 
         if (!NET_CL_Connect(addr, connect_data))
         {
-            I_Error("D_InitNetGame: Failed to connect to %s:\n%s\n",
+            I_Error("Failed to connect to %s:\n%s\n",
                     NET_AddrToString(addr), net_client_reject_reason);
         }
 
@@ -573,7 +573,7 @@ void D_QuitNetGame(void)
 {
     NET_SV_Shutdown();
     NET_CL_Disconnect();
-    net_sdl_module.Shutdown();
+    netlib_module.Shutdown();
 }
 
 static int GetLowTic(void)
@@ -831,7 +831,7 @@ void TryRunTics(void)
 
         if (lowtic < gametic / ticdup)
         {
-            I_Error("TryRunTics: lowtic < gametic");
+            I_Error("lowtic < gametic");
         }
 
         // Still no tics to run? Sleep until some are available.
@@ -870,7 +870,7 @@ void TryRunTics(void)
         {
             if (gametic / ticdup > lowtic)
             {
-                I_Error("gametic>lowtic");
+                I_Error("gametic > lowtic");
             }
 
             memcpy(local_playeringame, set->ingame, sizeof(local_playeringame));

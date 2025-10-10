@@ -22,6 +22,7 @@
 #include "d_think.h"
 #include "doomdef.h"
 #include "doomtype.h"
+#include "m_arena.h"
 #include "m_fixed.h"
 
 struct line_s;
@@ -614,7 +615,7 @@ typedef struct platlist {
 
 // p_ceilng
 
-typedef struct
+typedef struct vldoor_s
 {
   thinker_t thinker;
   vldoor_e type;
@@ -671,7 +672,7 @@ typedef struct ceilinglist {
 
 // p_floor
 
-typedef struct
+typedef struct floormove_s
 {
   thinker_t thinker;
   floor_e type;
@@ -685,7 +686,7 @@ typedef struct
   fixed_t speed;
 } floormove_t;
 
-typedef struct
+typedef struct elevator_s
 {
   thinker_t thinker;
   elevator_e type;
@@ -764,8 +765,10 @@ extern  int levelTimeCount;
 extern button_t buttonlist[MAXBUTTONS];
 
 extern platlist_t *activeplats;        // killough 2/14/98
+extern struct arena_s *activeplats_arena;
 
 extern ceilinglist_t *activeceilings;  // jff 2/22/98
+extern struct arena_s *activeceilings_arena;
 
 ////////////////////////////////////////////////////////////////
 //
@@ -833,42 +836,42 @@ void P_ChangeSwitchTexture(struct line_s *line, int useAgain);
 
 // p_lights
 
-void T_LightFlash(lightflash_t *flash);
+void T_LightFlashAdapter(struct mobj_s *mobj);
 
-void T_StrobeFlash(strobe_t *flash);
+void T_StrobeFlashAdapter(struct mobj_s *mobj);
 
-void T_Glow(glow_t *g);
+void T_GlowAdapter(struct mobj_s *mobj);
 
-void T_FireFlicker(fireflicker_t *flick);  // killough 10/4/98
+void T_FireFlickerAdapter(struct mobj_s *mobj);  // killough 10/4/98
 
 // p_plats
 
-void T_PlatRaise(plat_t *plat);
+void T_PlatRaiseAdapter(struct mobj_s *mobj);
 
 // p_doors
 
-void T_VerticalDoor(vldoor_t *door);
+void T_VerticalDoorAdapter(struct mobj_s *mobj);
 
 // p_ceilng
 
-void T_MoveCeiling(ceiling_t *ceiling);
+void T_MoveCeilingAdapter(struct mobj_s *mobj);
 
 // p_floor
 
 result_e T_MovePlane(struct sector_s *sector, fixed_t speed, fixed_t dest,
                      boolean crush, int floorOrCeiling, int direction);
 
-void T_MoveFloor(floormove_t *floor);
+void T_MoveFloorAdapter(struct mobj_s *mobj);
 
-void T_MoveElevator(elevator_t *elevator);
+void T_MoveElevatorAdapter(struct mobj_s *mobj);
 
 // p_spec
 
-void T_Scroll(scroll_t *);      // killough 3/7/98: scroll effect thinker
+void T_ScrollAdapter(struct mobj_s *mobj); // killough 3/7/98: scroll effect thinker
 
-void T_Friction(friction_t *);  // phares 3/12/98: friction thinker
+void T_FrictionAdapter(struct mobj_s *mobj); // phares 3/12/98: friction thinker
 
-void T_Pusher(pusher_t *);      // phares 3/20/98: Push thinker
+void T_PusherAdapter(struct mobj_s *mobj); // phares 3/20/98: Push thinker
 
 ////////////////////////////////////////////////////////////////
 //
@@ -947,6 +950,11 @@ int EV_DoGenDoor(struct line_s *line);
 
 int EV_DoGenLockedDoor(struct line_s *line);
 
+// misc
+
+void EV_ChangeMusic(struct line_s *line, int side);
+void EV_RotateOffsetFlat(struct line_s *line, struct sector_s *sector);
+
 ////////////////////////////////////////////////////////////////
 //
 // Linedef and sector special thinker spawning
@@ -968,7 +976,7 @@ void P_UpdateSpecials(void);
 boolean P_UseSpecialLine(struct mobj_s *thing, struct line_s *line, int side,
                          boolean bossaction);
 
-void P_ShootSpecialLine(struct mobj_s *thing, struct line_s *line);
+void P_ShootSpecialLine(struct mobj_s *thing, struct line_s *line, int side);
 
 void P_CrossSpecialLine(struct line_s *, int side, struct mobj_s *thing,
                         boolean bossaction); // killough 11/98

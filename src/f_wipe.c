@@ -48,9 +48,9 @@ static int wipe_columns;
 // SCREEN WIPE PACKAGE
 //
 
-static byte *wipe_scr_start;
-static byte *wipe_scr_end;
-static byte *wipe_scr;
+static pixel_t *wipe_scr_start;
+static pixel_t *wipe_scr_end;
+static pixel_t *wipe_scr;
 
 // [FG] cross-fading screen wipe implementation
 
@@ -76,9 +76,9 @@ static int wipe_doColorXForm(int width, int height, int ticks)
 
     for (int y = 0; y < height; y++)
     {
-        byte *sta = wipe_scr_start + y * width;
-        byte *end = wipe_scr_end + y * width;
-        byte *dst = wipe_scr + y * video.pitch;
+        pixel_t *sta = wipe_scr_start + y * width;
+        pixel_t *end = wipe_scr_end + y * width;
+        pixel_t *dst = wipe_scr + y * video.width;
 
         for (int x = 0; x < width; x++)
         {
@@ -231,7 +231,7 @@ int wipe_renderMelt(int width, int height, int ticks)
                 for (int i = 0; i < height; ++i)
                 {
                     *dest = *source;
-                    dest += video.pitch;
+                    dest += width;
                     source += width;
                 }
             }
@@ -246,12 +246,12 @@ int wipe_renderMelt(int width, int height, int ticks)
             for (; currcol < currcolend; ++currcol)
             {
                 pixel_t *source = wipe_scr_start + currcol;
-                pixel_t *dest = wipe_scr + currcol + (currrow * video.pitch);
+                pixel_t *dest = wipe_scr + currcol + (currrow * video.width);
 
                 for (int i = 0; i < height - currrow; ++i)
                 {
                     *dest = *source;
-                    dest += video.pitch;
+                    dest += width;
                     source += width;
                 }
             }
@@ -267,7 +267,7 @@ int wipe_renderMelt(int width, int height, int ticks)
         for (int i = 0; i < height; ++i)
         {
             *dest = v_darkest_color;
-            dest += video.pitch;
+            dest += width;
         }
     }
 
@@ -417,14 +417,14 @@ static int wipe_doFizzle(int width, int height, int ticks)
         vrect_t rect = {x, y, 1, 1};
         V_ScaleRect(&rect);
 
-        byte *src = wipe_scr_end + rect.sy * width + rect.sx;
-        byte *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
+        pixel_t *src = wipe_scr_end + rect.sy * width + rect.sx;
+        pixel_t *dest = wipe_scr + rect.sy * width + rect.sx;
 
         while (rect.sh--)
         {
             memcpy(dest, src, rect.sw);
             src += width;
-            dest += video.pitch;
+            dest += width;
         }
 
         if (rndval == 0) // entire sequence has been completed

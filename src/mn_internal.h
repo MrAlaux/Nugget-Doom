@@ -45,6 +45,8 @@ typedef enum
     key_mode
 } menu_input_mode_t;
 
+void M_ChooseSkill(int choice);
+
 extern int maxscreenblocks;
 
 extern int bigfont_priority;
@@ -80,7 +82,6 @@ void MN_BackSecondary(void);
 // [FG] alternative text for missing menu graphics lumps
 void MN_DrawTitle(int x, int y, const char *patch, const char *alttext);
 void MN_DrawStringCR(int cx, int cy, byte *cr1, byte *cr2, const char *ch);
-int MN_StringWidth(const char *string);
 int MN_StringHeight(const char *string);
 
 void MN_General(int choice);
@@ -90,6 +91,7 @@ void MN_StatusBar(int choice);
 void MN_Automap(int choice);
 void MN_Weapons(int choice);
 void MN_Enemy(int choice);
+void MN_CustomSkill(void);
 
 void MN_DrawGeneral(void);
 void MN_DrawKeybnd(void);
@@ -103,19 +105,15 @@ void MN_DrawMidi(void);
 void MN_DrawEqualizer(void);
 void MN_DrawPadAdv(void);
 void MN_DrawGyro(void);
+void MN_DrawCustomSkill(void);
 
 // [Nugget] /-----------------------------------------------------------------
 
 void MN_DrawView(void);
 void MN_DrawDisplay(void);
-void MN_DrawMisc(void);
 void MN_DrawHUDCol(void);
 void MN_DrawMapKeys(void);
 void MN_DrawCheatKeys(void);
-
-// Custom Skill menu
-void MN_CustomSkill(void);
-void MN_DrawCustomSkill(void);
 
 void MN_UpdateNughudItem(void);
 
@@ -126,42 +124,46 @@ void MN_UpdateNughudItem(void);
 // The following #defines are for the m_flags field of each item on every
 // Setup Screen. They can be OR'ed together where appropriate
 
-#define S_HILITE      0x00000001 // Cursor is sitting on this item
-#define S_SELECT      0x00000002 // We're changing this item
-#define S_TITLE       0x00000004 // Title item
-#define S_FUNC        0x00000008 // Non-config item
-#define S_CRITEM      0x00000010 // Message color
-#define S_RESET       0x00000020 // Reset to Defaults Button
-#define S_INPUT       0x00000040 // Composite input
-#define S_WEAP        0x00000080 // Weapon #
-#define S_NUM         0x00000100 // Numerical item
-#define S_SKIP        0x00000200 // Cursor can't land here
-#define S_KEEP        0x00000400 // Don't swap key out
-#define S_END         0x00000800 // Last item in list (dummy)
-#define S_LEVWARN     0x00001000 // killough 8/30/98: Always warn about pending change
-#define S_PRGWARN     0x00002000 // killough 10/98: Warn about change until next run
-#define S_BADVAL      0x00004000 // killough 10/98: Warn about bad value
-#define S_LEFTJUST    0x00008000 // killough 10/98: items which are left-justified
-#define S_CREDIT      0x00010000 // killough 10/98: credit
-#define S_CHOICE      0x00020000 // [FG] selection of choices
-#define S_DISABLE     0x00040000 // Disable item
-#define S_COSMETIC    0x00080000 // Don't warn about change, always load from OPTIONS lump
-#define S_THERMO      0x00100000 // Thermo bar (default size 8)
-#define S_WRAP_LINE   0x00200000 // Wrap long menu items relative to M_WRAP
-#define S_STRICT      0x00400000 // Disable in strict mode
-#define S_BOOM        0x00800000 // Disable if complevel < boom
-#define S_VANILLA     0x01000000 // Disable if complevel != vanilla
-#define S_ACTION      0x02000000 // Run function call only when change is complete
-#define S_THRM_SIZE11 0x04000000 // Thermo bar size 11
-#define S_ONOFF       0x08000000 // Alias for S_YESNO
-#define S_MBF         0x10000000 // Disable if complevel < mbf
-#define S_THRM_SIZE4  0x20000000 // Thermo bar size 4
-#define S_PCT         0x40000000 // Show % sign
+enum
+{
+    S_HILITE =      (1u << 0), // Cursor is sitting on this item
+    S_SELECT =      (1u << 1), // We're changing this item
+    S_TITLE =       (1u << 2), // Title item
+    S_FUNC =        (1u << 3), // Non-config item
+    S_CRITEM =      (1u << 4), // Message color
+    S_RESET =       (1u << 5), // Reset to Defaults Button
+    S_INPUT =       (1u << 6), // Composite input
+    S_WEAP =        (1u << 7), // Weapon #
+    S_NUM =         (1u << 8), // Numerical item
+    S_SKIP =        (1u << 9), // Cursor can't land here
+    S_KEEP =        (1u << 10), // Don't swap key out
+    S_END =         (1u << 11), // Last item in list (dummy)
+    S_LEVWARN =     (1u << 12), // killough 8/30/98: Always warn about pending change
+    S_PRGWARN =     (1u << 13), // killough 10/98: Warn about change until next run
+    S_BADVAL =      (1u << 14), // killough 10/98: Warn about bad value
+    S_LEFTJUST =    (1u << 15), // killough 10/98: items which are left-justified
+    S_CHOICE =      (1u << 16), // [FG] selection of choices
+    S_DISABLE =     (1u << 17), // Disable item
+    S_COSMETIC =    (1u << 18), // Don't warn about change, always load from OPTIONS lump
+    S_THERMO =      (1u << 19), // Thermo bar (default size 8)
+    S_WRAP_LINE =   (1u << 20), // Wrap long menu items relative to M_WRAP
+    S_STRICT =      (1u << 21), // Disable in strict mode
+    S_BOOM =        (1u << 22), // Disable if complevel < boom
+    S_VANILLA =     (1u << 23), // Disable if complevel != vanilla
+    S_ACTION =      (1u << 24), // Run function call only when change is complete
+    S_THRM_SIZE11 = (1u << 25), // Thermo bar size 11
+    S_ONOFF =       (1u << 26), // Alias for S_YESNO
+    S_MBF =         (1u << 27), // Disable if complevel < mbf
+    S_THRM_SIZE4 =  (1u << 28), // Thermo bar size 4
+    S_PCT =         (1u << 29), // Show % sign
+    S_CENTER =      (1u << 30), // Centered
+
+}; 
 
 // [Nugget]
-#define S_CRITICAL    0x0000000100000000 // Disable during non-casual play
-#define S_RES         0x0000000200000000 // Report current resolution
-#define S_FUNC2       0x0000000400000000 // Like `S_FUNC`, but with confirmation
+#define S_CRITICAL (1ull << 48) // Disable during non-casual play
+#define S_RES      (1ull << 49) // Report current resolution
+#define S_FUNC2    (1ull << 50) // Like `S_FUNC`, but with confirmation
 
 // S_SHOWDESC  = the set of items whose description should be displayed
 // S_SHOWSET   = the set of items whose setting should be displayed
@@ -170,7 +172,7 @@ void MN_UpdateNughudItem(void);
 
 #define S_SHOWDESC                                                       \
     (S_TITLE | S_ONOFF | S_CRITEM | S_RESET | S_INPUT | S_WEAP | S_NUM   \
-     | S_CREDIT | S_CHOICE | S_THERMO | S_FUNC                           \
+     | S_CHOICE | S_THERMO | S_FUNC | S_CENTER                           \
      | S_FUNC2) // [Nugget]
 
 #define S_SHOWSET \
@@ -180,7 +182,7 @@ void MN_UpdateNughudItem(void);
 #define S_HASDEFPTR \
     (S_ONOFF | S_NUM | S_WEAP | S_CRITEM | S_CHOICE | S_THERMO)
 
-#define S_DIRECT (S_RESET | S_END | S_CREDIT)
+#define S_DIRECT (S_RESET | S_END)
 
 /////////////////////////////
 //
@@ -268,7 +270,8 @@ typedef struct default_s
     {
         number,
         string,
-        input
+        input,
+        menu // menu only
     } type; // type
 
     ss_types setupscreen;      // setup screen this appears on

@@ -42,9 +42,10 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
+- **Support for SSG in Doom 1** [p.f. Woof! 15.2.0]
 - **_Hitbox-based Hitscan Collision_** setting
-- **_"Direct + Auto"_ mode for Vertical Aiming**
-- **_Direct Vertical Aiming_ for melee attacks**
+- **_"Direct + Auto"_ mode for _Free Look_**
+- **Direct vertical aiming for melee attacks**
 - **_Move Over/Under Things_** setting [partially p.f. Crispy Doom, DSDA-Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>) [i.b. ZDoom]
@@ -92,9 +93,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **_Auto Save Interval_** setting, for periodic auto saves
-- **Rewinding** [i.b. DSDA-Doom]
-- **_Play Internal Demos_** setting, to control whether or not to play demos built into WADs
-- **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
@@ -153,6 +151,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Show Powerup Timers_** setting
   - The CFG-only `hud_power_timers_notime` CVAR can be enabled to show only the powerup names/icons
 - **_Blink Missing Keys_** setting [partially p.f. Crispy Doom]
+- **_Animated Health/Armor Count_** setting
 - **_Berserk display when using Fist_** setting [partially p.f. Crispy Doom]
 - **_Automap Level Stats Format_** setting
 - **Level-Stats Selection** settings (CFG-only: `hud_stats_#[_map]`)
@@ -242,12 +241,18 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 
 ### Miscellaneous
 
-- **Customizable skill level**, supporting all vanilla settings and a new one for duplicate monster spawns
+- **Reworked custom skill**:
+  - Considered skill #6, settable through the `SKILL` cheat
+  - _Thing Spawns_ setting
+  - _Duplicate Monsters_ setting
+  - _Slow Spawn-Cube Spitter_ setting
+  - _Restart [Current] Level_ options
+  - Settings are saved in the config file
   - Its menu item uses the `M_CSTSKL` graphic if found
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
-- **When dying with freelook enabled, the camera is pitched towards the killer**
+- **When dying with _Free Look_ enabled, the camera is pitched towards the killer**
 - **Extended character cast** [partially p.f. Crispy Doom]
   - _Turn_ buttons to rotate
   - _Run_ button to gib
@@ -305,13 +310,13 @@ The following build system and libraries need to be installed:
  
  * [CMake](https://cmake.org) (>= 3.15)
  * [SDL2](https://github.com/libsdl-org/SDL/tree/SDL2) (>= 2.0.18)
- * [SDL2_net](https://github.com/libsdl-org/SDL_net)
  * [openal-soft](https://github.com/kcat/openal-soft) (>= 1.22.0 for PC Speaker emulation)
  * [libsndfile](https://github.com/libsndfile/libsndfile) (>= 1.1.0 for MPEG support)
  * [libebur128](https://github.com/jiixyj/libebur128) (>= 1.2.0)
  * [yyjson](https://github.com/ibireme/yyjson) (>= 0.10.0, optional)
  * [fluidsynth](https://github.com/FluidSynth/fluidsynth) (>= 2.2.0, optional)
  * [libxmp](https://github.com/libxmp/libxmp) (optional)
+ * [discord-rpc](https://github.com/discord/discord-rpc) (optional)
  
 Usually your distribution should have the corresponding packages in its repositories, and if your distribution has "dev" versions of those libraries, those are the ones you'll need.
 
@@ -330,13 +335,19 @@ After successful compilation the resulting binary can be found in the `src/` dir
 
 Visual Studio 2019 and [VSCode](https://code.visualstudio.com/) comes with built-in support for CMake by opening the source tree as a folder.
 
-Install vcpkg <https://github.com/Microsoft/vcpkg#quick-start-windows>. Integrate it into CMake or use toolchain file:
+Install vcpkg <https://github.com/Microsoft/vcpkg?tab=readme-ov-file#get-started>. 
+
+Run the CMake configuration:
 ```
  cd nugget-doom
  cmake -B build -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake"
+```
+During this step, vcpkg will build all the dependencies.
+
+Build the project:
+```
  cmake --build build
 ```
-CMake will automatically download and build all dependencies for you.
 
 # Contact
 
@@ -372,10 +383,13 @@ Copyright:
  © 2005-2006 by Florian Schulze, Colin Phipps, Neil Stevens, Andrey Budko;  
  © 2005-2018 Simon Howard;  
  © 2006 Ben Ryves;  
+ © 2006-2025 by The Odamex Team;  
  © 2007-2011 Moritz "Ripper" Kroll;  
  © 2008-2019 Simon Judd;  
+ © 2013-2025 Brad Harding;  
  © 2017 Christoph Oelckers;  
  © 2020 Alex Mayfield;  
+ © 2020 Ethan Watson;  
  © 2020 JadingTsunami;  
  © 2020-2024 Fabian Greffrath;  
  © 2020-2024 Roman Fomin;  
@@ -450,11 +464,6 @@ Copyright:
  © 2017 Shannon Freeman.  
 License: [MIT](https://github.com/sneakernets/DMXOPL/blob/DMXOPL3/LICENSE)
 
-Files: `cmake/FindSDL2.cmake, cmake/FindSDL2_net.cmake`  
-Copyright:  
- © 2018 Alex Mayfield.  
-License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
-
 Files: `data/nugget-doom.ico, data/nugget-doom.png, src/icon.c, data/setup.ico, data/nugget-doom-setup.png, setup/setup_icon.c`  
 Copyright:  
  © 2022 Korp.  
@@ -484,8 +493,19 @@ Copyright:
  © 2005-2017 Simon Howard.  
 License: [GPL-2.0+](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
+Files: `netlib/*`  
+Copyright:  
+ © 1997-2025 Sam Lantinga;  
+ © 2012 Simeon Maxein.    
+License: [zlib](https://opensource.org/license/zlib)
+
 Files: `third-party/md5/*`  
 License: public-domain
+
+Files: `third-party/minimp3/*`  
+Copyright:  
+ © 2021 lief.      
+License: [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 Files: `third-party/miniz/*`  
 Copyright:  
@@ -513,9 +533,4 @@ License: [BSD-2-Clause](https://opensource.org/license/bsd-2-clause)
 Files: `third-party/yyjson/*`  
 Copyright:  
  © 2020 YaoYuan.  
-License: [MIT](https://opensource.org/licenses/MIT)
-
-Files: `win32/win_opendir.*`  
-Copyright:  
- © 2019 win32ports.  
 License: [MIT](https://opensource.org/licenses/MIT)

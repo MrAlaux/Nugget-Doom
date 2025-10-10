@@ -31,10 +31,10 @@
 
 static const char snapshot_str[] = "NUGGETDOOM_SNAPSHOT";
 static const int snapshot_len = arrlen(snapshot_str);
-static const int snapshot_size = SCREENWIDTH * SCREENHEIGHT;
+static const int snapshot_size = (SCREENWIDTH * SCREENHEIGHT) * sizeof(pixel_t);
 
-static byte *snapshots[10];
-static byte *current_snapshot;
+static pixel_t *snapshots[10];
+static pixel_t *current_snapshot;
 static char savegametimes[10][32];
 
 const int MN_SnapshotDataSize(void)
@@ -132,23 +132,22 @@ static void TakeSnapshot(void)
         current_snapshot = malloc(snapshot_size * sizeof(**snapshots));
     }
 
-    byte *p = current_snapshot;
-
-    const byte *s = I_VideoBuffer;
-
+    pixel_t *p = current_snapshot;
+    const pixel_t *s = I_VideoBuffer;
     int x, y;
     for (y = 0; y < SCREENHEIGHT; y++)
     {
+        int line = V_ScaleY(y) * video.width;
         for (x = video.deltaw; x < NONWIDEWIDTH + video.deltaw; x++)
         {
-            *p++ = s[V_ScaleY(y) * video.pitch + V_ScaleX(x)];
+            *p++ = s[line + V_ScaleX(x)];
         }
     }
 
     R_SetViewSize(old_screenblocks);
 }
 
-void MN_WriteSnapshot(byte *p)
+void MN_WriteSnapshot(pixel_t *p)
 {
     TakeSnapshot();
 
@@ -181,15 +180,15 @@ boolean MN_DrawSnapshot(int n, int x, int y, int w, int h)
     const fixed_t step_x = (SCREENWIDTH << FRACBITS) / rect.sw;
     const fixed_t step_y = (SCREENHEIGHT << FRACBITS) / rect.sh;
 
-    byte *dest = I_VideoBuffer + rect.sy * video.pitch + rect.sx;
+    pixel_t *dest = I_VideoBuffer + rect.sy * video.width + rect.sx;
 
     fixed_t srcx, srcy;
     int destx, desty;
-    byte *destline, *srcline;
+    pixel_t *destline, *srcline;
 
     for (desty = 0, srcy = 0; desty < rect.sh; desty++, srcy += step_y)
     {
-        destline = dest + desty * video.pitch;
+        destline = dest + desty * video.width;
         srcline = snapshots[n] + (srcy >> FRACBITS) * SCREENWIDTH;
 
         for (destx = 0, srcx = 0; destx < rect.sw; destx++, srcx += step_x)

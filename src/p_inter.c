@@ -139,7 +139,7 @@ boolean P_GiveAmmo(player_t *player, ammotype_t ammo, int num)
     return false;
 
   if ((unsigned) ammo > NUMAMMO)
-    I_Error ("P_GiveAmmo: bad type %i", ammo);
+    I_Error ("bad type %i", ammo);
 
   if ( player->ammo[ammo] == player->maxammo[ammo]  )
     return false;
@@ -150,7 +150,7 @@ boolean P_GiveAmmo(player_t *player, ammotype_t ammo, int num)
     num = clipammo[ammo]/2;
 
   // give double ammo in trainer mode, you'll need in nightmare
-  if (doubleammo) // [Nugget]
+  if (gameskill == sk_baby || gameskill == sk_nightmare || doubleammo)
     num <<= 1;
 
   oldammo = player->ammo[ammo];
@@ -433,11 +433,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       break;
 
     case SPR_BON3:      // killough 7/11/98: evil sceptre from beta version
-      pickupmsg(player, "Picked up an evil sceptre");
+      pickupmsg(player, "%s", s_BETA_BONUS3);
       break;
 
     case SPR_BON4:      // killough 7/11/98: unholy bible from beta version
-      pickupmsg(player, "Picked up an unholy bible");
+      pickupmsg(player, "%s", s_BETA_BONUS4);
       break;
 
     case SPR_SOUL:
@@ -715,7 +715,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       break;
 
     default:
-      // I_Error("P_SpecialThing: Unknown gettable thing");
+      // I_Error("Unknown gettable thing");
       return;      // killough 12/98: suppress error message
     }
 
@@ -902,7 +902,7 @@ void P_NuggetGib(const mobj_t *const mo, const boolean crushed)
 
     if (mo->info->bloodcolor || idgaf)
     {
-      splat->flags2 |= MF2_COLOREDBLOOD;
+      splat->flags_extra |= MFX_COLOREDBLOOD;
       splat->bloodcolor = V_BloodColor(mo->info->bloodcolor);
     }
 
@@ -1073,7 +1073,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
   target->tics -= P_Random(pr_killtics)&3;
 
   // [crispy] randomly flip corpse, blood and death animation sprites
-  if (target->flags2 & MF2_FLIPPABLE)
+  if (target->flags_extra & MFX_MIRROREDCORPSE)
   {
     if (Woof_Random() & 1)
       target->intflags |= MIF_FLIP;
@@ -1148,7 +1148,7 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
     target->momx = target->momy = target->momz = 0;
 
   player = target->player;
-  if (player && halfdamage) // [Nugget]
+  if (player && (gameskill == sk_baby || halfplayerdamage))
     damage >>= 1;   // take half damage in trainer mode
 
   // Some close combat weapons should not

@@ -35,6 +35,7 @@
 #include "doomstat.h"
 #include "doomtype.h"
 #include "g_game.h"
+#include "g_rewind.h"
 #include "i_flickstick.h"
 #include "i_gamepad.h"
 #include "i_gyro.h"
@@ -84,6 +85,18 @@ void M_BindNum(const char *name, void *location, void *current,
                        {.number = default_val}, {min_val, max_val},
                        number, screen, wad, help };
     array_push(defaults, item);
+}
+
+void M_BindMenuNum(const char *name, void *location, int min_val, int max_val)
+{
+    default_t item = { name, {.i = location}, {0}, {0}, {min_val, max_val},
+                       menu, ss_none, wad_no, NULL };
+    array_push(defaults, item);
+}
+
+void M_BindMenuBool(const char *name, boolean *location)
+{
+    M_BindMenuNum(name, location, 0, 1);
 }
 
 void M_BindBool(const char *name, boolean *location, boolean *current,
@@ -136,6 +149,7 @@ void M_InitConfig(void)
     MN_BindMenuVariables();
     D_BindMiscVariables();
     G_BindGameVariables();
+    G_BindRewindVariables();
 
     G_BindGameInputVariables();
     G_BindMouseVariables();
@@ -209,6 +223,11 @@ default_t *M_LookupDefault(const char *name)
     for (dp = defaults[default_hash(name)].first;
          dp && strcasecmp(name, dp->name); dp = dp->next)
         ;
+
+    if (!dp)
+    {
+        I_Printf(VB_WARNING, "Unknown config key: %s", name);
+    }
 
     return dp;
 }
@@ -286,6 +305,11 @@ void M_SaveDefaults(void)
         if (!dp->name) // If we're at end of defaults table, exit loop
         {
             break;
+        }
+
+        if (dp->type == menu)
+        {
+            continue;
         }
 
         // jff 3/3/98 output help string
@@ -737,23 +761,18 @@ void M_LoadDefaults(void)
     // killough 9/21/98: Print warning if file missing, and use fgets for
     // reading
 
+    I_Printf(VB_INFO, "M_LoadDefaults: Load system defaults.");
+
     if ((f = M_fopen(defaultfile, "r")))
     {
-        char s[256];
+        I_Printf(VB_INFO, " default file: %s", defaultfile);
 
+        char s[256];
         while (fgets(s, sizeof s, f))
         {
             M_ParseOption(s, false);
         }
-    }
 
-    defaults_loaded = true; // killough 10/98
-
-    I_Printf(VB_INFO, "M_LoadDefaults: Load system defaults.");
-
-    if (f)
-    {
-        I_Printf(VB_INFO, " default file: %s", defaultfile);
         fclose(f);
     }
     else
@@ -762,4 +781,12 @@ void M_LoadDefaults(void)
                  " Warning: Cannot read %s -- using built-in defaults",
                  defaultfile);
     }
+
+    defaults_loaded = true; // killough 10/98
+}
+
+boolean M_CheckIfDisabled(const char *name)
+{
+    const default_t *dp = M_LookupDefault(name);
+    return dp->setup_menu->m_flags & S_DISABLE;
 }

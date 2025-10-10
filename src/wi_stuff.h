@@ -20,7 +20,6 @@
 #ifndef __WI_STUFF__
 #define __WI_STUFF__
 
-// [Nugget]
 #include "doomtype.h"
 
 // [Nugget] /=================================================================
@@ -70,6 +69,9 @@ void WI_Start(struct wbstartstruct_s *wbstartstruct);
 void WI_checkForAccelerate(void);      // killough 11/98
 
 void WI_slamBackground(void);          // killough 11/98
+
+extern boolean wi_overlay;
+void WI_drawOverlayStats(void);
 
 #endif
 

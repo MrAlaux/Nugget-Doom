@@ -3,10 +3,8 @@
   "version": "1.1.0",
   "nugget_version": 2,
   "metadata": null,
-  "data":
-  {
-    "numberfonts":
-    [
+  "data": {
+    "numberfonts": [
       {
         "name": "BigRed",
         "type": 0,
@@ -23,8 +21,7 @@
         "stem": "STYS"
       }
     ],
-    "hudfonts":
-    [
+    "hudfonts": [
       {
         "name": "Console",
         "type": 2,
@@ -36,17 +33,14 @@
         "stem": "DIG"
       }
     ],
-    "statusbars":
-    [
+    "statusbars": [
       {
         "height": 200,
         "fullscreenrender": false,
         "fillflat": null,
-        "children":
-        [
+        "children": [
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 160,
               "y": 168,
               "alignment": 1,
@@ -58,15 +52,13 @@
             }
           },
           {
-            "facebackground":
-            {
+            "facebackground": {
               "x": 143,
               "y": 169,
               "alignment": 0,
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 15,
                   "param": 0
@@ -76,8 +68,7 @@
             }
           },
           {
-            "face":
-            {
+            "face": {
               "x": 143,
               "y": 168,
               "alignment": 0,
@@ -88,8 +79,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 44,
               "y": 171,
               "alignment": 2,
@@ -99,8 +89,7 @@
               "type": 4,
               "param": 0,
               "maxlength": 3,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 4,
                   "param": 0
@@ -110,8 +99,7 @@
             }
           },
           {
-            "percent":
-            {
+            "percent": {
               "x": 104,
               "y": 171,
               "alignment": 2,
@@ -126,8 +114,7 @@
             }
           },
           {
-            "percent":
-            {
+            "percent": {
               "x": 235,
               "y": 171,
               "alignment": 2,
@@ -142,8 +129,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 138,
               "y": 171,
               "alignment": 2,
@@ -153,8 +139,7 @@
               "type": 2,
               "param": 0,
               "maxlength": 2,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 14,
                   "param": 2
@@ -164,34 +149,29 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 104,
               "y": 168,
               "alignment": 0,
               "patch": "STARMS",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 15,
                   "param": 2
                 }
               ],
-              "children":
-              [
+              "children": [
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 4,
                     "alignment": 0,
                     "patch": "STGNUM2",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 2
@@ -201,16 +181,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 4,
                     "alignment": 0,
                     "patch": "STYSNUM2",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 2
@@ -220,16 +198,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 4,
                     "alignment": 0,
                     "patch": "STGNUM3",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 3
@@ -239,16 +215,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 4,
                     "alignment": 0,
                     "patch": "STYSNUM3",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 3
@@ -258,16 +232,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 4,
                     "alignment": 0,
                     "patch": "STGNUM4",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 4
@@ -277,16 +249,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 4,
                     "alignment": 0,
                     "patch": "STYSNUM4",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 4
@@ -296,16 +266,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 14,
                     "alignment": 0,
                     "patch": "STGNUM5",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 5
@@ -315,16 +283,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 14,
                     "alignment": 0,
                     "patch": "STYSNUM5",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 5
@@ -334,16 +300,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 14,
                     "alignment": 0,
                     "patch": "STGNUM6",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 6
@@ -353,16 +317,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 14,
                     "alignment": 0,
                     "patch": "STYSNUM6",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 6
@@ -372,16 +334,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 14,
                     "alignment": 0,
                     "patch": "STGNUM7",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 7
@@ -391,16 +351,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 14,
                     "alignment": 0,
                     "patch": "STYSNUM7",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 7
@@ -413,8 +371,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 173,
               "alignment": 2,
@@ -429,8 +386,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 173,
               "alignment": 2,
@@ -445,8 +401,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 179,
               "alignment": 2,
@@ -461,8 +416,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 179,
               "alignment": 2,
@@ -477,8 +431,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 185,
               "alignment": 2,
@@ -493,8 +446,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 185,
               "alignment": 2,
@@ -509,8 +461,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 191,
               "alignment": 2,
@@ -525,8 +476,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 191,
               "alignment": 2,
@@ -541,16 +491,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 0,
               "patch": "STKEYS0",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 1
@@ -564,16 +512,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 0,
               "patch": "STKEYS3",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 11,
                   "param": 1
@@ -587,16 +533,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 0,
               "patch": "STKEYS3",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 1
@@ -614,16 +558,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 0,
               "patch": "STKEYS6",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 1
@@ -641,16 +583,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 0,
               "patch": "STKEYS1",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 2
@@ -664,16 +604,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 0,
               "patch": "STKEYS4",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 11,
                   "param": 2
@@ -687,16 +625,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 0,
               "patch": "STKEYS4",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 2
@@ -714,16 +650,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 0,
               "patch": "STKEYS7",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 2
@@ -741,16 +675,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 0,
               "patch": "STKEYS2",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 3
@@ -764,16 +696,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 0,
               "patch": "STKEYS5",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 11,
                   "param": 3
@@ -787,16 +717,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 0,
               "patch": "STKEYS5",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 3
@@ -814,16 +742,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 0,
               "patch": "STKEYS8",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 3
@@ -841,17 +767,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 160,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 0,
+              "type": "stat_totals",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -861,17 +785,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 152,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -885,17 +807,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 160,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -909,18 +829,16 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 8,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 0,
+              "type": "stat_totals",
               "font": "Digits",
               "vertical": true,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -930,17 +848,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 40,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -950,31 +866,28 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 8,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 32,
+              "type": "powerup_timers",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 16,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 2,
+              "type": "coordinates",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -984,18 +897,16 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 256,
               "y": 16,
               "alignment": 32,
               "tranmap": null,
               "translation": null,
-              "type": 2,
+              "type": "coordinates",
               "font": "Digits",
               "vertical": true,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -1005,70 +916,65 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 0,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 3,
+              "type": "fps_counter",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 8,
               "alignment": 0,
               "tranmap": null,
               "translation": null,
-              "type": 4,
+              "type": "render_stats",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 167,
               "alignment": 42,
               "tranmap": null,
               "translation": null,
-              "type": 5,
+              "type": "command_history",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 160,
               "y": 167,
               "alignment": 9,
               "tranmap": null,
               "translation": null,
-              "type": 6,
+              "type": "speedometer",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 0,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 7,
+              "type": "message",
               "font": "Console",
               "duration": 4,
               "conditions": null,
@@ -1076,14 +982,13 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 160,
               "y": 52,
               "alignment": 1,
               "tranmap": null,
               "translation": null,
-              "type": 8,
+              "type": "announce_level_title",
               "font": "Console",
               "duration": 2.5,
               "conditions": null,
@@ -1091,14 +996,13 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 0,
               "alignment": 16,
               "tranmap": null,
               "translation": "CRGOLD",
-              "type": 9,
+              "type": "chat",
               "font": "Console",
               "under_messages": true,
               "conditions": null,
@@ -1106,17 +1010,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 160,
               "alignment": 16,
               "tranmap": null,
               "translation": "CRGOLD",
-              "type": 10,
+              "type": "level_title",
               "font": "Console",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -1126,8 +1028,7 @@
             }
           },
           {
-            "carousel":
-            {
+            "carousel": {
               "x": 0,
               "y": 18,
               "alignment": 0,
@@ -1154,35 +1055,29 @@
         "height": 200,
         "fullscreenrender": true,
         "fillflat": null,
-        "children":
-        [
+        "children": [
           {
-            "canvas":
-            {
+            "canvas": {
               "x": 0,
               "y": 0,
               "alignment": 0,
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 18,
                   "param": 0
                 }
               ],
-              "children":
-              [
+              "children": [
                 {
-                  "facebackground":
-                  {
+                  "facebackground": {
                     "x": 19,
                     "y": 162,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 15,
                         "param": 0
@@ -1192,8 +1087,7 @@
                   }
                 },
                 {
-                  "face":
-                  {
+                  "face": {
                     "x": 20,
                     "y": 161,
                     "alignment": 16,
@@ -1204,8 +1098,7 @@
                   }
                 },
                 {
-                  "number":
-                  {
+                  "number": {
                     "x": 53,
                     "y": 175,
                     "alignment": 16,
@@ -1220,16 +1113,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 292,
                     "y": 189,
                     "alignment": 32,
                     "patch": "CLIPA0",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 5,
                         "param": 0
@@ -1239,16 +1130,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 295,
                     "y": 186,
                     "alignment": 32,
                     "patch": "SHELA0",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 5,
                         "param": 1
@@ -1258,16 +1147,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 297,
                     "y": 192,
                     "alignment": 32,
                     "patch": "CELLA0",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 5,
                         "param": 2
@@ -1277,16 +1164,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 295,
                     "y": 195,
                     "alignment": 32,
                     "patch": "ROCKA0",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 5,
                         "param": 3
@@ -1296,8 +1181,7 @@
                   }
                 },
                 {
-                  "number":
-                  {
+                  "number": {
                     "x": 285,
                     "y": 175,
                     "alignment": 34,
@@ -1307,8 +1191,7 @@
                     "type": 4,
                     "param": 0,
                     "maxlength": 3,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 4,
                         "param": 0
@@ -1318,16 +1201,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 125,
                     "y": 192,
                     "alignment": 16,
                     "patch": "ARM1A0",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 11,
                         "param": 15
@@ -1337,16 +1218,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 125,
                     "y": 192,
                     "alignment": 16,
                     "patch": "ARM2A0",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 10,
                         "param": 15
@@ -1356,8 +1235,7 @@
                   }
                 },
                 {
-                  "number":
-                  {
+                  "number": {
                     "x": 145,
                     "y": 175,
                     "alignment": 16,
@@ -1372,8 +1250,7 @@
                   }
                 },
                 {
-                  "number":
-                  {
+                  "number": {
                     "x": 300,
                     "y": 5,
                     "alignment": 34,
@@ -1383,8 +1260,7 @@
                     "type": 2,
                     "param": 0,
                     "maxlength": 2,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 14,
                         "param": 2
@@ -1394,27 +1270,23 @@
                   }
                 },
                 {
-                  "canvas":
-                  {
+                  "canvas": {
                     "x": 310,
                     "y": 168,
                     "alignment": 0,
                     "tranmap": null,
                     "translation": null,
                     "conditions": null,
-                    "children":
-                    [
+                    "children": [
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 0,
                           "alignment": 32,
                           "patch": "STKEYS0",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 1
@@ -1428,16 +1300,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 0,
                           "alignment": 32,
                           "patch": "STKEYS3",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 11,
                               "param": 1
@@ -1451,16 +1321,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 0,
                           "alignment": 32,
                           "patch": "STKEYS3",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 1
@@ -1478,16 +1346,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 0,
                           "alignment": 32,
                           "patch": "STKEYS6",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 1
@@ -1505,16 +1371,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 10,
                           "alignment": 32,
                           "patch": "STKEYS1",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 2
@@ -1528,16 +1392,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 10,
                           "alignment": 32,
                           "patch": "STKEYS4",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 11,
                               "param": 2
@@ -1551,16 +1413,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 10,
                           "alignment": 32,
                           "patch": "STKEYS4",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 2
@@ -1578,16 +1438,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 10,
                           "alignment": 32,
                           "patch": "STKEYS7",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 2
@@ -1605,16 +1463,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 20,
                           "alignment": 32,
                           "patch": "STKEYS2",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 3
@@ -1628,16 +1484,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 20,
                           "alignment": 32,
                           "patch": "STKEYS5",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 11,
                               "param": 3
@@ -1651,16 +1505,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 20,
                           "alignment": 32,
                           "patch": "STKEYS5",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 3
@@ -1678,16 +1530,14 @@
                         }
                       },
                       {
-                        "graphic":
-                        {
+                        "graphic": {
                           "x": 0,
                           "y": 20,
                           "alignment": 32,
                           "patch": "STKEYS8",
                           "tranmap": null,
                           "translation": null,
-                          "conditions":
-                          [
+                          "conditions": [
                             {
                               "condition": 10,
                               "param": 3
@@ -1708,17 +1558,15 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 2,
                     "y": 155,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "type": 0,
+                    "type": "stat_totals",
                     "font": "Digits",
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 4
@@ -1728,17 +1576,15 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 2,
                     "y": 147,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "type": 1,
+                    "type": "time",
                     "font": "Digits",
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 4
@@ -1752,17 +1598,15 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 2,
                     "y": 155,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "type": 1,
+                    "type": "time",
                     "font": "Digits",
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 4
@@ -1776,18 +1620,16 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 2,
                     "y": 8,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "type": 0,
+                    "type": "stat_totals",
                     "font": "Digits",
                     "vertical": true,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 3
@@ -1797,17 +1639,15 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 2,
                     "y": 40,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "type": 1,
+                    "type": "time",
                     "font": "Digits",
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 3
@@ -1817,31 +1657,28 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 318,
                     "y": 8,
                     "alignment": 34,
                     "tranmap": null,
                     "translation": null,
-                    "type": 32,
+                    "type": "powerup_timers",
                     "font": "Digits",
                     "conditions": null,
                     "children": null
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 318,
                     "y": 16,
                     "alignment": 34,
                     "tranmap": null,
                     "translation": null,
-                    "type": 2,
+                    "type": "coordinates",
                     "font": "Digits",
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 4
@@ -1851,18 +1688,16 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 256,
                     "y": 16,
                     "alignment": 32,
                     "tranmap": null,
                     "translation": null,
-                    "type": 2,
+                    "type": "coordinates",
                     "font": "Digits",
                     "vertical": true,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 3
@@ -1872,70 +1707,65 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 318,
                     "y": 0,
                     "alignment": 34,
                     "tranmap": null,
                     "translation": null,
-                    "type": 3,
+                    "type": "fps_counter",
                     "font": "Digits",
                     "conditions": null,
                     "children": null
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 2,
                     "y": 8,
                     "alignment": 0,
                     "tranmap": null,
                     "translation": null,
-                    "type": 4,
+                    "type": "render_stats",
                     "font": "Digits",
                     "conditions": null,
                     "children": null
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 318,
                     "y": 167,
                     "alignment": 42,
                     "tranmap": null,
                     "translation": null,
-                    "type": 5,
+                    "type": "command_history",
                     "font": "Digits",
                     "conditions": null,
                     "children": null
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 160,
                     "y": 167,
                     "alignment": 9,
                     "tranmap": null,
                     "translation": null,
-                    "type": 6,
+                    "type": "speedometer",
                     "font": "Digits",
                     "conditions": null,
                     "children": null
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 0,
                     "y": 0,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": null,
-                    "type": 7,
+                    "type": "message",
                     "font": "Console",
                     "duration": 4,
                     "conditions": null,
@@ -1943,14 +1773,13 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 160,
                     "y": 68,
                     "alignment": 1,
                     "tranmap": null,
                     "translation": null,
-                    "type": 8,
+                    "type": "announce_level_title",
                     "font": "Console",
                     "duration": 2.5,
                     "conditions": null,
@@ -1958,14 +1787,13 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 0,
                     "y": 0,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": "CRGOLD",
-                    "type": 9,
+                    "type": "chat",
                     "font": "Console",
                     "under_messages": true,
                     "conditions": null,
@@ -1973,17 +1801,15 @@
                   }
                 },
                 {
-                  "widget":
-                  {
+                  "component": {
                     "x": 0,
                     "y": 155,
                     "alignment": 16,
                     "tranmap": null,
                     "translation": "CRGOLD",
-                    "type": 10,
+                    "type": "level_title",
                     "font": "Console",
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 19,
                         "param": 2
@@ -1993,8 +1819,7 @@
                   }
                 },
                 {
-                  "carousel":
-                  {
+                  "carousel": {
                     "x": 0,
                     "y": 18,
                     "alignment": 0,
@@ -2024,11 +1849,9 @@
         "height": 200,
         "fullscreenrender": true,
         "fillflat": null,
-        "children":
-        [
+        "children": [
           {
-            "number":
-            {
+            "number": {
               "x": 44,
               "y": 171,
               "alignment": 18,
@@ -2038,8 +1861,7 @@
               "type": 4,
               "param": 0,
               "maxlength": 3,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 4,
                   "param": 0
@@ -2049,8 +1871,7 @@
             }
           },
           {
-            "percent":
-            {
+            "percent": {
               "x": 104,
               "y": 171,
               "alignment": 18,
@@ -2065,8 +1886,7 @@
             }
           },
           {
-            "percent":
-            {
+            "percent": {
               "x": 235,
               "y": 171,
               "alignment": 34,
@@ -2081,8 +1901,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 138,
               "y": 171,
               "alignment": 18,
@@ -2092,8 +1911,7 @@
               "type": 2,
               "param": 0,
               "maxlength": 2,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 14,
                   "param": 2
@@ -2103,31 +1921,26 @@
             }
           },
           {
-            "canvas":
-            {
+            "canvas": {
               "x": 104,
               "y": 168,
               "alignment": 0,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 15,
                   "param": 2
                 }
               ],
-              "children":
-              [
+              "children": [
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 4,
                     "alignment": 16,
                     "patch": "STGNUM2",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 2
@@ -2137,16 +1950,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 4,
                     "alignment": 16,
                     "patch": "STYSNUM2",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 2
@@ -2156,16 +1967,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 4,
                     "alignment": 16,
                     "patch": "STGNUM3",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 3
@@ -2175,16 +1984,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 4,
                     "alignment": 16,
                     "patch": "STYSNUM3",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 3
@@ -2194,16 +2001,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 4,
                     "alignment": 16,
                     "patch": "STGNUM4",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 4
@@ -2213,16 +2018,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 4,
                     "alignment": 16,
                     "patch": "STYSNUM4",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 4
@@ -2232,16 +2035,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 14,
                     "alignment": 16,
                     "patch": "STGNUM5",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 5
@@ -2251,16 +2052,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 7,
                     "y": 14,
                     "alignment": 16,
                     "patch": "STYSNUM5",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 5
@@ -2270,16 +2069,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 14,
                     "alignment": 16,
                     "patch": "STGNUM6",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 6
@@ -2289,16 +2086,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 19,
                     "y": 14,
                     "alignment": 16,
                     "patch": "STYSNUM6",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 6
@@ -2308,16 +2103,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 14,
                     "alignment": 16,
                     "patch": "STGNUM7",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 7,
                         "param": 7
@@ -2327,16 +2120,14 @@
                   }
                 },
                 {
-                  "graphic":
-                  {
+                  "graphic": {
                     "x": 31,
                     "y": 14,
                     "alignment": 16,
                     "patch": "STYSNUM7",
                     "tranmap": null,
                     "translation": null,
-                    "conditions":
-                    [
+                    "conditions": [
                       {
                         "condition": 6,
                         "param": 7
@@ -2349,8 +2140,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 173,
               "alignment": 34,
@@ -2365,8 +2155,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 173,
               "alignment": 34,
@@ -2381,8 +2170,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 179,
               "alignment": 34,
@@ -2397,8 +2185,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 179,
               "alignment": 34,
@@ -2413,8 +2200,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 185,
               "alignment": 34,
@@ -2429,8 +2215,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 185,
               "alignment": 34,
@@ -2445,8 +2230,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 288,
               "y": 191,
               "alignment": 34,
@@ -2461,8 +2245,7 @@
             }
           },
           {
-            "number":
-            {
+            "number": {
               "x": 314,
               "y": 191,
               "alignment": 34,
@@ -2477,16 +2260,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 32,
               "patch": "STKEYS0",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 1
@@ -2500,16 +2281,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 32,
               "patch": "STKEYS3",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 11,
                   "param": 1
@@ -2523,16 +2302,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 32,
               "patch": "STKEYS3",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 1
@@ -2550,16 +2327,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 171,
               "alignment": 32,
               "patch": "STKEYS6",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 1
@@ -2577,16 +2352,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 32,
               "patch": "STKEYS1",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 2
@@ -2600,16 +2373,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 32,
               "patch": "STKEYS4",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 11,
                   "param": 2
@@ -2623,16 +2394,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 32,
               "patch": "STKEYS4",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 2
@@ -2650,16 +2419,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 181,
               "alignment": 32,
               "patch": "STKEYS7",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 2
@@ -2677,16 +2444,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 32,
               "patch": "STKEYS2",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 3
@@ -2700,16 +2465,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 32,
               "patch": "STKEYS5",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 11,
                   "param": 3
@@ -2723,16 +2486,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 32,
               "patch": "STKEYS5",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 3
@@ -2750,16 +2511,14 @@
             }
           },
           {
-            "graphic":
-            {
+            "graphic": {
               "x": 239,
               "y": 191,
               "alignment": 32,
               "patch": "STKEYS8",
               "tranmap": null,
               "translation": null,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 10,
                   "param": 3
@@ -2777,17 +2536,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 160,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 0,
+              "type": "stat_totals",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -2797,17 +2554,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 152,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -2821,17 +2576,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 160,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -2845,18 +2598,16 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 8,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 0,
+              "type": "stat_totals",
               "font": "Digits",
               "vertical": true,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -2866,17 +2617,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 40,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -2886,31 +2635,28 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 8,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 32,
+              "type": "powerup_timers",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 16,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 2,
+              "type": "coordinates",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -2920,18 +2666,16 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 256,
               "y": 16,
               "alignment": 32,
               "tranmap": null,
               "translation": null,
-              "type": 2,
+              "type": "coordinates",
               "font": "Digits",
               "vertical": true,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -2941,70 +2685,65 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 0,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 3,
+              "type": "fps_counter",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 8,
               "alignment": 0,
               "tranmap": null,
               "translation": null,
-              "type": 4,
+              "type": "render_stats",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 167,
               "alignment": 42,
               "tranmap": null,
               "translation": null,
-              "type": 5,
+              "type": "command_history",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 160,
               "y": 167,
               "alignment": 9,
               "tranmap": null,
               "translation": null,
-              "type": 6,
+              "type": "speedometer",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 0,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 7,
+              "type": "message",
               "font": "Console",
               "duration": 4,
               "conditions": null,
@@ -3012,14 +2751,13 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 160,
               "y": 52,
               "alignment": 1,
               "tranmap": null,
               "translation": null,
-              "type": 8,
+              "type": "announce_level_title",
               "font": "Console",
               "duration": 2.5,
               "conditions": null,
@@ -3027,14 +2765,13 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 0,
               "alignment": 16,
               "tranmap": null,
               "translation": "CRGOLD",
-              "type": 9,
+              "type": "chat",
               "font": "Console",
               "under_messages": true,
               "conditions": null,
@@ -3042,17 +2779,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 160,
               "alignment": 16,
               "tranmap": null,
               "translation": "CRGOLD",
-              "type": 10,
+              "type": "level_title",
               "font": "Console",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -3062,8 +2797,7 @@
             }
           },
           {
-            "carousel":
-            {
+            "carousel": {
               "x": 0,
               "y": 18,
               "alignment": 0,
@@ -3090,20 +2824,17 @@
         "height": 200,
         "fullscreenrender": true,
         "fillflat": null,
-        "children":
-        [
+        "children": [
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 192,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 0,
+              "type": "stat_totals",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -3113,17 +2844,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 184,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -3137,17 +2866,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 192,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -3161,18 +2888,16 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 8,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 0,
+              "type": "stat_totals",
               "font": "Digits",
               "vertical": true,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -3182,17 +2907,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 40,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 1,
+              "type": "time",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -3202,31 +2925,28 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 8,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 32,
+              "type": "powerup_timers",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 16,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 2,
+              "type": "coordinates",
               "font": "Digits",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 4
@@ -3236,18 +2956,16 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 256,
               "y": 16,
               "alignment": 32,
               "tranmap": null,
               "translation": null,
-              "type": 2,
+              "type": "coordinates",
               "font": "Digits",
               "vertical": true,
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -3257,70 +2975,65 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 0,
               "alignment": 34,
               "tranmap": null,
               "translation": null,
-              "type": 3,
+              "type": "fps_counter",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 2,
               "y": 8,
               "alignment": 0,
               "tranmap": null,
               "translation": null,
-              "type": 4,
+              "type": "render_stats",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 318,
               "y": 200,
               "alignment": 42,
               "tranmap": null,
               "translation": null,
-              "type": 5,
+              "type": "command_history",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 160,
               "y": 200,
               "alignment": 9,
               "tranmap": null,
               "translation": null,
-              "type": 6,
+              "type": "speedometer",
               "font": "Digits",
               "conditions": null,
               "children": null
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 0,
               "alignment": 16,
               "tranmap": null,
               "translation": null,
-              "type": 7,
+              "type": "message",
               "font": "Console",
               "duration": 4,
               "conditions": null,
@@ -3328,14 +3041,13 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 160,
               "y": 68,
               "alignment": 1,
               "tranmap": null,
               "translation": null,
-              "type": 8,
+              "type": "announce_level_title",
               "font": "Console",
               "duration": 2.5,
               "conditions": null,
@@ -3343,14 +3055,13 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 0,
               "alignment": 16,
               "tranmap": null,
               "translation": "CRGOLD",
-              "type": 9,
+              "type": "chat",
               "font": "Console",
               "under_messages": true,
               "conditions": null,
@@ -3358,17 +3069,15 @@
             }
           },
           {
-            "widget":
-            {
+            "component": {
               "x": 0,
               "y": 192,
               "alignment": 16,
               "tranmap": null,
               "translation": "CRGOLD",
-              "type": 10,
+              "type": "level_title",
               "font": "Console",
-              "conditions":
-              [
+              "conditions": [
                 {
                   "condition": 19,
                   "param": 3
@@ -3378,8 +3087,7 @@
             }
           },
           {
-            "carousel":
-            {
+            "carousel": {
               "x": 0,
               "y": 18,
               "alignment": 0,

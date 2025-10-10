@@ -28,6 +28,7 @@ typedef enum {
   PITCH_NONE
 } pitchrange_t;
 
+struct ambient_s;
 struct mobj_s;
 
 //
@@ -44,12 +45,15 @@ void S_Init(int sfxVolume, int musicVolume);
 //
 void S_Start(void);
 
-void S_StopChannels(void);
+void S_EvictChannels(void);
 
 //
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
 //
+
+boolean S_StartAmbientSound(const struct mobj_s *origin, int sfx_id,
+                            struct ambient_s *ambient);
 
 // Thing at <origin> emits sound. No rumble.
 #define S_StartSound(o, i) S_StartSoundPitch((o), (i), PITCH_FULL)
@@ -87,6 +91,9 @@ void S_StartSoundOrigin(const struct mobj_s *source,
 // Stop sound for thing at <origin>
 void S_StopSound(const struct mobj_s *origin);
 
+void S_StopAmbientSounds(void);
+void S_MarkSounds(void);
+
 // [FG] play sounds in full length
 extern boolean full_sounds;
 // [FG] removed map objects may finish their sounds
@@ -102,9 +109,12 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping);
 // Stops the music fer sure.
 void S_StopMusic(void);
 
-// Stop and resume music, during game PAUSE.
 void S_PauseSound(void);
 void S_ResumeSound(void);
+
+// Stop and resume music, during game PAUSE.
+void S_PauseMusic(void);
+void S_ResumeMusic(void);
 
 void S_RestartMusic(void);
 
@@ -121,6 +131,8 @@ extern int snd_channels;
 
 // jff 3/17/98 holds last IDMUS number, or -1
 extern int idmusnum;
+
+extern int current_musicnum;
 
 void S_BindSoundVariables(void);
 

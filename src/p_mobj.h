@@ -220,9 +220,14 @@ typedef enum
     MF2_E4M8BOSS        = 0x00010000, // is an E4M8 boss
     MF2_RIP             = 0x00020000, // missile rips through solid
     MF2_FULLVOLSOUNDS   = 0x00040000, // full volume see / death sound
-    MF2_COLOREDBLOOD    = 0x00080000, // [FG] colored blood and gibs
-    MF2_FLIPPABLE       = 0x00100000, // [crispy] randomly flip corpse, blood and death animation sprites
 } mobjflag2_t;
+
+// Woof!-exclusive extension
+typedef enum
+{
+    MFX_COLOREDBLOOD    = 0x00000001, // [FG] colored blood and gibs
+    MFX_MIRROREDCORPSE  = 0x00000002, // [crispy] randomly flip corpse, blood and death animation sprites
+} mobjflag_extra_t;
 
 // killough 9/15/98: Same, but internal flags, not intended for .deh
 // (some degree of opaqueness is good, to avoid compatibility woes)
@@ -312,6 +317,7 @@ typedef struct mobj_s
     state_t*            state;
     int                 flags;
     int                 flags2; // mbf21
+    int                 flags_extra; // Woof!
     int                 intflags;  // killough 9/15/98: internal flags
     int                 health;
 
@@ -439,21 +445,28 @@ extern int itemrespawntime[];
 extern int iquehead;
 extern int iquetail;
 
-enum {
+typedef enum vertaim_s {
   VERTAIM_AUTO,
   VERTAIM_DIRECT,
   VERTAIM_DIRECTAUTO,
-}; extern int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
 
+  NUM_VERTAIM
+} vertaim_t;
+
+extern vertaim_t vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+extern int max_pitch_angle, default_max_pitch_angle;
 void P_UpdateDirectVerticalAiming(void);
 
 extern boolean checksight12;
 void P_UpdateCheckSight(void);
 
+// [Nugget] Removed `actualheight`
+
 mobj_t *P_SubstNullMobj(mobj_t *mobj);
 void    P_RespawnSpecials(void);
 mobj_t  *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
 void    P_RemoveMobj(mobj_t *th);
+extern int setmobjstate_recursion;
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void    P_MobjThinker(mobj_t *mobj);
 void    P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);

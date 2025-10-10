@@ -58,6 +58,7 @@
 #include "r_state.h"
 #include "r_swirl.h"
 #include "s_sound.h"
+#include "s_musinfo.h"
 #include "sounds.h"
 #include "st_stuff.h"
 #include "st_widgets.h"
@@ -215,10 +216,15 @@ void P_InitPicAnims (void)
       if (lastanim->speed < 65536 && lastanim->numpics != 1)
       {
       if (lastanim->numpics < 2)
-        I_Error ("P_InitPicAnims: bad cycle from %s to %s",
+        I_Error ("bad cycle from %s to %s",
                  animdefs[i].startname,
                  animdefs[i].endname);
       }
+
+      if (lastanim->speed == 0)
+        I_Error ("%s to %s animation cannot have speed 0",
+                 animdefs[i].startname,
+                 animdefs[i].endname);
 
       lastanim++;
     }
@@ -725,8 +731,8 @@ sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, int secnum)
 int P_FindSectorFromLineTag(const line_t *line, int start)
 {
   start = start >= 0 ? sectors[start].nexttag :
-    sectors[(unsigned) line->tag % (unsigned) numsectors].firsttag;
-  while (start >= 0 && sectors[start].tag != line->tag)
+    sectors[(unsigned) line->args[0] % (unsigned) numsectors].firsttag;
+  while (start >= 0 && sectors[start].tag != line->args[0])
     start = sectors[start].nexttag;
   return start;
 }
@@ -736,8 +742,8 @@ int P_FindSectorFromLineTag(const line_t *line, int start)
 int P_FindLineFromLineTag(const line_t *line, int start)
 {
   start = start >= 0 ? lines[start].nexttag :
-    lines[(unsigned) line->tag % (unsigned) numlines].firsttag;
-  while (start >= 0 && lines[start].tag != line->tag)
+    lines[(unsigned) line->args[0] % (unsigned) numlines].firsttag;
+  while (start >= 0 && lines[start].id != line->args[0])
     start = lines[start].nexttag;
   return start;
 }
@@ -764,7 +770,7 @@ static void P_InitTagLists(void)
 
   for (i=numlines; --i>=0; )        // Proceed from last to first linedef
     {                               // so that lower linedefs appear first
-      int j = (unsigned) lines[i].tag % (unsigned) numlines; // Hash func
+      int j = (unsigned) lines[i].id % (unsigned) numlines; // Hash func
       lines[i].nexttag = lines[j].firsttag;   // Prepend linedef to chain
       lines[j].firsttag = i;
     }
@@ -967,7 +973,7 @@ int P_CheckTag(line_t *line)
 {
   // killough 11/98: compatibility option:
 
-  if (comp[comp_zerotags] || line->tag)
+  if (comp[comp_zerotags] || line->args[0])
     return 1;
 
   switch (line->special)
@@ -1020,6 +1026,38 @@ int P_CheckTag(line_t *line)
     case 198:
     case 48:  // Scrolling walls
     case 85:
+    case 2069: // Inventory-reset Exits
+    case 2070:
+    case 2071:
+    case 2072:
+    case 2073:
+    case 2074:
+    case 2082: // Two-sided scrolling walls
+    case 2083:
+    case 2057: // Music changers
+    case 2058:
+    case 2059:
+    case 2060:
+    case 2061:
+    case 2062:
+    case 2063:
+    case 2064:
+    case 2065:
+    case 2066:
+    case 2067:
+    case 2068:
+    case 2087:
+    case 2088:
+    case 2089:
+    case 2090:
+    case 2091:
+    case 2092:
+    case 2093:
+    case 2094:
+    case 2095:
+    case 2096:
+    case 2097:
+    case 2098:
       return 1;
     }
 
@@ -1070,6 +1108,71 @@ boolean P_IsSecret(sector_t *sec)
 boolean P_WasSecret(sector_t *sec)
 {
   return sec->oldspecial == 9 || sec->oldspecial & SECRET_MASK;
+}
+
+//
+// EV_ChangeMusic() -- ID24 Music Changers
+//
+// Generic solution for changing the currently playing music during play time.
+// There are four type of music changing behavior, all of them available in all
+// six major activation triggers (W1, WR, S1, SR, G1, GR) totalling 24 lines.
+// All specials can be triggered from either side of the line being activated.
+// Of the four categories, there are two conditions:
+//
+//  1. If the given music lump will loop or not
+//  2. If it will reset to the map's default when no music lump is defined
+//
+// Giving the four resulting categories:
+// * Change music and make it loop only if a track is defined.
+// * Change music and make it play only once and stop all music after.
+// * Change music and make it loop, reset to looping default if no track
+//    defined.
+// * Change music and make it play only once, reset to looping default if no
+//    track defined.
+//
+
+void EV_ChangeMusic(line_t *line, int side)
+{
+  boolean once = false;
+  boolean loops = false;
+  boolean resets = false;
+
+  int music = side ? line->backmusic : line->frontmusic;
+
+  switch (line->special)
+  {
+    case 2057: case 2059: case 2061: case 2063:
+    case 2065: case 2067: case 2087: case 2089:
+    case 2091: case 2093: case 2095: case 2097:
+      once = true;
+      break;
+  }
+
+  switch (line->special)
+  {
+    case 2057: case 2058: case 2059: case 2060:
+    case 2061: case 2062: case 2087: case 2088:
+    case 2089: case 2090: case 2091: case 2092:
+      loops = true;
+      break;
+  }
+
+  switch (line->special)
+  {
+    case 2087: case 2088: case 2089: case 2090:
+    case 2091: case 2092: case 2093: case 2094:
+    case 2095: case 2096: case 2097: case 2098:
+      resets = true;
+      break;
+  }
+
+  if (music)
+    S_ChangeMusInfoMusic(music, loops);
+  else if (resets)
+    S_ChangeMusInfoMusic(musinfo.items[0], true); // Always loops when defaulting
+
+  if (once)
+    line->special = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1128,7 +1231,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
           if (!thing->player && !bossaction)
             if ((line->special & FloorChange) || !(line->special & FloorModel))
               return;     // FloorModel is "Allow Monsters" if FloorChange is 0
-          if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+          if (!line->args[0]) //jff 2/27/98 all walk generalized types require tag
             return;
           linefunc = EV_DoGenFloor;
         }
@@ -1138,7 +1241,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
             if (!thing->player && !bossaction)
               if ((line->special & CeilingChange) || !(line->special & CeilingModel))
                 return;     // CeilingModel is "Allow Monsters" if CeilingChange is 0
-            if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+            if (!line->args[0]) //jff 2/27/98 all walk generalized types require tag
               return;
             linefunc = EV_DoGenCeiling;
           }
@@ -1152,7 +1255,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
                   if (line->flags & ML_SECRET) // they can't open secret doors either
                     return;
                 }
-              if (!line->tag) //3/2/98 move outside the monster check
+              if (!line->args[0]) //3/2/98 move outside the monster check
                 return;
               linefunc = EV_DoGenDoor;
             }
@@ -1176,7 +1279,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
                   if (!thing->player && !bossaction)
                     if (!(line->special & LiftMonster))
                       return; // monsters disallowed
-                  if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+                  if (!line->args[0]) //jff 2/27/98 all walk generalized types require tag
                     return;
                   linefunc = EV_DoGenLift;
                 }
@@ -1186,7 +1289,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
                     if (!thing->player && !bossaction)
                       if (!(line->special & StairMonster))
                         return; // monsters disallowed
-                    if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+                    if (!line->args[0]) //jff 2/27/98 all walk generalized types require tag
                       return;
                     linefunc = EV_DoGenStairs;
                   }
@@ -1198,7 +1301,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
                     if (!thing->player && !bossaction)
                       if (!(line->special & StairMonster))
                         return; // monsters disallowed
-                    if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+                    if (!line->args[0]) //jff 2/27/98 all walk generalized types require tag
                       return;
                     linefunc = EV_DoGenCrusher;
                   }
@@ -1401,6 +1504,13 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
         line->special = 0;
       break;
 
+    // W1 - Exit to the next map and reset inventory.
+    case 2069:
+      if (demo_version < DV_ID24)
+        break;
+      reset_inventory = true;
+      // fallthrough
+
     case 52:
       // EXIT!
 
@@ -1486,6 +1596,13 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
       if (EV_DoPlat(line,blazeDWUS,0) || demo_compatibility)
         line->special = 0;
       break;
+
+    // W1 - Exit to the secret map and reset inventory.
+    case 2072:
+      if (demo_version < DV_ID24)
+        break;
+      reset_inventory = true;
+      // fallthrough
 
     case 124:
       // Secret EXIT
@@ -1678,6 +1795,27 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
       // Raise Floor Turbo
       EV_DoFloor(line,raiseFloorTurbo);
       break;
+
+    // ID24 Music Changers
+    case 2057: case 2063: case 2087: case 2093:
+    case 2058: case 2064: case 2088: case 2094:
+      EV_ChangeMusic(line, side);
+      break;
+
+
+    case 2076:
+      line->special = 0;
+      // fallthrough
+
+    case 2077:
+    {
+      int colormap_index = side ? line->backtint : line->fronttint;
+      for (int s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
+      {
+        sectors[s].tint = colormap_index;
+      }
+      break;
+    }
 
       // Extended walk triggers
 
@@ -1999,7 +2137,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing, boolean bossactio
 // of the line, should the sector already be in motion when the line is
 // impacted. Change is qualified by demo_compatibility.
 //
-void P_ShootSpecialLine(mobj_t *thing, line_t *line)
+void P_ShootSpecialLine(mobj_t *thing, line_t *line, int side)
 {
   //jff 02/04/98 add check here for generalized linedef
   if (!demo_compatibility)
@@ -2014,7 +2152,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
           if (!thing->player)
             if ((line->special & FloorChange) || !(line->special & FloorModel))
               return;   // FloorModel is "Allow Monsters" if FloorChange is 0
-          if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+          if (!line->args[0]) //jff 2/27/98 all gun generalized types require tag
             return;
 
           linefunc = EV_DoGenFloor;
@@ -2025,7 +2163,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
             if (!thing->player)
               if ((line->special & CeilingChange) || !(line->special & CeilingModel))
                 return;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
-            if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+            if (!line->args[0]) //jff 2/27/98 all gun generalized types require tag
               return;
             linefunc = EV_DoGenCeiling;
           }
@@ -2039,7 +2177,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
                   if (line->flags & ML_SECRET) // they can't open secret doors either
                     return;
                 }
-              if (!line->tag) //jff 3/2/98 all gun generalized types require tag
+              if (!line->args[0]) //jff 3/2/98 all gun generalized types require tag
                 return;
               linefunc = EV_DoGenDoor;
             }
@@ -2055,7 +2193,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
                   }
                 else
                   return;
-                if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+                if (!line->args[0]) //jff 2/27/98 all gun generalized types require tag
                   return;
 
                 linefunc = EV_DoGenLockedDoor;
@@ -2074,7 +2212,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
                     if (!thing->player)
                       if (!(line->special & StairMonster))
                         return; // monsters disallowed
-                    if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+                    if (!line->args[0]) //jff 2/27/98 all gun generalized types require tag
                       return;
                     linefunc = EV_DoGenStairs;
                   }
@@ -2084,7 +2222,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
                       if (!thing->player)
                         if (!(line->special & StairMonster))
                           return; // monsters disallowed
-                      if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+                      if (!line->args[0]) //jff 2/27/98 all gun generalized types require tag
                         return;
                       linefunc = EV_DoGenCrusher;
                     }
@@ -2143,6 +2281,26 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
         P_ChangeSwitchTexture(line,0);
       break;
 
+    // ID24 Music Changers
+    case 2061: case 2067: case 2091: case 2097:
+    case 2062: case 2068: case 2092: case 2098:
+      EV_ChangeMusic(line, side);
+      break;
+
+    case 2080:
+      line->special = 0;
+      // fallthrough
+
+    case 2081:
+    {
+      int colormap_index = side ? line->backtint : line->fronttint;
+      for (int s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
+      {
+        sectors[s].tint = colormap_index;
+      }
+      break;
+    }
+
       //jff 1/30/98 added new gun linedefs here
       // killough 1/31/98: added demo_compatibility check, added inner switch
 
@@ -2150,6 +2308,13 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
       if (!demo_compatibility)
         switch (line->special)
           {
+          // G1 - Exit to the next map and reset inventory.
+          case 2071:
+            if (demo_version < DV_ID24)
+              break;
+            reset_inventory = true;
+            // fallthrough
+
           case 197:
             // Exit to next level
 
@@ -2159,6 +2324,13 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
             P_ChangeSwitchTexture(line,0);
             G_ExitLevel();
             break;
+
+          // G1 - Exit to the secret map and reset inventory.
+          case 2074:
+            if (demo_version < DV_ID24)
+              break;
+            reset_inventory = true;
+            // fallthrough
 
           case 198:
             // Exit to secret level
@@ -2494,7 +2666,7 @@ void P_UpdateSpecials (void)
   // [crispy] draw fuzz effect independent of rendering frame rate
   R_SetFuzzPosTic();
 
-  R_UpdateSky();
+  R_UpdateSkies();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -2502,6 +2674,95 @@ void P_UpdateSpecials (void)
 // Sector and Line special thinker spawning at level startup
 //
 //////////////////////////////////////////////////////////////////////
+
+//
+// EV_RotateOffsetFlat
+//
+// As of the ID24, this action only contains the static specials that are
+// triggered at spawn time:
+// * Offset target floor texture by line direction
+// * Offset target ceiling texture by line direction
+// * Offset target floor and ceiling texture by line direction
+// * Rotate target floor texture by line angle
+// * Rotate target ceiling texture by line angle
+// * Rotate target floor and ceiling texture by line angle
+// * Offset then rotate target floor texture by line direction and angle
+// * Offset then rotate target ceiling texture by line direction and angle
+// * Offset then rotate target floor and ceiling texture by line direction and angle
+//
+
+void EV_RotateOffsetFlat(line_t *line, sector_t *sector)
+{
+  boolean offset_floor   = false;
+  boolean offset_ceiling = false;
+  boolean rotate_floor   = false;
+  boolean rotate_ceiling = false;
+
+  int s = -1;
+
+  switch (line->special)
+  {
+    case 2048:
+      offset_floor   = true;
+      break;
+    case 2049:
+      offset_ceiling = true;
+      break;
+    case 2050:
+      offset_floor   = true;
+      offset_ceiling = true;
+      break;
+    case 2051:
+      rotate_floor   = true;
+      break;
+    case 2052:
+      rotate_ceiling = true;
+      break;
+    case 2053:
+      rotate_floor   = true;
+      rotate_ceiling = true;
+      break;
+    case 2054:
+      offset_floor   = true;
+      rotate_floor   = true;
+      break;
+    case 2055:
+      offset_ceiling = true;
+      rotate_ceiling = true;
+      break;
+    case 2056:
+      offset_floor   = true;
+      offset_ceiling = true;
+      rotate_floor   = true;
+      rotate_ceiling = true;
+      break;
+  }
+
+  for (s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
+  {
+    if (offset_floor)
+    {
+      sectors[s].floor_xoffs -= line->dx;
+      sectors[s].floor_yoffs += line->dy;
+    }
+
+    if (offset_ceiling)
+    {
+      sectors[s].ceiling_xoffs -= line->dx;
+      sectors[s].ceiling_yoffs += line->dy;
+    }
+
+    if (rotate_floor)
+    {
+      sectors[s].floor_rotation -= line->angle;
+    }
+
+    if (rotate_ceiling)
+    {
+      sectors[s].ceiling_rotation -= line->angle;
+    }
+  }
+}
 
 //
 // P_SpawnSpecials
@@ -2686,10 +2947,25 @@ void P_SpawnSpecials (void)
 
       case 271:   // Regular sky
       case 272:   // Same, only flipped
+      {
         // Pre-calculate sky color
-        R_GetSkyColor(texturetranslation[sides[*lines[i].sidenum].toptexture]);
+        skyindex_t skyindex = R_AddLevelskyFromLine(&sides[lines[i].sidenum[0]]);
         for (s = -1; (s = P_FindSectorFromLineTag(lines+i,s)) >= 0;)
-          sectors[s].sky = i | PL_SKYFLAT;
+          sectors[s].floorsky = sectors[s].ceilingsky = skyindex | PL_SKYFLAT;
+        break;
+      }
+
+      case 2048: case 2049: case 2050:
+      case 2051: case 2052: case 2053:
+      case 2054: case 2055: case 2056:
+        EV_RotateOffsetFlat(&lines[i], sectors);
+        break;
+
+      case 2075:
+        for (int s = -1; (s = P_FindSectorFromLineTag(&lines[i], s)) >= 0;)
+        {
+          sectors[s].tint = lines[i].fronttint;
+        }
         break;
       }
 }
@@ -2713,7 +2989,7 @@ void P_SpawnSpecials (void)
 // This is the main scrolling code
 // killough 3/7/98
 
-void T_Scroll(scroll_t *s)
+static void T_Scroll(scroll_t *s)
 {
   fixed_t dx = s->dx, dy = s->dy;
 
@@ -2749,42 +3025,36 @@ void T_Scroll(scroll_t *s)
         side = sides + s->affectee;
         if (side->oldgametic != gametic)
         {
-          side->oldtextureoffset = side->basetextureoffset;
-          side->oldrowoffset = side->baserowoffset;
+          side->oldtextureoffset = side->textureoffset;
+          side->oldrowoffset = side->rowoffset;
           side->oldgametic = gametic;
         }
-        side->basetextureoffset += dx;
-        side->baserowoffset += dy;
-        side->textureoffset = side->basetextureoffset;
-        side->rowoffset = side->baserowoffset;
+        side->textureoffset += dx;
+        side->rowoffset += dy;
         break;
 
     case sc_floor:                  // killough 3/7/98: Scroll floor texture
         sec = sectors + s->affectee;
         if (sec->old_floor_offs_gametic != gametic)
         {
-          sec->old_floor_xoffs = sec->base_floor_xoffs;
-          sec->old_floor_yoffs = sec->base_floor_yoffs;
+          sec->old_floor_xoffs = sec->floor_xoffs;
+          sec->old_floor_yoffs = sec->floor_yoffs;
           sec->old_floor_offs_gametic = gametic;
         }
-        sec->base_floor_xoffs += dx;
-        sec->base_floor_yoffs += dy;
-        sec->floor_xoffs = sec->base_floor_xoffs;
-        sec->floor_yoffs = sec->base_floor_yoffs;
+        sec->floor_xoffs += dx;
+        sec->floor_yoffs += dy;
         break;
 
     case sc_ceiling:               // killough 3/7/98: Scroll ceiling texture
         sec = sectors + s->affectee;
         if (sec->old_ceil_offs_gametic != gametic)
         {
-          sec->old_ceiling_xoffs = sec->base_ceiling_xoffs;
-          sec->old_ceiling_yoffs = sec->base_ceiling_yoffs;
+          sec->old_ceiling_xoffs = sec->ceiling_xoffs;
+          sec->old_ceiling_yoffs = sec->ceiling_yoffs;
           sec->old_ceil_offs_gametic = gametic;
         }
-        sec->base_ceiling_xoffs += dx;
-        sec->base_ceiling_yoffs += dy;
-        sec->ceiling_xoffs = sec->base_ceiling_xoffs;
-        sec->ceiling_yoffs = sec->base_ceiling_yoffs;
+        sec->ceiling_xoffs += dx;
+        sec->ceiling_yoffs += dy;
         break;
 
     case sc_carry:
@@ -2818,6 +3088,11 @@ void T_Scroll(scroll_t *s)
     }
 }
 
+void T_ScrollAdapter(mobj_t *mobj)
+{
+    T_Scroll((scroll_t *)mobj);
+}
+
 //
 // Add_Scroller()
 //
@@ -2839,8 +3114,8 @@ void T_Scroll(scroll_t *s)
 static void Add_Scroller(int type, fixed_t dx, fixed_t dy,
                          int control, int affectee, int accel)
 {
-  scroll_t *s = Z_Malloc(sizeof *s, PU_LEVSPEC, 0);
-  s->thinker.function.p1 = (actionf_p1)T_Scroll;
+  scroll_t *s = arena_alloc(thinkers_arena, scroll_t);
+  s->thinker.function.p1 = T_ScrollAdapter;
   s->type = type;
   s->dx = dx;
   s->dy = dy;
@@ -2897,8 +3172,24 @@ static void P_SpawnScrollers(void)
       int control = -1, accel = 0;         // no control sector or acceleration
       int special = l->special;
 
-      if (demo_compatibility && special != 48)
-        continue;
+      if (demo_compatibility)
+      {
+        // Allow all scrollers that do not break demo compatibility.
+        // The following are the original Boom scrollers that move Things
+        // across the floor, in their accelerative / displacement / normal
+        // variants.
+        // All other scrollers from Boom through ID24 retain compatibility.
+        switch (special)
+        {
+          case 216:
+          case 217:
+          case 247:
+          case 248:
+          case 252:
+          case 253:
+            continue;
+        }
+      }
 
       // killough 3/7/98: Types 245-249 are same as 250-254 except that the
       // first side's sector's heights cause scrolling when they change, and
@@ -2958,30 +3249,60 @@ static void P_SpawnScrollers(void)
                        sides[s].rowoffset, -1, s, accel);
           break;
 
-        case 1024: // special 255 with tag control
-        case 1025:
+        // special 255 with tag control
+
+        // Always - Scroll both front and back sidedef's textures and
+        // accelerate the scroll value by the target sector's movement
+        // divided by 8.
+        case 2086:
         case 1026:
-          if (l->tag == 0)
+          accel = 1;
+          // fallthrough
+
+        // Always - Scroll both front and back sidedef's textures
+        // according to the target sector's movement divided by 8.
+        case 2085:
+        case 1025:
+          control = sides[*l->sidenum].sector - sectors;
+          // fallthrough
+
+        // Always - Scroll both front and back sidedef's textures
+        // according to the target sector's scroll values divided by 8
+        case 2084:
+        case 1024:
+          if (l->args[0] == 0)
             I_Error("Line %d is missing a tag!", i);
-
-          if (special > 1024)
-            control = sides[*l->sidenum].sector - sectors;
-
-          if (special == 1026)
-            accel = 1;
 
           s = lines[i].sidenum[0];
           dx = -sides[s].textureoffset / 8;
           dy = sides[s].rowoffset / 8;
           for (s = -1; (s = P_FindLineFromLineTag(l, s)) >= 0;)
             if (s != i)
+            {
               Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel);
 
+              if (special >= 2084 && special <= 2086 && lines[s].sidenum[1] != NO_INDEX)
+                Add_Scroller(sc_side, -dx, dy, control, lines[s].sidenum[1], accel);
+            }
           break;
+
+        // Always - Scroll both front and back sidedef's textures
+        // according to the line's left direction.
+        case 2082:
+          if (lines[i].sidenum[1] != NO_INDEX)
+            Add_Scroller(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[1], accel);
+          // fallthrough
 
         case 48:                  // scroll first side
           Add_Scroller(sc_side,  FRACUNIT, 0, -1, lines[i].sidenum[0], accel);
           break;
+
+        // Always - Scroll both front and back sidedef's textures
+        // according to the line's right direction.
+        case 2083:
+          if (lines[i].sidenum[1] != NO_INDEX)
+            Add_Scroller(sc_side, FRACUNIT, 0, -1, lines[i].sidenum[1], accel);
+          // fallthrough
 
         case 85:                  // jff 1/30/98 2-way scroll
           Add_Scroller(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel);
@@ -3001,9 +3322,9 @@ static void P_SpawnScrollers(void)
 
 static void Add_Friction(int friction, int movefactor, int affectee)
 {
-    friction_t *f = Z_Malloc(sizeof *f, PU_LEVSPEC, 0);
+    friction_t *f = arena_alloc(thinkers_arena, friction_t);
 
-    f->thinker.function.p1 = (actionf_p1)T_Friction;
+    f->thinker.function.p1 = T_FrictionAdapter;
     f->friction = friction;
     f->movefactor = movefactor;
     f->affectee = affectee;
@@ -3061,6 +3382,11 @@ void T_Friction(friction_t *f)
             }
         node = node->m_snext;
     }
+}
+
+void T_FrictionAdapter(mobj_t *mobj)
+{
+    T_Friction((friction_t *)mobj);
 }
 
 // killough 3/7/98 -- end generalized scroll effects
@@ -3232,9 +3558,9 @@ static void P_SpawnFriction(void)
 static void Add_Pusher(int type, int x_mag, int y_mag,
                        mobj_t *source, int affectee)
 {
-  pusher_t *p = Z_Malloc(sizeof *p, PU_LEVSPEC, 0);
+  pusher_t *p = arena_alloc(thinkers_arena, pusher_t);
 
-  p->thinker.function.p1 = (actionf_p1)T_Pusher;
+  p->thinker.function.p1 = T_PusherAdapter;
   p->source = source;
   p->type = type;
   p->x_mag = x_mag>>FRACBITS;
@@ -3315,7 +3641,7 @@ boolean PIT_PushThing(mobj_t* thing)
 // the effect.
 //
 
-void T_Pusher(pusher_t *p)
+static void T_Pusher(pusher_t *p)
 {
   sector_t *sec;
   mobj_t   *thing;
@@ -3435,6 +3761,11 @@ void T_Pusher(pusher_t *p)
       thing->momy += yspeed<<(FRACBITS-PUSH_FACTOR);
       thing->intflags |= MIF_SCROLLING;
     }
+}
+
+void T_PusherAdapter(mobj_t *mobj)
+{
+    T_Pusher((pusher_t *)mobj);
 }
 
 /////////////////////////////

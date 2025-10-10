@@ -61,33 +61,38 @@
 boolean fancy_teleport;
 
 //jff 1/7/98 default automap colors added
-static int mapcolor_back;    // map background
-static int mapcolor_grid;    // grid lines color
-static int mapcolor_wall;    // normal 1s wall color
-static int mapcolor_fchg;    // line at floor height change color
-static int mapcolor_cchg;    // line at ceiling height change color
-static int mapcolor_clsd;    // line at sector with floor=ceiling color
-static int mapcolor_rkey;    // red key color
-static int mapcolor_bkey;    // blue key color
-static int mapcolor_ykey;    // yellow key color
-static int mapcolor_rdor;    // red door color  (diff from keys to allow option)
-static int mapcolor_bdor;    // blue door color (of enabling one but not other )
-static int mapcolor_ydor;    // yellow door color
-static int mapcolor_tele;    // teleporter line color
-static int mapcolor_secr;    // secret sector boundary color
-static int mapcolor_revsecr; // revealed secret sector boundary color
-static int mapcolor_trig;    // [Nugget] Trigger-line color
-static int mapcolor_exit;    // jff 4/23/98 add exit line color
-static int mapcolor_unsn;    // computer map unseen line color
-static int mapcolor_flat;    // line with no floor/ceiling changes
-static int mapcolor_sprt;    // general sprite color
-static int mapcolor_hair;    // crosshair color
-static int mapcolor_sngl;    // single player arrow color
-static int mapcolor_plyr[4]; // colors for player arrows in multiplayer
-static int mapcolor_frnd;    // colors for friends of player
-static int mapcolor_item;    // item sprite color
-static int mapcolor_enemy;   // enemy sprite color
-static int mapcolor_hitbox;  // [Nugget] Hitbox color
+#define MAPCOLOR(x) mapcolor_##x, cur_mapcolor_##x
+static int MAPCOLOR(back);    // map background
+static int MAPCOLOR(grid);    // grid lines color
+static int MAPCOLOR(wall);    // normal 1s wall color
+static int MAPCOLOR(fchg);    // line at floor height change color
+static int MAPCOLOR(cchg);    // line at ceiling height change color
+static int MAPCOLOR(clsd);    // line at sector with floor=ceiling color
+static int MAPCOLOR(rkey);    // red key color
+static int MAPCOLOR(bkey);    // blue key color
+static int MAPCOLOR(ykey);    // yellow key color
+static int MAPCOLOR(rdor);    // red door color  (diff from keys to allow option)
+static int MAPCOLOR(bdor);    // blue door color (of enabling one but not other )
+static int MAPCOLOR(ydor);    // yellow door color
+static int MAPCOLOR(tele);    // teleporter line color
+static int MAPCOLOR(secr);    // secret sector boundary color
+static int MAPCOLOR(revsecr); // revealed secret sector boundary color
+static int MAPCOLOR(exit);    // jff 4/23/98 add exit line color
+static int MAPCOLOR(unsn);    // computer map unseen line color
+static int MAPCOLOR(flat);    // line with no floor/ceiling changes
+static int MAPCOLOR(sprt);    // general sprite color
+static int MAPCOLOR(hair);    // crosshair color
+static int MAPCOLOR(sngl);    // single player arrow color
+static int MAPCOLOR(plyr[4]); // colors for player arrows in multiplayer
+static int MAPCOLOR(frnd);    // colors for friends of player
+static int MAPCOLOR(item);    // item sprite color
+static int MAPCOLOR(enemy);   // enemy sprite color
+
+// [Nugget]
+static int MAPCOLOR(trig);    // Trigger-line color
+static int MAPCOLOR(hitbox);  // Hitbox color
+
+#undef MAPCOLOR
 
 //jff 3/9/98 add option to not show secret sectors until entered
 static boolean map_secret_after;
@@ -735,8 +740,8 @@ static void AM_initScreenSize(void)
   {
     int x = mm_x + video.deltaw;
 
-    x += (abs(mm_ws) == 2) ? video.deltaw                  * (mm_ws / 2)
-       : (abs(mm_ws) == 1) ? video.deltaw * ST_GetLayout() *  mm_ws
+    x += (abs(mm_ws) == 2) ? video.deltaw      * (mm_ws / 2)
+       : (abs(mm_ws) == 1) ? ST_GetWideShift() *  mm_ws
        :                     0;
 
     f_x = V_ScaleX(x);
@@ -858,10 +863,10 @@ void AM_Start()
 
   static int last_automap = -1,
              last_messages = -1,
-             last_layout = -1;
+             last_wide_shift = -1;
 
   const int messages_height = ST_GetNumMessageLines();
-  const boolean layout = ST_GetLayout();
+  const boolean wide_shift = ST_GetWideShift();
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -870,7 +875,7 @@ void AM_Start()
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode
       || last_automap != automapactive || last_messages != messages_height
-      || last_layout != layout)
+      || last_wide_shift != wide_shift)
   {
     AM_LevelInit();
 
@@ -881,7 +886,7 @@ void AM_Start()
     lastepisode = gameepisode;
     last_automap = automapactive;
     last_messages = messages_height;
-    last_layout = layout;
+    last_wide_shift = wide_shift;
   }
   else
   {
@@ -1426,7 +1431,7 @@ void AM_Ticker (void)
       {
         const line_t *const l = subsec->sector->lines[i];
 
-        if (l && l->tag > 0)
+        if (l && l->args[0] > 0)
         {
           if (l->v1 && l->v2)
           {
@@ -1440,7 +1445,7 @@ void AM_Ticker (void)
 
             if (dist < min_distance) {
               min_distance = dist;
-              min_tag = l->tag;
+              min_tag = l->args[0];
             }
           }
         }
@@ -1496,12 +1501,14 @@ void AM_Ticker (void)
 static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
+
   int h = f_h;
-  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *src = I_VideoBuffer + ((f_y * video.width) + f_x);
+
   while (h--)
   {
     memset(src, color, f_w);
-    src += video.pitch;
+    src += video.width;
   }
 }
 
@@ -1647,13 +1654,13 @@ static boolean AM_clipMline
 #undef DOOUTCODE
 
 // [Nugget] Factored out
-static void PUTDOT(int xx, int yy, int cc)
+static inline void PUTDOT(int xx, int yy, int cc)
 {
   if (STRICTMODE(flip_levels)) { xx = f_x*2 + f_w - 1 - xx; } // [Nugget] Flip levels
 
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h))
-    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+    I_VideoBuffer[(yy) * video.width + (xx)] = (cc);
 }
 
 
@@ -1758,7 +1765,7 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 
   // [Nugget] ---------------------------------------------------------------/
 
-   byte *dest = &I_VideoBuffer[y * video.pitch + x];
+   pixel_t *dest = &I_VideoBuffer[y * video.width + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;
@@ -2085,7 +2092,7 @@ static int AM_isTagFinderLine(const line_t *const line)
       ret |= 0x1;
     }
 
-    if (line->tag > 0 && (line->tag == magic_tag || (magic_sector && (line->tag == magic_sector->tag))))
+    if (line->args[0] > 0 && (line->args[0] == magic_tag || (magic_sector && (line->args[0] == magic_sector->tag))))
     {
       ret |= 0x2;
     }
@@ -2170,36 +2177,36 @@ static void AM_drawWalls(void)
             array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, highlight_color[amd] })); 
         }
 
-        if ((mapcolor_bdor || mapcolor_ydor || mapcolor_rdor) &&
+        if ((cur_mapcolor_bdor || cur_mapcolor_ydor || cur_mapcolor_rdor) &&
             !(lines[i].flags & ML_SECRET) &&    /* non-secret */
             (amd != -1)
         )
         {
             if (keyed_door_flash)
             {
-               AM_drawMline(&l, mapcolor_grid);
+               AM_drawMline(&l, cur_mapcolor_grid);
             }
             else switch (amd) // closed keyed door
             {
               case 1:
                 /*bluekey*/
                 AM_drawMline(&l,
-                  mapcolor_bdor? mapcolor_bdor : mapcolor_cchg);
+                  cur_mapcolor_bdor? cur_mapcolor_bdor : cur_mapcolor_cchg);
                 break;
               case 2:
                 /*yellowkey*/
                 AM_drawMline(&l,
-                  mapcolor_ydor? mapcolor_ydor : mapcolor_cchg);
+                  cur_mapcolor_ydor? cur_mapcolor_ydor : cur_mapcolor_cchg);
                 break;
               case 0:
                 /*redkey*/
                 AM_drawMline(&l,
-                  mapcolor_rdor? mapcolor_rdor : mapcolor_cchg);
+                  cur_mapcolor_rdor? cur_mapcolor_rdor : cur_mapcolor_cchg);
                 break;
               case 3:
                 /*any or all*/
                 AM_drawMline(&l,
-                  mapcolor_clsd? mapcolor_clsd : mapcolor_cchg);
+                  cur_mapcolor_clsd? cur_mapcolor_clsd : cur_mapcolor_cchg);
                 break;
             }
             continue;
@@ -2207,7 +2214,7 @@ static void AM_drawWalls(void)
       }
       if //jff 4/23/98 add exit lines to automap
       (
-        mapcolor_exit &&
+        cur_mapcolor_exit &&
         (
           lines[i].special==11 ||
           lines[i].special==52 ||
@@ -2218,7 +2225,7 @@ static void AM_drawWalls(void)
         )
       )
       {
-        AM_drawMline(&l, keyed_door_flash ? mapcolor_grid : mapcolor_exit); // exit line
+        AM_drawMline(&l, keyed_door_flash ? cur_mapcolor_grid : cur_mapcolor_exit); // exit line
         continue;
       }
 
@@ -2232,17 +2239,17 @@ static void AM_drawWalls(void)
 
       if (!lines[i].backsector)
       {
-        if (mapcolor_exit && P_IsDeathExit(lines[i].frontsector))
+        if (cur_mapcolor_exit && P_IsDeathExit(lines[i].frontsector))
         {
-          array_push(lines_1S, ((am_line_t){l, keyed_door_flash ? mapcolor_grid : mapcolor_exit}));
+          array_push(lines_1S, ((am_line_t){l, keyed_door_flash ? cur_mapcolor_grid : cur_mapcolor_exit}));
         }
         // [Nugget] Trigger lines
-        else if (ddt_cheating && mapcolor_trig && IsTrigger(lines[i]))
+        else if (ddt_cheating && cur_mapcolor_trig && IsTrigger(lines[i]))
         {
-          array_push(lines_1S, ((am_line_t){l, mapcolor_trig}));
+          array_push(lines_1S, ((am_line_t){l, cur_mapcolor_trig}));
         }
         // jff 1/10/98 add new color for 1S secret sector boundary
-        else if (mapcolor_secr && //jff 4/3/98 0 is disable
+        else if (cur_mapcolor_secr && //jff 4/3/98 0 is disable
             (
              !map_secret_after &&
              P_IsSecret(lines[i].frontsector)
@@ -2250,9 +2257,9 @@ static void AM_drawWalls(void)
           )
         {
           // line bounding secret sector
-          array_push(lines_1S, ((am_line_t){l, mapcolor_secr}));
+          array_push(lines_1S, ((am_line_t){l, cur_mapcolor_secr}));
         }
-        else if (mapcolor_revsecr &&
+        else if (cur_mapcolor_revsecr &&
             (
              P_WasSecret(lines[i].frontsector) &&
              !P_IsSecret(lines[i].frontsector)
@@ -2260,12 +2267,12 @@ static void AM_drawWalls(void)
           )
         {
           // line bounding revealed secret sector
-          array_push(lines_1S, ((am_line_t){l, mapcolor_revsecr}));
+          array_push(lines_1S, ((am_line_t){l, cur_mapcolor_revsecr}));
         }
         else                               //jff 2/16/98 fixed bug
         {
           // special was cleared
-          array_push(lines_1S, ((am_line_t){l, mapcolor_wall}));
+          array_push(lines_1S, ((am_line_t){l, cur_mapcolor_wall}));
         }
       }
       else
@@ -2273,42 +2280,42 @@ static void AM_drawWalls(void)
         // jff 1/10/98 add color change for all teleporter types
         if
         (
-            mapcolor_tele && !(lines[i].flags & ML_SECRET) && 
+            cur_mapcolor_tele && !(lines[i].flags & ML_SECRET) &&
             (lines[i].special == 39 || lines[i].special == 97 /* ||
             lines[i].special == 125 || lines[i].special == 126 */ )
         )
         { // teleporters
-          AM_drawMline(&l, mapcolor_tele);
+          AM_drawMline(&l, cur_mapcolor_tele);
         }
         // [Nugget] Trigger lines
-        else if (ddt_cheating && mapcolor_trig && IsTrigger(lines[i]))
+        else if (ddt_cheating && cur_mapcolor_trig && IsTrigger(lines[i]))
         {
-          AM_drawMline(&l, mapcolor_trig);
+          AM_drawMline(&l, cur_mapcolor_trig);
         }
         else if (lines[i].flags & ML_SECRET)    // secret door
         {
-          AM_drawMline(&l, mapcolor_wall);      // wall color
+          AM_drawMline(&l, cur_mapcolor_wall);      // wall color
         }
         else if
         (
-            mapcolor_clsd &&  
+            cur_mapcolor_clsd &&
             !(lines[i].flags & ML_SECRET) &&    // non-secret closed door
             ((lines[i].backsector->floorheight==lines[i].backsector->ceilingheight) ||
             (lines[i].frontsector->floorheight==lines[i].frontsector->ceilingheight))
         )
         {
-          AM_drawMline(&l, mapcolor_clsd);      // non-secret closed door
+          AM_drawMline(&l, cur_mapcolor_clsd);      // non-secret closed door
         } //jff 1/6/98 show secret sector 2S lines
-        else if (mapcolor_exit &&
+        else if (cur_mapcolor_exit &&
             (P_IsDeathExit(lines[i].frontsector) ||
              P_IsDeathExit(lines[i].backsector))
         )
         {
-          AM_drawMline(&l, keyed_door_flash ? mapcolor_grid : mapcolor_exit);
+          AM_drawMline(&l, keyed_door_flash ? cur_mapcolor_grid : cur_mapcolor_exit);
         }
         else if
         (
-            mapcolor_secr && //jff 2/16/98 fixed bug
+            cur_mapcolor_secr && //jff 2/16/98 fixed bug
             (                    // special was cleared after getting it
               !map_secret_after &&
                (
@@ -2318,11 +2325,11 @@ static void AM_drawWalls(void)
             )
         )
         {
-          AM_drawMline(&l, mapcolor_secr); // line bounding secret sector
+          AM_drawMline(&l, cur_mapcolor_secr); // line bounding secret sector
         } //jff 1/6/98 end secret sector line change
         else if
         (
-            mapcolor_revsecr &&
+            cur_mapcolor_revsecr &&
             (
               (P_WasSecret(lines[i].frontsector)
                && !P_IsSecret(lines[i].frontsector)) ||
@@ -2331,21 +2338,21 @@ static void AM_drawWalls(void)
             )
         )
         {
-          AM_drawMline(&l, mapcolor_revsecr); // line bounding revealed secret sector
+          AM_drawMline(&l, cur_mapcolor_revsecr); // line bounding revealed secret sector
         }
         else if (lines[i].backsector->floorheight !=
                   lines[i].frontsector->floorheight)
         {
-          AM_drawMline(&l, mapcolor_fchg); // floor level change
+          AM_drawMline(&l, cur_mapcolor_fchg); // floor level change
         }
         else if (lines[i].backsector->ceilingheight !=
                   lines[i].frontsector->ceilingheight)
         {
-          AM_drawMline(&l, mapcolor_cchg); // ceiling level change
+          AM_drawMline(&l, cur_mapcolor_cchg); // ceiling level change
         }
-        else if (mapcolor_flat && ddt_cheating)
+        else if (cur_mapcolor_flat && ddt_cheating)
         { 
-          AM_drawMline(&l, mapcolor_flat); //2S lines that appear only in IDDT  
+          AM_drawMline(&l, cur_mapcolor_flat); //2S lines that appear only in IDDT
         }
       }
     } // now draw the lines only visible because the player has computermap
@@ -2355,7 +2362,7 @@ static void AM_drawWalls(void)
       {
         if
         (
-          mapcolor_flat
+          cur_mapcolor_flat
           ||
           !lines[i].backsector
           ||
@@ -2365,7 +2372,7 @@ static void AM_drawWalls(void)
           lines[i].backsector->ceilingheight
           != lines[i].frontsector->ceilingheight
         )
-          AM_drawMline(&l, mapcolor_unsn);
+          AM_drawMline(&l, cur_mapcolor_unsn);
       }
     }
   }
@@ -2560,7 +2567,7 @@ static void AM_drawPlayers(void)
         NUMCHEATPLYRLINES,
         0,
         smoothangle,
-        mapcolor_sngl,      //jff color
+        cur_mapcolor_sngl,      //jff color
         pt.x,
         pt.y
       );
@@ -2571,7 +2578,7 @@ static void AM_drawPlayers(void)
         NUMPLYRLINES,
         0,
         smoothangle,
-        mapcolor_sngl,      //jff color
+        cur_mapcolor_sngl,      //jff color
         pt.x,
         pt.y);
 
@@ -2597,7 +2604,7 @@ static void AM_drawPlayers(void)
     if (p->powers[pw_invisibility])
       color = 246; // *close* to black
     else
-      color = mapcolor_plyr[their_color];   //jff 1/6/98 use default color
+      color = cur_mapcolor_plyr[their_color];   //jff 1/6/98 use default color
 
     // [crispy] interpolate other player arrows
     if (uncapped && leveltime > oldleveltime && p->mo->interp)
@@ -2679,7 +2686,7 @@ static void AM_drawThings
           NUMSQUAREHITBOXLINES,
           t->radius >> FRACTOMAPBITS,
           0,
-          mapcolor_hitbox,
+          cur_mapcolor_hitbox,
           pt.x,
           pt.y
         );
@@ -2694,7 +2701,7 @@ static void AM_drawThings
       }
 
       //jff 1/5/98 case over doomednum of thing being drawn
-      if (mapcolor_rkey || mapcolor_ykey || mapcolor_bkey)
+      if (cur_mapcolor_rkey || cur_mapcolor_ykey || cur_mapcolor_bkey)
       {
         // [Nugget] Make keys flash too
         const boolean key_flash = (map_keyed_door == MAP_KEYED_DOOR_FLASH)
@@ -2710,7 +2717,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              key_flash ? mapcolor_grid : (mapcolor_rkey != -1 ? mapcolor_rkey : mapcolor_sprt),
+              key_flash ? cur_mapcolor_grid : cur_mapcolor_rkey!=-1? cur_mapcolor_rkey : cur_mapcolor_sprt,
               pt.x,
               pt.y
             );
@@ -2723,7 +2730,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              key_flash ? mapcolor_grid : (mapcolor_ykey != -1 ? mapcolor_ykey : mapcolor_sprt),
+              key_flash ? cur_mapcolor_grid : cur_mapcolor_ykey!=-1? cur_mapcolor_ykey : cur_mapcolor_sprt,
               pt.x,
               pt.y
             );
@@ -2736,7 +2743,7 @@ static void AM_drawThings
               NUMCROSSMARKLINES,
               16<<MAPBITS,
               t->angle,
-              key_flash ? mapcolor_grid : (mapcolor_bkey != -1 ? mapcolor_bkey : mapcolor_sprt),
+              key_flash ? cur_mapcolor_grid : cur_mapcolor_bkey!=-1? cur_mapcolor_bkey : cur_mapcolor_sprt,
               pt.x,
               pt.y
             );
@@ -2756,12 +2763,12 @@ static void AM_drawThings
         t->radius >> FRACTOMAPBITS, // [crispy] triangle size represents actual thing size
         t->angle,
         // killough 8/8/98: mark friends specially
-        ((t->flags & MF_FRIEND) && !t->player) ? mapcolor_frnd :
+        ((t->flags & MF_FRIEND) && !t->player) ? cur_mapcolor_frnd :
         /* cph 2006/07/30 - Show count-as-kills in red. */
-        ((t->flags & (MF_COUNTKILL | MF_CORPSE)) == MF_COUNTKILL) ? mapcolor_enemy :
+        ((t->flags & (MF_COUNTKILL | MF_CORPSE)) == MF_COUNTKILL) ? cur_mapcolor_enemy :
         /* bbm 2/28/03 Show countable items in yellow. */
-        (t->flags & MF_COUNTITEM) ? mapcolor_item :
-        mapcolor_sprt,
+        (t->flags & MF_COUNTITEM) ? cur_mapcolor_item :
+        cur_mapcolor_sprt,
         pt.x,
         pt.y
       );
@@ -2855,7 +2862,7 @@ void AM_shadeScreen(void)
     {
       for (int y = f_y;  y < f_y+f_h;  y++)
       {
-        const int pixel = y * video.pitch + x;
+        const int pixel = y * video.width + x;
         I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];
       }
     }
@@ -2904,7 +2911,7 @@ void AM_Drawer (void)
   }
 
   if (automapoverlay == AM_OVERLAY_OFF)
-    AM_clearFB(mapcolor_back);       //jff 1/5/98 background default color
+    AM_clearFB(cur_mapcolor_back);       //jff 1/5/98 background default color
   // [Alaux] Dark automap overlay
   else if (automapoverlay == AM_OVERLAY_DARK)
     AM_shadeScreen();
@@ -2926,12 +2933,12 @@ void AM_Drawer (void)
   }
 
   if (automap_grid)                  // killough 2/28/98: change var name
-    AM_drawGrid(mapcolor_grid);      //jff 1/7/98 grid default color
+    AM_drawGrid(cur_mapcolor_grid);      //jff 1/7/98 grid default color
   AM_drawWalls();
   AM_drawPlayers();
   if (ddt_cheating==2)
-    AM_drawThings(mapcolor_sprt, 0); //jff 1/5/98 default double IDDT sprite
-  AM_drawCrosshair(mapcolor_hair);   //jff 1/7/98 default crosshair color
+    AM_drawThings(cur_mapcolor_sprt, 0); //jff 1/5/98 default double IDDT sprite
+  AM_drawCrosshair(cur_mapcolor_hair);   //jff 1/7/98 default crosshair color
 
   AM_drawMarks();
 }
@@ -2946,60 +2953,109 @@ typedef enum {
 
 static am_preset_t mapcolor_preset;
 
+#define MAPCOLOR(x) &mapcolor_##x, &cur_mapcolor_##x
+
+static struct
+{
+    int *var, *cur_var;
+    int color[NUM_AM_PRESETS]; // Vanilla Doom, Crispy, Boom, ZDoom
+} mapcolors[] =
+{                                              // ZDoom CVAR name
+    {MAPCOLOR(back),    {  0,   0, 247, 139}}, // am_backcolor
+    {MAPCOLOR(grid),    {104, 104, 104,  70}}, // am_gridcolor
+    {MAPCOLOR(wall),    {176, 180,  23, 239}}, // am_wallcolor
+    {MAPCOLOR(fchg),    { 64,  70,  55, 135}}, // am_fdwallcolor
+    {MAPCOLOR(cchg),    {231, 163, 215,  76}}, // am_cdwallcolor
+    {MAPCOLOR(clsd),    {  0,   0, 208,   0}},
+    {MAPCOLOR(rkey),    {176, 176, 175, 176}}, // P_GetMapColorForLock()
+    {MAPCOLOR(bkey),    {200, 200, 204, 200}}, // P_GetMapColorForLock()
+    {MAPCOLOR(ykey),    {231, 231, 231, 231}}, // P_GetMapColorForLock()
+    {MAPCOLOR(rdor),    {176, 174, 175, 176}}, // P_GetMapColorForLock()
+    {MAPCOLOR(bdor),    {200, 200, 204, 200}}, // P_GetMapColorForLock()
+    {MAPCOLOR(ydor),    {231, 229, 231, 231}}, // P_GetMapColorForLock()
+    {MAPCOLOR(tele),    {  0, 120, 119, 200}}, // am_intralevelcolor
+    {MAPCOLOR(secr),    {  0, 251, 252, 251}}, // am_unexploredsecretcolor
+    {MAPCOLOR(revsecr), {  0, 112, 112, 251}}, // am_secretsectorcolor
+    {MAPCOLOR(exit),    {  0, 209, 208, 176}}, // am_interlevelcolor
+    {MAPCOLOR(unsn),    { 99,  99, 104, 100}}, // am_notseencolor
+    {MAPCOLOR(flat),    { 96,  96,  88,  95}}, // am_tswallcolor
+    {MAPCOLOR(sprt),    {112, 112, 112,   4}}, // am_thingcolor
+    {MAPCOLOR(hair),    { 96,  96, 208,  97}}, // am_xhaircolor
+    {MAPCOLOR(sngl),    {209, 209, 208, 209}}, // am_yourcolor
+    {MAPCOLOR(plyr[0]), {112, 112, 112, 112}},
+    {MAPCOLOR(plyr[1]), { 96,  96,  88,  88}},
+    {MAPCOLOR(plyr[2]), { 64,  64,  64,  64}},
+    {MAPCOLOR(plyr[3]), {176, 176, 176, 176}},
+    {MAPCOLOR(frnd),    {252, 252, 252,   4}}, // am_thingcolor_friend
+    {MAPCOLOR(enemy),   {112, 176, 177,   4}}, // am_thingcolor_monster
+    {MAPCOLOR(item),    {112, 231, 231,   4}}, // am_thingcolor_item
+
+    // [Nugget]
+    {MAPCOLOR(trig),    {  0,   0,   0,   0}},
+    {MAPCOLOR(hitbox),  { 96,  96,  96,  96}},
+
+    {&hudcolor_titl, NULL, {CR_NONE, CR_GOLD, CR_GOLD, CR_GRAY}}, // DrawAutomapHUD()
+};
+
+#undef MAPCOLOR
+
+void AM_ApplyColors(boolean force)
+{
+    static boolean first_time = true;
+
+    if (!first_time && !force)
+    {
+        return;
+    }
+    first_time = false;
+
+    byte *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
+    byte *iwad_playpal = NULL;
+
+    for (int i = 0; i < numlumps; i++)
+    {
+        if (strcasecmp(lumpinfo[i].name, "PLAYPAL") == 0)
+        {
+            iwad_playpal = W_CacheLumpNum(i, PU_STATIC);
+            break;
+        }
+    }
+
+    if (iwad_playpal == NULL || playpal == iwad_playpal
+        || M_CheckIfDisabled("mapcolor_preset"))
+    {
+        for (int i = 0; mapcolors[i].cur_var; i++)
+        {
+            *mapcolors[i].cur_var = *mapcolors[i].var;
+        }
+    }
+    else
+    {
+        for (int i = 0; mapcolors[i].cur_var; i++)
+        {
+            const int j = *mapcolors[i].var;
+            byte r = iwad_playpal[3 * j + 0],
+                 g = iwad_playpal[3 * j + 1],
+                 b = iwad_playpal[3 * j + 2];
+
+            *mapcolors[i].cur_var = I_GetNearestColor(playpal, r, g, b);
+        }
+    }
+
+    Z_ChangeTag(playpal, PU_CACHE);
+    Z_ChangeTag(iwad_playpal, PU_CACHE);
+}
+
 void AM_ColorPreset(void)
 {
-  struct
-  {
-    int *var;
-    int color[NUM_AM_PRESETS]; // Vanilla Doom, Crispy, Boom, ZDoom
-  } mapcolors[] =
-  {                                            // ZDoom CVAR name
-    {&mapcolor_back,    {  0,   0, 247, 139}}, // am_backcolor
-    {&mapcolor_grid,    {104, 104, 104,  70}}, // am_gridcolor
-    {&mapcolor_wall,    {176, 180,  23, 239}}, // am_wallcolor
-    {&mapcolor_fchg,    { 64,  70,  55, 135}}, // am_fdwallcolor
-    {&mapcolor_cchg,    {231, 163, 215,  76}}, // am_cdwallcolor
-    {&mapcolor_clsd,    {  0,   0, 208,   0}},
-    {&mapcolor_rkey,    {176, 176, 175, 176}}, // P_GetMapColorForLock()
-    {&mapcolor_bkey,    {200, 200, 204, 200}}, // P_GetMapColorForLock()
-    {&mapcolor_ykey,    {231, 231, 231, 231}}, // P_GetMapColorForLock()
-    {&mapcolor_rdor,    {176, 174, 175, 176}}, // P_GetMapColorForLock()
-    {&mapcolor_bdor,    {200, 200, 204, 200}}, // P_GetMapColorForLock()
-    {&mapcolor_ydor,    {231, 229, 231, 231}}, // P_GetMapColorForLock()
-    {&mapcolor_tele,    {  0, 120, 119, 200}}, // am_intralevelcolor
-    {&mapcolor_secr,    {  0,  -1, 252, 251}}, // am_unexploredsecretcolor
-    {&mapcolor_revsecr, {  0,  -1, 112, 251}}, // am_secretsectorcolor
-    {&mapcolor_exit,    {  0, 209, 208, 176}}, // am_interlevelcolor
-    {&mapcolor_unsn,    { 99,  99, 104, 100}}, // am_notseencolor
-    {&mapcolor_flat,    { 96,  96,  88,  95}}, // am_tswallcolor
-    {&mapcolor_sprt,    {112, 112, 112,   4}}, // am_thingcolor
-    {&mapcolor_hair,    { 96,  96, 208,  97}}, // am_xhaircolor
-    {&mapcolor_sngl,    {209, 209, 208, 209}}, // am_yourcolor
-    {&mapcolor_plyr[0], {112, 112, 112, 112}},
-    {&mapcolor_plyr[1], { 96,  96,  88,  88}},
-    {&mapcolor_plyr[2], { 64,  64,  64,  64}},
-    {&mapcolor_plyr[3], {176, 176, 176, 176}},
-    {&mapcolor_frnd,    {252, 252, 252,   4}}, // am_thingcolor_friend
-    {&mapcolor_enemy,   {112, 176, 177,   4}}, // am_thingcolor_monster
-    {&mapcolor_item,    {112, 231, 231,   4}}, // am_thingcolor_item
+    for (int i = 0; i < arrlen(mapcolors); i++)
+    {
+        *mapcolors[i].var = mapcolors[i].color[mapcolor_preset];
+    }
 
-    {&hudcolor_titl,    {CR_NONE, CR_GOLD, CR_GOLD, CR_GRAY}}, // DrawAutomapHUD()
-  };
+    AM_ApplyColors(true);
 
-  for (int i = 0; i < arrlen(mapcolors); i++)
-  {
-    *mapcolors[i].var = mapcolors[i].color[mapcolor_preset];
-  }
-
-  // [crispy] Make secret wall colors independent from PLAYPAL color indexes
-  if (mapcolor_preset == AM_PRESET_CRISPY)
-  {
-    byte *playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
-    mapcolor_secr = I_GetNearestColor(playpal, 255, 0, 255);
-    mapcolor_revsecr = I_GetNearestColor(playpal, 119, 255, 111);
-  }
-
-  ST_ResetTitle();
+    ST_ResetTitle();
 }
 
 void AM_BindAutomapVariables(void)
@@ -3079,7 +3135,7 @@ void AM_BindAutomapVariables(void)
   BIND_CR(mapcolor_frnd, 252, "Color used for friends");
   BIND_CR(mapcolor_enemy, 177, "Color used for enemies");
   BIND_CR(mapcolor_item, 231, "Color used for countable items");
-  BIND_CR(mapcolor_hitbox, 96, "Color used for thing hitboxes");
+  BIND_CR(mapcolor_hitbox, 96, "Color used for thing hitboxes"); // [Nugget]
 }
 
 static mline_t *GetTanzerF(int f)

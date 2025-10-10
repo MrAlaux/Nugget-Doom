@@ -82,6 +82,9 @@ demo_version_t G_GetNamedComplevel(const char *arg);
 const char *G_GetCurrentComplevelName(void);
 
 int G_GotoNextLevel(int *pEpi, int *pMap);
+int G_GotoPrevLevel(void);
+
+const char *G_GetLevelTitle(void);
 
 void G_BindGameInputVariables(void);
 void G_BindGameVariables(void);
@@ -96,9 +99,13 @@ typedef enum
   CL_BOOM,
   CL_MBF,
   CL_MBF21,
+  CL_ID24,
 } complevel_t;
 
 extern complevel_t force_complevel, default_complevel;
+
+// ID24 exit line specials
+extern boolean reset_inventory;
 
 extern int realtic_clock_rate;
 
@@ -113,8 +120,7 @@ extern int  key_help;
 extern boolean autorun;           // always running?                   // phares
 extern boolean autostrafe50;
 extern boolean novert;
-extern boolean mouselook;
-extern boolean padlook;
+extern boolean freelook;
 
 extern fixed_t forwardmove[2];
 extern fixed_t default_sidemove[2];
@@ -134,6 +140,8 @@ extern boolean um_pars;
 
 extern boolean secretexit;
 
+extern byte *demo_p;
+
 // [Nugget] ==================================================================
 
 extern boolean doom_weapon_toggles; // Global
@@ -152,6 +160,7 @@ extern boolean improved_weapon_toggles;
 extern boolean skip_ammoless_weapons;
 extern screenshotpalette_t screenshot_palette;
 extern boolean comp_longautoaim;
+extern boolean default_pistolstart;
 
 extern boolean nugget_devmode;
 
@@ -161,16 +170,6 @@ extern int autosave_interval;
 
 boolean G_SavingPeriodicAutoSave(void);
 void G_SetAutoSaveCountdown(int value);
-
-// Rewind --------------------------------------------------------------------
-
-extern int rewind_interval;
-
-void G_SetRewindCountdown(int value);
-void G_EnableRewind(void);
-void G_Rewind(void);
-void G_ClearExcessKeyFrames(void);
-boolean G_KeyFrameRW(void);
 
 // Slow Motion ---------------------------------------------------------------
 

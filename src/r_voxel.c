@@ -21,12 +21,12 @@
 #include "i_printf.h"
 #include "i_video.h"
 #include "info.h"
-#include "m_array.h"
 #include "m_fixed.h"
-#include "mn_menu.h"
 #include "m_misc.h"
+#include "mn_menu.h"
 #include "p_mobj.h"
 #include "r_bmaps.h"
+#include "r_data.h"
 #include "r_defs.h"
 #include "r_draw.h"
 #include "r_main.h"
@@ -509,7 +509,7 @@ static boolean VX_CheckFrustum (fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
 }
 
 
-boolean VX_ProjectVoxel (mobj_t * thing)
+boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 {
 	if (!STRICTMODE(voxels_rendering))
 		return false;
@@ -683,6 +683,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 
 	vis->mobjflags = thing->flags;
 	vis->mobjflags2 = thing->flags2;
+	vis->mobjflags_extra = thing->flags_extra;
 	vis->scale = xscale;
 
 	vis->gx  = gx;
@@ -697,8 +698,19 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	vis->yscale = 0;
 	vis->fullbright = false;
 	vis->flipped = false;
+	vis->no_perc = false;
+
+	if (thing->subsector->sector->floorlightsec >= 0)
+	{
+		vis->tint = sectors[thing->subsector->sector->floorlightsec].tint;
+	}
+	else
+	{
+		vis->tint = thing->subsector->sector->tint;
+	}
 
 	// get light level...
+	lighttable_t *thiscolormap = vis->tint ? colormaps[vis->tint] : fullcolormap;
 
 	if (vis->mobjflags & MF_SHADOW)
 	{
@@ -706,31 +718,48 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	}
 	else if (fixedcolormap != NULL)
 	{
-		vis->colormap[0] = vis->colormap[1] = fixedcolormap;
+		vis->colormap[0] = vis->colormap[1] = thiscolormap + fixedcolormapindex * 256;
 	}
 	else if (thing->frame & FF_FULLBRIGHT)
 	{
-		vis->colormap[0] = vis->colormap[1] = fullcolormap;
+		vis->colormap[0] = vis->colormap[1] = thiscolormap;
+
 		vis->fullbright = true; // [Nugget]
 	}
 	else
 	{
 		// diminished light
 		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-											? 0 : R_GetLightIndex(xscale);
+		                  ? 0 : R_GetLightIndex(xscale);
+
+		int lightnum;
 
 		// [Nugget] Thing lighting
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
 		{
-			const int lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
-			                   + extralight;
+			const int lightlevel = R_CalculateHitboxLightLevel(vis->gx, vis->gy, thing->radius, false);
 
-			spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+			lightnum = lightlevel >> LIGHTSEGSHIFT;
+		}
+		else
+		{
+			lightnum = (demo_version >= DV_MBF)
+			         ? (lightlevel_override >> LIGHTSEGSHIFT)
+			         : (thing->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
 		}
 
-		vis->colormap[0] = spritelights[index];
-		vis->colormap[1] = fullcolormap;
+		lightnum = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+		int* spritelightoffsets = &scalelightoffset[MAXLIGHTSCALE * lightnum];
+
+		vis->colormap[0] = thiscolormap + spritelightoffsets[index];
+		vis->colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+				? thiscolormap
+				: dc_colormap[0];
 	}
+
+	// ID24 per-state tranmap
+	// tranmaps do not work with Voxels yet
+	vis->tranmap = NULL;
 
 	vis->brightmap = R_BrightmapForSprite(thing->sprite);
 	vis->color = thing->bloodcolor;
@@ -738,13 +767,12 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	// [Alaux] Lock crosshair on target
 	if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target)
 	{
-		HU_UpdateCrosshairLock
-		(
-			BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS),
-      // [Nugget] Removed `actualheight`
-			BETWEEN(0, viewheight - 1, (centeryfrac + FixedMul(viewz - gz - crosshair_target->height/2, xscale)) >> FRACBITS)
-		);
-
+		int x = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS;
+		// [Nugget] Removed `actualheight`
+		int y = (centeryfrac + FixedMul(viewz - gz - crosshair_target->height / 2, xscale)) >> FRACBITS;
+		x = clampi(x, 0, viewwidth - 1);
+		y = clampi(y, 0, viewheight - 1);
+		HU_UpdateCrosshairLock(x, y);
 		crosshair_target = NULL; // Don't update it again until next tic
 	}
 
@@ -857,16 +885,16 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
-	int linesize = video.pitch;
-	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	int linesize = video.width;
+	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
-	const byte *colormap[2];
+	byte *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
 	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
-			&& !spr->fullbright && spr->colormap[0] && !fixedcolormap)
+			&& !spr->no_perc && spr->colormap[0] && !fixedcolormap)
 	{
 		const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
 									yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
@@ -879,13 +907,25 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-		int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-								 + extralight;
+		int lightnum, tint;
+
+		R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+
+		lightnum = spr->fullbright
+		         ? LIGHTLEVELS-1
+		         : (lightnum >> LIGHTSEGSHIFT) + extralight;
+
+		lighttable_t *const thiscolormap = tint ? colormaps[tint] : fullcolormap;
 
 		const int lightindex = STRICTMODE(!diminishing_lighting)
-													 ? 0 : R_GetLightIndex(B_xscale);
+		                       ? 0 : R_GetLightIndex(B_xscale);
 
-		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+		colormap[0] = thiscolormap
+		            + (scalelightoffset + MAXLIGHTSCALE * CLAMP(lightnum, 0, LIGHTLEVELS-1))
+		              [lightindex];
+
+		colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+		              ? thiscolormap : colormap[0];
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
@@ -1101,16 +1141,16 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
-	const int linesize = video.pitch;
-	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	const int linesize = video.width;
+	pixel_t *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// [Nugget] Thing lighting /------------------------------------------------
 
-	const byte *colormap[2];
+	byte *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
 	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
-			&& !spr->fullbright && spr->colormap[0] && !fixedcolormap)
+			&& !spr->no_perc && spr->colormap[0] && !fixedcolormap)
 	{
 		const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
 									yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
@@ -1123,13 +1163,25 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-		int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-								 + extralight;
+		int lightnum, tint;
+
+		R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+
+		lightnum = spr->fullbright
+		         ? LIGHTLEVELS-1
+		         : (lightnum >> LIGHTSEGSHIFT) + extralight;
+
+		lighttable_t *const thiscolormap = tint ? colormaps[tint] : fullcolormap;
 
 		const int lightindex = STRICTMODE(!diminishing_lighting)
-													 ? 0 : R_GetLightIndex(midscale);
+		                       ? 0 : R_GetLightIndex(midscale);
 
-		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+		colormap[0] = thiscolormap
+		            + (scalelightoffset + MAXLIGHTSCALE * CLAMP(lightnum, 0, LIGHTLEVELS-1))
+		              [lightindex];
+
+		colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+		              ? thiscolormap : colormap[0];
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
@@ -1189,7 +1241,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			{
 				int i = (((uy - uy0) >> FRACBITS) * FixedDiv(FRACUNIT, midscale)) >> FRACBITS;
 
-				i = BETWEEN(0, len - 1, i);
+				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i],
 				           pix = colormap[spr->brightmap[src]][src];
@@ -1292,7 +1344,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 		spr->colormap[0] = new_colormap;
 	}
 
-	if ((spr->mobjflags2 & MF2_COLOREDBLOOD) && (spr->colormap[0] != NULL))
+	if ((spr->mobjflags_extra & MFX_COLOREDBLOOD) && (spr->colormap[0] != NULL))
 	{
 		static const byte * prev_trans = NULL, * prev_map = NULL;
 		const byte * trans = red2col[spr->color], * map = spr->colormap[0];
@@ -1330,7 +1382,8 @@ void VX_DrawVoxel (vissprite_t * spr)
 
 // [Nugget] Weapon voxels
 boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
-                              const boolean translucent)
+                              int lightlevel_override,
+                              boolean translucent)
 {
   if (STRICTMODE(hide_weapon)
       || R_ChasecamOn() // Chasecam
@@ -1384,13 +1437,12 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
   { thing.flags |= MF_SHADOW; }
 
+  const mobj_t *const playermo = players[displayplayer].mo;
+
+  thing.subsector = playermo->subsector;
+
   // Thing lighting: use the player's radius
-  thing.radius = players[displayplayer].mo->radius;
+  thing.radius = playermo->radius;
 
-  // Albeit unused, `R_ProjectVoxel()` accesses `heightsec`
-  sector_t sector = {0};
-  subsector_t sub = { .sector = &sector };
-  thing.subsector = &sub;
-
-  return VX_ProjectVoxel(&thing);
+  return VX_ProjectVoxel(&thing, lightlevel_override);
 }

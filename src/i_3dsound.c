@@ -36,7 +36,7 @@
 #include "r_main.h"
 #include "r_state.h"
 
-#define FIXED_TO_ALFLOAT(x) ((ALfloat)(FIXED2DOUBLE(x)))
+#define FIXED_TO_ALFLOAT(x) ((ALfloat)(FixedToDouble(x)))
 
 typedef struct oal_listener_params_s
 {
@@ -49,7 +49,7 @@ typedef struct oal_source_params_s
 {
     ALfloat position[3];
     ALfloat velocity[3];
-    boolean use_3d;
+    boolean positional;
     boolean point_source;
     fixed_t z;
 } oal_source_params_t;
@@ -89,11 +89,14 @@ static void CalcListenerParams(const mobj_t *listener,
     lis->position[1] = FIXED_TO_ALFLOAT(player->viewz);
     lis->position[2] = FIXED_TO_ALFLOAT(-listener->y);
 
-    if (oal_use_doppler)
+    if (oal_use_doppler && listener->interp == true)
     {
-        lis->velocity[0] = FIXED_TO_ALFLOAT(listener->momx) * TICRATE;
-        lis->velocity[1] = FIXED_TO_ALFLOAT(listener->momz) * TICRATE;
-        lis->velocity[2] = FIXED_TO_ALFLOAT(-listener->momy) * TICRATE;
+        lis->velocity[0] =
+            FIXED_TO_ALFLOAT(listener->x - listener->oldx) * TICRATE;
+        lis->velocity[1] =
+            FIXED_TO_ALFLOAT(listener->z - listener->oldz) * TICRATE;
+        lis->velocity[2] =
+            FIXED_TO_ALFLOAT(listener->oldy - listener->y) * TICRATE;
     }
     else
     {
@@ -155,12 +158,14 @@ static void CalcSourceParams(const mobj_t *source, oal_source_params_t *src)
     src->position[1] = FIXED_TO_ALFLOAT(src->z);
     src->position[2] = FIXED_TO_ALFLOAT(-source->y);
 
-    // Doppler effect only applies to monsters and projectiles.
-    if (oal_use_doppler && src->point_source)
+    // Doppler effect only applies to projectiles and other players.
+    if (oal_use_doppler && src->point_source && source->interp == true
+        && (source->flags & (MF_MISSILE | MF_SKULLFLY)
+            || source->type == MT_PLAYER))
     {
-        src->velocity[0] = FIXED_TO_ALFLOAT(source->momx) * TICRATE;
-        src->velocity[1] = FIXED_TO_ALFLOAT(source->momz) * TICRATE;
-        src->velocity[2] = FIXED_TO_ALFLOAT(-source->momy) * TICRATE;
+        src->velocity[0] = FIXED_TO_ALFLOAT(source->x - source->oldx) * TICRATE;
+        src->velocity[1] = FIXED_TO_ALFLOAT(source->z - source->oldz) * TICRATE;
+        src->velocity[2] = FIXED_TO_ALFLOAT(source->oldy - source->y) * TICRATE;
     }
     else
     {
@@ -177,11 +182,11 @@ static void CalcSourceParams(const mobj_t *source, oal_source_params_t *src)
     }
 }
 
-static void CalcHypotenuse(fixed_t adx, fixed_t ady, fixed_t *dist)
+static void CalcHypotenuse(int adx, int ady, int *dist)
 {
     if (ady > adx)
     {
-        const fixed_t temp = adx;
+        const int temp = adx;
         adx = ady;
         ady = temp;
     }
@@ -199,27 +204,25 @@ static void CalcHypotenuse(fixed_t adx, fixed_t ady, fixed_t *dist)
 }
 
 static void CalcDistance(const mobj_t *listener, const mobj_t *source,
-                         oal_source_params_t *src, fixed_t *dist)
+                         oal_source_params_t *src, int *dist)
 {
-    const fixed_t adx =
-        abs((listener->x >> FRACBITS) - (source->x >> FRACBITS));
-    const fixed_t ady =
-        abs((listener->y >> FRACBITS) - (source->y >> FRACBITS));
-    fixed_t distxy;
+    const int adx = abs((listener->x >> FRACBITS) - (source->x >> FRACBITS));
+    const int ady = abs((listener->y >> FRACBITS) - (source->y >> FRACBITS));
+    int distxy;
 
     CalcHypotenuse(adx, ady, &distxy);
 
-    // Treat monsters and projectiles as point sources.
+    // Treat monsters, projectiles, other players, and ambient sounds as point
+    // sources.
     src->point_source =
-        (source->thinker.function.p1 != (actionf_p1)P_DegenMobjThinker
-         && source->info && source->info->height); // [Nugget] Removed `actualheight`
+        (source->thinker.function.p1 != P_DegenMobjThinker
+         && source->info);
 
     if (src->point_source)
     {
-        fixed_t adz;
-        // Vertical distance is from player's view to middle of source's sprite.
-        // [Nugget] Removed `actualheight`, so actually to middle of its bounding box
-        src->z = source->z + (source->info->height >> 1);
+        int adz;
+        // Vertical distance is from player's view to middle of source's height.
+        src->z = source->z + (source->height >> 1);
         adz = abs((listener->player->viewz >> FRACBITS) - (src->z >> FRACBITS));
         CalcHypotenuse(distxy, adz, dist);
     }
@@ -232,74 +235,60 @@ static void CalcDistance(const mobj_t *listener, const mobj_t *source,
     }
 }
 
-static boolean CalcVolumePriority(fixed_t dist, int *vol, int *pri)
+static void UpdatePriority(sfxparams_t *params)
 {
-    int pri_volume;
+    // Decrease priority with volume attenuation.
+    params->priority += (127 - params->volume);
 
+    if (params->priority > 255)
+    {
+        params->priority = 255;
+    }
+}
+
+static boolean CalcVolumePriority(int dist, sfxparams_t *params)
+{
     if (dist == 0)
     {
         return true;
     }
-    else if (dist >= (S_CLIPPING_DIST >> FRACBITS))
+    else if (dist >= params->stop_dist)
     {
         return false;
     }
-    else if (dist <= (S_CLOSE_DIST >> FRACBITS))
+    else if (dist >= params->clipping_dist)
     {
-        pri_volume = *vol;
+        // Special case for zero-volume sounds that are allowed to stay active.
+        params->volume = 0;
+        UpdatePriority(params);
+        return true;
     }
-    else if (dist > S_ATTENUATOR)
+    else if (dist > params->close_dist)
     {
         // OpenAL inverse distance model never reaches zero volume. Gradually
         // ramp down the volume as the distance approaches the limit.
-        pri_volume = *vol * ((S_CLIPPING_DIST >> FRACBITS) - dist)
-                     / (S_CLOSE_DIST >> FRACBITS);
-        *vol = pri_volume;
-    }
-    else
-    {
-        // Range where OpenAL inverse distance model applies. Calculate volume
-        // for priority bookkeeping but let OpenAL handle the real volume.
-        // Simplify formula for OAL_ROLLOFF_FACTOR = 1:
-        pri_volume = *vol * (S_CLOSE_DIST >> FRACBITS) / dist;
+        params->volume = params->volume * (params->clipping_dist - dist)
+                         / (params->clipping_dist - params->close_dist);
     }
 
-    // Decrease priority with volume attenuation.
-    *pri += (127 - pri_volume);
-
-    if (*pri > 255)
-    {
-        *pri = 255;
-    }
-
-    return (pri_volume > 0);
-}
-
-static boolean ScaleVolume(int chanvol, int *vol)
-{
-    *vol = (snd_SfxVolume * chanvol) / 15;
-
-    if (*vol < 1)
-    {
-        return false;
-    }
-    else if (*vol > 127)
-    {
-        *vol = 127;
-    }
-
-    return true;
+    UpdatePriority(params);
+    return (params->volume > 0);
 }
 
 static boolean I_3D_AdjustSoundParams(const mobj_t *listener,
-                                      const mobj_t *source, int chanvol,
-                                      int *vol, int *sep, int *pri)
+                                      const mobj_t *source, sfxparams_t *params)
 {
-    fixed_t dist;
+    int dist;
 
-    if (!ScaleVolume(chanvol, vol))
+    params->volume = snd_SfxVolume * params->volume_scale / 15;
+
+    if (params->volume < 1)
     {
         return false;
+    }
+    else if (params->volume > 127)
+    {
+        params->volume = 127;
     }
 
     // [Nugget] Freecam
@@ -310,31 +299,31 @@ static boolean I_3D_AdjustSoundParams(const mobj_t *listener,
     if (!source || source == playermo || !listener
         || !listener->player)
     {
-        src.use_3d = false;
+        src.positional = false;
         return true;
     }
 
     CalcDistance(listener, source, &src, &dist);
 
-    if (!CalcVolumePriority(dist, vol, pri))
+    if (!CalcVolumePriority(dist, params))
     {
         return false;
     }
 
-    src.use_3d = true;
+    src.positional = true;
     CalcSourceParams(source, &src);
 
     return true;
 }
 
-static void I_3D_UpdateSoundParams(int channel, int volume, int separation)
+static void I_3D_UpdateSoundParams(int channel, const sfxparams_t *params)
 {
-    if (src.use_3d)
+    if (src.positional)
     {
         I_OAL_UpdateSourceParams(channel, src.position, src.velocity);
     }
 
-    I_OAL_SetVolume(channel, volume);
+    I_OAL_SetVolume(channel, params->volume);
 }
 
 static void I_3D_UpdateListenerParams(const mobj_t *listener)
@@ -346,22 +335,30 @@ static void I_3D_UpdateListenerParams(const mobj_t *listener)
         return;
     }
 
+    // Only update when listener is moving.
+    if ((menuactive && !netgame && !demoplayback) || paused
+        || gamestate != GS_LEVEL)
+    {
+        return;
+    }
+
     CalcListenerParams(listener, &lis);
     I_OAL_UpdateListenerParams(lis.position, lis.velocity, lis.orientation);
 }
 
-static boolean I_3D_StartSound(int channel, sfxinfo_t *sfx, float pitch)
+static boolean I_3D_StartSound(int channel, sfxinfo_t *sfx,
+                               const sfxparams_t *params)
 {
-    if (src.use_3d)
+    if (src.positional)
     {
-        I_OAL_ResetSource3D(channel, src.point_source);
+        I_OAL_ResetSource3D(channel, src.point_source, params);
     }
     else
     {
         I_OAL_ResetSource2D(channel);
     }
 
-    return I_OAL_StartSound(channel, sfx, pitch);
+    return I_OAL_StartSound(channel, sfx, params);
 }
 
 static boolean I_3D_InitSound(void)
@@ -383,9 +380,14 @@ const sound_module_t sound_3d_module =
     I_3D_AdjustSoundParams,
     I_3D_UpdateSoundParams,
     I_3D_UpdateListenerParams,
+    I_OAL_SetGain,
+    I_OAL_GetOffset,
     I_3D_StartSound,
     I_OAL_StopSound,
+    I_OAL_PauseSound,
+    I_OAL_ResumeSound,
     I_OAL_SoundIsPlaying,
+    I_OAL_SoundIsPaused,
     I_OAL_ShutdownSound,
     I_OAL_ShutdownModule,
     I_OAL_DeferUpdates,

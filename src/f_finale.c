@@ -233,7 +233,8 @@ static boolean MapInfo_Drawer(void)
             else if (gamemapinfo->endpic[0])
             {
                 V_DrawPatchFullScreen(
-                    V_CachePatchName(gamemapinfo->endpic, PU_CACHE));
+                    V_CachePatchName(
+                        W_CheckWidescreenPatch(gamemapinfo->endpic), PU_CACHE));
             }
             break;
         case FINALE_STAGE_CAST:
@@ -914,7 +915,7 @@ static void F_FancyCastTicker(void)
 
       casttics = caststate->tics;
       castflip = flipcorpses && state == info->deathstate
-                 && (info->flags2 & MF2_FLIPPABLE)
+                 && (info->flags_extra & MFX_MIRROREDCORPSE)
                  && (Woof_Random() & 1);
 
       sfxenum_t actionsound = F_SoundForAction(info, caststate);
@@ -946,7 +947,7 @@ static void F_FancyCastTicker(void)
   {
     oldstate = caststate;
 
-    if (caststate->action.p1 == (actionf_p1) A_RandomJump)
+    if (caststate->action.p1 == A_RandomJump)
     {
       if (Woof_Random() < caststate->misc2)
       {
@@ -1242,7 +1243,7 @@ static boolean F_CastResponder(event_t* ev)
 
   // [Nugget]: [crispy] flippable death sequence
   castflip = flipcorpses && castdeath
-             && (mobjinfo[castorder[castnum].type].flags2 & MF2_FLIPPABLE)
+             && (mobjinfo[castorder[castnum].type].flags_extra & MFX_MIRROREDCORPSE)
              && (Woof_Random() & 1);
         
   return true;
@@ -1327,7 +1328,9 @@ static void F_CastDrawer(void)
 
   // [Nugget] ---------------------------------------------------------------/
 
-    V_DrawPatchFullScreen (V_CachePatchName (bgcastcall, PU_CACHE)); // Ty 03/30/98 bg texture extern
+    // Ty 03/30/98 bg texture extern
+    V_DrawPatchFullScreen(
+      V_CachePatchName(W_CheckWidescreenPatch(bgcastcall), PU_CACHE));
 
   // [Nugget] Fancy cast
   if (!fc_enabled || fc_showname)
@@ -1401,8 +1404,8 @@ static void F_BunnyScroll(void)
   int         stage;
   static int  laststage;
 
-  p1 = V_CachePatchName ("PFUB1", PU_LEVEL);
-  p2 = V_CachePatchName ("PFUB2", PU_LEVEL);
+  p1 = V_CachePatchName(W_CheckWidescreenPatch("PFUB1"), PU_LEVEL);
+  p2 = V_CachePatchName(W_CheckWidescreenPatch("PFUB2"), PU_LEVEL);
 
   scrolled = 320 - (finalecount-230)/2;
 
@@ -1488,19 +1491,23 @@ void F_Drawer (void)
     switch (gameepisode)
     {
       case 1:
-           if ( gamemode == retail || gamemode == commercial )
-             V_DrawPatchFullScreen (V_CachePatchName("CREDIT",PU_CACHE));
+           if ( (gamemode == retail && !pwad_help2) || gamemode == commercial )
+             V_DrawPatchFullScreen(
+              V_CachePatchName(W_CheckWidescreenPatch("CREDIT"), PU_CACHE));
            else
-             V_DrawPatchFullScreen (V_CachePatchName("HELP2",PU_CACHE));
+             V_DrawPatchFullScreen(
+              V_CachePatchName(W_CheckWidescreenPatch("HELP2"), PU_CACHE));
            break;
       case 2:
-           V_DrawPatchFullScreen (V_CachePatchName("VICTORY2",PU_CACHE));
+           V_DrawPatchFullScreen(
+            V_CachePatchName(W_CheckWidescreenPatch("VICTORY2"), PU_CACHE));
            break;
       case 3:
-           F_BunnyScroll ();
+           F_BunnyScroll();
            break;
       case 4:
-           V_DrawPatchFullScreen (V_CachePatchName("ENDPIC",PU_CACHE));
+           V_DrawPatchFullScreen(
+            V_CachePatchName(W_CheckWidescreenPatch("ENDPIC"), PU_CACHE));
            break;
     }
   }

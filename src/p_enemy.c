@@ -298,11 +298,11 @@ static boolean P_IsOnLift(const mobj_t *actor)
   int l;
 
   // Short-circuit: it's on a lift which is active.
-  if (sec->floordata && ((thinker_t *) sec->floordata)->function.p1==(actionf_p1)T_PlatRaise)
+  if (sec->floordata && ((thinker_t *) sec->floordata)->function.p1 == T_PlatRaiseAdapter)
     return true;
 
   // Check to see if it's in a sector which can be activated as a lift.
-  if ((line.tag = sec->tag))
+  if ((line.args[0] = sec->tag))
     for (l = -1; (l = P_FindLineFromLineTag(&line, l)) >= 0;)
       switch (lines[l].special)
 	{
@@ -334,8 +334,8 @@ static int P_IsUnderDamage(mobj_t *actor)
   const ceiling_t *cl;             // Crushing ceiling
   int dir = 0;
   for (seclist=actor->touching_sectorlist; seclist; seclist=seclist->m_tnext)
-    if ((cl = seclist->m_sector->ceilingdata) &&
-	cl->thinker.function.p1 == (actionf_p1)T_MoveCeiling)
+    if ((cl = seclist->m_sector->ceilingdata) && 
+	cl->thinker.function.p1 == T_MoveCeilingAdapter)
       dir |= cl->direction;
   return dir;
 }
@@ -865,6 +865,7 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
 {
   player_t *player;
   int stop, stopc, c;
+  boolean unseen[MAXPLAYERS] = {0};
 
   if (actor->flags & MF_FRIEND)
     {  // killough 9/9/98: friendly monsters go about players differently
@@ -940,9 +941,12 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
       if (player->health <= 0)
 	continue;               // dead
 
-      if (!P_IsVisible(actor, player->mo, allaround))
+      if (unseen[actor->lastlook] || !P_IsVisible(actor, player->mo, allaround))
+      {
+	unseen[actor->lastlook] = true;
 	continue;
-
+      }
+      
       P_SetTarget(&actor->target, player->mo);
 
       // killough 9/9/98: give monsters a threshold towards getting players
@@ -1064,7 +1068,7 @@ static boolean P_LookForAnyTargets(mobj_t *const actor, const boolean force)
 
   while ((currentthinker = currentthinker->next) != &thinkercap)
   {
-    if (currentthinker->function.p1 == (actionf_p1) P_MobjThinker)
+    if (currentthinker->function.p1 == P_MobjThinker)
     {
       mobj_t *const mo = (mobj_t *) currentthinker;
 
@@ -1299,7 +1303,7 @@ void A_Chase(mobj_t *actor)
   if (actor->flags & MF_JUSTATTACKED)
     {
       actor->flags &= ~MF_JUSTATTACKED;
-      if (!aggressive && !fastmonsters) // [Nugget] Custom Skill
+      if (!aggromonsters && !fastmonsters) // [Nugget] Custom Skill
         P_NewChaseDir(actor);
       return;
     }
@@ -1317,7 +1321,7 @@ void A_Chase(mobj_t *actor)
 
   // check for missile attack
   if (actor->info->missilestate)
-    if (!actor->movecount || aggressive || fastmonsters) // [Nugget] Custom Skill
+    if (!actor->movecount || aggromonsters || fastmonsters) // [Nugget] Custom Skill
       if (P_CheckMissileRange(actor))
         {
           P_SetMobjState(actor, actor->info->missilestate);
@@ -1904,7 +1908,10 @@ static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfx
 		      I_Printf(VB_WARNING, "A_VileChase: Resurrected ghost monster (%d) at (%d/%d)!",
 		              corpsehit->type, corpsehit->x>>FRACBITS, corpsehit->y>>FRACBITS);
 		  }
-		  
+
+		  corpsehit->flags_extra &= ~MFX_COLOREDBLOOD;
+		  corpsehit->bloodcolor = 0;
+
                   corpsehit->health = info->spawnhealth;
 		  P_SetTarget(&corpsehit->target, NULL);  // killough 11/98
 
@@ -2221,7 +2228,7 @@ void A_PainShootSkull(mobj_t *actor, angle_t angle)
       for (currentthinker = thinkercap.next;
            currentthinker != &thinkercap;
            currentthinker = currentthinker->next)
-        if ((currentthinker->function.p1 == (actionf_p1)P_MobjThinker)
+        if ((currentthinker->function.p1 == P_MobjThinker)
             && ((mobj_t *)currentthinker)->type == MT_SKULL)
 	  if (--count < 0)         // killough 8/29/98: early exit
 	    return;
@@ -2464,7 +2471,7 @@ void A_BossDeath(mobj_t *mo)
       // if all bosses are dead
       for (th = thinkercap.next; th != &thinkercap; th = th->next)
       {
-          if (th->function.p1 == (actionf_p1)P_MobjThinker)
+          if (th->function.p1 == P_MobjThinker)
           {
               mobj_t *mo2 = (mobj_t *)th;
               if (mo2 != mo && mo2->type == mo->type && mo2->health > 0)
@@ -2480,7 +2487,7 @@ void A_BossDeath(mobj_t *mo)
           {
               junk = *lines;
               junk.special = (short)bossaction->special;
-              junk.tag = (short)bossaction->tag;
+              junk.args[0] = (short)bossaction->tag;
               // use special semantics for line activation to block problem
               // types.
               if (!P_UseSpecialLine(mo, &junk, 0, true))
@@ -2578,7 +2585,7 @@ void A_BossDeath(mobj_t *mo)
   // scan the remaining thinkers to see
   // if all bosses are dead
   for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
-    if (th->function.p1 == (actionf_p1)P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *mo2 = (mobj_t *) th;
         if (mo2 != mo && mo2->type == mo->type && mo2->health > 0)
@@ -2592,14 +2599,14 @@ void A_BossDeath(mobj_t *mo)
         {
           if (mo->flags2 & MF2_MAP07BOSS1)
             {
-              junk.tag = 666;
+              junk.args[0] = 666;
               EV_DoFloor(&junk,lowerFloorToLowest);
               return;
             }
 
           if (mo->flags2 & MF2_MAP07BOSS2)
             {
-              junk.tag = 667;
+              junk.args[0] = 667;
               EV_DoFloor(&junk,raiseToTexture);
               return;
             }
@@ -2610,7 +2617,7 @@ void A_BossDeath(mobj_t *mo)
       switch(gameepisode)
         {
         case 1:
-          junk.tag = 666;
+          junk.args[0] = 666;
           EV_DoFloor(&junk, lowerFloorToLowest);
           return;
           break;
@@ -2619,13 +2626,13 @@ void A_BossDeath(mobj_t *mo)
           switch(gamemap)
             {
             case 6:
-              junk.tag = 666;
+              junk.args[0] = 666;
               EV_DoDoor(&junk, blazeOpen);
               return;
               break;
 
             case 8:
-              junk.tag = 666;
+              junk.args[0] = 666;
               EV_DoFloor(&junk, lowerFloorToLowest);
               return;
               break;
@@ -2689,7 +2696,7 @@ void P_SpawnBrainTargets(void)  // killough 3/26/98: renamed old function
   brain.easy = 0;           // killough 3/26/98: always init easy to 0
 
   for (thinker=thinkercap.next; thinker != &thinkercap; thinker=thinker->next)
-    if (thinker->function.p1 == (actionf_p1)P_MobjThinker)
+    if (thinker->function.p1 == P_MobjThinker)
       {
         mobj_t *m = (mobj_t *) thinker;
 
@@ -2899,14 +2906,14 @@ void A_KeenDie(mobj_t* mo)
   // scan the remaining thinkers to see if all Keens are dead
 
   for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
-    if (th->function.p1 == (actionf_p1)P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *mo2 = (mobj_t *) th;
         if (mo2 != mo && mo2->type == mo->type && mo2->health > 0)
           return;                           // other Keen not dead
       }
 
-  junk.tag = 666;
+  junk.args[0] = 666;
   EV_DoDoor(&junk,doorOpen);
 }
 
@@ -2991,8 +2998,8 @@ void A_LineEffect(mobj_t *mo)
 	  player_t *oldplayer = mo->player;          // Remember player status
 	  mo->player = &player;                      // Fake player
 	  player.health = 100;                       // Alive player
-	  junk.tag = (short)mo->state->misc2;        // Sector tag for linedef
-	  if (!P_UseSpecialLine(mo, &junk, 0, false)) // Try using it
+	  junk.args[0] = (short)mo->state->misc2;    // Sector tag for linedef
+	  if (!P_UseSpecialLine(mo, &junk, 0, false))// Try using it
 	    P_CrossSpecialLine(&junk, 0, mo, false); // Try crossing it
 	  if (!junk.special)                         // If type cleared,
 	    mo->intflags |= MIF_LINEDONE;            // no more for this thing
@@ -3197,7 +3204,7 @@ void A_MonsterMeleeAttack(mobj_t *actor)
   S_StartSound(actor, hitsound);
 
   damage = (P_Random(pr_mbf21) % damagemod + 1) * damagebase;
-  P_DamageMobj(actor->target, actor, actor, damage);
+  P_DamageMobjBy(actor->target, actor, actor, damage, MOD_Melee);
 }
 
 //

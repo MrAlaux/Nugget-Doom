@@ -557,7 +557,7 @@ static boolean UpdateAnimation(void)
 
                 case Frame_RandomDuration:
                     tics = M_Random() % frame->maxduration;
-                    tics = BETWEEN(frame->duration, frame->maxduration, tics);
+                    tics = CLAMP(tics, frame->duration, frame->maxduration);
                     break;
 
                 default:
@@ -755,7 +755,8 @@ void WI_slamBackground(void)
 
     const char *name = WI_getBackgroundName(); // [Nugget] Factored out
 
-    V_DrawPatchFullScreen(V_CachePatchName(name, PU_CACHE));
+    V_DrawPatchFullScreen(
+      V_CachePatchName(W_CheckWidescreenPatch(name), PU_CACHE));
 }
 
 // ====================================================================
@@ -1253,10 +1254,15 @@ WI_drawTime
 // Args:    none
 // Returns: void
 //
+
+static boolean wi_inited = false;
+
 static void WI_unloadData(void)
 {
   int   i;
   int   j;
+
+  wi_inited = false;
 
   if (wiminus)
   Z_ChangeTag(wiminus, PU_CACHE);
@@ -1366,6 +1372,7 @@ static void WI_updateNoState(void)
 
 static boolean    snl_pointeron = false;
 
+static void WI_loadData(void);
 
 // ====================================================================
 // WI_initShowNextLoc
@@ -1390,8 +1397,6 @@ static void WI_initShowNextLoc(void)
       // episode change
       if (wbs->epsd != wbs->nextep)
       {
-          void WI_loadData(void);
-
           wbs->epsd = wbs->nextep;
           wbs->last = wbs->next - 1;
           WI_loadData();
@@ -1658,7 +1663,7 @@ static void WI_updateDeathmatchStats(void)
 
             if (NextLocAnimation())
               WI_initShowNextLoc();
-            if ( gamemode == commercial)
+            else if (gamemode == commercial)
               WI_initNoState();
             else
               WI_initShowNextLoc();
@@ -1770,6 +1775,61 @@ static void WI_drawDeathmatchStats(void)
     }
 }
 
+static void WI_overlayDeathmatchStats(void)
+{
+    V_DrawPatch(DM_TOTALSX - SHORT(total->width) / 2,
+                DM_MATRIXY - WI_SPACINGY + 10, total);
+    V_DrawPatch(DM_KILLERSX, DM_KILLERSY, killers);
+    V_DrawPatch(DM_VICTIMSX, DM_VICTIMSY, victims);
+
+    int x = DM_MATRIXX + DM_SPACINGX;
+    int y = DM_MATRIXY;
+    const int w = SHORT(num[0]->width);
+
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        int x2 = DM_MATRIXX + DM_SPACINGX;
+
+        if (playeringame[i])
+        {
+            V_DrawPatch(x - SHORT(p[i]->width) / 2, DM_MATRIXY - WI_SPACINGY,
+                        p[i]);
+
+            V_DrawPatch(DM_MATRIXX - SHORT(p[i]->width) / 2, y, p[i]);
+
+            if (i == displayplayer)
+            {
+                V_DrawPatch(x - SHORT(p[i]->width) / 2,
+                            DM_MATRIXY - WI_SPACINGY, bstar);
+
+                V_DrawPatch(DM_MATRIXX - SHORT(p[i]->width) / 2, y, star);
+            }
+
+            int totals = 0;
+
+            for (int j = 0; j < MAXPLAYERS; j++)
+            {
+                if (playeringame[j])
+                {
+                    WI_drawNum(x2 + w, y + 10, CLAMP(players[i].frags[j], -999, 999), 2);
+
+                    if (i != j)
+                    {
+                        totals += players[i].frags[j];
+                    }
+                    else
+                    {
+                        totals -= players[i].frags[j];
+                    }
+                }
+                x2 += DM_SPACINGX;
+            }
+            WI_drawNum(DM_TOTALSX + w, y + 10, CLAMP(totals, -999, 999), 2);
+        }
+        x += DM_SPACINGX;
+        y += WI_SPACINGY;
+    }
+}
 
 //
 // Note: The term "Netgame" means a coop game
@@ -1969,7 +2029,7 @@ static void WI_updateNetgameStats(void)
 
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
-                  if ( gamemode == commercial )
+                  else if (gamemode == commercial)
                     WI_initNoState();
                   else
                     WI_initShowNextLoc();
@@ -2048,6 +2108,67 @@ static void WI_drawNetgameStats(void)
       }
 
       y += WI_SPACINGY;
+    }
+}
+
+static void WI_overlayNetgameStats(void)
+{
+    dofrags = false;
+
+    V_DrawPatch(NG_STATSX + NG_SPACINGX - SHORT(kills->width), NG_STATSY,
+                kills);
+    V_DrawPatch(NG_STATSX + 2 * NG_SPACINGX - SHORT(items->width), NG_STATSY,
+                items);
+    V_DrawPatch(NG_STATSX + 3 * NG_SPACINGX - SHORT(secret->width), NG_STATSY,
+                secret);
+
+    const int pwidth = SHORT(percent->width);
+    int y = NG_STATSY + SHORT(kills->height);
+
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        if (!playeringame[i])
+        {
+            continue;
+        }
+
+        int x = NG_STATSX;
+        V_DrawPatch(x - SHORT(p[i]->width), y, p[i]);
+
+        if (i == displayplayer)
+        {
+            V_DrawPatch(x - SHORT(p[i]->width), y, star);
+        }
+
+        x += NG_SPACINGX;
+        WI_drawPercent(x - pwidth, y + 10, 100 * players[i].killcount / (totalkills ? totalkills : 1));
+        x += NG_SPACINGX;
+        WI_drawPercent(x - pwidth, y + 10, 100 * players[i].itemcount / (totalitems ? totalitems : 1));
+        x += NG_SPACINGX;
+        WI_drawPercent(x - pwidth, y + 10, totalsecret ? (100 * players[i].secretcount / totalsecret) : 100);
+
+        y += WI_SPACINGY;
+    }
+}
+
+boolean wi_overlay = false;
+
+void WI_drawOverlayStats(void)
+{
+    if (!wi_inited)
+    {
+        WI_loadData();
+    }
+
+    V_ShadeScreen(20); // [Nugget] Parameterized
+
+    if (deathmatch)
+    {
+        WI_overlayDeathmatchStats();
+    }
+    else if (netgame)
+    {
+        WI_overlayNetgameStats();
     }
 }
 
@@ -2513,7 +2634,7 @@ void WI_Ticker(void)
 // Args:    none
 // Returns: void
 //
-void WI_loadData(void)
+static void WI_loadData(void)
 {
   int   i,j;
   char name[32];
@@ -2683,6 +2804,8 @@ void WI_loadData(void)
       M_snprintf(name, sizeof(name), "WIBP%d", i + 1);
       bp[i] = V_CachePatchName(name, PU_STATIC);
     }
+
+  wi_inited = true;
 }
 
 // ====================================================================
@@ -2830,6 +2953,8 @@ void WI_Start(wbstartstruct_t* wbstartstruct)
       WI_initNetgameStats();
     else
       WI_initStats();
+
+  wi_overlay = false;
 
   old_alt_interpic_on = false; // [Nugget] Alt. intermission background
 }

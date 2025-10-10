@@ -1,5 +1,6 @@
 //
 // Copyright(C) 2024 Roman Fomin
+// Copyright(C) 2025 Fabian Greffrath, Guilherme Miranda
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -20,8 +21,9 @@
 #include "m_fixed.h"
 #include "m_json.h"
 #include "m_misc.h"
+#include "r_data.h"
 
-static boolean ParseFire(json_t *json, fire_t *out)
+static boolean ParseFire(json_t *json, sky_t *out)
 {
     json_t *updatetime = JS_GetObject(json, "updatetime");
     if (!JS_IsNumber(updatetime))
@@ -35,8 +37,9 @@ static boolean ParseFire(json_t *json, fire_t *out)
     {
         return false;
     }
-    int size = JS_GetArraySize(palette);
-    for (int i = 0; i < size; ++i)
+
+    int arr_size = JS_GetArraySize(palette);
+    for (int i = 0; i < arr_size; ++i)
     {
         json_t *color = JS_GetArrayItem(palette, i);
         array_push(out->palette, JS_GetInteger(color));
@@ -47,31 +50,37 @@ static boolean ParseFire(json_t *json, fire_t *out)
 
 static boolean ParseSkyTex(json_t *json, skytex_t *out)
 {
-    json_t *name = JS_GetObject(json, "name");
-    if (!JS_IsString(name))
+    const char *name = JS_GetStringValue(json, "name");
+    if (!name)
     {
-        out->name = "-"; // no texture
         return false;
     }
-    out->name = M_StringDuplicate(JS_GetString(name));
+    out->texture = R_TextureNumForName(name);
 
     json_t *mid = JS_GetObject(json, "mid");
     json_t *scrollx = JS_GetObject(json, "scrollx");
     json_t *scrolly = JS_GetObject(json, "scrolly");
     json_t *scalex = JS_GetObject(json, "scalex");
     json_t *scaley = JS_GetObject(json, "scaley");
-    if (!JS_IsNumber(mid)
-        || !JS_IsNumber(scrollx) || !JS_IsNumber(scrolly)
-        || !JS_IsNumber(scalex)  || !JS_IsNumber(scaley))
+    if (!JS_IsNumber(mid) || !JS_IsNumber(scrollx) || !JS_IsNumber(scrolly)
+        || !JS_IsNumber(scalex) || !JS_IsNumber(scaley))
     {
         return false;
     }
-    out->mid = JS_GetNumber(mid);
+    out->mid = JS_GetNumber(mid) * FRACUNIT;
     const double ticratescale = 1.0 / TICRATE;
     out->scrollx = (JS_GetNumber(scrollx) * ticratescale) * FRACUNIT;
     out->scrolly = (JS_GetNumber(scrolly) * ticratescale) * FRACUNIT;
-    out->scalex = JS_GetNumber(scalex) * FRACUNIT;
-    double value = JS_GetNumber(scaley);
+    double value = JS_GetNumber(scalex);
+    if (value)
+    {
+        out->scalex = (1.0 / value) * FRACUNIT;
+    }
+    else
+    {
+        out->scalex = FRACUNIT;
+    }
+    value = JS_GetNumber(scaley);
     if (value)
     {
         out->scaley = (1.0 / value) * FRACUNIT;
@@ -98,15 +107,13 @@ static boolean ParseSky(json_t *json, sky_t *out)
     {
         return false;
     }
-    out->skytex = background;
+    out->background = background;
 
     json_t *js_fire = JS_GetObject(json, "fire");
-    fire_t fire = {0};
     if (!JS_IsNull(js_fire))
     {
-        ParseFire(js_fire, &fire);
+        ParseFire(js_fire, out);
     }
-    out->fire = fire;
 
     json_t *js_foreground = JS_GetObject(json, "foregroundtex");
     skytex_t foreground = {0};
@@ -121,10 +128,16 @@ static boolean ParseSky(json_t *json, sky_t *out)
 
 static boolean ParseFlatMap(json_t *json, flatmap_t *out)
 {
-    json_t *flat = JS_GetObject(json, "flat");
-    out->flat = M_StringDuplicate(JS_GetString(flat));
-    json_t *sky = JS_GetObject(json, "sky");
-    out->sky = M_StringDuplicate(JS_GetString(sky));
+    const char *flat = JS_GetStringValue(json, "flat");
+    if (flat)
+    {
+        out->flat_name = M_StringDuplicate(flat);
+    }
+    const char *sky = JS_GetStringValue(json, "sky");
+    if (sky)
+    {
+        out->sky_name = M_StringDuplicate(sky);
+    }
     return true;
 }
 
@@ -164,7 +177,7 @@ skydefs_t *R_ParseSkyDefs(void)
         flatmap_t flatmap = {0};
         if (ParseFlatMap(js_flatmap, &flatmap))
         {
-            array_push(out->flatmapping, flatmap);
+            array_push(out->skyflats, flatmap);
         }
     }
 

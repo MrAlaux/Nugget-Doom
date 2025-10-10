@@ -44,19 +44,37 @@ typedef enum
     sbc_itemnotowned,
     sbc_featurelevelgreaterequal,
     sbc_featurelevelless,
-    sbc_sessiontypeeequal,
+    sbc_sessiontypeequal,
     sbc_sessiontypenotequal,
     sbc_modeeequal,
     sbc_modenotequal,
     sbc_hudmodeequal,
 
     // Woof!
-    sbc_widgetmode,
+    sbc_automapmode,
     sbc_widgetenabled,
     sbc_widgetdisabled,
-
-    // [Nugget]
     sbc_weaponnotowned,
+    sbc_healthgreaterequal,
+    sbc_healthless,
+    sbc_healthgreaterequalpct,
+    sbc_healthlesspct,
+    sbc_armorgreaterequal,
+    sbc_armorless,
+    sbc_armorgreaterequalpct,
+    sbc_armorlesspct,
+    sbc_ammogreaterequal,
+    sbc_ammoless,
+    sbc_ammogreaterequalpct,
+    sbc_ammolesspct,
+    sbc_ammotypegreaterequal,
+    sbc_ammotypeless,
+    sbc_ammotypegreaterequalpct,
+    sbc_ammotypelesspct,
+    sbc_widescreenequal,
+    sbc_episodeequal,
+    sbc_levelgreaterequal,
+    sbc_levelless,
 
     sbc_max,
 } sbarconditiontype_t;
@@ -65,6 +83,7 @@ typedef struct
 {
     sbarconditiontype_t condition;
     int param;
+    int param2;
 } sbarcondition_t;
 
 typedef enum
@@ -184,6 +203,9 @@ typedef struct
 {
     const char *patch_name;
     patch_t *patch;
+
+    // Woof!
+    crop_t crop;
 } sbe_graphic_t;
 
 typedef struct
@@ -201,8 +223,9 @@ typedef struct
     int maxlength;
     int value;
     int numvalues;
-    int oldvalue;
     int xoffset;
+
+    int oldvalue; // [Nugget] Animated health/armor count
 } sbe_number_t;
 
 typedef struct
@@ -213,7 +236,16 @@ typedef struct
 
     // used for evil grin
     boolean oldweaponsowned[NUMWEAPONS];
+
+    // Woof!
+    crop_t crop;
 } sbe_face_t;
+
+typedef struct
+{
+    // Woof!
+    crop_t crop;
+} sbe_facebackground_t;
 
 typedef struct
 {
@@ -271,6 +303,7 @@ struct sbarelem_s
         sbe_animation_t *animation;
         sbe_number_t *number;
         sbe_face_t *face;
+        sbe_facebackground_t *facebackground;
 
         // Woof!
         sbe_widget_t *widget;

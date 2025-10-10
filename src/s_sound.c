@@ -20,6 +20,7 @@
 // killough 3/7/98: modified to allow arbitrary listeners in spy mode
 // killough 5/2/98: reindented, removed useless code, beautified
 
+#include <math.h>
 #include <string.h>
 
 #include "doomdef.h"
@@ -32,6 +33,7 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
+#include "p_ambient.h"
 #include "p_mobj.h"
 #include "s_musinfo.h" // [crispy] struct musinfo
 #include "s_sound.h"
@@ -45,24 +47,33 @@
 #include "r_main.h"
 #include "r_state.h"
 
+static int optionals[NUG_SFX_END - NUG_SFX_START]; // [Nugget]
+
 // jff end sound enabling variables readable here
 
 typedef struct channel_s
 {
     sfxinfo_t *sfxinfo;   // sound information (if null, channel avail.)
     const mobj_t *origin; // origin of sound
-    int volume;           // volume scale value for effect -- haleyjd 05/29/06
+    ambient_t *ambient;   // Ambient sound source using this channel.
+    int close_dist;       // Sounds at or under this distance are full volume.
+    int clipping_dist;    // Sounds at or over this distance are zero volume.
+    int stop_dist;        // Sounds at or over this distance are stopped.
+    int volume_scale;     // volume scale value for effect -- haleyjd 05/29/06
     int handle;           // handle of the sound being played
     int o_priority;       // haleyjd 09/27/06: stored priority value
     int priority;         // current priority value
     int singularity;      // haleyjd 09/27/06: stored singularity value
-    int idnum;            // haleyjd 09/30/06: unique id num for sound event
+    int volume;
 } channel_t;
 
 // the set of channels available
 static channel_t channels[MAX_CHANNELS];
 // [FG] removed map objects may finish their sounds
 static mobj_t sobjs[MAX_CHANNELS];
+
+// Pitch to stepping lookup.
+static float steptable[256];
 
 // These are not used, but should be (menu).
 // Maximum volume of a sound effect.
@@ -86,9 +97,74 @@ int snd_channels;
 // jff 3/17/98 to keep track of last IDMUS specified music num
 int idmusnum;
 
+static int max_channels_per_sfx;
+static int max_volume_per_sfx;
+
+static void ResetActive(void)
+{
+    for (int cnum = 0; cnum < MAX_CHANNELS; cnum++)
+    {
+        if (channels[cnum].sfxinfo)
+        {
+            channels[cnum].sfxinfo->active.count = 0;
+            channels[cnum].sfxinfo->active.volume = 0;
+        }
+    }
+
+    max_channels_per_sfx = 0;
+    max_volume_per_sfx = 0;
+
+    if (snd_limiter)
+    {
+        max_channels_per_sfx = MIN(snd_channels_per_sfx, snd_channels);
+
+        // Limit volume per sfx only when it makes sense to do so.
+        if (max_channels_per_sfx < 1
+            || snd_volume_per_sfx < max_channels_per_sfx * 100)
+        {
+            // Convert percent to Doom's volume scale.
+            max_volume_per_sfx = 127 * snd_volume_per_sfx / 100;
+        }
+    }
+}
+
 //
 // Internals.
 //
+
+static void StopChannel(int cnum)
+{
+    if (channels[cnum].sfxinfo)
+    {
+        I_StopSound(channels[cnum].handle); // stop the sound playing
+        channels[cnum].sfxinfo->active.count--;
+
+        // haleyjd 09/27/06: clear the entire channel
+        memset(&channels[cnum], 0, sizeof(channel_t));
+    }
+}
+
+//
+// S_EvictChannel
+//
+// Stops a sound channel due to zero volume or low priority.
+//
+static void S_EvictChannel(int cnum)
+{
+#ifdef RANGECHECK
+    if (cnum >= snd_channels)
+    {
+        I_Error("handle %d out of range", cnum);
+    }
+#endif
+
+    if (channels[cnum].ambient)
+    {
+        P_EvictAmbientSound(channels[cnum].ambient, channels[cnum].handle);
+    }
+
+    StopChannel(cnum);
+}
 
 //
 // S_StopChannel
@@ -100,26 +176,31 @@ static void S_StopChannel(int cnum)
 #ifdef RANGECHECK
     if (cnum < 0 || cnum >= snd_channels)
     {
-        I_Error("S_StopChannel: handle %d out of range\n", cnum);
+        I_Error("handle %d out of range\n", cnum);
     }
 #endif
 
-    if (channels[cnum].sfxinfo)
+    if (channels[cnum].ambient)
     {
-        I_StopSound(channels[cnum].handle); // stop the sound playing
-
-        // haleyjd 09/27/06: clear the entire channel
-        memset(&channels[cnum], 0, sizeof(channel_t));
+        P_StopAmbientSound(channels[cnum].ambient);
     }
+
+    StopChannel(cnum);
 }
 
-void S_StopChannels(void)
+void S_EvictChannels(void)
 {
     for (int i = 0; i < MAX_CHANNELS; i++)
     {
+        if (channels[i].ambient)
+        {
+            P_EvictAmbientSound(channels[i].ambient, channels[i].handle);
+        }
+
         I_StopSound(channels[i].handle);
     }
 
+    ResetActive();
     memset(channels, 0, sizeof(channels));
     memset(sobjs, 0, sizeof(sobjs));
 }
@@ -134,9 +215,56 @@ void S_StopChannels(void)
 // haleyjd: added priority scaling
 //
 static int S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
-                               int chanvol, int *vol, int *sep, int *pri)
+                               sfxparams_t *params)
 {
-    return I_AdjustSoundParams(listener, source, chanvol, vol, sep, pri);
+    return I_AdjustSoundParams(listener, source, params);
+}
+
+static void LimitChannelsPerSfx(const mobj_t *origin, const sfxinfo_t *sfxinfo,
+                                int priority, int *cnum)
+{
+    if (max_channels_per_sfx < 1 || *cnum != snd_channels || !origin)
+    {
+        return;
+    }
+
+    int lowestpriority = -1;
+    int lpcnum = -1;
+    int num_channels = 0;
+
+    for (int i = 0; i < snd_channels; i++)
+    {
+        const channel_t *c = &channels[i];
+        const sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx && sfxinfo == sfx && c->origin)
+        {
+            // Find the lowest priority channel using the target sound.
+            if (c->priority > lowestpriority)
+            {
+                lowestpriority = c->priority;
+                lpcnum = i;
+            }
+
+            // Find the number of channels using the target sound.
+            num_channels++;
+        }
+    }
+
+    if (num_channels >= max_channels_per_sfx)
+    {
+        if (priority > lowestpriority)
+        {
+            // The other channels have higher priority.
+            *cnum = -1;
+        }
+        else
+        {
+            // Stop the lowest priority channel.
+            S_EvictChannel(lpcnum);
+            *cnum = lpcnum;
+        }
+    }
 }
 
 //
@@ -146,8 +274,8 @@ static int S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source,
 //   haleyjd 09/27/06: fixed priority/singularity bugs
 //   Note that a higher priority number means lower priority!
 //
-static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
-                        int singularity)
+static int S_getChannel(const mobj_t *origin, const sfxinfo_t *sfxinfo,
+                        int priority, int singularity)
 {
     // channel number to use
     int cnum;
@@ -170,6 +298,8 @@ static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
             break;
         }
     }
+
+    LimitChannelsPerSfx(origin, sfxinfo, priority, &cnum);
 
     // Find an open channel
     if (cnum == snd_channels)
@@ -200,7 +330,7 @@ static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
         }
         else
         {
-            S_StopChannel(lpcnum); // Otherwise, kick out lowest priority.
+            S_EvictChannel(lpcnum); // Otherwise, kick out lowest priority.
             cnum = lpcnum;
         }
     }
@@ -208,33 +338,126 @@ static int S_getChannel(const mobj_t *origin, sfxinfo_t *sfxinfo, int priority,
 #ifdef RANGECHECK
     if (cnum >= snd_channels)
     {
-        I_Error("S_getChannel: handle %d out of range\n", cnum);
+        I_Error("handle %d out of range\n", cnum);
     }
 #endif
 
     return cnum;
 }
 
-static int optionals[NUG_SFX_END - NUG_SFX_START]; // [Nugget]
-
-static void StartSound(const mobj_t *origin, int sfx_id,
-                       pitchrange_t pitch_range, rumble_type_t rumble_type)
+static void LimitVolumePerSfx(void)
 {
-    int sep, pitch, o_priority, priority, singularity, cnum, handle;
-    int volumeScale = 127;
-    int volume = snd_SfxVolume;
+    if (max_volume_per_sfx < 1)
+    {
+        return;
+    }
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx)
+        {
+            sfx->active.volume = 0;
+        }
+    }
+
+    // Find channels using the same sound and add up the total volume.
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx && sfx->active.count > 1 && c->origin)
+        {
+            sfx->active.volume += c->volume;
+        }
+    }
+
+    // If the total volume of a sound is too loud, reduce the volume of each
+    // channel playing that sound.
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (sfx && sfx->active.volume > max_volume_per_sfx)
+        {
+            const float gain = (float)c->volume * max_volume_per_sfx
+                               / (127 * sfx->active.volume);
+
+            I_SetGain(c->handle, gain);
+        }
+    }
+}
+
+static float GetAmbientSoundOffset(sfxinfo_t *sfxinfo, ambient_t *ambient)
+{
+    // If another source is playing the same sound, then sync the offsets.
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        channel_t *c = &channels[cnum];
+        sfxinfo_t *sfx = c->sfxinfo;
+
+        if (c->ambient && c->ambient != ambient && sfx == sfxinfo)
+        {
+            if (P_PlayingAmbientSound(c->ambient))
+            {
+                return I_GetSoundOffset(c->handle);
+            }
+        }
+    }
+
+    // Just use an approximation.
+    return P_GetAmbientSoundOffset(ambient);
+}
+
+static float GetPitch(pitchrange_t pitch_range)
+{
+    if (pitched_sounds)
+    {
+        int pitch = NORM_PITCH;
+
+        // hacks to vary the sfx pitches
+        if (pitch_range == PITCH_HALF)
+        {
+            pitch += 8 - (M_Random() & 15);
+        }
+        else if (pitch_range == PITCH_FULL)
+        {
+            pitch += 16 - (M_Random() & 31);
+        }
+
+        pitch = CLAMP(pitch, 0, 255);
+        return steptable[pitch];
+    }
+    else
+    {
+        return 1.0f;
+    }
+}
+
+#define StartSound(o, i, p, r) StartSoundEx((o), (i), (p), (r), NULL)
+
+static boolean StartSoundEx(const mobj_t *origin, int sfx_id,
+                            pitchrange_t pitch_range, rumble_type_t rumble_type,
+                            ambient_t *ambient)
+{
+    int o_priority, singularity, cnum, handle;
+    sfxparams_t params;
     sfxinfo_t *sfx;
 
     // jff 1/22/98 return if sound is not enabled
     if (nosfxparm)
     {
-        return;
+        return false;
     }
 
     // [FG] ignore request to play no sound
     if (sfx_id == sfx_None)
     {
-        return;
+        return false;
     }
 
 #ifdef RANGECHECK
@@ -248,11 +471,21 @@ static void StartSound(const mobj_t *origin, int sfx_id,
     sfx = &S_sfx[sfx_id];
 
     // Initialize sound parameters
-    pitch = NORM_PITCH;
+    if (ambient)
+    {
+        P_GetAmbientSoundParams(ambient, &params);
+    }
+    else
+    {
+        params.close_dist = S_CLOSE_DIST;
+        params.clipping_dist = S_CLIPPING_DIST;
+        params.stop_dist = params.clipping_dist;
+        params.volume_scale = 127;
+    }
 
     // haleyjd: modified so that priority value is always used
     // haleyjd: also modified to get and store proper singularity value
-    o_priority = priority = sfx->priority;
+    o_priority = params.priority = sfx->priority;
     singularity = sfx->singularity;
 
     // Check to see if it is audible, modify the params
@@ -263,50 +496,25 @@ static void StartSound(const mobj_t *origin, int sfx_id,
                              ? viewplayer->mo
                              : players[displayplayer].mo;
 
-    if (!S_AdjustSoundParams(playermo, origin, volumeScale,
-                             &volume, &sep, &priority))
+    if (!S_AdjustSoundParams(playermo, origin, &params))
     {
-        return;
-    }
-
-    if (pitched_sounds)
-    {
-        // hacks to vary the sfx pitches
-        if (pitch_range == PITCH_HALF)
-        {
-            pitch += 8 - (M_Random() & 15);
-        }
-        else if (pitch_range == PITCH_FULL)
-        {
-            pitch += 16 - (M_Random() & 31);
-        }
-
-        if (pitch < 0)
-        {
-            pitch = 0;
-        }
-
-        if (pitch > 255)
-        {
-            pitch = 255;
-        }
+        return false;
     }
 
     // try to find a channel
-    if ((cnum = S_getChannel(origin, sfx, priority, singularity)) < 0)
+    if ((cnum = S_getChannel(origin, sfx, params.priority, singularity)) < 0)
     {
-        return;
+        return false;
     }
 
 #ifdef RANGECHECK
     if (cnum < 0 || cnum >= snd_channels)
     {
-        I_Error("S_StartSfxInfo: handle %d out of range\n", cnum);
+        I_Error("handle %d out of range\n", cnum);
     }
 #endif
 
     channels[cnum].sfxinfo = sfx;
-    channels[cnum].origin = origin;
 
     // [Nugget] Check if there's a lump for the sound,
     // and skip the loop if there is, therefore using the lump instead
@@ -315,21 +523,30 @@ static void StartSound(const mobj_t *origin, int sfx_id,
         sfx = sfx->link; // sf: skip thru link(s)
     }
 
+    params.pitch = GetPitch(pitch_range);
+    params.offset = ambient ? GetAmbientSoundOffset(sfx, ambient) : 0.0f;
+
     // Assigns the handle to one of the channels in the mix/output buffer.
-    handle = I_StartSound(sfx, volume, sep, pitch);
+    handle = I_StartSound(sfx, &params);
 
     // haleyjd: check to see if the sound was started
     if (handle >= 0)
     {
-        channels[cnum].handle = handle;
-
         // haleyjd 05/29/06: record volume scale value
         // haleyjd 09/27/06: store priority and singularity values (!!!)
-        channels[cnum].volume = volumeScale;
-        channels[cnum].o_priority = o_priority; // original priority
-        channels[cnum].priority = priority;     // scaled priority
+        channels[cnum].origin = origin;
+        channels[cnum].handle = handle;
+        channels[cnum].ambient = ambient;
+        channels[cnum].close_dist = params.close_dist;
+        channels[cnum].clipping_dist = params.clipping_dist;
+        channels[cnum].stop_dist = params.stop_dist;
+        channels[cnum].volume_scale = params.volume_scale;
+        channels[cnum].o_priority = o_priority;    // original priority
+        channels[cnum].priority = params.priority; // scaled priority
         channels[cnum].singularity = singularity;
-        channels[cnum].idnum = I_SoundID(handle); // unique instance id
+        channels[cnum].volume = params.volume;
+        channels[cnum].sfxinfo->active.count++;
+        LimitVolumePerSfx();
 
         if (rumble_type != RUMBLE_NONE)
         {
@@ -340,7 +557,16 @@ static void StartSound(const mobj_t *origin, int sfx_id,
     else // haleyjd: the sound didn't start, so clear the channel info
     {
         memset(&channels[cnum], 0, sizeof(channel_t));
+        return false;
     }
+
+    return true;
+}
+
+boolean S_StartAmbientSound(const mobj_t *origin, int sfx_id,
+                            ambient_t *ambient)
+{
+    return StartSoundEx(origin, sfx_id, PITCH_NONE, RUMBLE_NONE, ambient);
 }
 
 void S_StartSoundPitch(const mobj_t *origin, int sfx_id,
@@ -387,6 +613,7 @@ void S_StartSoundCGun(const mobj_t *origin, int sfx_id)
 
 void S_StartSoundBFG(const mobj_t *origin, int sfx_id)
 {
+    S_sfx[sfx_id].singularity = (demo_version < DV_MBF) ? sg_oof : sg_none;
     StartSound(origin, sfx_id, PITCH_FULL, RumbleType(origin, RUMBLE_BFG));
 }
 
@@ -422,7 +649,8 @@ void S_StartSoundPain(const mobj_t *origin, int sfx_id)
     // so we can place this code right here
     if (STRICTMODE(sfx_id == sfx_plpain))
     {
-        int i = BETWEEN(0, 3, (origin->health - 1) / 25);
+        int i = (origin->health - 1) / 25;
+            i = CLAMP(i, 0, 3);
 
         while (optionals[sfx_ppai25 + i - NUG_SFX_START] == -1)
         {
@@ -554,6 +782,38 @@ void S_StopSound(const mobj_t *origin)
     }
 }
 
+void S_StopAmbientSounds(void)
+{
+    if (nosfxparm)
+    {
+        return;
+    }
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        if (channels[cnum].ambient)
+        {
+            S_StopChannel(cnum);
+        }
+    }
+}
+
+void S_MarkSounds(void)
+{
+    if (nosfxparm)
+    {
+        return;
+    }
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        if (channels[cnum].ambient)
+        {
+            P_MarkAmbientSound(channels[cnum].ambient, channels[cnum].handle);
+        }
+    }
+}
+
 // [FG] play sounds in full length
 boolean full_sounds;
 
@@ -585,11 +845,51 @@ void S_UnlinkSound(mobj_t *origin)
     }
 }
 
+void S_PauseSound(void)
+{
+    if (nosfxparm)
+    {
+        return;
+    }
+
+    I_DeferSoundUpdates();
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        if (channels[cnum].sfxinfo)
+        {
+            I_PauseSound(channels[cnum].handle);
+        }
+    }
+
+    I_ProcessSoundUpdates();
+}
+
+void S_ResumeSound(void)
+{
+    if (nosfxparm)
+    {
+        return;
+    }
+
+    I_DeferSoundUpdates();
+
+    for (int cnum = 0; cnum < snd_channels; cnum++)
+    {
+        if (channels[cnum].sfxinfo)
+        {
+            I_ResumeSound(channels[cnum].handle);
+        }
+    }
+
+    I_ProcessSoundUpdates();
+}
+
 //
 // Stop and resume music, during game PAUSE.
 //
 
-void S_PauseSound(void)
+void S_PauseMusic(void)
 {
     if (mus_playing && !mus_paused)
     {
@@ -598,7 +898,7 @@ void S_PauseSound(void)
     }
 }
 
-void S_ResumeSound(void)
+void S_ResumeMusic(void)
 {
     if (mus_playing && mus_paused)
     {
@@ -637,56 +937,53 @@ void S_UpdateSounds(const mobj_t *listener)
     if (R_FreecamOn() && !nodrawers) { listener = viewplayer->mo; }
 
     I_DeferSoundUpdates();
+    I_UpdateListenerParams(listener);
 
     for (cnum = 0; cnum < snd_channels; ++cnum)
     {
         channel_t *c = &channels[cnum];
         sfxinfo_t *sfx = c->sfxinfo;
 
-        // haleyjd: has this software channel lost its hardware channel?
-        if (c->idnum != I_SoundID(c->handle))
-        {
-            // clear the channel and keep going
-            memset(c, 0, sizeof(channel_t));
-            continue;
-        }
-
         if (sfx)
         {
             if (I_SoundIsPlaying(c->handle))
             {
-                // initialize parameters
-                int volume = snd_SfxVolume;
-                int sep = NORM_SEP;
-                int pri = c->o_priority; // haleyjd 09/27/06: priority
-
                 // check non-local sounds for distance clipping
                 // or modify their params
 
                 if (c->origin && listener != c->origin) // killough 3/20/98
                 {
-                    if (!S_AdjustSoundParams(listener, c->origin, c->volume,
-                                             &volume, &sep, &pri))
+                    // initialize parameters
+                    sfxparams_t params;
+                    params.close_dist = c->close_dist;
+                    params.clipping_dist = c->clipping_dist;
+                    params.stop_dist = c->stop_dist;
+                    params.volume_scale = c->volume_scale;
+                    params.priority = c->o_priority; // haleyjd 09/27/06: priority
+
+                    if (S_AdjustSoundParams(listener, c->origin, &params))
                     {
-                        S_StopChannel(cnum);
+                        I_UpdateSoundParams(c->handle, &params);
+                        c->priority = params.priority; // haleyjd
+                        c->volume = params.volume;
                     }
                     else
                     {
-                        I_UpdateSoundParams(c->handle, volume, sep);
-                        c->priority = pri; // haleyjd
+                        S_EvictChannel(cnum);
                     }
                 }
 
                 I_UpdateRumbleParams(listener, c->origin, c->handle);
             }
-            else // if channel is allocated but sound has stopped, free it
+            else if (!I_SoundIsPaused(c->handle))
             {
+                // if channel is allocated but sound has stopped, free it
                 S_StopChannel(cnum);
             }
         }
     }
 
-    I_UpdateListenerParams(listener);
+    LimitVolumePerSfx();
     I_ProcessSoundUpdates();
     I_UpdateRumble();
 }
@@ -730,7 +1027,7 @@ void S_SetSfxVolume(int volume)
 
 static extra_music_t extra_music;
 
-static int current_musicnum = -1;
+int current_musicnum = -1;
 
 void S_ChangeMusic(int musicnum, int looping)
 {
@@ -774,16 +1071,9 @@ void S_ChangeMusic(int musicnum, int looping)
 
     // load & register it
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-    if (extra_music && trakinfo_found)
+    if (extra_music)
     {
-        const char *extra =
-            S_GetExtra(music->data, W_LumpLength(music->lumpnum), extra_music);
-        if (extra)
-        {
-            music->lumpnum = W_GetNumForName(extra);
-            Z_Free(music->data);
-            music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-        }
+        S_GetExtra(music, extra_music);
     }
     // julian: added lump length
     music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
@@ -838,16 +1128,9 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
     music->lumpnum = lumpnum;
 
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-    if (extra_music && trakinfo_found)
+    if (extra_music)
     {
-        const char *extra =
-            S_GetExtra(music->data, W_LumpLength(music->lumpnum), extra_music);
-        if (extra)
-        {
-            music->lumpnum = W_GetNumForName(extra);
-            Z_Free(music->data);
-            music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
-        }
+        S_GetExtra(music, extra_music);
     }
     music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
 
@@ -954,6 +1237,9 @@ void S_Start(void)
         return;
     }
 
+    // [crispy] reset musinfo data at the start of a new map
+    memset(&musinfo, 0, sizeof(musinfo));
+
     // start new music for the level
     mus_paused = 0;
 
@@ -986,9 +1272,6 @@ void S_Start(void)
                           mus_runnin - mus_e1m1);
         }
     }
-
-    // [crispy] reset musinfo data at the start of a new map
-    memset(&musinfo, 0, sizeof(musinfo));
 
     S_ChangeMusic(mnum, true);
 }
@@ -1137,7 +1420,7 @@ static void InitFinalDoomMusic()
     {
         char name[9] = "d_";
 
-        strncpy(&name[2], altmusic[j].to, 6);
+        M_CopyLumpName(&name[2], altmusic[j].to);
 
         if (W_CheckNumForName(name) == -1)
         {
@@ -1151,13 +1434,29 @@ static void InitFinalDoomMusic()
     }
 }
 
+static void InitPitchStepTable(void)
+{
+    const double base = pitch_bend_range / 100.0;
+
+    // This table provides step widths for pitch parameters.
+    for (int i = 0; i < arrlen(steptable); i++)
+    {
+        // [FG] variable pitch bend range
+        steptable[i] = pow(base, (double)(2 * (i - NORM_PITCH)) / NORM_PITCH);
+    }
+}
+
 void S_Init(int sfxVolume, int musicVolume)
 {
+    ResetActive();
+    S_PostParseSndInfo();
+
     // jff 1/22/98 skip sound init if sound not enabled
     if (!nosfxparm)
     {
         // haleyjd
         I_SetChannels();
+        InitPitchStepTable();
 
         S_SetSfxVolume(sfxVolume);
 

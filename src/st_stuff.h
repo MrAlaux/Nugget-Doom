@@ -27,10 +27,10 @@
 
 struct event_s;
 struct patch_s;
+struct player_s;
 
 // [Nugget]
 enum keyblink_e;
-struct player_s;
 
 // [Nugget] /=================================================================
 
@@ -42,7 +42,7 @@ extern boolean comp_godface;
 extern boolean comp_unusedpals;
 extern int force_carousel;
 
-boolean ST_GetLayout(void);
+int ST_GetWideShift(void);
 int ST_GetMessageFontHeight(void);
 boolean ST_IconAvailable(const int i);
 boolean ST_GetNughudOn(void);
@@ -103,6 +103,8 @@ extern int health_red;    // health amount less than which status is red
 extern int health_yellow; // health amount less than which status is yellow
 extern int health_green;  // health amount above is blue, below is green
 
+boolean ST_PlayerInvulnerable(struct player_s *player);
+
 extern boolean palette_changes;
 
 extern struct hudfont_s *stcfnt;
@@ -110,6 +112,8 @@ extern struct patch_s **hu_font;
 
 void WI_UpdateWidgets(void);
 void WI_DrawWidgets(void);
+
+extern int st_wide_shift;
 
 const char **ST_StatusbarList(void);
 

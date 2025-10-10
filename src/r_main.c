@@ -1,6 +1,7 @@
 //
 //  Copyright (C) 1999 by
 //  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
+//  Copyright (C) 2020 by Ethan Watson
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -72,6 +73,7 @@
 int viewangleoffset;
 int validcount = 1;         // increment every time a check is made
 lighttable_t *fixedcolormap;
+int fixedcolormapindex;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
 fixed_t  projection;
@@ -123,13 +125,18 @@ int LIGHTZSHIFT;
 // killough 4/4/98: support dynamic number of them as well
 
 int numcolormaps;
-lighttable_t ***(*c_scalelight) = NULL;
-lighttable_t ***(*c_zlight) = NULL;
-lighttable_t **(*scalelight) = NULL;
-lighttable_t **scalelightfixed = NULL;
-lighttable_t **(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
+
+// updated thanks to Rum-and-Raisin Doom, Ethan Watson
+int* scalelightoffset;
+int* scalelightindex;
+int* zlightoffset;
+int* zlightindex;
+int* planezlightoffset;
+int  planezlightindex;
+int* walllightoffset;
+int  walllightindex;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -152,27 +159,45 @@ boolean R_SpriteShadowsOn(void)
   return sprite_shadows_on;
 }
 
-int R_GetLightLevelInPoint(
+void R_GetLightLevelAndTintInPoint(
   const fixed_t x,
   const fixed_t y,
-  const boolean force_mbf
+  const boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
 ) {
-  int lightlevel;
-
   sector_t *const sector = R_PointInSubsector(x, y)->sector;
 
-  if (demo_version > DV_BOOM || force_mbf)
+  if (lightlevel_p)
   {
-    sector_t tempsector;
-    int floorlightlevel, ceilinglightlevel;
+    int lightlevel;
 
-    R_FakeFlat(sector, &tempsector, &floorlightlevel, &ceilinglightlevel, false);
+    if (demo_version >= DV_MBF || force_mbf)
+    {
+      sector_t tempsector;
+      int floorlightlevel, ceilinglightlevel;
 
-    lightlevel = (floorlightlevel + ceilinglightlevel) >> 1;
+      R_FakeFlat(sector, &tempsector, &floorlightlevel, &ceilinglightlevel, false);
+
+      lightlevel = (floorlightlevel + ceilinglightlevel) / 2;
+    }
+    else { lightlevel = sector->lightlevel; }
+
+    *lightlevel_p = lightlevel;
   }
-  else { lightlevel = sector->lightlevel; }
 
-  return lightlevel;
+  if (tint_p)
+  {
+    int tint;
+
+    if (sector->floorlightsec >= 0)
+    {
+      tint = sectors[sector->floorlightsec].tint;
+    }
+    else { tint = sector->tint; }
+
+    *tint_p = tint;
+  }
 }
 
 // CVARs ---------------------------------------------------------------------
@@ -334,7 +359,7 @@ static void ProcessFOVEffects(void)
           float step = zoomtarget - *target;
           const int sign = (step > 0) ? 1 : -1;
 
-          *target += BETWEEN(1, 16, fabs(step) / 3.0) * sign;
+          *target += CLAMP(fabs(step) / 3.0, 1, 16) * sign;
 
           if (   (sign > 0 && *target > zoomtarget)
               || (sign < 0 && *target < zoomtarget))
@@ -379,7 +404,7 @@ static void ProcessFOVEffects(void)
     }
   }
 
-  targetfov = BETWEEN(1.0f, 179.0f, targetfov);
+  targetfov = CLAMP(targetfov, 1.0f, 179.0f);
 
   if (r_fov != targetfov)
   {
@@ -632,7 +657,10 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     if (!(freecam.pitch = MAX(0, abs(freecam.pitch) - 4*ANG1) * ((freecam.pitch > 0) ? 1 : -1)))
     { freecam.centering = false; }
   }
-  else { freecam.pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, freecam.pitch + pitch); }
+  else {
+    freecam.pitch += pitch;
+    freecam.pitch  = CLAMP(freecam.pitch, -max_pitch_angle, max_pitch_angle);
+  }
 }
 
 // [Nugget] =================================================================/
@@ -647,13 +675,14 @@ void (*colfunc)(void);                    // current column draw function
 //
 // killough 5/2/98: reformatted
 //
+int (*R_PointOnSide)(fixed_t x, fixed_t y, struct node_s *node);
 
 // Workaround for optimization bug in clang
 // fixes desync in competn/doom/fp2-3655.lmp and in dmnsns.wad dmn01m909.lmp
 #if defined(__clang__)
-int R_PointOnSide(volatile fixed_t x, volatile fixed_t y, node_t *node)
+int R_PointOnSideClassic(volatile fixed_t x, volatile fixed_t y, node_t *node)
 #else
-int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
+int R_PointOnSideClassic(fixed_t x, fixed_t y, node_t *node)
 #endif
 {
   if (!node->dx)
@@ -671,9 +700,31 @@ int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
   return FixedMul(y, node->dx>>FRACBITS) >= FixedMul(node->dy>>FRACBITS, x);
 }
 
-// killough 5/2/98: reformatted
+#if defined(__clang__)
+int R_PointOnSidePrecise(volatile fixed_t x, volatile fixed_t y, node_t *node)
+#else
+int R_PointOnSidePrecise(fixed_t x, fixed_t y, node_t *node)
+#endif
+{
+   if(!node->dx)
+      return x <= node->x ? node->dy > 0 : node->dy < 0;
 
-int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
+   if(!node->dy)
+      return y <= node->y ? node->dx < 0 : node->dx > 0;
+
+   x -= node->x;
+   y -= node->y;
+
+   // Try to quickly decide by looking at sign bits.
+   if((node->dy ^ node->dx ^ x ^ y) < 0)
+      return (node->dy ^ x) < 0;  // (left is negative)
+   return (int64_t)y * node->dx >= (int64_t)node->dy * x;
+}
+
+// killough 5/2/98: reformatted
+int (*R_PointOnSegSide)(fixed_t x, fixed_t y, seg_t *line);
+
+int R_PointOnSegSideClassic(fixed_t x, fixed_t y, seg_t *line)
 {
   fixed_t lx = line->v1->x;
   fixed_t ly = line->v1->y;
@@ -693,6 +744,28 @@ int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
   if ((ldy ^ ldx ^ x ^ y) < 0)
     return (ldy ^ x) < 0;          // (left is negative)
   return FixedMul(y, ldx>>FRACBITS) >= FixedMul(ldy>>FRACBITS, x);
+}
+
+int R_PointOnSegSidePrecise(fixed_t x, fixed_t y, seg_t *line)
+{
+  fixed_t lx = line->v1->x;
+  fixed_t ly = line->v1->y;
+  fixed_t ldx = line->v2->x - lx;
+  fixed_t ldy = line->v2->y - ly;
+
+  if (!ldx)
+    return x <= lx ? ldy > 0 : ldy < 0;
+
+  if (!ldy)
+    return y <= ly ? ldx < 0 : ldx > 0;
+
+  x -= lx;
+  y -= ly;
+
+  // Try to quickly decide by looking at sign bits.
+  if ((ldy ^ ldx ^ x ^ y) < 0)
+    return (ldy ^ x) < 0;          // (left is negative)
+  return (int64_t) y * ldx >= (int64_t) x * ldy;
 }
 
 //
@@ -870,7 +943,7 @@ static void R_InitTextureMapping(void)
   //  xtoviewangle will give the smallest view angle
   //  that maps to x.
 
-  linearskyfactor = FIXED2DOUBLE(slopefrac) * ANG90;
+  linearskyfactor = FixedToDouble(slopefrac) * ANG90;
 
   for (x=0; x<=viewwidth; x++)
     {
@@ -908,37 +981,6 @@ boolean smoothlight;
 
 void R_InitLightTables (void)
 {
-  int i, cm;
-
-  if (c_scalelight)
-  {
-    for (cm = 0; cm < numcolormaps; ++cm)
-    {
-      for (i = 0; i < LIGHTLEVELS; ++i)
-        Z_Free(c_scalelight[cm][i]);
-
-      Z_Free(c_scalelight[cm]);
-    }
-    Z_Free(c_scalelight);
-  }
-
-  if (scalelightfixed)
-  {
-    Z_Free(scalelightfixed);
-  }
-
-  if (c_zlight)
-  {
-    for (cm = 0; cm < numcolormaps; ++cm)
-    {
-      for (i = 0; i < LIGHTLEVELS; ++i)
-        Z_Free(c_zlight[cm][i]);
-
-      Z_Free(c_zlight[cm]);
-    }
-    Z_Free(c_zlight);
-  }
-
   if (smoothlight)
   {
       LIGHTLEVELS = 32;
@@ -960,47 +1002,30 @@ void R_InitLightTables (void)
       LIGHTZSHIFT = 20;
   }
 
-  scalelightfixed = Z_Malloc(MAXLIGHTSCALE * sizeof(*scalelightfixed), PU_STATIC, 0);
-
   // killough 4/4/98: dynamic colormaps
-  c_zlight = Z_Malloc(sizeof(*c_zlight) * numcolormaps, PU_STATIC, 0);
-  c_scalelight = Z_Malloc(sizeof(*c_scalelight) * numcolormaps, PU_STATIC, 0);
-
-  for (cm = 0; cm < numcolormaps; ++cm)
-  {
-    c_zlight[cm] = Z_Malloc(LIGHTLEVELS * sizeof(**c_zlight), PU_STATIC, 0);
-    c_scalelight[cm] = Z_Malloc(LIGHTLEVELS * sizeof(**c_scalelight), PU_STATIC, 0);
-  }
+  // ScaleLight calculated below
+  int NumZLightEntries = LIGHTLEVELS * MAXLIGHTZ;
+  zlightoffset = (int*)Z_Malloc(sizeof(int) * NumZLightEntries, PU_STATIC, NULL);
+  zlightindex  = (int*)Z_Malloc(sizeof(int) * NumZLightEntries, PU_STATIC, NULL);
 
   // Calculate the light levels to use
   //  for each level / distance combination.
-  for (i=0; i< LIGHTLEVELS; i++)
+  for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
+  {
+    int lightz, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-lightlevel)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+    for (lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      int scale = FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (lightz + 1) << LIGHTZSHIFT);
+      int level = startmap - (scale >> LIGHTSCALESHIFT) / DISTMAP;
+      level = CLAMP(level, 0, NUMCOLORMAPS - 1);
 
-      for (cm = 0; cm < numcolormaps; ++cm)
-      {
-        c_scalelight[cm][i] = Z_Malloc(MAXLIGHTSCALE * sizeof(***c_scalelight), PU_STATIC, 0);
-        c_zlight[cm][i] = Z_Malloc(MAXLIGHTZ * sizeof(***c_zlight), PU_STATIC, 0);
-      }
-
-      for (j=0; j<MAXLIGHTZ; j++)
-        {
-          int scale = FixedDiv ((SCREENWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
-          int t, level = startmap - (scale >> LIGHTSCALESHIFT)/DISTMAP;
-
-          if (level < 0)
-            level = 0;
-          else
-            if (level >= NUMCOLORMAPS)
-              level = NUMCOLORMAPS-1;
-
-          // killough 3/20/98: Initialize multiple colormaps
-          level *= 256;
-          for (t=0; t<numcolormaps; t++)         // killough 4/4/98
-            c_zlight[t][i][j] = colormaps[t] + level;
-        }
+      // killough 3/20/98: Initialize multiple colormaps
+      // killough 4/4/98
+      // updated thanks to Rum-and-Raisin Doom
+      zlightindex[lightlevel * MAXLIGHTZ + lightz] = level;
+      zlightoffset[lightlevel * MAXLIGHTZ + lightz] = level * 256;
     }
+  }
 }
 
 boolean setsmoothlight;
@@ -1019,7 +1044,7 @@ void R_SmoothLight(void)
 int R_GetLightIndex(fixed_t scale)
 {
   const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
-  return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+  return clampi(index, 0, MAXLIGHTSCALE - 1);
 }
 
 static fixed_t viewpitch;
@@ -1171,15 +1196,16 @@ void R_ExecuteSetViewSize (void)
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
   }
 
-  // [Nugget] FOV-based sky stretching;
-  // we intentionally use `custom_fov` to disregard any FOV effects
-  if (custom_fov == FOV_DEFAULT)
-  {
-    skyiscalediff = FRACUNIT;
-  }
-  else {
-    skyiscalediff = tan(custom_fov * M_PI / 360.0) * FRACUNIT;
-  }
+  // [Nugget] FOV-based sky stretching /--------------------------------------
+
+  // We intentionally use `custom_fov` to disregard any FOV effects
+  skyiscalediff = (custom_fov == FOV_DEFAULT)
+                ? FRACUNIT
+                : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
+
+  R_UpdateStretchSkies();
+
+  // [Nugget] ---------------------------------------------------------------/
 
   for (i=0 ; i<viewwidth ; i++)
     {
@@ -1189,29 +1215,29 @@ void R_ExecuteSetViewSize (void)
       screenheightarray[i] = viewheight;
     }
 
+  // Lightz calculated above
+  int NumScaleLightEntries = LIGHTLEVELS * MAXLIGHTSCALE;
+  scalelightindex  = (int*)Z_Malloc(sizeof(int) * NumScaleLightEntries, PU_STATIC, NULL);
+  scalelightoffset = (int*)Z_Malloc(sizeof(int) * NumScaleLightEntries, PU_STATIC, NULL);
+
   // Calculate the light levels to use
   //  for each level / scale combination.
-  for (i=0; i<LIGHTLEVELS; i++)
+  for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
+  {
+    int startmap = ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
+    for (int lightscale = 0; lightscale < MAXLIGHTSCALE; lightscale++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      // killough 11/98:
+      int level = startmap - lightscale / DISTMAP;
+      level = CLAMP(level, 0, NUMCOLORMAPS - 1);
 
-      for (j=0 ; j<MAXLIGHTSCALE ; j++)
-        {                                       // killough 11/98:
-          int t, level = startmap - j / DISTMAP;
-
-          if (level < 0)
-            level = 0;
-
-          if (level >= NUMCOLORMAPS)
-            level = NUMCOLORMAPS-1;
-
-          // killough 3/20/98: initialize multiple colormaps
-          level *= 256;
-
-          for (t=0; t<numcolormaps; t++)     // killough 4/4/98
-            c_scalelight[t][i][j] = colormaps[t] + level;
-        }
+      // killough 3/20/98: initialize multiple colormaps
+      // killough 4/4/98
+      // updated thanks to Rum-and-Raisin Doom
+      scalelightindex[lightlevel * MAXLIGHTSCALE + lightscale] = level;
+      scalelightoffset[lightlevel * MAXLIGHTSCALE + lightscale] = level * 256;
     }
+  }
 
   // [Nugget] Alt. intermission background
   if (!WI_AltInterpicOn())
@@ -1230,7 +1256,6 @@ void R_Init (void)
   R_SetViewSize(screenblocks);
   R_InitPlanes();
   R_InitLightTables();
-  R_InitSkyMap();
   R_InitTranslationTables();
   V_InitFlexTranTable();
 
@@ -1238,7 +1263,6 @@ void R_Init (void)
   R_SetFuzzColumnMode();
 
   colfunc = R_DrawColumn;
-  R_InitDrawFunctions();
 }
 
 //
@@ -1373,7 +1397,7 @@ void R_SetupFrame (player_t *player)
     player = &dummyplayer;
   }
 
-  int i, cm;
+  int cm;
   fixed_t pitch;
   const boolean use_localview = CheckLocalView(player);
   const boolean camera_ready = (
@@ -1431,10 +1455,10 @@ void R_SetupFrame (player_t *player)
     }
 
     if ((use_localview || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
-        && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
+        && raw_input && !player->centering && freelook) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
-      basepitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, basepitch);
+      basepitch = CLAMP(basepitch, -max_pitch_angle, max_pitch_angle);
     }
     else
     {
@@ -1625,7 +1649,7 @@ void R_SetupFrame (player_t *player)
       {
         fixed_t frac;
 
-        viewz  = BETWEEN(sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT, viewz);
+        viewz  = CLAMP(viewz, sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT);
         frac   = FixedDiv(viewz - z, FixedMul(slope, dist));
         viewx -= FixedMul(dx, frac);
         viewy -= FixedMul(dy, frac);
@@ -1678,21 +1702,17 @@ void R_SetupFrame (player_t *player)
     cm = 0;
 
   fullcolormap = colormaps[cm];
-  zlight = c_zlight[cm];
-  scalelight = c_scalelight[cm];
+  fixedcolormapindex = player->fixedcolormap;
 
-  if (player->fixedcolormap)
-    {
-      fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
-        + player->fixedcolormap*256*sizeof(lighttable_t);
-
-      walllights = scalelightfixed;
-
-      for (i=0 ; i<MAXLIGHTSCALE ; i++)
-        scalelightfixed[i] = fixedcolormap;
-    }
+  if (fixedcolormapindex)
+  {
+    // killough 3/20/98: use fullcolormap
+    fixedcolormap = fullcolormap + fixedcolormapindex * 256;
+  }
   else
+  {
     fixedcolormap = 0;
+  }
 
   validcount++;
 }
@@ -1845,7 +1865,7 @@ void R_RenderPlayerView (player_t* player)
     int first_y = (viewheight % ph) / 2,
         first_x;
 
-    byte *const dest = I_VideoBuffer;
+    pixel_t *const dest = I_VideoBuffer;
 
     for (y = viewwindowy;  y < (viewwindowy + viewheight);)
     {
@@ -1856,10 +1876,10 @@ void R_RenderPlayerView (player_t* player)
         for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
         {
           memset(
-            dest + ((y + y2) * video.pitch) + x,
+            dest + ((y + y2) * video.width) + x,
             dest[
               ( (first_y ? viewwindowy + first_y
-                         : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
+                         : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
               + (first_x ? viewwindowx + first_x
                          : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
             ],
@@ -1898,7 +1918,9 @@ void R_InitAnyRes(void)
 void R_BindRenderVariables(void)
 {
   BIND_NUM_GENERAL(extra_level_brightness, 0, -8, 8, "Level brightness"); // [Nugget] Broader light-level range
-  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
+  BIND_NUM_GENERAL(fuzzmode, FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_ORIGINAL,
+    "Partial Invisibility (0 = Blocky; 1 = Refraction; 2 = Shadow, 3 = Original)");
+  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for free look"); // [Nugget] Extended description
 
   // [Nugget] FOV-based sky stretching (CFG-only)
   M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,
@@ -1993,7 +2015,9 @@ void R_BindRenderVariables(void)
              false, ss_none, wad_yes,
              "Disable the Killough-face easter egg");
 
-  BIND_NUM(screenblocks, 10, 3, UL, "Size of game-world screen");
+  M_BindNum("screenblocks", &screenblocks, NULL, 10, 3,
+            UL, ss_stat, wad_no, "Size of game-world screen");
+  BIND_NUM(default_max_pitch_angle, 32, 30, 60, "Maximum view pitch angle");
 
   M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
              "Translucency for some things");
@@ -2003,9 +2027,6 @@ void R_BindRenderVariables(void)
 
   M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
              "Randomly mirrored death animations");
-  M_BindNum("fuzzmode", &fuzzmode, NULL,
-            FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_SHADOW, ss_none, wad_no,
-            "Partial Invisibility (0 = Vanilla; 1 = Refraction; 2 = Shadow)");
 
   BIND_BOOL(draw_nearby_sprites, true,
     "Draw sprites overlapping into visible sectors");

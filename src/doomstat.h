@@ -40,10 +40,9 @@ struct mapentry_s;
 extern  boolean nomonsters; // checkparm of -nomonsters
 extern  boolean respawnparm;  // checkparm of -respawn
 extern  boolean fastparm; // checkparm of -fast
+extern  boolean pistolstart; // checkparm of -pistolstart
+extern  boolean coopspawns; // checkparm of -coop_spawns
 extern  boolean devparm;  // DEBUG: launched with -devparm
-
-// [Nugget]
-extern  boolean coopspawnsparm;
 
 extern  int screenblocks;     // killough 11/98
 
@@ -71,8 +70,15 @@ extern char *MapName(int e, int m);
 // Set if homebrew PWAD stuff has been added.
 extern  boolean modifiedgame;
 
+// [Nugget] SSG in Doom 1
+extern boolean doom1_ssg;
 extern boolean have_ssg;
-#define ALLOW_SSG (gamemode == commercial || CRITICAL(have_ssg))
+
+#define ALLOW_SSG (gamemode == commercial \
+                   || (CRITICAL(doom1_ssg && have_ssg))) // [Nugget] SSG in Doom 1
+
+extern boolean pwad_help2;
+
 
 // compatibility with old engines (monster behavior, metrics, etc.)
 extern int compatibility, default_compatibility;          // killough 1/31/98
@@ -105,6 +111,7 @@ typedef enum {
   DV_BOOM    = 202,
   DV_MBF     = 203,
   DV_MBF21   = 221,
+  DV_ID24    = 224, // (2025-03-20) COMPATIBILITY NOT YET STABLE
   DV_UM      = 255,
 } demo_version_t;
 
@@ -115,7 +122,7 @@ extern demo_version_t demo_version;           // killough 7/19/98: Version of de
 
 #define demo_compatibility (demo_version < DV_BOOM200) /* killough 11/98: macroized */
 
-#define mbf21 (demo_version == DV_MBF21)
+#define mbf21 (demo_version >= DV_MBF21)
 
 // killough 7/19/98: whether monsters should fight against each other
 extern boolean monster_infighting, default_monster_infighting;
@@ -124,6 +131,7 @@ extern boolean monkeys, default_monkeys;
 
 // v1.1-like pitched sounds
 extern boolean pitched_sounds;
+extern int pitch_bend_range; // [FG] variable pitch bend range
 
 extern boolean translucency;
 
@@ -200,18 +208,24 @@ extern  int             timelimit;
 // Nightmare mode flag, single player.
 extern  boolean         respawnmonsters;
 
-// [Nugget] /-----------------------------------------------------------------
+// [Nugget] Custom skill flags /----------------------------------------------
 
-enum { THINGSPAWNS_EASY, THINGSPAWNS_NORMAL, THINGSPAWNS_HARD };
-extern  int             thingspawns;
+enum {
+  THINGSPAWNS_BABY,
+  THINGSPAWNS_EASY,
+  THINGSPAWNS_MEDIUM,
+  THINGSPAWNS_HARD,
+  THINGSPAWNS_NIGHTMARE
+};
 
-extern  boolean         realnomonsters;
-extern  boolean         doubleammo;
-extern  boolean         halfdamage;
-extern  boolean         slowbrain;
-extern  boolean         fastmonsters;
-extern  boolean         aggressive;
-extern  boolean         x2monsters;
+extern int     thingspawns;
+extern boolean realnomonsters;
+extern boolean doubleammo;
+extern boolean halfplayerdamage;
+extern boolean slowbrain;
+extern boolean fastmonsters;
+extern boolean aggromonsters;
+extern boolean x2monsters;
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -224,8 +238,6 @@ extern boolean D_CheckNetConnect(void);
 // Flag: true only if started as net deathmatch.
 // An enum might handle altdeath/cooperative better.
 extern int deathmatch;
-
-extern boolean coop_spawns;
 
 // ------------------------------------------
 // Internal parameters for sound rendering.
@@ -273,6 +285,7 @@ extern  overlay_t automapoverlay;
 #define automap_off (automapactive != AM_FULL || automapoverlay)
 
 extern  boolean menuactive;    // Menu overlayed?
+extern  boolean menu_pause_demos;
 extern  int     paused;        // Game Pause?
 extern  boolean viewactive;
 extern  boolean nodrawers;
@@ -346,8 +359,7 @@ extern  int       playback_skiptics;
 
 extern  boolean   frozen_mode;
 
-extern  boolean   strictmode, default_strictmode;
-extern  boolean   force_strictmode;
+extern  boolean   strictmode;
 
 #define STRICTMODE(x) (strictmode ? 0 : (x))
 
