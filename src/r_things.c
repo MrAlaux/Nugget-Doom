@@ -1767,7 +1767,7 @@ void R_DrawMasked(void)
     {
       for (int x = 0;  x < viewwidth/2;  x++)
       {
-        pixel_t *const restrict left = &I_VideoBuffer[(viewwindowy + y) * video.pitch + viewwindowx + x],
+        pixel_t *const restrict left = &I_VideoBuffer[(viewwindowy + y) * video.width + viewwindowx + x],
                 *const restrict right = left + viewwidth - 1 - x*2,
                 temp = *left;
 

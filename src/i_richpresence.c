@@ -22,8 +22,8 @@
 
 #include "discord_rpc.h"
 
-// https://discord.com/oauth2/authorize?client_id=1425007665855336460
-#define DEFAULT_DISCORD_APP_ID "1425007665855336460"
+// https://discord.com/oauth2/authorize?client_id=1425667874151731283
+#define DEFAULT_DISCORD_APP_ID "1425667874151731283"
 
 static void DiscordReady(const DiscordUser *connectedUser)
 {

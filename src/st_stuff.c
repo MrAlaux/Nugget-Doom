@@ -2541,7 +2541,7 @@ void ST_InitRes(void)
 
   // [Nugget] Status-Bar chunks
   // More than necessary (we only use the section visible in 4:3), but so be it
-  st_bar = Z_Malloc((video.pitch * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+  st_bar = Z_Malloc((video.width * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
 }
 
 const char **ST_StatusbarList(void)

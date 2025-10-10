@@ -1876,10 +1876,10 @@ void R_RenderPlayerView (player_t* player)
         for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
         {
           memset(
-            dest + ((y + y2) * video.pitch) + x,
+            dest + ((y + y2) * video.width) + x,
             dest[
               ( (first_y ? viewwindowy + first_y
-                         : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
+                         : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
               + (first_x ? viewwindowx + first_x
                          : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
             ],
