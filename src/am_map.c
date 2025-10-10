@@ -1501,12 +1501,14 @@ void AM_Ticker (void)
 static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
+
   int h = f_h;
-  pixel_t *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *src = I_VideoBuffer + ((f_y * video.width) + f_x);
+
   while (h--)
   {
     memset(src, color, f_w);
-    src += video.pitch;
+    src += video.width;
   }
 }
 
@@ -1652,13 +1654,13 @@ static boolean AM_clipMline
 #undef DOOUTCODE
 
 // [Nugget] Factored out
-static void PUTDOT(int xx, int yy, int cc)
+static inline void PUTDOT(int xx, int yy, int cc)
 {
   if (STRICTMODE(flip_levels)) { xx = f_x*2 + f_w - 1 - xx; } // [Nugget] Flip levels
 
   // [Nugget] Minimap: take `f_x` and `f_y` into account
   if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h))
-    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+    I_VideoBuffer[(yy) * video.width + (xx)] = (cc);
 }
 
 
@@ -1763,7 +1765,7 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 
   // [Nugget] ---------------------------------------------------------------/
 
-   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
+   pixel_t *dest = &I_VideoBuffer[y * video.width + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;
@@ -2860,7 +2862,7 @@ void AM_shadeScreen(void)
     {
       for (int y = f_y;  y < f_y+f_h;  y++)
       {
-        const int pixel = y * video.pitch + x;
+        const int pixel = y * video.width + x;
         I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];
       }
     }
