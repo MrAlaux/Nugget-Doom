@@ -162,11 +162,24 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
           psp->sx = state->misc1 << FRACBITS;
           psp->sy = state->misc2 << FRACBITS;
           // [FG] centered weapon sprite
-          // [Nugget] If applicable, subtract 1 pixel from the `misc1` calculation,
-          // for consistency with the first-person-sprite-centering correction
-          psp->sx2 = (state->misc1 - STRICTMODE(sx_fix)) << FRACBITS;
-          psp->sy2 = state->misc2 << FRACBITS;
+          psp->sx2 = psp->sx;
+          psp->sy2 = psp->sy;
+
+          // [Nugget] --------------------------------------------------------
+
+          if (STRICTMODE(sx_fix))
+          {
+            // Subtract 1 pixel for consistency
+            psp->sx2 -= 1<<FRACBITS;
+          }
+
+          psp->sxf = psp->sx2;
+          psp->syf = psp->sy2;
         }
+      else { // [Nugget]
+        psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
+        psp->syf = 0;
+      }
 
       // Call action routine.
       // Modified handling.
@@ -224,6 +237,8 @@ static void P_BringUpWeapon(player_t *player)
   }
 
   // [Nugget]
+  psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
+  psp->syf = 0;
   psp->dy = 0; // [crispy] squat down weapon sprite
   psp->wix = psp->wiy = 0; // Reset offsets for weapon inertia
 
@@ -540,11 +555,14 @@ static void P_NuggetBobbing(player_t* player)
 {
   pspdef_t *psp = player->psprites;
 
-  if ((player->attackdown && STRICTMODE(center_weapon) != WEAPON_BOBBING) // [FG] not attacking means idle
-      || !psp->state || psp->state->misc1 || (player->switching && !switch_bob))
+  if (((player->attackdown || psp->state->misc1) // [FG] not attacking means idle
+       && STRICTMODE(center_weapon) != WEAPON_BOBBING)
+      || !psp->state || (player->switching && !switch_bob))
   {
     return;
   }
+
+  const boolean fixed_position = (psp->sxf != (STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0));
 
   // Extended weapon bobbing percentage setting
   const fixed_t bob = player->bob * weapon_bobbing_pct / 100;
@@ -577,7 +595,9 @@ static void P_NuggetBobbing(player_t* player)
       break;
   }
 
-  if (!player->switching)
+  if (fixed_position) { psp->sx2 += psp->sxf; }
+
+  if (!player->switching) // Don't bob vertically while switching, regardless of the setting
   {
     // `sy` - Used for all styles; their specific values are added to this one right after
     psp->sy2 = WEAPONTOP + abs(psp->dy); // Squat weapon down on impact
@@ -613,6 +633,8 @@ static void P_NuggetBobbing(player_t* player)
         psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
         break;
     }
+
+    if (fixed_position) { psp->sy2 += psp->syf - WEAPONTOP; }
   }
 }
 

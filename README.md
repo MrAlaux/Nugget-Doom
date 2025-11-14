@@ -113,6 +113,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
+- **Made _Bobbing Weapon Alignment_ respect DeHackEd-set sprite offsets**
 - **Always Bob** setting (CFG-only: `always_bob`)
   - This setting forces the weapon to bob in every tic of its ready state,
     whether or not the `A_WeaponReady` action is called in said tic,
