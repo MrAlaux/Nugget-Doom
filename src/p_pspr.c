@@ -176,10 +176,6 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
           psp->sxf = psp->sx2;
           psp->syf = psp->sy2;
         }
-      else { // [Nugget]
-        psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
-        psp->syf = 0;
-      }
 
       // Call action routine.
       // Modified handling.
@@ -693,6 +689,10 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
     }
   else
     player->attackdown = false;
+
+  // [Nugget]
+  psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
+  psp->syf = 0;
 
   P_ApplyBobbing(&psp->sx, &psp->sy, player->bob);
 
@@ -1705,6 +1705,8 @@ void P_MovePsprites(player_t *player)
   player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
 
   // [Nugget]
+  player->psprites[ps_flash].sxf    = player->psprites[ps_weapon].sxf;
+  player->psprites[ps_flash].syf    = player->psprites[ps_weapon].syf;
   player->psprites[ps_flash].dy     = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].wix    = player->psprites[ps_weapon].wix;
   player->psprites[ps_flash].oldwix = player->psprites[ps_weapon].oldwix;
