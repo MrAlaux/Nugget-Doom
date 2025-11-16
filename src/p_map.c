@@ -1890,6 +1890,30 @@ static boolean PTR_AimTraverse (intercept_t *in)
 
 // [Nugget] /=================================================================
 
+// Factored out from `PTR_ShootTraverse()`;
+// 1 means that the ceiling was hit, -1 that the floor was hit, and 0 neither
+static int CorrectPuffPosition(
+  const fixed_t z,
+  const sector_t *const sector,
+  fixed_t *const cx,
+  fixed_t *const cy,
+  fixed_t *const cz,
+  fixed_t *const cfrac
+) {
+  const int hit_plane = (sector->ceilingheight < z) - (z < sector->floorheight);
+
+  // Calculate corrected values even if we hit a sky (i.e. don't check for skies)
+  if (hit_plane)
+  {
+    *cz = BETWEEN(sector->floorheight, sector->ceilingheight, z);
+    *cfrac = FixedDiv(*cz - shootz, FixedMul(aimslope, attackrange));
+    *cx = trace.x + FixedMul (trace.dx, *cfrac);
+    *cy = trace.y + FixedMul (trace.dy, *cfrac);
+  }
+
+  return hit_plane;
+}
+
 // Extra Gibbing -------------------------------------------------------------
 
 static boolean is_bfg_tracer = false;
@@ -1906,6 +1930,9 @@ void P_SetIsBFGTracer(const boolean value)
 
 // Explosive hitscan cheat ---------------------------------------------------
 
+// Notice: once code that uses this has passed, set it to false as soon as possible,
+// since entities processed within the traversal code could fire a shot of their own,
+// which would unintentionally become explosive
 static boolean is_boomshot = false;
 
 void P_SetIsBoomShot(const boolean value)
@@ -1916,7 +1943,7 @@ void P_SetIsBoomShot(const boolean value)
 static void P_SpawnExplosion(fixed_t x, fixed_t y, fixed_t z)
 {
   mobj_t *mo = P_SpawnMobj(x, y, z, MT_ROCKET);
-  
+
   mo->angle = shootthing->angle;
   P_SetTarget(&mo->target, shootthing);
   P_ExplodeMissile(mo);
@@ -1970,21 +1997,10 @@ static boolean PTR_ShootTraverse(intercept_t *in)
       y = trace.y + FixedMul(trace.dy, frac);
       z = shootz + FixedMul(aimslope, FixedMul(frac, attackrange));
 
-      if (li->frontsector->ceilingpic == skyflatnum)
-	{
-	  // don't shoot the sky!
+      // [Nugget] Corrected puff-position values
+      fixed_t cx = x,  cy = y,  cz = z,  cfrac = frac;
 
-	  if (z > li->frontsector->ceilingheight)
-	    return false;
-
-	  // it's a sky hack wall
-	  // fix bullet-eaters -- killough:
-	  if  (li->backsector && li->backsector->ceilingpic == skyflatnum)
-	    // [Nugget - rrPKrr] Fix disappearing bullet puffs when outside
-	    if ((demo_compatibility && !casual_play) || li->backsector->ceilingheight < z)
-	    { return false; }
-	}
-
+      // [Nugget] Brought from below
       // [crispy] check if the pullet puff's z-coordinate is below or above
       // its spawning sector's floor or ceiling, respectively, and move its
       // coordinates to the point where the trajectory hits the plane
@@ -1997,18 +2013,66 @@ static boolean PTR_ShootTraverse(intercept_t *in)
         {
           const sector_t *const sector = sides[side].sector;
 
-          if (z < sector->floorheight ||
-             (z > sector->ceilingheight && sector->ceilingpic != skyflatnum))
-          {
-            z = BETWEEN(sector->floorheight, sector->ceilingheight, z);
-            frac = FixedDiv(z - shootz, FixedMul(aimslope, attackrange));
-            x = trace.x + FixedMul (trace.dx, frac);
-            y = trace.y + FixedMul (trace.dy, frac);
-          }
+          // [Nugget] Factored out
+          CorrectPuffPosition(z, sector, &cx, &cy, &cz, &cfrac);
         }
       }
 
-      distance_travelled = P_AproxDistance(x - trace.x, y - trace.y); // [Nugget] Hitscan trails
+      distance_travelled = P_CalcDistance(cx - trace.x, cy - trace.y); // [Nugget] Hitscan trails
+
+      // [Nugget] The block below this one normally ignores what side of the line the trace comes from,
+      // causing an issue whereby traces that go over the line "hit" the sky of the front sector,
+      // even if it is behind the back sector's ceiling from the trace's perspective;
+      // select the sectors prudently
+      // /--------------------------------------------------------------------
+
+      const sector_t *nearsector = NULL, *farsector = NULL;
+
+      if (casual_play)
+      {
+        const int lineside = P_PointOnLineSide(trace.x, trace.y, li),
+                  nearside = li->sidenum[lineside],
+                   farside = li->sidenum[!lineside];
+
+        nearsector = (nearside != NO_INDEX) ? sides[nearside].sector : NULL;
+         farsector = ( farside != NO_INDEX) ? sides[ farside].sector : NULL;
+
+        if (!nearsector && farsector)
+        {
+          nearsector = farsector;
+          farsector = NULL;
+        }
+      }
+
+      if (!(nearsector || farsector))
+      {
+        nearsector = li->frontsector;
+         farsector = li->backsector;
+      }
+
+      // --------------------------------------------------------------------/
+
+      if (nearsector->ceilingpic == skyflatnum)
+	{
+	  // don't shoot the sky!
+
+	  if (z > nearsector->ceilingheight)
+	    return false;
+
+	  // it's a sky hack wall
+	  // fix bullet-eaters -- killough:
+	  if  (farsector && farsector->ceilingpic == skyflatnum)
+	    // [Nugget - rrPKrr] Fix disappearing bullet puffs when outside in vanilla complevel
+	    if ((demo_compatibility && !casual_play) || farsector->ceilingheight < z)
+	    { return false; }
+	}
+
+      // [Nugget] Moved code to correct puff position above,
+      // but it still only takes effect here
+      x = cx;
+      y = cy;
+      z = cz;
+      frac = cfrac;
 
       // [Nugget] Explosive hitscan cheat
       if (is_boomshot && (is_boomshot = false, distance_travelled > (144 + 4)*FRACUNIT))
@@ -2140,7 +2204,9 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
 {
   fixed_t x2, y2;
 
-  distance_travelled = distance; // [Nugget] Hitscan trails
+  // [Nugget] Hitscan trails
+  distance_travelled = distance;
+  boolean no_hit;
 
   angle >>= ANGLETOFINESHIFT;
   shootthing = t1;
@@ -2150,9 +2216,37 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
   shootz = t1->z + (t1->height>>1) + 8*FRACUNIT;
   attackrange = distance;
   aimslope = slope;
-  P_PathTraverse(t1->x,t1->y,x2,y2,PT_ADDLINES|PT_ADDTHINGS,PTR_ShootTraverse);
+  no_hit = P_PathTraverse(t1->x,t1->y,x2,y2,PT_ADDLINES|PT_ADDTHINGS,PTR_ShootTraverse);
 
-  // [Nugget] Hitscan trails
+  // [Nugget] ================================================================
+
+  if (no_hit)
+  {
+    // No lines nor things were hit; spawn a puff if we hit a plane
+
+    const fixed_t z = shootz + FixedMul(aimslope, attackrange);
+    const sector_t *const sector = R_PointInSubsector(x2, y2)->sector;
+    fixed_t cx, cy, cz, cfrac;
+    int hit_plane;
+
+    if ((hit_plane = CorrectPuffPosition(z, sector, &cx, &cy, &cz, &cfrac)))
+    {
+      distance_travelled = P_CalcDistance(cx - t1->x, cy - t1->y); // Hitscan trails
+
+      // Don't spawn anything if we hit a sky ceiling
+      if (!(hit_plane == 1 && sector->ceilingpic == skyflatnum))
+      {
+        // Explosive hitscan cheat
+        if (is_boomshot && (is_boomshot = false, distance_travelled > (144 + 4)*FRACUNIT))
+        {
+          P_SpawnExplosion(cx, cy, cz);
+        }
+        else { P_SpawnPuff(cx, cy, cz); }
+      }
+    }
+  }
+
+  // Hitscan trails
   if (((show_hitscan_trails == 1 || G_GetSlowMotion()) && attackrange >= 128*FRACUNIT)
       || show_hitscan_trails == 2)
   {
@@ -2160,7 +2254,7 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
                         aimslope, attackrange, distance_travelled);
   }
 
-  is_boomshot = false; // [Nugget] Explosive hitscan cheat
+  is_boomshot = false; // Explosive hitscan cheat
 }
 
 //
