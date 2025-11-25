@@ -1312,7 +1312,11 @@ void A_FireCGun(player_t *player, pspdef_t *psp)
   static int sound = -1;
 
   if (sound == -1)
-  { sound = ((W_CheckNumForName("dschgun") > -1) ? sfx_chgun : sfx_pistol); }
+  {
+    sound = (W_CheckNumForName("dschgun") > -1 && gamemission != pack_hacx)
+          ? sfx_chgun
+          : sfx_pistol;
+  }
 
   // [Nugget] ===============================================================/
 

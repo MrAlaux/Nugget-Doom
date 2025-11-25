@@ -267,7 +267,8 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
 - **Customizable darkening level for dark menu background and Automap overlay** (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
-- The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
+- The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
+  - This does not apply to HacX, as it provides a dummy, incongruous lump for the sound
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-only: `sp_chat`)
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]

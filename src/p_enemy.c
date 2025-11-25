@@ -1449,10 +1449,19 @@ boolean comp_cgunnersfx; // [Nugget]
 void A_CPosAttack(mobj_t *actor)
 {
   int angle, bangle, damage, slope, t;
-  // [Nugget] Use Pistol sound (or Chaingun sound if available) instead
+
+  // [Nugget] Use Pistol sound (or Chaingun sound if available) instead /-----
+
   static int sound = -1;
+
   if (sound == -1)
-  { sound = (W_CheckNumForName("dschgun") > -1 ? sfx_chgun : sfx_pistol); }
+  {
+    sound = (W_CheckNumForName("dschgun") > -1 && gamemission != pack_hacx)
+          ? sfx_chgun
+          : sfx_pistol;
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   if (!actor->target)
     return;
