@@ -6,6 +6,7 @@
 ## Changes
 
 - **Improved _Hitbox Thing Lighting_**
+- **Optimized _Bounded Voxel Rendering_**
 - **Optimized _Flip Levels_ post-process**
 - **Smoothened the transitions between idling and firing with _Weapon Inertia_ enabled**
 - **Reduced sensitivity of _Vertical Target Lock-on_**

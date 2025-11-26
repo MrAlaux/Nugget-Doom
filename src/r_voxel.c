@@ -1073,13 +1073,13 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	fixed_t const By = ty[idx];
 	idx = (idx + 1) & 3;
 
+	if (By < VX_MINZ) { return; }
+
 	fixed_t       Cx = tx[idx];
 	fixed_t const Cy = ty[idx];
 	idx = (idx + 1) & 3;
 
 	fixed_t const Dy = ty[idx];
-
-	if (By < VX_MINZ) { return; }
 
 	const fixed_t A_xscale = FixedDiv(projection, Ay),
 	              B_xscale = FixedDiv(projection, By),
@@ -1092,7 +1092,8 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	const fixed_t frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
 	               backscale = MIN(D_xscale, MIN(C_xscale, A_xscale)),
-	                midscale = ((int64_t) frontscale + backscale) / 2;
+	                midscale = ((int64_t) frontscale + backscale) / 2,
+	               imidscale = FixedDiv(FRACUNIT, midscale);
 
 	static const byte A_faces[9] = { F_BACK, F_BACK, F_RIGHT, F_LEFT, 0, F_RIGHT, F_LEFT,  F_FRONT, F_FRONT };
 	static const byte B_faces[9] = { F_LEFT,      0, F_BACK,       0, 0,       0, F_FRONT,       0, F_RIGHT };
@@ -1187,7 +1188,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 			for (fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;  uy <= uy2;  uy += FRACUNIT)
 			{
-				int i = (((uy - uy0) >> FRACBITS) * FixedDiv(FRACUNIT, midscale)) >> FRACBITS;
+				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
 				i = BETWEEN(0, len - 1, i);
 
