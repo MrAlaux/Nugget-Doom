@@ -1679,17 +1679,43 @@ void R_DrawMasked(void)
   // [Nugget] Flip levels
   if (STRICTMODE(flip_levels))
   {
-    for (int y = 0;  y < viewheight;  y++)
-    {
-      for (int x = 0;  x < viewwidth/2;  x++)
-      {
-        pixel_t *const restrict left = &I_VideoBuffer[(viewwindowy + y) * video.pitch + viewwindowx + x],
-                *const restrict right = left + viewwidth - 1 - x*2,
-                temp = *left;
+    pixel_t *row = I_VideoBuffer + (viewwindowy * video.pitch + viewwindowx);
+    const int half_viewwidth = viewwidth / 2;
 
-        *left = *right;
-        *right = temp;
+    for (int y = 0;  y < viewheight;  y++, row += video.pitch)
+    {
+      pixel_t *restrict  left = row,
+              *restrict right = left + (viewwidth - 1);
+
+      int16_t count = half_viewwidth;
+
+      #define SWAP() \
+          temp = *left; \
+         *left = *right; \
+        *right = temp; \
+        left++; \
+        right--;
+
+      while (count >= 8)
+      {
+        pixel_t temp;
+
+        SWAP(); SWAP(); SWAP(); SWAP();
+        SWAP(); SWAP(); SWAP(); SWAP();
+
+        count -= 8;
       }
+
+      while (count)
+      {
+        pixel_t temp;
+
+        SWAP();
+
+        count--;
+      }
+
+      #undef SWAP
     }
   }
 
