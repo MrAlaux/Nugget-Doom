@@ -2011,10 +2011,12 @@ static setup_menu_t weap_settings5[] =
     {"Weapon Squat Upon Landing", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"weaponsquat"}},
     {"Force Weapon Carousel",     S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"force_carousel"}, .strings_id = str_force_carousel},
     MI_GAP,
-    {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
-    {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
-    {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
-    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    #define W_X2 (W_X_THRM8 + 16)
+    {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
+    {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    #undef W_X2
 
   MI_END
 };

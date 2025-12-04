@@ -1973,7 +1973,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
   return mobj;
 }
 
-boolean flakes, allow_flakes;
+boolean flakes, allow_flakes, faint_flakes;
 
 typedef struct flaker_s {
   fixed_t x, y, z;
@@ -1984,6 +1984,17 @@ flaker_t *flakers = NULL;
 
 static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
 {
+  if (prespawn)
+  {
+    if (M_Random() & 3) { return; }
+  }
+  else if (M_Random() != 4) { return; }
+
+  if (faint_flakes)
+  {
+    if (leveltime & 1 || M_Random() != Woof_Random()) { return; }
+  }
+
   fixed_t vx, vy, vz;
 
   if (prespawn)
@@ -2004,18 +2015,12 @@ static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
 
   if (dist > 4096*FRACUNIT) { return; }
 
-  if (prespawn)
-  {
-    if (M_Random() & 3) { return; }
-  }
-  else if (M_Random() != 4) { return; }
-
   const fixed_t x = flaker->x + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2,
                 y = flaker->y + (FLAKER_DIST * Woof_Random() / 255) - FLAKER_DIST/2;
 
   if (R_PointInSubsector(x, y)->sector != flaker->sector) { return; }
 
-  fixed_t z = MIN(flaker->z, vz + 1024*FRACUNIT);
+  fixed_t z = MIN(flaker->z - FRACUNIT, vz + 1024*FRACUNIT);
 
   if (prespawn)
   { z -= ((int64_t) z - flaker->sector->floorheight) * Woof_Random() / 255; }
@@ -2025,7 +2030,7 @@ static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
   flake->flags |= MF_NOGRAVITY;
   flake->intflags |= MIF_FLAKE;
 
-  flake->gentranmap_pct = 40;
+  flake->gentranmap_pct = faint_flakes ? 5 : 40;
   flake->gentranmap = R_GetGenericTranMap(flake->gentranmap_pct);
 
   const fixed_t momz = FRACUNIT + (dist / 3000);

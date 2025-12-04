@@ -2741,11 +2741,12 @@ void D_DoomMain(void)
 
     if (curtm)
     {
-           if (curtm->tm_mon ==  3 && curtm->tm_mday ==  1) {  cheese = true; }
-      else if (curtm->tm_mon ==  6 && curtm->tm_mday == 15) {    tanz = true; }
+           if (curtm->tm_mon ==  3 && curtm->tm_mday ==  1) { cheese = true; }
+      else if (curtm->tm_mon ==  6 && curtm->tm_mday == 15) { tanz = true; }
       else if (curtm->tm_mon ==  9 && curtm->tm_mday ==  7) { src_ain = true; }
       else if (curtm->tm_mon ==  9 && curtm->tm_mday == 31) { frights = true; }
-      else if (curtm->tm_mon == 11 && curtm->tm_mday == 25) {  flakes = allow_flakes = true; }
+      else if (curtm->tm_mon == 11 && curtm->tm_mday == 24) { flakes = allow_flakes = faint_flakes = true; }
+      else if (curtm->tm_mon == 11 && curtm->tm_mday == 25) { flakes = allow_flakes = true; }
     }
   }
 

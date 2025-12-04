@@ -471,7 +471,7 @@ int     P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta);
 
 // [Nugget] ==================================================================
 
-extern boolean cheese, frights, flakes, allow_flakes;
+extern boolean cheese, frights, flakes, allow_flakes, faint_flakes;
 
 enum {
   FLINCH_OFF,
