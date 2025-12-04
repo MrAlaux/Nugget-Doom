@@ -946,11 +946,15 @@ static void R_ProjectSprite (mobj_t* thing)
 
   if (viewz < floorheight + FRACUNIT) { return; }
 
+  fixed_t floordist = MAX(0, interpz - floorheight);
+
+  if (floordist >= 256*FRACUNIT) { return; }
+
+  floordist = floordist * 10/32;
+  floordist = FixedMul(floordist, floordist / 8);
+
   int offset_divisor = 0;
   fixed_t yscale_mult;
-
-  fixed_t floordist = MAX(0, interpz - floorheight) * 10/32;
-          floordist = FixedMul(floordist, floordist / 8);
 
   if (sprite_shadows == SPRITESHADOWS_3D)
   {
@@ -968,11 +972,11 @@ static void R_ProjectSprite (mobj_t* thing)
     yscale_mult -= FixedMul(floordist, yscale_mult);
   }
   else {
-    const fixed_t base_yscale_mult = FRACUNIT/10;
+    #define BASE_YSCALE_MULT (FRACUNIT/10)
     offset_divisor = 4;
 
-    floordist = FixedMul(floordist, base_yscale_mult / 2);
-    yscale_mult = base_yscale_mult - FixedMul(floordist, base_yscale_mult);
+    floordist = FixedMul(floordist, BASE_YSCALE_MULT / 2);
+    yscale_mult = BASE_YSCALE_MULT - FixedMul(floordist, BASE_YSCALE_MULT);
   }
 
   shadow_yscale = FixedMul(xscale, yscale_mult);

@@ -19,6 +19,7 @@
 
 - **Crash when changing _[HUD] Layout_ without loading into a map since launching the game**
 - **_Bobbing Weapon Alignment_ misbehaving with DeHackEd-set sprite offsets**
+- **Entities casting huge shadows when far above the floor**
 - **`A_FireCGun` and `A_CPosAttack` using the wrong sound in HacX (fixes Uzi and Monstruct)**
 - **Bullet puffs not spawning and hitscan trails misbehaving when firing at planes far away from lines**
 - **Bullet puffs not spawning when "hitting" the sky behind a line if said sky were the ceiling of the line's front sector**
