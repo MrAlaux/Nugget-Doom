@@ -160,14 +160,15 @@ void HU_UpdateCrosshair(void)
                                        : SCREENHEIGHT / 2;
 
     // [Nugget] Freecam
-    if (R_FreecamOn()) {
+    if (R_FreecamOn())
+    {
       crosshair.cr = colrngs[hud_crosshair_color];
       return;
     }
 
     crosshair.side = 0; // [Nugget] Horizontal-autoaim indicators
 
-    boolean invul = (plr->cheats & CF_GODMODE) || plr->powers[pw_invulnerability];
+    boolean invul = ST_PlayerInvulnerable(plr);
 
     if (hud_crosshair_health)
     {

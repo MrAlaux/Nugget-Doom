@@ -201,8 +201,9 @@ typedef struct
     int maxlength;
     int value;
     int numvalues;
-    int oldvalue;
     int xoffset;
+
+    int oldvalue; // [Nugget]
 } sbe_number_t;
 
 typedef struct

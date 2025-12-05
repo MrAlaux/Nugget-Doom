@@ -439,16 +439,22 @@ extern int itemrespawntime[];
 extern int iquehead;
 extern int iquetail;
 
-enum {
+typedef enum vertaim_e {
   VERTAIM_AUTO,
   VERTAIM_DIRECT,
   VERTAIM_DIRECTAUTO,
-}; extern int vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+} vertaim_t;
+
+extern vertaim_t vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+
+extern int max_pitch_angle, default_max_pitch_angle;
 
 void P_UpdateDirectVerticalAiming(void);
 
 extern boolean checksight12;
 void P_UpdateCheckSight(void);
+
+// [Nugget] Removed `actualheight`
 
 mobj_t *P_SubstNullMobj(mobj_t *mobj);
 void    P_RespawnSpecials(void);

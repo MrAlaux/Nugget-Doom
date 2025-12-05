@@ -1787,9 +1787,15 @@ boolean G_Responder(event_t* ev)
 	if (M_InputActivated(input_pause))
 	{
 	  if (paused ^= 2)
+	  {
 	    S_PauseSound();
+	    S_PauseMusic();
+	  }
 	  else
+	  {
 	    S_ResumeSound();
+	    S_ResumeMusic();
+	  }
 	  return true;
 	}
 
@@ -1811,8 +1817,6 @@ boolean G_Responder(event_t* ev)
 	  ((ev->type == ev_keydown) ||
 	   (ev->type == ev_mouseb_down) ||
 	   (ev->type == ev_joyb_down)) ?
-	  (!menuactive ? S_StartSoundOptional(NULL, sfx_mnuopn, sfx_swtchn) // [Nugget]: [NS] Optional menu sounds.
-	               : true),
 	  MN_StartControlPanel(), true : false;
     }
 
@@ -1931,6 +1935,7 @@ static void G_JoinDemo(void)
 
   // [crispy] continue recording
   demoplayback = false;
+  usergame = true;
 
   // clear progress demo bar
   ST_Start();
@@ -4151,9 +4156,15 @@ void G_Ticker(void)
 
 	    case BTS_PAUSE:
 	      if ((paused ^= 1))
-		S_PauseSound();
+	      {
+	        S_PauseSound();
+	        S_PauseMusic();
+	      }
 	      else
-		S_ResumeSound();
+	      {
+	        S_ResumeSound();
+	        S_ResumeMusic();
+	      }
 	      break;
 
 	    case BTS_SAVEGAME:
@@ -4356,12 +4367,17 @@ void G_PlayerReborn(int player)
   int itemcount;
   int secretcount;
   int maxkilldiscount;
+  int num_visitedlevels;
+  level_t *visitedlevels;
+
 
   memcpy (frags, players[player].frags, sizeof frags);
   killcount = players[player].killcount;
   itemcount = players[player].itemcount;
   secretcount = players[player].secretcount;
   maxkilldiscount = players[player].maxkilldiscount;
+  num_visitedlevels = players[player].num_visitedlevels;
+  visitedlevels = players[player].visitedlevels;
 
   p = &players[player];
 
@@ -4377,6 +4393,8 @@ void G_PlayerReborn(int player)
   players[player].itemcount = itemcount;
   players[player].secretcount = secretcount;
   players[player].maxkilldiscount = maxkilldiscount;
+  players[player].num_visitedlevels = num_visitedlevels;
+  players[player].visitedlevels = visitedlevels;
 
   p->usedown = p->attackdown = true;  // don't do anything immediately
   p->playerstate = PST_LIVE;
@@ -4841,6 +4859,38 @@ const char *G_GetCurrentComplevelName(void)
     }
 }
 
+static GameVersion_t GetWadGameVersion(void)
+{
+    int lumpnum = W_CheckNumForName("GAMEVERS");
+
+    if (lumpnum < 0)
+    {
+        return exe_indetermined;
+    }
+
+    int length = W_LumpLength(lumpnum);
+    char *data = W_CacheLumpNum(lumpnum, PU_CACHE);
+
+    if (length >= 5 && !strncasecmp("1.666", data, 5))
+    {
+        return exe_doom_1_9;
+    }
+    else if (length >= 3 && !strncasecmp("1.9", data, 3))
+    {
+        return exe_doom_1_9;
+    }
+    else if (length >= 8 && !strncasecmp("ultimate", data, 8))
+    {
+        return exe_ultimate;
+    }
+    else if (length >= 5 && !strncasecmp("final", data, 5))
+    {
+        return exe_final;
+    }
+
+    return exe_indetermined;
+}
+
 static demo_version_t GetWadDemover(void)
 {
     int lumpnum = W_CheckNumForName("COMPLVL");
@@ -5035,6 +5085,12 @@ void G_ReloadDefaults(boolean keep_demover)
     if (demover == DV_NONE)
     {
       demover = GetWadDemover();
+      if (demover == DV_VANILLA)
+      {
+        GameVersion_t gamever = GetWadGameVersion();
+        if (gamever != exe_indetermined)
+          gameversion = gamever;
+      }
     }
 
     if (demover == DV_NONE)
@@ -5223,7 +5279,7 @@ void G_InitNew(skill_t skill, int episode, int map)
   if (paused)
     {
       paused = false;
-      S_ResumeSound();
+      S_ResumeMusic();
     }
 
   if (skill > sk_nightmare && skill != sk_custom) // [Nugget] Custom Skill
@@ -6235,6 +6291,10 @@ void G_BindCompVariables(void)
 
   M_BindBool("pistolstart", &default_pistolstart, &pistolstart,
              false, ss_comp, wad_no, "Pistol start");
+
+  // [Nugget] SSG in Doom 1
+  M_BindBool("doom1_ssg", &doom1_ssg, NULL, false, ss_comp, wad_yes,
+             "Allow SSG in Doom 1");
 
 #define BIND_COMP(id, v, help) \
   M_BindNum(#id, &default_comp[(id)], &comp[(id)], (v), 0, 1, ss_none, wad_yes, help)

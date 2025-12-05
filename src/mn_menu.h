@@ -29,6 +29,7 @@ struct event_s;
 // CVARs
 extern boolean quick_quitgame;
 
+void MN_UpdateDoom1SSGItem(void);
 void MN_UpdateImprovedWeaponTogglesItem(void);
 
 // [Nugget] -----------------------------------------------------------------/
@@ -113,6 +114,7 @@ void MN_InitMenuStrings(void);
 
 boolean MN_StartsWithMapIdentifier(char *str);
 
+int MN_StringWidth(const char *string);
 int MN_GetPixelWidth(const char *ch);
 void MN_DrawString(int cx, int cy, int color, const char *ch);
 

@@ -34,6 +34,7 @@
 #include "m_config.h"
 #include "m_input.h"
 #include "m_misc.h"
+#include "mn_menu.h"
 #include "p_mobj.h"
 #include "p_spec.h"
 #include "r_main.h"
@@ -405,7 +406,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
     }
 }
 
-static char announce_string[HU_MAXLINELENGTH];
+static char announce_string[HU_MAXLINELENGTH], author_string[HU_MAXLINELENGTH];
 
 static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
 {
@@ -435,6 +436,7 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
     }
     else if (player->secretmessage)
     {
+        author_string[0] = '\0';
         state = announce_secret;
         widget->duration_left = widget->duration;
         M_snprintf(string, sizeof(string), GOLD_S "%s" ORIG_S,
@@ -445,6 +447,10 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
     if (widget->duration_left > 0)
     {
         ST_AddLine(widget, string);
+        if (author_string[0])
+        {
+            ST_AddLine(widget, author_string);
+        }
         --widget->duration_left;
 
         // [Nugget] Message fadeout
@@ -922,16 +928,23 @@ void ST_ResetTitle(void)
                '0' + hudcolor_titl, string);
 
     announce_string[0] = '\0';
+    author_string[0] = '\0';
     if (hud_map_announce && leveltime == 0)
     {
         if (gamemapinfo && gamemapinfo->author)
         {
             M_snprintf(announce_string, sizeof(announce_string), "%s by %s",
                        string, gamemapinfo->author);
+            if (MN_StringWidth(announce_string) > SCREENWIDTH) 
+            {
+                M_StringCopy(announce_string, string, sizeof(announce_string));
+                M_snprintf(author_string, sizeof(author_string), "by %s",
+                           gamemapinfo->author);
+            }
         }
         else
         {
-            M_snprintf(announce_string, sizeof(announce_string), "%s", string);
+            M_StringCopy(announce_string, string, sizeof(announce_string));
         }
     }
 }
@@ -1285,7 +1298,7 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
 {
     ST_ClearLines(widget);
 
-    if (!WidgetEnabled(hud_level_time))
+    if (!WidgetEnabled(hud_level_time) && !player->btuse_tics)
     {
         return;
     }
@@ -1298,35 +1311,32 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
 
     // [Nugget] Colors
 
-    if (time_scale != 100)
+    if (WidgetEnabled(hud_level_time))
     {
-        offset +=
-            M_snprintf(string, sizeof(string), "\x1b%c%d%% ",
-                       '0'+hudcolor_time_scale, time_scale);
+        if (time_scale != 100)
+        {
+            offset +=
+                M_snprintf(string, sizeof(string), "\x1b%c%d%% ",
+                           '0'+hudcolor_time_scale, time_scale);
+        }
+
+        if (levelTimer == true)
+        {
+            const int time = levelTimeCount / TICRATE;
+
+            offset += M_snprintf(string + offset, sizeof(string) - offset,
+                                 BROWN_S "%d:%02d ", time / 60, time % 60);
+        }
+        else if (totalleveltimes)
+        {
+            const int time = (totalleveltimes + leveltime) / TICRATE;
+
+            offset += M_snprintf(string + offset, sizeof(string) - offset,
+                                 "\x1b%c%d:%02d ", '0'+hudcolor_total_time, time / 60, time % 60);
+        }
     }
 
-    if (levelTimer == true)
-    {
-        const int time = levelTimeCount / TICRATE;
-
-        offset += M_snprintf(string + offset, sizeof(string) - offset,
-                             BROWN_S "%d:%02d ", time / 60, time % 60);
-    }
-    else if (totalleveltimes)
-    {
-        const int time = (totalleveltimes + leveltime) / TICRATE;
-
-        offset += M_snprintf(string + offset, sizeof(string) - offset,
-                             "\x1b%c%d:%02d ", '0'+hudcolor_total_time, time / 60, time % 60);
-    }
-
-    if (!player->btuse_tics)
-    {
-        M_snprintf(string + offset, sizeof(string) - offset,
-                   "\x1b%c%d:%05.2f\t", '0'+hudcolor_time, leveltime / TICRATE / 60,
-                   (float)(leveltime % (60 * TICRATE)) / TICRATE);
-    }
-    else
+    if (player->btuse_tics)
     {
         const int type = player->eventtype;
 
@@ -1337,7 +1347,12 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
                    type == TIMER_KEYPICKUP ? 'K' : type == TIMER_TELEPORT ? 'T' : 'U',
                    player->btuse / TICRATE / 60, 
                    (float)(player->btuse % (60 * TICRATE)) / TICRATE);
-        player->btuse_tics--;
+    }
+    else
+    {
+        M_snprintf(string + offset, sizeof(string) - offset,
+                   "\x1b%c%d:%05.2f\t", '0'+hudcolor_time, leveltime / TICRATE / 60,
+                   (float)(leveltime % (60 * TICRATE)) / TICRATE);
     }
 
     ST_AddLine(widget, string);
@@ -1515,30 +1530,30 @@ struct
     const char *col;
 } static const colorize_strings[] = {
     // [Woof!] colorize keycard and skull key messages
-    {&s_GOTBLUECARD,     CR_BLUE2, " blue "  },
-    {&s_GOTBLUESKUL,     CR_BLUE2, " blue "  },
-    {&s_GOTREDCARD,      CR_RED,   " red "   },
-    {&s_GOTREDSKULL,     CR_RED,   " red "   },
-    {&s_GOTYELWCARD,     CR_GOLD,  " yellow "},
-    {&s_GOTYELWSKUL,     CR_GOLD,  " yellow "},
-    {&s_PD_BLUEC,        CR_BLUE2, " blue "  },
-    {&s_PD_BLUEK,        CR_BLUE2, " blue "  },
-    {&s_PD_BLUEO,        CR_BLUE2, " blue "  },
-    {&s_PD_BLUES,        CR_BLUE2, " blue "  },
-    {&s_PD_REDC,         CR_RED,   " red "   },
-    {&s_PD_REDK,         CR_RED,   " red "   },
-    {&s_PD_REDO,         CR_RED,   " red "   },
-    {&s_PD_REDS,         CR_RED,   " red "   },
-    {&s_PD_YELLOWC,      CR_GOLD,  " yellow "},
-    {&s_PD_YELLOWK,      CR_GOLD,  " yellow "},
-    {&s_PD_YELLOWO,      CR_GOLD,  " yellow "},
-    {&s_PD_YELLOWS,      CR_GOLD,  " yellow "},
+    {&s_GOTBLUECARD,     CR_BLUE2, "blue"  },
+    {&s_GOTBLUESKUL,     CR_BLUE2, "blue"  },
+    {&s_GOTREDCARD,      CR_RED,   "red"   },
+    {&s_GOTREDSKULL,     CR_RED,   "red"   },
+    {&s_GOTYELWCARD,     CR_GOLD,  "yellow"},
+    {&s_GOTYELWSKUL,     CR_GOLD,  "yellow"},
+    {&s_PD_BLUEC,        CR_BLUE2, "blue"  },
+    {&s_PD_BLUEK,        CR_BLUE2, "blue"  },
+    {&s_PD_BLUEO,        CR_BLUE2, "blue"  },
+    {&s_PD_BLUES,        CR_BLUE2, "blue"  },
+    {&s_PD_REDC,         CR_RED,   "red"   },
+    {&s_PD_REDK,         CR_RED,   "red"   },
+    {&s_PD_REDO,         CR_RED,   "red"   },
+    {&s_PD_REDS,         CR_RED,   "red"   },
+    {&s_PD_YELLOWC,      CR_GOLD,  "yellow"},
+    {&s_PD_YELLOWK,      CR_GOLD,  "yellow"},
+    {&s_PD_YELLOWO,      CR_GOLD,  "yellow"},
+    {&s_PD_YELLOWS,      CR_GOLD,  "yellow"},
 
     // [Woof!] colorize multi-player messages
-    {&s_HUSTR_PLRGREEN,  CR_GREEN, "Green: " },
-    {&s_HUSTR_PLRINDIGO, CR_GRAY,  "Indigo: "},
-    {&s_HUSTR_PLRBROWN,  CR_BROWN, "Brown: " },
-    {&s_HUSTR_PLRRED,    CR_RED,   "Red: "   },
+    {&s_HUSTR_PLRGREEN,  CR_GREEN, "Green:" },
+    {&s_HUSTR_PLRINDIGO, CR_GRAY,  "Indigo:"},
+    {&s_HUSTR_PLRBROWN,  CR_BROWN, "Brown:" },
+    {&s_HUSTR_PLRRED,    CR_RED,   "Red:"   },
 };
 
 static char* PrepareColor(const char *str, const char *col)
@@ -1547,7 +1562,7 @@ static char* PrepareColor(const char *str, const char *col)
 
     M_snprintf(col_replace, sizeof(col_replace),
                ORIG_S "%s" ORIG_S, col);
-    str_replace = M_StringReplace(str, col, col_replace);
+    str_replace = M_StringReplaceWord(str, col, col_replace);
 
     return str_replace;
 }

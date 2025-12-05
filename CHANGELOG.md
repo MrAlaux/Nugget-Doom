@@ -5,6 +5,9 @@
 
 ## Changes
 
+- **Merged changes from [Woof! 15.3.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.3.0)**, note:
+  - Maintained support for SSG in Doom 1, now governed by the `doom1_ssg` CVAR
+  - Maintained _Animated Health/Armor Count_ setting, and made it settable in WADs
 - **Improved _Hitbox Thing Lighting_**
 - **Optimized _Bounded Voxel Rendering_**
 - **Optimized _Flip Levels_ post-process**

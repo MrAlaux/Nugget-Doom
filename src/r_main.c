@@ -632,7 +632,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     if (!(freecam.pitch = MAX(0, abs(freecam.pitch) - 4*ANG1) * ((freecam.pitch > 0) ? 1 : -1)))
     { freecam.centering = false; }
   }
-  else { freecam.pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, freecam.pitch + pitch); }
+  else { freecam.pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, freecam.pitch + pitch); }
 }
 
 // [Nugget] =================================================================/
@@ -1434,7 +1434,7 @@ void R_SetupFrame (player_t *player)
         && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
-      basepitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, basepitch);
+      basepitch = BETWEEN(-max_pitch_angle, max_pitch_angle, basepitch);
     }
     else
     {
@@ -1898,6 +1898,8 @@ void R_InitAnyRes(void)
 void R_BindRenderVariables(void)
 {
   BIND_NUM_GENERAL(extra_level_brightness, 0, -8, 8, "Level brightness"); // [Nugget] Broader light-level range
+  BIND_NUM_GENERAL(fuzzmode, FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_ORIGINAL,
+    "Partial Invisibility (0 = Blocky; 1 = Refraction; 2 = Shadow, 3 = Original)");
   BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
 
   // [Nugget] FOV-based sky stretching (CFG-only)
@@ -1993,7 +1995,9 @@ void R_BindRenderVariables(void)
              false, ss_none, wad_yes,
              "Disable the Killough-face easter egg");
 
-  BIND_NUM(screenblocks, 10, 3, UL, "Size of game-world screen");
+  M_BindNum("screenblocks", &screenblocks, NULL, 10, 3,
+            UL, ss_stat, wad_no, "Size of game-world screen");
+  BIND_NUM(default_max_pitch_angle, 32, 30, 60, "Maximum view pitch angle");
 
   M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
              "Translucency for some things");
@@ -2003,9 +2007,6 @@ void R_BindRenderVariables(void)
 
   M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
              "Randomly mirrored death animations");
-  M_BindNum("fuzzmode", &fuzzmode, NULL,
-            FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_SHADOW, ss_none, wad_no,
-            "Partial Invisibility (0 = Vanilla; 1 = Refraction; 2 = Shadow)");
 
   BIND_BOOL(draw_nearby_sprites, true,
     "Draw sprites overlapping into visible sectors");

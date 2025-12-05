@@ -174,7 +174,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
             // [crispy] brightmaps for two sided mid-textures
             dc_brightmap = texturebrightmap[texnum];
             dc_colormap[0] = walllights[index];
-            dc_colormap[1] = STRICTMODE(brightmaps) ? fullcolormap : dc_colormap[0];
+            dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                              ? fullcolormap
+                              : dc_colormap[0];
           }
 
         // killough 3/2/98:
@@ -207,8 +209,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
         // when forming multipatched textures (see r_data.c).
 
         // draw the texture
-        col = (column_t *)((byte *)
-                           R_GetColumnMod(texnum,maskedtexturecol[dc_x]) - 3);
+        col = (column_t *)(R_GetColumnMasked(texnum, maskedtexturecol[dc_x]) - 3);
         R_DrawMaskedColumn (col);
         maskedtexturecol[dc_x] = INT_MAX; // [FG] 32-bit integer math
       }
@@ -389,8 +390,10 @@ static void R_RenderSegLoop (void)
 
           // calculate lighting
           dc_colormap[0] = walllights[index];
-          dc_colormap[1] = (!fixedcolormap && STRICTMODE(brightmaps)) ?
-                           fullcolormap : dc_colormap[0];
+          dc_colormap[1] = (!fixedcolormap &&
+                            (STRICTMODE(brightmaps) || force_brightmaps))
+                            ? fullcolormap
+                            : dc_colormap[0];
           dc_x = rw_x;
           dc_iscale = 0xffffffffu / (unsigned)rw_scale;
         }
@@ -525,7 +528,7 @@ void R_StoreWallRange(const int start, const int stop)
   int64_t dx, dy, dx1, dy1, dist;
   const uint32_t len = curline->r_length; // [FG] use re-calculated seg lengths
 
-  if (ds_p == drawsegs+maxdrawsegs)   // killough 1/98 -- fix 2s line HOM
+  if (!drawsegs || ds_p == drawsegs+maxdrawsegs) // killough 1/98 -- fix 2s line HOM
     {
       unsigned newmax = maxdrawsegs ? maxdrawsegs*2 : 128; // killough
       drawsegs = Z_Realloc(drawsegs,newmax*sizeof(*drawsegs),PU_STATIC,0);

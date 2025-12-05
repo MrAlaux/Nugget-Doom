@@ -232,7 +232,7 @@ static void UpdateNughudStacks(void);
 // graphics are drawn to a backing screen and blitted to the real screen
 static pixel_t *st_backing_screen = NULL;
 
-// [Alaux]
+// [Nugget] Animated health/armor counts
 static boolean hud_animated_counts;
 
 static boolean sts_colored_numbers;
@@ -588,19 +588,19 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
     return result;
 }
 
-// [Alaux]
+// [Nugget]
 static int SmoothCount(int shownval, int realval)
 {
     int step = realval - shownval;
 
-    // [Nugget] Disallowed in Strict Mode
-    if (strictmode || !hud_animated_counts || !step)
+    if (!step || !hud_animated_counts || strictmode)
     {
         return realval;
     }
     else
     {
-        int sign = step / abs(step);
+        const int sign = step < 0 ? -1 : 1;
+
         step = BETWEEN(1, 7, abs(step) / 20);
         shownval += (step + 1) * sign;
 
@@ -622,6 +622,7 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
     switch (number->type)
     {
         case sbn_health:
+            // [Nugget] Animated health/armor counts
             if (number->oldvalue == -1)
             {
                 number->oldvalue = player->health;
@@ -631,6 +632,7 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
             break;
 
         case sbn_armor:
+            // [Nugget] Animated health/armor counts
             if (number->oldvalue == -1)
             {
                 number->oldvalue = player->armorpoints;
@@ -1041,8 +1043,7 @@ static void UpdateBoomColors(sbarelem_t *elem, player_t *player)
 
     sbe_number_t *number = elem->subtype.number;
 
-    boolean invul = (player->powers[pw_invulnerability]
-                     || player->cheats & CF_GODMODE);
+    boolean invul = ST_PlayerInvulnerable(player);
 
     crange_idx_e cr;
 
@@ -1361,6 +1362,7 @@ static void ResetElem(sbarelem_t *elem, player_t *player)
             }
             break;
 
+        // [Nugget]
         case sbe_number:
         case sbe_percent:
             elem->subtype.number->oldvalue = -1;
@@ -1794,7 +1796,7 @@ static void DrawSolidBackground(void)
     // [FG] calculate average color of the 16px left and right of the status bar
     const int vstep[][2] = { {0, 1}, {1, 2}, {2, ST_HEIGHT} };
 
-    patch_t *sbar = V_CachePatchName("STBAR", PU_CACHE);
+    patch_t *sbar = V_CachePatchName(W_CheckWidescreenPatch("STBAR"), PU_CACHE);
     // [FG] temporarily draw status bar to background buffer
     V_DrawPatch(-video.deltaw, 0, sbar);
 
@@ -2426,6 +2428,7 @@ const char **ST_StatusbarList(void)
     }
 
     maxscreenblocks += array_size(strings) - 1;
+    screenblocks = MIN(screenblocks, maxscreenblocks);
 
     return strings;
 }
@@ -3752,12 +3755,13 @@ void ST_BindSTSVariables(void)
   M_BindBool("st_solidbackground", &st_solidbackground, NULL,
              false, ss_stat, wad_no,
              "Use solid-color borders for the status bar in widescreen mode");
-  M_BindBool("hud_animated_counts", &hud_animated_counts, NULL,
-            false, ss_stat, wad_no, "Animated health/armor counts");
   M_BindBool("hud_armor_type", &hud_armor_type, NULL, true, ss_none, wad_no,
              "Armor count is colored based on armor type");
 
   // [Nugget] /---------------------------------------------------------------
+
+  M_BindBool("hud_animated_counts", &hud_animated_counts, NULL,
+             false, ss_stat, wad_yes, "Animated health/armor counts");
 
   M_BindBool("sts_show_berserk", &sts_show_berserk, NULL,
              true, ss_stat, wad_yes,
