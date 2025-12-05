@@ -29,6 +29,7 @@ struct event_s;
 // CVARs
 extern boolean quick_quitgame;
 
+void MN_UpdateDoom1SSGItem(void);
 void MN_UpdateImprovedWeaponTogglesItem(void);
 
 // [Nugget] -----------------------------------------------------------------/

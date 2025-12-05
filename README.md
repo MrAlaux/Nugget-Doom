@@ -23,7 +23,7 @@ Note that this feature list is relative to [Woof!'s](https://github.com/fabiangr
 read the latter for more details.
 Some features were first implemented in Nugget Doom and later in Woof!, so they're not listed here anymore.
 
-The build corresponding to this README is based on [Woof! 15.2.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.2.0).
+The build corresponding to this README is based on [Woof! 15.3.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.3.0).
 
 Most of Nugget Doom's features come from other sources, like source ports and mods;
 the initial implementations for some are **ported from (p.f.)** said sources, while others are just **inspired by (i.b.)** them.
@@ -42,6 +42,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
+- **Support for SSG in Doom 1** [p.f. Woof! 15.2.0]
 - **_Hitbox-based Hitscan Collision_** setting
 - **_"Direct + Auto"_ mode for Vertical Aiming**
 - **_Direct Vertical Aiming_ for melee attacks**
@@ -156,6 +157,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Show Powerup Timers_** setting
   - The CFG-only `hud_power_timers_notime` CVAR can be enabled to show only the powerup names/icons
 - **_Blink Missing Keys_** setting [partially p.f. Crispy Doom]
+- **_Animated Health/Armor Count_** setting
 - **_Berserk display when using Fist_** setting [partially p.f. Crispy Doom]
 - **_Automap Level Stats Format_** setting
 - **Level-Stats Selection** settings (CFG-only: `hud_stats_#[_map]`)

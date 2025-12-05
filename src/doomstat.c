@@ -42,6 +42,9 @@ Language_t   language = english;
 // Set if homebrew PWAD stuff has been added.
 boolean modifiedgame;
 
+// [Nugget] SSG in Doom 1
+boolean doom1_ssg;
+
 boolean have_ssg;
 
 //-----------------------------------------------------------------------------

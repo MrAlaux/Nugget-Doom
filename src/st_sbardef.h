@@ -202,6 +202,8 @@ typedef struct
     int value;
     int numvalues;
     int xoffset;
+
+    int oldvalue; // [Nugget]
 } sbe_number_t;
 
 typedef struct

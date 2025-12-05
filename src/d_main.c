@@ -1629,6 +1629,40 @@ static void D_EndDoom(void)
 // [FG] fast-forward demo to the desired map
 int playback_warp = -1;
 
+// [Nugget] SSG in Doom 1
+// [FG] check for SSG assets
+static boolean CheckHaveSSG (void)
+{
+  const int ssg_sfx[] = {sfx_dshtgn, sfx_dbopn, sfx_dbload, sfx_dbcls};
+  char ssg_sprite[] = "SHT2A0";
+  int i;
+
+  if (gamemode == commercial)
+  {
+    return true;
+  }
+
+  for (i = 0; i < arrlen(ssg_sfx); i++)
+  {
+    if (I_GetSfxLumpNum(&S_sfx[ssg_sfx[i]]) < 0)
+    {
+      return false;
+    }
+  }
+
+  for (i = 'A'; i <= 'J'; i++)
+  {
+    ssg_sprite[4] = i;
+
+    if ((W_CheckNumForName)(ssg_sprite, ns_sprites) < 0)
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 static int mainwadfile;
 
 #define SET_DIR(a, b) \
@@ -2490,6 +2524,11 @@ void D_DoomMain(void)
       I_AtExit(StatDump, true);
       I_Printf(VB_INFO, "External statistics registered.");
     }
+
+  // [Nugget] SSG in Doom 1
+  // [FG] check for SSG assets
+  have_ssg = CheckHaveSSG();
+  MN_UpdateDoom1SSGItem();
 
   //!
   // @category game
