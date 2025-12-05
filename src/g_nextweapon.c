@@ -160,6 +160,7 @@ typedef enum
 } next_weapon_state_t;
 
 static next_weapon_state_t state;
+static boolean currently_active;
 
 void G_NextWeaponUpdate(void)
 {
@@ -176,11 +177,16 @@ void G_NextWeaponUpdate(void)
     else if (M_InputDeactivated(input_prevweapon)
              || M_InputDeactivated(input_nextweapon))
     {
-        state = nw_state_deactivate;
+        if (currently_active)
+        {
+            currently_active = false;
+            state = nw_state_deactivate;
+        }
     }
 
     if (weapon != wp_nochange)
     {
+        currently_active = true;
         state = nw_state_activate;
         players[consoleplayer].nextweapon = weapon;
     }
@@ -229,6 +235,7 @@ void G_NextWeaponResendCmd(void)
 
 void G_NextWeaponReset(void)
 {
+    currently_active = false;
     state = nw_state_none;
 
     if (!ST_ForceCarousel(&players[consoleplayer])) // [Nugget]

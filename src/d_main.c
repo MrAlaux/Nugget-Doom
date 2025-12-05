@@ -478,7 +478,8 @@ void D_PageTicker(void)
 
 void D_PageDrawer(void)
 {
-  V_DrawPatchFullScreen(V_CachePatchName(pagename, PU_CACHE));
+  V_DrawPatchFullScreen(
+    V_CachePatchName(W_CheckWidescreenPatch(pagename), PU_CACHE));
 }
 
 //
@@ -505,20 +506,12 @@ void D_DoAdvanceDemo(void)
     usergame = false; // no save / end game here
     paused = false;
     gameaction = ga_nothing;
+    gamestate = GS_DEMOSCREEN;
 
     D_AdvanceDemoLoop();
     switch (demoloop_point->type)
     {
         case TYPE_ART:
-            gamestate = GS_DEMOSCREEN;
-
-            // Needed to support the Doom 3: BFG Edition variant
-            if (W_CheckNumForName(demoloop_point->primary_lump) < 0
-                && !strcasecmp(demoloop_point->primary_lump, "TITLEPIC"))
-            {
-                M_CopyLumpName(demoloop_point->primary_lump, "DMENUPIC");
-            }
-
             if (W_CheckNumForName(demoloop_point->primary_lump) >= 0)
             {
                 pagename = demoloop_point->primary_lump;
@@ -528,24 +521,18 @@ void D_DoAdvanceDemo(void)
                 {
                     S_ChangeMusInfoMusic(music, false);
                 }
-                break;
             }
-            // fallthrough
+            break;
 
         case TYPE_DEMO:
-            gamestate = GS_DEMOSCREEN;
-
             if (W_CheckNumForName(demoloop_point->primary_lump) >= 0)
             {
                 G_DeferedPlayDemo(demoloop_point->primary_lump);
-                break;
             }
-            // fallthrough
+            break;
 
         default:
-            I_Printf(VB_WARNING,
-                     "D_DoAdvanceDemo: Invalid demoloop[%d] entry, skipping",
-                     demosequence);
+            I_Printf(VB_DEBUG, "D_DoAdvanceDemo: unhandled demoloop type");
             break;
     }
 }
@@ -1369,6 +1356,10 @@ static void LoadIWadBase(void)
     {
         W_AddBaseDir("doom-all");
     }
+    else if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
+    {
+        W_AddBaseDir("chex-all");
+    }
     if (local_gamemission == doom)
     {
         W_AddBaseDir("doom1-all");
@@ -1398,6 +1389,12 @@ static void AutoloadIWadDir(void (*AutoLoadFunc)(const char *path))
             if (local_gamemission < pack_chex)
             {
                 dir = GetAutoloadDir(autoload_paths[i], "doom-all", true);
+                AutoLoadFunc(dir);
+                free(dir);
+            }
+            else if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
+            {
+                dir = GetAutoloadDir(autoload_paths[i], "chex-all", true);
                 AutoLoadFunc(dir);
                 free(dir);
             }
@@ -1602,7 +1599,7 @@ static void D_ShowEndDoom(void)
 
 boolean disable_endoom = false;
 
-static boolean AllowEndDoom(void)
+boolean D_AllowEndDoom(void)
 {
   return (!disable_endoom
           && (exit_sequence == EXIT_SEQUENCE_FULL
@@ -1612,7 +1609,7 @@ static boolean AllowEndDoom(void)
 static void D_EndDoom(void)
 {
   // Do we even want to show an ENDOOM?
-  if (!AllowEndDoom())
+  if (!D_AllowEndDoom())
   {
     return;
   }
@@ -1631,39 +1628,6 @@ static void D_EndDoom(void)
 
 // [FG] fast-forward demo to the desired map
 int playback_warp = -1;
-
-// [FG] check for SSG assets
-static boolean CheckHaveSSG (void)
-{
-  const int ssg_sfx[] = {sfx_dshtgn, sfx_dbopn, sfx_dbload, sfx_dbcls};
-  char ssg_sprite[] = "SHT2A0";
-  int i;
-
-  if (gamemode == commercial)
-  {
-    return true;
-  }
-
-  for (i = 0; i < arrlen(ssg_sfx); i++)
-  {
-    if (I_GetSfxLumpNum(&S_sfx[ssg_sfx[i]]) < 0)
-    {
-      return false;
-    }
-  }
-
-  for (i = 'A'; i <= 'J'; i++)
-  {
-    ssg_sprite[4] = i;
-
-    if ((W_CheckNumForName)(ssg_sprite, ns_sprites) < 0)
-    {
-      return false;
-    }
-  }
-
-  return true;
-}
 
 static int mainwadfile;
 
@@ -2345,6 +2309,12 @@ void D_DoomMain(void)
 
   W_InitMultipleFiles();
 
+  // Always process chex.deh first
+  if (gamemission == pack_chex)
+  {
+    ProcessDehLump(W_GetNumForName("chexdeh"));
+  }
+
   // Check for wolf levels
   haswolflevels = (W_CheckNumForName("map31") >= 0);
 
@@ -2520,9 +2490,6 @@ void D_DoomMain(void)
       I_AtExit(StatDump, true);
       I_Printf(VB_INFO, "External statistics registered.");
     }
-
-  // [FG] check for SSG assets
-  have_ssg = CheckHaveSSG();
 
   //!
   // @category game

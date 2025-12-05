@@ -865,6 +865,7 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
 {
   player_t *player;
   int stop, stopc, c;
+  boolean unseen[MAXPLAYERS] = {0};
 
   if (actor->flags & MF_FRIEND)
     {  // killough 9/9/98: friendly monsters go about players differently
@@ -940,9 +941,12 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
       if (player->health <= 0)
 	continue;               // dead
 
-      if (!P_IsVisible(actor, player->mo, allaround))
+      if (unseen[actor->lastlook] || !P_IsVisible(actor, player->mo, allaround))
+      {
+	unseen[actor->lastlook] = true;
 	continue;
-
+      }
+      
       P_SetTarget(&actor->target, player->mo);
 
       // killough 9/9/98: give monsters a threshold towards getting players
@@ -1913,7 +1917,13 @@ static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfx
 		      I_Printf(VB_WARNING, "A_VileChase: Resurrected ghost monster (%d) at (%d/%d)!",
 		              corpsehit->type, corpsehit->x>>FRACBITS, corpsehit->y>>FRACBITS);
 		  }
-		  
+
+		  if (Woof_Random()) // [Nugget] *Maybe* let it happen
+		  {
+		    corpsehit->flags2 &= ~MF2_COLOREDBLOOD;
+		    corpsehit->bloodcolor = 0;
+		  }
+
                   corpsehit->health = info->spawnhealth;
 		  P_SetTarget(&corpsehit->target, NULL);  // killough 11/98
 

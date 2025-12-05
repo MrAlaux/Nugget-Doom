@@ -343,6 +343,10 @@ int P_SwitchWeapon(player_t *player)
   if (mbf21)
     return P_SwitchWeaponMBF21(player);
 
+  // Fix weapon switch logic in vanilla (example: chainsaw with ammo)
+  if (demo_compatibility)
+    currentweapon = newweapon = wp_nochange;
+
   // killough 2/8/98: follow preferences and fix BFG/SSG bugs
 
   do
@@ -1106,7 +1110,14 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
         slope = player->slope;
       }
       else
+
+// desync fix: mh1910-430
+// in PrBoom, autoaim can only be activated with AIM cheat in beta emulation
+#ifdef MBF_STRICT
       if (autoaim || !beta_emulation)
+#else
+      if (autoaim || vertical_aiming == VERTAIM_DIRECTAUTO) // [Nugget] Vertical aiming
+#endif
 	{
 	  // killough 8/2/98: make autoaiming prefer enemies
 	  int mask = MF_FRIEND;

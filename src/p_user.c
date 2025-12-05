@@ -506,7 +506,7 @@ void P_MovePlayer (player_t* player)
   if (!menuactive && !demoplayback && !player->centering)
   {
     player->pitch += cmd->pitch << FRACBITS;
-    player->pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, player->pitch);
+    player->pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, player->pitch);
     player->slope = PlayerSlope(player);
   }
 }
@@ -597,7 +597,7 @@ void P_DeathThink (player_t* player)
 
           pitch = P_SlopeToPitch(slope);
 
-          pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, pitch);
+          pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, pitch);
         }
         else { pitch = 0; }
 
@@ -657,7 +657,7 @@ void P_SetPlayerEvent(player_t* player, eventtimer_t type)
   player->eventtype = type;
   // to match the timer, we use the leveltime value at the end of the frame
   player->btuse = leveltime + 1;
-  player->btuse_tics = 5*TICRATE/2; // [crispy] 2.5 seconds
+  player->btuse_tics = 5*TICRATE/2 + 1; // [crispy] 2.5 seconds
 }
 
 //
@@ -709,19 +709,11 @@ void P_PlayerThink (player_t* player)
   { player->centering = false; }
 
   // [crispy] center view
-  #define CENTERING_VIEW_ANGLE (4 * ANG1)
-
   if (player->centering)
   {
-    if (player->pitch > 0)
-    {
-      player->pitch -= CENTERING_VIEW_ANGLE;
-    }
-    else if (player->pitch < 0)
-    {
-      player->pitch += CENTERING_VIEW_ANGLE;
-    }
-    if (abs(player->pitch) < CENTERING_VIEW_ANGLE)
+    player->pitch /= 2;
+
+    if (abs(player->pitch) < ANG1)
     {
       player->pitch = 0;
 
@@ -834,7 +826,7 @@ void P_PlayerThink (player_t* player)
                         slope);
 
         target_pitch = P_SlopeToPitch(slope);
-        target_pitch = BETWEEN(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE, target_pitch);
+        target_pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, target_pitch);
       }
       else if (lock_time) { target_pitch = player->pitch; }
 
@@ -958,8 +950,8 @@ void P_PlayerThink (player_t* player)
 	  P_UseLines (player);
 	  player->usedown = true;
 
-    // [Nugget] Support more event timers
-    P_SetPlayerEvent(player, TIMER_USE);
+	  // [Nugget] Support more event timers
+	  P_SetPlayerEvent(player, TIMER_USE);
 	}
     }
   else
@@ -970,6 +962,9 @@ void P_PlayerThink (player_t* player)
   P_MovePsprites (player);
 
   // Counters, time dependent power ups.
+
+  if (player->btuse_tics > 0)
+    player->btuse_tics--;
 
   // Strength counts up to diminish fade.
 

@@ -135,7 +135,7 @@ void R_InitPlanesRes(void)
   maxopenings = video.width * video.height;
   openings = Z_Calloc(1, maxopenings * sizeof(*openings), PU_RENDERER, NULL);
 
-  xtoskyangle = linearsky ? linearskyangle : xtoviewangle;
+  R_InitPlanes();
 }
 
 void R_InitVisplanesRes(void)
@@ -410,9 +410,9 @@ static void DrawSkyFire(visplane_t *pl, fire_t *fire)
 
 static void DrawSkyTex(visplane_t *pl, skytex_t *skytex)
 {
-    int texture = R_TextureNumForName(skytex->name);
+    int texture = texturetranslation[skytex->texture];
 
-    dc_texturemid = skytex->mid * FRACUNIT;
+    dc_texturemid = skytex->mid;
     dc_texheight = textureheight[texture] >> FRACBITS;
     dc_iscale = FixedMul(skyiscale, skytex->scaley);
 
@@ -440,8 +440,9 @@ static void DrawSkyTex(visplane_t *pl, skytex_t *skytex)
 
         if (dc_yl != USHRT_MAX && dc_yl <= dc_yh)
         {
-            dc_source = R_GetColumnMod2(texture, (an + xtoskyangle[x])
-                                                     >> ANGLETOSKYSHIFT);
+            int col = (an + xtoskyangle[x]) >> ANGLETOSKYSHIFT;
+            col = FixedToInt(FixedMul(IntToFixed(col), skytex->scalex));
+            dc_source = R_GetColumn(texture, col);
             colfunc();
         }
     }
@@ -531,7 +532,7 @@ static void do_draw_mbf_sky(visplane_t *pl)
     else // Normal Doom sky, only one allowed per level
     {
         dc_texturemid = skytexturemid; // Default y-offset
-        texture = skytexture;          // Default texture
+        texture = texturetranslation[skytexture]; // Default texture
         flip = 0;                      // Doom flips it
     }
 
@@ -592,7 +593,7 @@ static void do_draw_mbf_sky(visplane_t *pl)
 
         if (dc_yl != USHRT_MAX && dc_yl <= dc_yh)
         {
-            dc_source = R_GetColumnMod2(texture, ((an + xtoskyangle[x]) ^ flip)
+            dc_source = R_GetColumn(texture, ((an + xtoskyangle[x]) ^ flip)
                                                      >> ANGLETOSKYSHIFT);
             colfunc();
         }
