@@ -2247,7 +2247,7 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
   }
 
   // Hitscan trails
-  if (((show_hitscan_trails == 1 || G_GetSlowMotion()) && attackrange >= 128*FRACUNIT)
+  if (((show_hitscan_trails == 1 || G_GetSlowMotion()) && attackrange > 192*FRACUNIT)
       || show_hitscan_trails == 2)
   {
     P_SpawnHitscanTrail(t1->x, t1->y, shootz, angle << ANGLETOFINESHIFT,
