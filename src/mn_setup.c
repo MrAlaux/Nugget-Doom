@@ -1553,7 +1553,7 @@ static setup_menu_t keys_settings5[] = {
     {"Shift Left",      S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_left},
     {"Shift Right",     S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_right},
     {"Mark Place",      S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_mark},
-    {"Clear Last Mark", S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_clear},
+    {"Clear Mark",      S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_clear}, // [Nugget] Changed description
     {"Full/Zoom",       S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_gobig},
     {"Grid",            S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_grid},
     MI_END

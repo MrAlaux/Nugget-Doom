@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Clear [Automap] Mark_ button now clears the mark under the crosshair when over one**
 - **Dedicated _Weapon Inertia_ scale value for firing**
 - `FOVSKY` developer cheat
 
@@ -15,6 +16,8 @@
 - **Reduced sensitivity of _Vertical Target Lock-on_**
 - **Reduced opacity of hitscan trails**
 - **Replaced _Weapon Inertia_ toggle with the scale values themselves**
+- **Tweaked blinking of automap marks when highlighting points of interest**
+- **Made automap mark numbers be centered on the position of the mark itself**
 - **Made `TURBO` cheat display a help message**
 - **Replaced "translucency" with "opacity" in setting descriptions where prudent**
 

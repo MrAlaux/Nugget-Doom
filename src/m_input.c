@@ -808,7 +808,7 @@ void M_BindInputVariables(void)
     BIND_INPUT(input_map_zoomin, "Enlarge automap");
     BIND_INPUT(input_map_zoomout, "Reduce automap");
     BIND_INPUT(input_map_mark, "Drop a marker on automap");
-    BIND_INPUT(input_map_clear, "Clear last marker on automap");
+    BIND_INPUT(input_map_clear, "Clear selected/last marker on automap"); // [Nugget] Changed description
     BIND_INPUT(input_map_gobig, "Toggle max zoom on automap");
 
     BIND_INPUT_SUB(input_map_mini, "Activate minimap mode", ss_mapkeys); // [Nugget]

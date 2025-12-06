@@ -179,6 +179,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Position the automap pointer over a sector and press this button
     to highlight its activator line(s), and vice versa
 - Button to **_Teleport to Automap pointer_**
+- **The _Clear [Automap] Mark_ button now clears the mark under the crosshair when over one**
 - **_Show Thing Hitboxes_** setting
 - **Keys now flash when flashing of keyed doors is enabled**
 - **Color for trigger lines**, used with IDDT (CFG-only: `mapcolor_trig`)

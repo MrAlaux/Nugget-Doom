@@ -401,6 +401,25 @@ static int highlight_color[4];
 
 // ---------------------------------------------------------------------------
 
+static int pointed_mark_index = -1;
+
+static void AM_clearPointedMark(void)
+{
+  if (!markpointnum || pointed_mark_index < 0) { return; }
+
+  if (pointed_mark_index < markpointnum-1)
+  {
+    memmove(
+      markpoints + (pointed_mark_index),
+      markpoints + (pointed_mark_index + 1),
+      sizeof(*markpoints) * (markpointnum - 1 - pointed_mark_index)
+    );
+  }
+
+  markpointnum--;
+  pointed_mark_index = -1;
+}
+
 boolean tanz = false;
 static boolean tanzen = false;
 static int tanzf = 0;
@@ -714,6 +733,13 @@ void AM_clearMarks(void)
 // [Alaux] Clear just the last mark
 static void AM_clearLastMark(void)
 {
+  // [Nugget]
+  if (pointed_mark_index >= 0)
+  {
+    AM_clearPointedMark();
+    return;
+  }
+
   if (markpointnum)
     markpointnum--;
 }
@@ -1155,7 +1181,9 @@ boolean AM_Responder
         displaymsg("%s", s_AMSTR_MARKSCLEARED);
       else {
         AM_clearLastMark();
-        displaymsg("Cleared spot %d", markpointnum);
+        displaymsg("Cleared spot %d", (pointed_mark_index >= 0) // [Nugget]
+                                      ? pointed_mark_index
+                                      : markpointnum);
       }
     }
     else
@@ -1185,7 +1213,7 @@ boolean AM_Responder
     // Highlight points of interest
     else if (M_InputActivated(input_map_blink))
     {
-      highlight_timer = 4*TICRATE;
+      highlight_timer = TICRATE * 144/35; // A bit over 4 seconds
 
       if (markpointnum)
       {
@@ -1438,7 +1466,8 @@ void AM_Ticker (void)
               dist = fabs((y2 - y1) * tmapx - (x2 - x1) * tmapy + x2*y1 - y2*x1)
                    / sqrtf(powf(y2 - y1, 2) + powf(x2 - x1, 2));
 
-            if (dist < min_distance) {
+            if (dist < min_distance)
+            {
               min_distance = dist;
               min_tag = l->tag;
             }
@@ -1447,7 +1476,8 @@ void AM_Ticker (void)
       }
 
       // only pick the line if the crosshair is "close" to it
-      if (min_tag > 0) {
+      if (min_tag > 0)
+      {
         magic_tag = min_tag;
         magic_sector = NULL;
       }
@@ -1458,12 +1488,63 @@ void AM_Ticker (void)
   {
     if (++magic_sector_color_pos >= MAGIC_SECTOR_COLOR_MAX)
     { magic_sector_color_pos = MAGIC_SECTOR_COLOR_MIN; }
-    
+
     if (++magic_line_color_pos >= MAGIC_LINE_COLOR_MAX)
     { magic_line_color_pos = MAGIC_LINE_COLOR_MIN; }
   }
 
   // -------------------------------------------------------------------------
+
+  {
+    static int64_t old_m_x = -1, old_m_y = -1, old_m_w = -1, old_m_h = -1;
+    static int old_markpointnum = -1;
+
+    if (automapactive != AM_FULL)
+    {
+      pointed_mark_index = -1;
+      old_m_x = -1; // Make the check be run when re-entering
+    }
+    else if (old_m_x != m_x || old_m_y != m_y || old_m_w != m_w || old_m_h != m_h
+             || old_markpointnum != markpointnum)
+    {
+      // The pointer has moved, or marks have changed; check if the pointer is near a mark
+
+      old_m_x = m_x;
+      old_m_y = m_y;
+      old_m_w = m_w;
+      old_m_h = m_h;
+      old_markpointnum = markpointnum;
+
+      pointed_mark_index = -1;
+
+      if (markpointnum)
+      {
+        // Pointer position
+        const int64_t px = m_x + m_w/2,
+                      py = m_y + m_h/2;
+
+        int64_t min_distance = 6 * FixedMul(scale_ftom, video.xscale);
+
+        if (followplayer)
+        { min_distance = MAX(40 << MAPBITS, min_distance); }
+
+        for (int i = 0;  i < markpointnum;  i++)
+        {
+          const mpoint_t *const mark = markpoints + i;
+
+          const int64_t dx = abs(mark->x - px),
+                        dy = abs(mark->y - py),
+                        distance = MAX(dx, dy);
+
+          if (min_distance >= distance)
+          {
+            min_distance = distance;
+            pointed_mark_index = i;
+          }
+        }
+      }
+    }
+  }
 
   if (tanzen)
   {
@@ -2805,6 +2886,19 @@ static void AM_drawMarks(void)
 
 	if (STRICTMODE(flip_levels)) { fx = f_x*2 + f_w - 1 - fx; } // [Nugget] Flip levels
 
+	// [Nugget] Center number on mark spot /------------------------------------
+
+	w -= video.yscale >> FRACBITS; // killough 2/22/98: 1 space backwards
+
+	int num_digits = 1;
+
+	for (int num = j;  num /= 10;  num_digits++);
+
+	fx += (w * (num_digits-1)) - (w * num_digits / 2);
+	fy -= h / 2;
+
+	// [Nugget] ---------------------------------------------------------------/
+
 	do
 	  {
 	    int d = j % 10;
@@ -2812,14 +2906,37 @@ static void AM_drawMarks(void)
 	    if (d == 1)           // killough 2/22/98: less spacing for '1'
 	      fx += (video.xscale >> FRACBITS);
 
+	    // [Nugget] /-----------------------------------------------------------
+
+	    byte *cr1 = NULL, *cr2 = NULL;
+
+	    if (i == pointed_mark_index)
+	    {
+	      cr1 = cr_yellow;
+	      cr2 = cr_bright;
+	    }
+	    else if (highlight_timer)
+	    {
+	      cr1 = (highlight_timer & 8) ? cr_bright : cr_dark;
+	    }
+
+	    // [Nugget] -----------------------------------------------------------/
+
 	    // [Nugget] Minimap: take `f_x` and `f_y` into account
 	    if (fx >= f_x && fx < f_x+f_w - w && fy >= f_y && fy < f_y+f_h - h)
-	      // [Nugget] Highlight marks
-	      V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
-                              (fy << FRACBITS) / video.yscale,
-                              marknums[d], (highlight_timer & 8) ? cr_dark : NULL);
+	    {
+	      // [Nugget] Translation
+	      if (cr2)
+	        V_DrawPatchTRTR(((fx << FRACBITS) / video.xscale) - video.deltaw,
+	                        (fy << FRACBITS) / video.yscale,
+	                        marknums[d], cr1, cr2);
+	      else
+	        V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
+	                              (fy << FRACBITS) / video.yscale,
+	                              marknums[d], cr1);
+	    }
 
-	    fx -= w - (video.yscale >> FRACBITS); // killough 2/22/98: 1 space backwards
+	    fx -= w;
 
 	    j /= 10;
 	  }
