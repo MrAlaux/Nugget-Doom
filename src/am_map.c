@@ -1532,8 +1532,8 @@ void AM_Ticker (void)
         {
           const mpoint_t *const mark = markpoints + i;
 
-          const int64_t dx = abs(mark->x - px),
-                        dy = abs(mark->y - py),
+          const int64_t dx = llabs(mark->x - px),
+                        dy = llabs(mark->y - py),
                         distance = MAX(dx, dy);
 
           if (min_distance >= distance)
