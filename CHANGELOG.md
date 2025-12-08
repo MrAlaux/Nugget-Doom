@@ -10,4 +10,4 @@ None.
 
 ## Bug Fixes
 
-None.
+- **Wrong message when clearing specific automap marks**

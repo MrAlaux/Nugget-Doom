@@ -1204,10 +1204,11 @@ boolean AM_Responder
       if (!markpointnum)
         displaymsg("%s", s_AMSTR_MARKSCLEARED);
       else {
+        // [Nugget]
+        const int pmi = pointed_mark_index;
+
         AM_clearLastMark();
-        displaymsg("Cleared spot %d", (pointed_mark_index >= 0) // [Nugget]
-                                      ? pointed_mark_index
-                                      : markpointnum);
+        displaymsg("Cleared spot %d", (pmi >= 0) ? pmi : markpointnum);
       }
     }
     else
