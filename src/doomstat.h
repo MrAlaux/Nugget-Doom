@@ -256,6 +256,7 @@ extern  boolean statusbaractive;
 
 // [Nugget]
 typedef enum automapmode_e {
+  AM_FORCEOFF = -1,
   AM_OFF,
   AM_FULL,
   AM_MINI, // Minimap

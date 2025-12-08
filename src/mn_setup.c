@@ -1619,8 +1619,6 @@ static setup_menu_t keys_settings7[] =
 
 static setup_menu_t mapkeys_settings1[] =
 {
-    {"Minimap",            S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_mini},
-    MI_GAP,
     {"Tag Finder",         S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_tagfinder},
     MI_GAP,
     {"Highlight P.O.I.'s", S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_blink},

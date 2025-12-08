@@ -849,7 +849,8 @@ static void AM_LevelInit(void)
 //
 // Passed nothing, returns nothing
 //
-void AM_Stop (void)
+// [Nugget] Renamed, local
+static void AM_doStop (void)
 {
   static event_t st_notify = {.type = 0, .data1.i = ev_keyup, .data2.i = AM_MSGEXITED};
 
@@ -892,7 +893,7 @@ void AM_Start()
   // [Nugget] ---------------------------------------------------------------/
 
   if (!stopped)
-    AM_Stop();
+    AM_doStop();
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode
       || last_automap != automapactive || last_messages != messages_height
@@ -945,23 +946,45 @@ static void AM_maxOutWindowScale(void)
   AM_activateNewScale();
 }
 
-// [Nugget]
+// [Nugget] /=================================================================
+
+void AM_Stop(void)
+{
+  AM_ChangeMode(AM_FORCEOFF);
+}
+
 void AM_ChangeMode(automapmode_t mode)
 {
-  const boolean modechange = mode && automapactive && mode != automapactive;
-  fixed_t rx=0, ry=0, rw=0, rh=0; // Restored values
+  static int last_change_tic = SHRT_MIN;
+  static boolean minimap_on = false;
+
+  if (mode == AM_FORCEOFF)
+  {
+    mode = AM_OFF;
+  }
+  else if (automapactive != AM_MINI && gametic - last_change_tic < TICRATE * 2/7) // A bit under 0.3 seconds
+  {
+    mode = AM_MINI;
+  }
+
+  const boolean minimap_toggled = mode && minimap_on != (mode == AM_MINI);
 
   automapactive = mode;
 
   if (automapactive == AM_MINI)
   { memset(buttons_state, 0, sizeof(buttons_state)); }
 
-  if (modechange)
+  fixed_t rx=0, ry=0, rw=0, rh=0; // Restored values
+
+  if (minimap_toggled)
   {
+    minimap_on = automapactive == AM_MINI;
+
     rx = older_m_x;
     ry = older_m_y;
     rw = older_m_w;
     rh = older_m_h;
+
     older_m_x = m_x;
     older_m_y = m_y;
     older_m_w = m_w;
@@ -969,11 +992,11 @@ void AM_ChangeMode(automapmode_t mode)
   }
 
   if (!automapactive)
-    AM_Stop();
+    AM_doStop();
   else
     AM_Start();
 
-  if (modechange)
+  if (minimap_toggled)
   {
     if (reset_older)
     {
@@ -984,6 +1007,7 @@ void AM_ChangeMode(automapmode_t mode)
       old_m_y = ry;
       old_m_w = rw;
       old_m_h = rh;
+
       AM_restoreScaleAndLoc();
       AM_activateNewScale();
     }
@@ -993,9 +1017,7 @@ void AM_ChangeMode(automapmode_t mode)
   {
     if (automapactive == AM_FULL)
     {
-      static int modechangetic = 0;
-
-      if (gametic - modechangetic >= TICRATE)
+      if (gametic - last_change_tic >= TICRATE)
       {
         if ((tanzen = Woof_Random() == 156)) // Only because the table doesn't have 157
         {
@@ -1004,12 +1026,14 @@ void AM_ChangeMode(automapmode_t mode)
           tanzd = TICRATE;
         }
       }
-
-      modechangetic = gametic;
     }
     else { tanzen = false; }
   }
+
+  last_change_tic = gametic;
 }
+
+// [Nugget] =================================================================/
 
 //
 // AM_Responder()
@@ -1047,7 +1071,7 @@ boolean AM_Responder
   {
     if (M_InputActivated(input_map) && !WS_Override())
     {
-      AM_ChangeMode(AM_FULL);
+      AM_ChangeMode(AM_FULL); // [Nugget]
       viewactive = false;
       rc = true;
     }
@@ -1137,7 +1161,7 @@ boolean AM_Responder
       {
         bigstate = 0;
         viewactive = true;
-        AM_ChangeMode(AM_OFF);
+        AM_ChangeMode(AM_OFF); // [Nugget]
       }
       else
       {
@@ -1222,11 +1246,6 @@ boolean AM_Responder
       }
       else { displaymsg("Highlighting points of interest..."); }
     }
-    // Minimap
-    else if (M_InputActivated(input_map_mini))
-    {
-      AM_ChangeMode(AM_MINI);
-    }
     // Tag Finder from PrBoomX
     else if (M_InputActivated(input_map_tagfinder))
     {
@@ -1271,7 +1290,6 @@ boolean AM_Responder
 
         P_MapEnd();
       }
-      
     }
 
     // [Nugget] -------------------------------------------------------------/

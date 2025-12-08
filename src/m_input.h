@@ -152,7 +152,6 @@ enum
     input_map_blink, // Highlight points of interest
     input_map_tagfinder, // Tag Finder from PrBoomX
     input_map_teleport, // Teleport to Automap pointer
-    input_map_mini, // Minimap
 
     input_idbeholda,
     input_infammo,

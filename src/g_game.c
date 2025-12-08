@@ -114,7 +114,7 @@ boolean nugget_devmode;
 
 // ---------------------------------------------------------------------------
 
-boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
+static boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
 
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
 
@@ -1463,8 +1463,8 @@ static void G_DoLoadLevel(void)
   // Minimap
   if (minimap_was_on)
   {
-    AM_ChangeMode(AM_MINI);
     minimap_was_on = false;
+    AM_ChangeMode(AM_MINI);
   }
 
   // Slow Motion
@@ -2181,7 +2181,7 @@ void G_RestartWithLoadout(const boolean current)
   {
     if (automapactive == AM_MINI) { minimap_was_on = true; }
 
-    AM_ChangeMode(AM_OFF);
+    AM_Stop();
   }
 
   AM_clearMarks();
@@ -2217,12 +2217,11 @@ static void G_DoCompleted(void)
     if (playeringame[i])
       G_PlayerFinishLevel(i);        // take away cards and stuff
 
-  if (automapactive)
-  {
-    if (automapactive == AM_MINI) { minimap_was_on = true; }
+  // [Nugget] Minimap
+  if (automapactive == AM_MINI) { minimap_was_on = true; }
 
-    AM_ChangeMode(AM_OFF);
-  }
+  if (automapactive)
+    AM_Stop();
 
   wminfo.nextep = wminfo.epsd = gameepisode -1;
   wminfo.last = gamemap -1;
@@ -4320,7 +4319,7 @@ void G_Ticker(void)
 
         pitch = cmd->pitch << FRACBITS;
 
-        static int strafetic = -10;
+        static int strafetic = SHRT_MIN;
         static boolean strafedown = false;
 
         if (!INPUT(input_strafe))
@@ -4331,7 +4330,7 @@ void G_Ticker(void)
         {
           strafedown = true;
 
-          if (gametic - strafetic < 10)
+          if (gametic - strafetic < TICRATE * 2/7) // A bit under 0.3 seconds
           {
             center = true;
           }

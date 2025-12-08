@@ -63,7 +63,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - _Use_ to reset the camera to the player's POV
   - _Fire_ to lock onto and let go of a sentient thing's POV
   - _Previous/Next Weapon_ to adjust the camera's movement speed
-  - Rapid _Strafe On_ double-press to center the camera vertically
+  - Quick _Strafe On_ double-press to center the camera vertically
 - **_Chasecam_** [i.b. ZDoom]
 - **Slow Motion** button
 - **Zoom** button
@@ -173,12 +173,12 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### Automap
 
-- **Minimap mode** [i.b. DSDA-Doom]
+- **Minimap mode:** Quickly press the automap button twice to enable it [i.b. DSDA-Doom]
 - Button to **_Highlight Points of Interest_**; marks and keyed lines (default: <kbd>B</kbd>)
 - **_Tag Finder_** button [p.f. PrBoomX]
   - Position the automap pointer over a sector and press this button
     to highlight its activator line(s), and vice versa
-- Button to **_Teleport to Automap pointer_**
+- Button to **_Teleport to automap pointer_**
 - **The _Clear [Automap] Mark_ button now clears the mark under the crosshair when over one**
 - **_Show Thing Hitboxes_** setting
 - **Keys now flash when flashing of keyed doors is enabled**
