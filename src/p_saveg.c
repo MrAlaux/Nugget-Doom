@@ -3061,8 +3061,11 @@ void P_ArchiveMap(void)
       for (i = 0; i < markpointnum; ++i)
       {
         // [Woof!]: int64_t x,y;
-        saveg_write64(markpoints[i].x);
-        saveg_write64(markpoints[i].y);
+        saveg_write64(markpoints[i].pt.x);
+        saveg_write64(markpoints[i].pt.y);
+
+        // [Nugget] int color;
+        saveg_write32(markpoints[i].color);
       }
     }
 }
@@ -3092,14 +3095,21 @@ void P_UnArchiveMap(void)
         if (saveg_compat > saveg_mbf)
         {
           // [Woof!]: int64_t x,y;
-          markpoints[i].x = saveg_read64();
-          markpoints[i].y = saveg_read64();
+          markpoints[i].pt.x = saveg_read64();
+          markpoints[i].pt.y = saveg_read64();
+
+          if (saveg_compat > saveg_nugget450)
+          {
+            // [Nugget] int color;
+            markpoints[i].color = saveg_read32();
+          }
+          else { markpoints[i].color = 0; }
         }
         else
         {
           // fixed_t x,y;
-          markpoints[i].x = saveg_read32();
-          markpoints[i].y = saveg_read32();
+          markpoints[i].pt.x = saveg_read32();
+          markpoints[i].pt.y = saveg_read32();
         }
       }
     }

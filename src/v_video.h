@@ -59,7 +59,8 @@ extern byte *cr_bright;
 extern byte invul_gray[];
 
 // [Nugget]
-extern byte cr_allblack[],
+extern byte cr_bright3[],
+            cr_allblack[],
             cr_gray_vc[],  // `V_Colorize()` only
             nightvision[]; // Night-vision visor
 
@@ -197,7 +198,7 @@ void V_DrawPatchTRTRTL(int x, int y, struct patch_s *patch,
                        byte *outr1, byte *outr2, byte *tl);
 
 void V_DrawPatchTranslucent2(int x, int y, struct patch_s *patch, boolean flipped,
-                             byte *outr1, byte *outr2, byte *tmap);
+                             byte *outr1, byte *outr2, byte *tl);
 
 #define V_DrawPatchTL2(x, y, p, tp) \
   V_DrawPatchTranslucent2(x, y, p, false, NULL, NULL, tp)
@@ -212,7 +213,7 @@ void V_DrawPatchTranslucent2(int x, int y, struct patch_s *patch, boolean flippe
   V_DrawPatchTranslucent2(x, y, p, false, cr1, cr2, tp)
 
 void V_DrawPatchShadowed(int x, int y, struct patch_s *patch, boolean flipped,
-                         byte *outr1, byte *outr2, byte *tmap);
+                         byte *outr1, byte *outr2, byte *tl);
 
 #define V_DrawPatchSH(x, y, p) \
   V_DrawPatchShadowed(x, y, p, false, NULL, NULL, NULL)

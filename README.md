@@ -180,6 +180,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
     to highlight its activator line(s), and vice versa
 - Button to **_Teleport to automap pointer_**
 - **The _Clear [Automap] Mark_ button now clears the mark under the crosshair when over one**
+- **Pressing _Place Mark_ while over a mark changes that mark's color**
 - **_Show Thing Hitboxes_** setting
 - **Keys now flash when flashing of keyed doors is enabled**
 - **Color for trigger lines**, used with IDDT (CFG-only: `mapcolor_trig`)

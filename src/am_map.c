@@ -312,7 +312,7 @@ static patch_t *marknums[10];   // numbers used for marking by the automap
 // killough 2/22/98: Remove limit on automap marks,
 // and make variables external for use in savegames.
 
-mpoint_t *markpoints = NULL;    // where the points are
+mapmark_t *markpoints = NULL;    // where the points are
 int markpointnum = 0; // next point to be assigned (also number of points now)
 int markpointnum_max = 0;       // killough 2/22/98
 boolean followplayer = true; // specifies whether to follow the player around
@@ -402,6 +402,28 @@ static int highlight_color[4];
 // ---------------------------------------------------------------------------
 
 static int pointed_mark_index = -1;
+
+static const int markcolors[] =
+{
+  CR_NONE,
+  CR_RED,
+  CR_ORANGE,
+  CR_YELLOW,
+  CR_GREEN,
+  CR_BLUE1,
+  CR_PURPLE
+};
+
+static const size_t NUM_MARKCOLORS = sizeof(markcolors) / sizeof(*markcolors);
+
+static void AM_colorPointedMark(void)
+{
+  if (!markpointnum || pointed_mark_index < 0) { return; }
+
+  mapmark_t *const mark = markpoints + pointed_mark_index;
+
+  mark->color = (mark->color + 1) % NUM_MARKCOLORS;
+}
 
 static void AM_clearPointedMark(void)
 {
@@ -516,9 +538,12 @@ static void AM_addMark(void)
                             markpointnum_max*2 : 16) * sizeof(*markpoints),
                            PU_STATIC, 0);
 
-  markpoints[markpointnum].x = m_x + m_w/2;
-  markpoints[markpointnum].y = m_y + m_h/2;
+  markpoints[markpointnum].pt.x = m_x + m_w/2;
+  markpoints[markpointnum].pt.y = m_y + m_h/2;
   markpointnum++;
+
+  // [Nugget]
+  markpoints[markpointnum-1].color = 0;
 }
 
 //
@@ -733,13 +758,6 @@ void AM_clearMarks(void)
 // [Alaux] Clear just the last mark
 static void AM_clearLastMark(void)
 {
-  // [Nugget]
-  if (pointed_mark_index >= 0)
-  {
-    AM_clearPointedMark();
-    return;
-  }
-
   if (markpointnum)
     markpointnum--;
 }
@@ -1194,9 +1212,17 @@ boolean AM_Responder
     }
     else if (M_InputActivated(input_map_mark))
     {
-      // Ty 03/27/98 - *not* externalized     
-      displaymsg("%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
-      AM_addMark();
+      // [Nugget]
+      if (pointed_mark_index >= 0)
+      {
+        AM_colorPointedMark();
+      }
+      else
+      {
+        // Ty 03/27/98 - *not* externalized     
+        displaymsg("%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
+        AM_addMark();
+      }
     }
     else if (M_InputActivated(input_map_clear))
     {
@@ -1207,7 +1233,15 @@ boolean AM_Responder
         // [Nugget]
         const int pmi = pointed_mark_index;
 
-        AM_clearLastMark();
+        if (pmi >= 0)
+        {
+          AM_clearPointedMark();
+        }
+        else
+        {
+          AM_clearLastMark();
+        }
+
         displaymsg("Cleared spot %d", (pmi >= 0) ? pmi : markpointnum);
       }
     }
@@ -1549,10 +1583,10 @@ void AM_Ticker (void)
 
         for (int i = 0;  i < markpointnum;  i++)
         {
-          const mpoint_t *const mark = markpoints + i;
+          const mapmark_t *const mark = markpoints + i;
 
-          const int64_t dx = llabs(mark->x - px),
-                        dy = llabs(mark->y - py),
+          const int64_t dx = llabs(mark->pt.x - px),
+                        dy = llabs(mark->pt.y - py),
                         distance = MAX(dx, dy);
 
           if (min_distance >= distance)
@@ -2888,7 +2922,7 @@ static void AM_drawMarks(void)
   mpoint_t pt;
 
   for (i=0;i<markpointnum;i++) // killough 2/22/98: remove automap mark limit
-    if (markpoints[i].x != -1)
+    if (markpoints[i].pt.x != -1)
       {
 	int w = (5 * video.xscale) >> FRACBITS;
 	int h = (6 * video.yscale) >> FRACBITS;
@@ -2897,15 +2931,17 @@ static void AM_drawMarks(void)
 	int j = i;
 
 	// [crispy] center marks around player
-	pt.x = markpoints[i].x;
-	pt.y = markpoints[i].y;
+	pt.x = markpoints[i].pt.x;
+	pt.y = markpoints[i].pt.y;
 	AM_transformPoint(&pt);
 	fx = CXMTOF(pt.x);
 	fy = CYMTOF(pt.y);
 
 	if (STRICTMODE(flip_levels)) { fx = f_x*2 + f_w - 1 - fx; } // [Nugget] Flip levels
 
-	// [Nugget] Center number on mark spot /------------------------------------
+	// [Nugget] /===============================================================
+
+	// Center number on mark spot ----------------------------------------------
 
 	w -= video.yscale >> FRACBITS; // killough 2/22/98: 1 space backwards
 
@@ -2916,7 +2952,28 @@ static void AM_drawMarks(void)
 	fx += (w * (num_digits-1)) - (w * num_digits / 2);
 	fy -= h / 2;
 
-	// [Nugget] ---------------------------------------------------------------/
+	// Colorize number ---------------------------------------------------------
+
+	const mapmark_t *const mark = markpoints + i;
+
+	byte *cr1 = NULL, *cr2 = NULL;
+
+	if (mark->color)
+	{
+	  cr1 = colrngs[markcolors[mark->color]];
+	  cr2 = cr_bright;
+	}
+
+	if (i == pointed_mark_index)
+	{
+	  cr2 = cr_bright3;
+	}
+	else if (highlight_timer)
+	{
+	  cr2 = (highlight_timer & 8) ? cr_bright : cr_dark;
+	}
+
+	// [Nugget] ===============================================================/
 
 	do
 	  {
@@ -2925,34 +2982,18 @@ static void AM_drawMarks(void)
 	    if (d == 1)           // killough 2/22/98: less spacing for '1'
 	      fx += (video.xscale >> FRACBITS);
 
-	    // [Nugget] /-----------------------------------------------------------
-
-	    byte *cr1 = NULL, *cr2 = NULL;
-
-	    if (i == pointed_mark_index)
-	    {
-	      cr1 = cr_yellow;
-	      cr2 = cr_bright;
-	    }
-	    else if (highlight_timer)
-	    {
-	      cr1 = (highlight_timer & 8) ? cr_bright : cr_dark;
-	    }
-
-	    // [Nugget] -----------------------------------------------------------/
-
 	    // [Nugget] Minimap: take `f_x` and `f_y` into account
 	    if (fx >= f_x && fx < f_x+f_w - w && fy >= f_y && fy < f_y+f_h - h)
 	    {
 	      // [Nugget] Translation
-	      if (cr2)
+	      if (cr1 && cr2)
 	        V_DrawPatchTRTR(((fx << FRACBITS) / video.xscale) - video.deltaw,
 	                        (fy << FRACBITS) / video.yscale,
 	                        marknums[d], cr1, cr2);
 	      else
 	        V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
 	                              (fy << FRACBITS) / video.yscale,
-	                              marknums[d], cr1);
+	                              marknums[d], cr1 ? cr1 : cr2);
 	    }
 
 	    fx -= w;
