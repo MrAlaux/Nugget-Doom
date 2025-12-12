@@ -101,6 +101,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
 - **Fixed bullet puffs not spawning when firing at planes far away from lines**
 - **Fixed bullet puffs not spawning when "hitting" the sky behind a line if said sky were the ceiling of the line's front sector**
+- **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees**
 
 ### Weapons
 

@@ -3093,6 +3093,15 @@ void A_SpawnObject(mobj_t *actor)
 
   // [XA] don't bother with the dont-inherit-friendliness hack
   // that exists in A_Spawn, 'cause WTF is that about anyway?
+
+  // [Nugget] If the spawner is blood-colored
+  // (it is either a blood splat or a pool of guts),
+  // inherit blood color to spawnee
+  if (!strictmode && actor->flags2 & MF2_COLOREDBLOOD)
+  {
+    mo->flags2 |= MF2_COLOREDBLOOD;
+    mo->bloodcolor = actor->bloodcolor;
+  }
 }
 
 //
