@@ -669,7 +669,8 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
       {
         player->pendingweapon = wp_nochange;
       }
-      else {
+      else
+      {
         // change weapon (pending weapon should already be validated)
         statenum_t newstate = weaponinfo[player->readyweapon].downstate;
         P_SetPsprite(player, ps_weapon, newstate);

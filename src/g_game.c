@@ -566,6 +566,14 @@ static weapontype_t LastWeapon(void)
 {
     const weapontype_t weapon = players[consoleplayer].lastweapon;
 
+    // [Nugget] Weapon-switch interruption
+    if (CASUALPLAY(weapswitch_interruption))
+    {
+        const player_t *const player = players + consoleplayer;
+
+        if (player->pendingweapon == weapon) { return player->readyweapon; }
+    }
+
     if (weapon < wp_fist || weapon >= NUMWEAPONS
         || !G_WeaponSelectable(weapon))
     {
@@ -4300,14 +4308,14 @@ void G_Ticker(void)
             displaymsg("Freecam Speed: %i unit%s", scaledspeed, (scaledspeed == 1) ? "" : "s");
           }
 
-          fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed))) * 100 / realtic_clock_rate;
+          const fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed))) * 100 / realtic_clock_rate;
 
-          fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward)),
-                  sidemove    = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));
+          const fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward));
+                fixed_t    sidemove = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));
 
           if (flip_levels) { sidemove = -sidemove; } // Flip levels
 
-          angle_t fangle = R_GetFreecamAngle() + angle;
+          const angle_t fangle = R_GetFreecamAngle() + angle;
 
           x = FixedMul(forwardmove, finecosine[ fangle          >> ANGLETOFINESHIFT])
             + FixedMul(sidemove,    finecosine[(fangle - ANG90) >> ANGLETOFINESHIFT]);

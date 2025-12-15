@@ -11,4 +11,5 @@
 
 ## Bug Fixes
 
+- **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **Wrong message when clearing specific automap marks**

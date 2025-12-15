@@ -347,7 +347,7 @@ void P_MovePlayer (player_t* player)
       else if (onground && !player->jumptics
                && mo->height == mo->info->height
                && ceilingz - floorz > mo->height)
-      { // Jump
+      {
         mo->momz = 8*FRACUNIT;
         player->jumptics = 20;
 
