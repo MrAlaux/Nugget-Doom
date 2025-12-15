@@ -980,7 +980,7 @@ void AM_ChangeMode(automapmode_t mode)
   {
     mode = AM_OFF;
   }
-  else if (automapactive != AM_MINI && gametic - last_change_tic < TICRATE * 2/7) // A bit under 0.3 seconds
+  else if (automapactive != AM_MINI && gametic - last_change_tic < TICRATE/5) // 0.2 seconds
   {
     mode = AM_MINI;
   }
