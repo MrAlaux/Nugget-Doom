@@ -191,6 +191,7 @@ boolean diminishing_lighting;
 static boolean a11y_weapon_flash;
 boolean a11y_weapon_pspr;
 boolean a11y_invul_colormap;
+int pspr_invis_translucent;
 int pspr_translucency_pct;
 int zoom_fov;
 boolean comp_powerrunout;

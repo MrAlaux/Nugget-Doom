@@ -1220,9 +1220,18 @@ void R_InitData(void)
   if (ST_MessageFadeoutOn())
   { R_InitMessageFadeoutTranMaps(); }
 
-  // Translucent flashes
+  // Translucent weapon when invisible
+  if (pspr_invis_translucent)
+  { R_GetGenericTranMap(PSPR_INVIS_TRANSLUCENCY); }
+
+  // Translucent weapon flashes
   if (pspr_translucency_pct != 100)
-  { R_GetGenericTranMap(pspr_translucency_pct); }
+  {
+    R_GetGenericTranMap(pspr_translucency_pct);
+
+    if (pspr_invis_translucent)
+    { R_GetGenericTranMap(pspr_translucency_pct * PSPR_INVIS_TRANSLUCENCY / 100); }
+  }
 
   // Translucent crosshair
   if (hud_crosshair_tran_pct != 100)

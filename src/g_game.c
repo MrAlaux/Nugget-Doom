@@ -6463,6 +6463,10 @@ void G_BindWeapVariables(void)
              false, ss_weap, wad_yes,
              "Squat weapon down upon landing/jumping");
 
+  M_BindBool("pspr_invis_translucent", &pspr_invis_translucent, NULL,
+             false, ss_weap, wad_yes,
+             "Make the weapon translucent instead of fuzzy when partially invisible");
+
   M_BindNum("pspr_translucency_pct", &pspr_translucency_pct, NULL,
             100, 0, 100, ss_weap, wad_yes,
             "Weapon-flash opacity percent");

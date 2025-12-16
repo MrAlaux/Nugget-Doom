@@ -1250,7 +1250,8 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   vis->patch = lump;
 
   // killough 7/11/98: beta psprites did not draw shadows
-  if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
+  if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation
+      && !STRICTMODE(pspr_invis_translucent)) // [Nugget] Translucent weapon when invisible
 
     vis->colormap[0] = vis->colormap[1] = NULL;                    // shadow draw
   else if (fixedcolormap)
@@ -1270,8 +1271,20 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   }
   vis->brightmap = R_BrightmapForState(psp->state - states);
 
-  // [Nugget] Translucent flashes
-  vis->tranmap = translucent ? R_GetGenericTranMap(pspr_translucency_pct) : NULL;
+  // [Nugget] /---------------------------------------------------------------
+
+  int trans_pct = 100;
+
+  // Translucent weapon when invisible
+  if (STRICTMODE(pspr_invis_translucent) && POWER_RUNOUT(viewplayer->powers[pw_invisibility]))
+  { trans_pct = PSPR_INVIS_TRANSLUCENCY; }
+
+  // Translucent weapon flashes
+  if (translucent) { trans_pct = pspr_translucency_pct * trans_pct / 100; }
+
+  vis->tranmap = (trans_pct < 100) ? R_GetGenericTranMap(trans_pct) : NULL;
+
+  // [Nugget] ---------------------------------------------------------------/
 
   // [crispy] free look
   vis->texturemid += (centery - viewheight/2) * pspriteiscale;
@@ -1342,7 +1355,7 @@ void R_DrawPlayerSprites(void)
        i < ((strictmode || a11y_weapon_pspr) ? NUMPSPRITES : ps_flash);
        i++,psp++)
     if (psp->state)
-      R_DrawPSprite (psp, i == ps_flash && STRICTMODE(pspr_translucency_pct != 100)); // [Nugget] Translucent flashes
+      R_DrawPSprite (psp, i == ps_flash && STRICTMODE(pspr_translucency_pct < 100)); // [Nugget] Translucent flashes
 
   // [Nugget] Weapon voxels
   if (queued_weapon_voxels)

@@ -127,6 +127,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Bob While Switching_** setting
 - **_Weapon Inertia_** settings [by _ceski_]
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
+- **_Translucent [Weapon] When Invisible_** setting
 - **_[Weapon] Flash Opacity_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting (CFG-only: `sx_fix`)
