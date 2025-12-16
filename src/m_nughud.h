@@ -81,6 +81,7 @@ typedef struct nughud_s {
   nughud_vlignable_t ammoicon;
   boolean            ammoicon_big;
   nughud_bar_t       ammobar;
+  nughud_vlignable_t weaponicon;
   nughud_alignable_t health;
   nughud_vlignable_t healthicon;
   nughud_bar_t       healthbar;

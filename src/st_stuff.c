@@ -123,6 +123,7 @@ static int nughud_patchlump[NUMNUGHUDPATCHES];
 
 static patch_t *nhbersrk,   // NHBERSRK
                *nhammo[4],  // NHAMMO#, from 0 to 3
+               *nhweap[9],  // NHWEAP#, from 0 to 8
                *nhambar[2], // NHAMBAR#, from 0 to 1
                *nhealth[2], // NHEALTH#, from 0 to 1
                *nhhlbar[2], // NHHLBAR#, from 0 to 1
@@ -2587,6 +2588,23 @@ void LoadNuggetGraphics(void)
     else if (!i) { break; }
   }
 
+  // Weapon icons ------------------------------------------------------------
+
+  // Load NHWEAP0 to NHWEAP8 if available
+  for (int i = 0;  i < 9;  i++)
+  {
+    M_snprintf(namebuf, sizeof(namebuf), "NHWEAP%d", i);
+
+    if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+    {
+      nhweap[i] = (patch_t *) V_CachePatchNum(lumpnum, PU_STATIC);
+    }
+    else {
+      nhweap[0] = NULL;
+      break;
+    }
+  }
+
   // Health icons ------------------------------------------------------------
 
   // Load NHEALTH0 to NHEALTH1 if available
@@ -2737,7 +2755,8 @@ static void DrawNughudPatch(nughud_vlignable_t *widget, patch_t *patch, boolean 
     - ((widget->vlign == -1) ? SHORT(patch->height)   :
        (widget->vlign ==  0) ? SHORT(patch->height)/2 : 0);
 
-  if (no_offsets) {
+  if (no_offsets)
+  {
     x += SHORT(patch->leftoffset);
     y += SHORT(patch->topoffset);
   }
@@ -2771,7 +2790,8 @@ static void DrawNughudBar(nughud_bar_t *widget, patch_t **patches, int units, in
 
     for (int i = 0;  i < (1 + twobars);  i++)
     {
-      const int slices = MIN(100 * (2 - twobars), (units * 100 / maxunits) - (100 * i)) * 100 / widget->ups;
+      const int slices = MIN(100 * (2 - twobars), (units * 100 / maxunits) - (100 * i))
+                       * 100 / widget->ups;
 
       const int xstep = (widget->xstep || widget->ystep)
                         ? widget->xstep : SHORT(patches[i]->width);
@@ -2881,7 +2901,6 @@ static void DrawNughudGraphics(void)
   if (nughud.ammoicon.x > -1 && weaponinfo[plyr->readyweapon].ammo != am_noammo)
   {
     patch_t *patch;
-    int lump;
     boolean no_offsets = false;
 
     if (nhammo[0])
@@ -2889,10 +2908,10 @@ static void DrawNughudGraphics(void)
       patch = nhammo[BETWEEN(0, 3, weaponinfo[plyr->readyweapon].ammo)];
     }
     else {
-      char namebuf[32];
-      boolean big = nughud.ammoicon_big;
-
       no_offsets = true;
+
+      char namebuf[32];
+      const boolean big = nughud.ammoicon_big;
 
       switch (BETWEEN(0, 3, weaponinfo[plyr->readyweapon].ammo))
       {
@@ -2901,6 +2920,8 @@ static void DrawNughudGraphics(void)
         case 2: M_snprintf(namebuf, sizeof(namebuf), big ? "CELPA0" : "CELLA0"); break;
         case 3: M_snprintf(namebuf, sizeof(namebuf), big ? "BROKA0" : "ROCKA0"); break;
       }
+
+      int lump;
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
       {
@@ -2912,10 +2933,41 @@ static void DrawNughudGraphics(void)
     if (patch) { DrawNughudPatch(&nughud.ammoicon, patch, no_offsets); }
   }
 
+  if (nughud.weaponicon.x > -1)
+  {
+    patch_t *patch;
+    boolean no_offsets = true;
+
+    const weapontype_t weap = plyr->readyweapon;
+
+    if (weap < 0 || NUMWEAPONS <= weap)
+    {
+      patch = (patch_t *) V_CachePatchNum(
+        (W_CheckNumForName)("SMUNKN0", ns_global), PU_STATIC
+      );
+    }
+    else if (nhweap[0])
+    {
+      no_offsets = false;
+      patch = nhweap[weap];
+    }
+    else {
+      const char *const carousel_icons[] = {
+        "SMFIST0", "SMPISG0", "SMSHOT0", "SMMGUN0", "SMLAUN0", "SMPLAS0",
+        "SMBFGG0", "SMCSAW0", "SMSGN20"
+      };
+
+      patch = (patch_t *) V_CachePatchNum(
+        (W_CheckNumForName)(carousel_icons[weap], ns_global), PU_STATIC
+      );
+    }
+
+    DrawNughudPatch(&nughud.weaponicon, patch, no_offsets);
+  }
+
   if (nughud.healthicon.x > -1)
   {
     patch_t *patch;
-    int lump;
     boolean no_offsets = false;
 
     if (nhealth[0])
@@ -2923,15 +2975,17 @@ static void DrawNughudGraphics(void)
       patch = nhealth[plyr->powers[pw_strength] ? 1 : 0];
     }
     else {
-      char namebuf[32];
-
       no_offsets = true;
+
+      char namebuf[32];
 
       switch (plyr->powers[pw_strength] ? 1 : 0)
       {
         case 0: M_snprintf(namebuf, sizeof(namebuf), "MEDIA0"); break;
         case 1: M_snprintf(namebuf, sizeof(namebuf), "PSTRA0"); break;
       }
+
+      int lump;
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
       {
@@ -2946,7 +3000,6 @@ static void DrawNughudGraphics(void)
   if (nughud.armoricon.x > -1)
   {
     patch_t *patch;
-    int lump;
     boolean no_offsets = false;
 
     if (nharmor[0])
@@ -2954,9 +3007,9 @@ static void DrawNughudGraphics(void)
       patch = nharmor[BETWEEN(0, 2, plyr->armortype)];
     }
     else {
-      char namebuf[32];
-
       no_offsets = true;
+
+      char namebuf[32];
 
       switch (BETWEEN(0, 2, plyr->armortype))
       {
@@ -2964,6 +3017,8 @@ static void DrawNughudGraphics(void)
         case 1: M_snprintf(namebuf, sizeof(namebuf), "ARM1A0"); break;
         case 2: M_snprintf(namebuf, sizeof(namebuf), "ARM2A0"); break;
       }
+
+      int lump;
 
       if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
       {

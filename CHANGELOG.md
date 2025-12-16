@@ -1,5 +1,6 @@
 ## New Features
 
+- **NUGHUD Weapon icon**
 - **Pressing _Place [Automap] Mark_ while over a mark now changes that mark's color**
 
 ## Changes

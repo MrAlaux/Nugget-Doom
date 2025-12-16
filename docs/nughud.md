@@ -61,6 +61,7 @@ The following status-bar widgets are available:
 | `nughud_ammo`       | Yes       | Ammo count for the currently equipped weapon |
 | `nughud_ammoicon`   | Yes       | Ammo icon, which changes depending on the ammo type of the current weapon |
 | `nughud_ammobar`    | Yes       | Ammo bar |
+| `nughud_weaponicon` | Yes       | Weapon icon, which changes depending on the current weapon |
 | `nughud_health`     | Yes       | Health count |
 | `nughud_healthicon` | Yes       | Health icon, which changes depending on whether the player has Berserk |
 | `nughud_healthbar`  | Yes       | Health bar |
@@ -74,9 +75,9 @@ The following status-bar widgets are available:
 | `nughud_ammo#`      | Yes       | Ammo count for each type, where `#` is an integer in the [0, 3] range (in order: Bullets; Shells; Cells; Rockets) |
 | `nughud_maxammo#`   | Yes       | Same as the above, but for Max. Ammo |
 
-**All status-bar widgets are disableable**, by setting `_x` to `-1`.
+**All status-bar widgets can be disabled** by setting `_x` to `-1`.
 
-**The _Ammo_, _Health_ and _Armor_ icons are vertically alignable.**
+**The _Ammo_, _Weapon_, _Health_ and _Armor_ icons are vertically alignable.**
 Additionally, **the offsets of the graphics used by these icons will be ignored, unless a custom font is being used** (see details below).
 
 **The _Ammo_, _Health_ and _Armor bars_ support additional properties:**
@@ -224,6 +225,12 @@ Berserk, drawn in place of the Ammo count when using the Berserk Fist:
 Ammo graphics, used for the Ammo icon widget:
 
 - NHAMMO# - Graphic, where # is a number between 0 and 3 (in order: Bullets; Shells; Cells; Rockets)
+
+
+Weapon graphics, used for the Weapon icon widget:
+
+- NHWEAP# - Graphic, where # is a number between 0 and 8
+  (in order: Fist; Pistol; Shotgun; Chaingun; Rocket Launcher; Plasma Rifle; BFG; Chainsaw; SSG)
 
 
 Health graphics, used for the Health icon widget:

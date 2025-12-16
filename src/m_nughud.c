@@ -105,6 +105,8 @@ default_t nughud_defaults[] = {
   TOGGLE(  "nughud_ammoicon_big", nughud.ammoicon_big,  0                   ),
   BAR(     "nughud_ammobar",      nughud.ammobar,      -1,  0,    0, -1, -1 ),
 
+  WIDGET3( "nughud_weaponicon", nughud.weaponicon, -1, 0, 0, -1, 1 ),
+
   WIDGET2( "nughud_health",     nughud.health,      90, 171, -1,  1     ),
   WIDGET3( "nughud_healthicon", nughud.healthicon, -1,  0,    0, -1, 1  ),
   BAR(     "nughud_healthbar",  nughud.healthbar,  -1,  0,    0, -1, -1 ),
