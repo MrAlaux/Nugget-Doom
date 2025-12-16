@@ -100,6 +100,10 @@ int force_carousel;
 
 static patch_t *font_extras[HU_FONTEXTRAS] = { NULL };
 
+// Animated health/armor counts ----------------------------------------------
+
+static int smooth_health = 100, smooth_armor = 0;
+
 // Key blinking --------------------------------------------------------------
 
 #define KEYBLINKMASK 0x8
@@ -146,9 +150,6 @@ static void UpdateNughudOn(void)
               && (   ( normal_sbardef && screenblocks == maxscreenblocks - 1 && use_nughud)
                   || (!normal_sbardef && screenblocks == 11));
 }
-
-static sbarelem_t *nughud_health_elem = NULL,
-                  *nughud_armor_elem = NULL;
 
 // Used for Status-Bar chunks
 static pixel_t *st_bar = NULL;
@@ -624,22 +625,12 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
     {
         case sbn_health:
             // [Nugget] Animated health/armor counts
-            if (number->oldvalue == -1)
-            {
-                number->oldvalue = player->health;
-            }
-            result = SmoothCount(number->oldvalue, player->health);
-            number->oldvalue = result;
+            result = smooth_health;
             break;
 
         case sbn_armor:
             // [Nugget] Animated health/armor counts
-            if (number->oldvalue == -1)
-            {
-                number->oldvalue = player->armorpoints;
-            }
-            result = SmoothCount(number->oldvalue, player->armorpoints);
-            number->oldvalue = result;
+            result = smooth_armor;
             break;
 
         case sbn_frags:
@@ -1221,6 +1212,10 @@ static void UpdateStatusBar(player_t *player)
 
     statusbar = &sbardef->statusbars[st_nughud ? 0 : barindex]; // [Nugget] NUGHUD
 
+    // [Nugget] Animated health/armor counts
+    smooth_health = SmoothCount(smooth_health, player->health);
+    smooth_armor  = SmoothCount(smooth_armor,  player->armorpoints);
+
     // [Nugget] Key blinking /------------------------------------------------
 
     static boolean was_blinking = false;
@@ -1361,12 +1356,6 @@ static void ResetElem(sbarelem_t *elem, player_t *player)
                 animation->frame_index = 0;
                 animation->duration_left = 0;
             }
-            break;
-
-        // [Nugget]
-        case sbe_number:
-        case sbe_percent:
-            elem->subtype.number->oldvalue = -1;
             break;
 
         case sbe_widget:
@@ -2234,9 +2223,19 @@ void ST_Drawer(void)
 
 void ST_Start(void)
 {
-    // [Nugget] Key blinking
+    // [Nugget] /=============================================================
+
+    const player_t *const player = &players[displayplayer];
+
+    // Animated health/armor counts
+    smooth_health = player->health;
+    smooth_armor  = player->armorpoints;
+
+    // Key blinking
     memset(keyblinkkeys, 0, sizeof(keyblinkkeys));
     keyblinktics = 0;
+
+    // [Nugget] =============================================================/
 
     if (!sbardef)
     {
@@ -2318,20 +2317,7 @@ void ST_Init(void)
     sbarelem_t *elem;
     array_foreach(elem, nughud_sbardef->statusbars[0].children)
     {
-        if (elem->type != sbe_widget)
-        {
-            if (elem->type == sbe_number || elem->type == sbe_percent)
-            {
-                switch (elem->subtype.number->type)
-                {
-                    case sbn_health:  nughud_health_elem = elem;  break;
-                    case sbn_armor:   nughud_armor_elem  = elem;  break;
-                    default:                                      break;
-                }
-            }
-
-            continue; 
-        }
+        if (elem->type != sbe_widget) { continue; }
 
         const sbarwidgettype_t type = elem->subtype.widget->type;
         const nughud_textline_t *ntl;
@@ -2824,7 +2810,7 @@ static void DrawNughudGraphics(void)
 {
   if (!st_nughud) { return; }
 
-  player_t *plyr = &players[displayplayer];
+  const player_t *const plyr = &players[displayplayer];
 
   // Status-Bar chunks -------------------------------------------------------
 
@@ -2860,11 +2846,8 @@ static void DrawNughudGraphics(void)
       );
     }
 
-    const int health = nughud_health_elem ? SmoothCount(nughud_health_elem->subtype.number->oldvalue, plyr->health)
-                                          : plyr->health;
-
-    const int armor = nughud_armor_elem ? SmoothCount(nughud_armor_elem->subtype.number->oldvalue, plyr->armorpoints)
-                                        : plyr->armorpoints;
+    const int health = smooth_health,
+               armor = smooth_armor;
 
     DrawNughudBar(&nughud.healthbar, nhhlbar, health, maxhealth);
     DrawNughudBar(&nughud.armorbar,  nharbar,  armor, max_armor/2);

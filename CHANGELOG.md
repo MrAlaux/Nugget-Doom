@@ -13,4 +13,5 @@
 ## Bug Fixes
 
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
+- **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Wrong message when clearing specific automap marks**
