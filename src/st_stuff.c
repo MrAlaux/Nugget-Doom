@@ -2743,8 +2743,11 @@ static int NughudWideShift(const int wide)
          :                    0;
 }
 
-static void DrawNughudPatch(nughud_vlignable_t *widget, patch_t *patch, boolean no_offsets)
-{
+static void DrawNughudPatch(
+  const nughud_vlignable_t *const widget,
+  patch_t *const patch,
+  const boolean no_offsets
+) {
   int x, y;
 
   x = widget->x + NughudWideShift(widget->wide)
@@ -2764,7 +2767,7 @@ static void DrawNughudPatch(nughud_vlignable_t *widget, patch_t *patch, boolean 
   V_DrawPatch(x, y, patch);
 }
 
-static void DrawNughudSBChunk(nughud_sbchunk_t *chunk)
+static void DrawNughudSBChunk(const nughud_sbchunk_t *const chunk)
 {
   int x  = chunk->x + NughudWideShift(chunk->wide) + video.deltaw,
       y  = chunk->y,
@@ -2782,8 +2785,12 @@ static void DrawNughudSBChunk(nughud_sbchunk_t *chunk)
   V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
 }
 
-static void DrawNughudBar(nughud_bar_t *widget, patch_t **patches, int units, int maxunits)
-{
+static void DrawNughudBar(
+  const nughud_bar_t *const widget,
+  patch_t *const *const patches,
+  const int units,
+  const int maxunits
+) {
   if (widget->x > -1 && patches[0])
   {
     const boolean twobars = patches[1] && maxunits < units;
@@ -2900,7 +2907,7 @@ static void DrawNughudGraphics(void)
 
   if (nughud.ammoicon.x > -1 && weaponinfo[plyr->readyweapon].ammo != am_noammo)
   {
-    patch_t *patch;
+    patch_t *patch = NULL;
     boolean no_offsets = false;
 
     if (nhammo[0])
@@ -2921,13 +2928,10 @@ static void DrawNughudGraphics(void)
         case 3: M_snprintf(namebuf, sizeof(namebuf), big ? "BROKA0" : "ROCKA0"); break;
       }
 
-      int lump;
+      const int lump = (W_CheckNumForName)(namebuf, ns_sprites);
 
-      if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
-      {
-        patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
-      }
-      else { patch = NULL; }
+      if (lump >= 0)
+      { patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC); }
     }
 
     if (patch) { DrawNughudPatch(&nughud.ammoicon, patch, no_offsets); }
@@ -2935,7 +2939,7 @@ static void DrawNughudGraphics(void)
 
   if (nughud.weaponicon.x > -1)
   {
-    patch_t *patch;
+    patch_t *patch = NULL;
     boolean no_offsets = true;
 
     const weapontype_t weap = plyr->readyweapon;
@@ -2967,7 +2971,7 @@ static void DrawNughudGraphics(void)
 
   if (nughud.healthicon.x > -1)
   {
-    patch_t *patch;
+    patch_t *patch = NULL;
     boolean no_offsets = false;
 
     if (nhealth[0])
@@ -2985,13 +2989,10 @@ static void DrawNughudGraphics(void)
         case 1: M_snprintf(namebuf, sizeof(namebuf), "PSTRA0"); break;
       }
 
-      int lump;
+      const int lump = (W_CheckNumForName)(namebuf, ns_sprites);
 
-      if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
-      {
-        patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
-      }
-      else { patch = NULL; }
+      if (lump >= 0)
+      { patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC); }
     }
 
     if (patch) { DrawNughudPatch(&nughud.healthicon, patch, no_offsets); }
@@ -2999,7 +3000,7 @@ static void DrawNughudGraphics(void)
 
   if (nughud.armoricon.x > -1)
   {
-    patch_t *patch;
+    patch_t *patch = NULL;
     boolean no_offsets = false;
 
     if (nharmor[0])
@@ -3018,13 +3019,10 @@ static void DrawNughudGraphics(void)
         case 2: M_snprintf(namebuf, sizeof(namebuf), "ARM2A0"); break;
       }
 
-      int lump;
+      const int lump = (W_CheckNumForName)(namebuf, ns_sprites);
 
-      if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
-      {
-        patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
-      }
-      else { patch = NULL; }
+      if (lump >= 0)
+      { patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC); }
     }
 
     if (patch) { DrawNughudPatch(&nughud.armoricon, patch, no_offsets); }
@@ -3037,8 +3035,7 @@ static boolean NughudAddToStack(
   const nughud_textline_t *const ntl,
   sbarelem_t *const elem,
   const int stack
-)
-{
+) {
   if (ntl->x != -1 || ntl->y != -1) { return false; }
 
   for (int i = 0;  i < NUMSQWIDGETS;  i++)
@@ -3060,10 +3057,10 @@ static boolean NughudAddToStack(
   return true;
 }
 
-static int NughudSortWidgets(const void *_p1, const void *_p2)
+static int NughudSortWidgets(const void *const _p1, const void *const _p2)
 {
-  const widgetpair_t *p1 = (widgetpair_t *) _p1,
-                     *p2 = (widgetpair_t *) _p2;
+  const widgetpair_t *const p1 = (widgetpair_t *) _p1,
+                     *const p2 = (widgetpair_t *) _p2;
 
   if (!p1->ntl) { return 0; }
 
@@ -3080,65 +3077,64 @@ static int NughudSortWidgets(const void *_p1, const void *_p2)
 
 static void UpdateNughudStacks(void)
 {
-    if (!st_nughud) { return; }
+  if (!st_nughud) { return; }
 
-    for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
-    {
-        nughud_stackqueues[i].offset = 0;
+  for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
+  {
+    nughud_stackqueues[i].offset = 0;
 
-        int secondtime = 0;
+    int secondtime = 0;
 
-        do {
-            for (int j = 0;  j < NUMSQWIDGETS;  j++)
-            {
-                const widgetpair_t *const pair = &nughud_stackqueues[i].pairs[j];
+    do {
+      for (int j = 0;  j < NUMSQWIDGETS;  j++)
+      {
+        const widgetpair_t *const pair = &nughud_stackqueues[i].pairs[j];
 
-                if (!pair->ntl) { continue; }
+        if (!pair->ntl) { continue; }
 
-                sbarelem_t *const elem = pair->elem;
+        sbarelem_t *const elem = pair->elem;
 
-                if (!CheckConditions(elem->conditions, &players[displayplayer]))
-                { continue; }
+        if (!CheckConditions(elem->conditions, &players[displayplayer]))
+        { continue; }
 
-                sbe_widget_t *const wid = elem->subtype.widget;
-                const nughud_vlignable_t *const stack = &nughud.stacks[i];
-                const sbarwidgettype_t type = wid->type;
+        const sbe_widget_t *const wid = elem->subtype.widget;
+        const nughud_vlignable_t *const stack = &nughud.stacks[i];
+        const sbarwidgettype_t type = wid->type;
 
-                if (secondtime && i == pair->ntl->stack - 1)
-                {
-                    elem->y_pos = stack->y - nughud_stackqueues[i].offset;
+        if (secondtime && i == pair->ntl->stack - 1)
+        {
+          elem->y_pos = stack->y - nughud_stackqueues[i].offset;
 
-                    if (!((type == sbw_message || type == sbw_chat) && nughud.message_defx))
-                    {
-                        elem->alignment = NughudConvertAlignment(stack->wide, stack->align);
-                        elem->x_pos = stack->x;
-                    }
-                }
+          if (!((type == sbw_message || type == sbw_chat) && nughud.message_defx))
+          {
+            elem->alignment = NughudConvertAlignment(stack->wide, stack->align);
+            elem->x_pos = stack->x;
+          }
+        }
 
-                const int numlines = array_size(wid->lines);
-                const int lineheight = wid->font->maxheight;
+        const int numlines = array_size(wid->lines);
+        const int lineheight = wid->font->maxheight;
 
-                for (int k = 0;  k < numlines;  k++)
-                {
-                    if (!wid->lines[k].totalwidth
-                        && !(type == sbw_chat && ST_GetChatOn()))
-                    {
-                        continue;
-                    }
+        for (int k = 0;  k < numlines;  k++)
+        {
+          if (!wid->lines[k].totalwidth && !(type == sbw_chat && ST_GetChatOn()))
+          {
+            continue;
+          }
 
-                    if (!secondtime)
-                    {
-                        switch (stack->vlign) {
-                            case -1:  nughud_stackqueues[i].offset += lineheight;      break;
-                            case  0:  nughud_stackqueues[i].offset += lineheight / 2;  break;
-                            case  1:  default:                                         break;
-                        }
-                    }
-                    else { nughud_stackqueues[i].offset -= lineheight; }
-                }
+          if (!secondtime)
+          {
+            switch (stack->vlign) {
+              case -1:  nughud_stackqueues[i].offset += lineheight;      break;
+              case  0:  nughud_stackqueues[i].offset += lineheight / 2;  break;
+              case  1:  default:                                         break;
             }
-        } while (!secondtime++);
-    }
+          }
+          else { nughud_stackqueues[i].offset -= lineheight; }
+        }
+      }
+    } while (!secondtime++);
+  }
 }
 
 // NUGHUD loading ------------------------------------------------------------
@@ -3147,8 +3143,7 @@ static hudfont_t LoadNughudHUDFont(
   const char *const name,
   const fonttype_t type,
   const char *const stem
-)
-{
+) {
   hudfont_t font = {0};
 
   font.name = M_StringDuplicate(name);
@@ -3183,8 +3178,7 @@ static sbarelem_t CreateNughudNumber(
   numberfont_t *const font,
   const int maxlength,
   const boolean is_percent
-)
-{
+) {
   sbarelem_t elem = {0};
 
   elem.cr = elem.crboom = CR_NONE;
@@ -3209,8 +3203,7 @@ static sbarelem_t CreateNughudNumber(
 static sbarelem_t CreateNughudGraphic(
   const nughud_widget_t nw,
   const char *const name
-)
-{
+) {
   sbarelem_t elem = {0};
 
   elem.cr = elem.crboom = CR_NONE;
@@ -3234,8 +3227,7 @@ static sbarelem_t CreateNughudWidget(
   const nughud_textline_t ntl,
   const sbarwidgettype_t type,
   hudfont_t *const font
-)
-{
+) {
   sbarelem_t elem = {0};
 
   elem.cr = elem.crboom = CR_NONE;
