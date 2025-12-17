@@ -11,9 +11,13 @@
 - **Made the minimap be opened by quickly pressing the automap button twice**, replacing the dedicated button
 - **Made the minimap be closed upon dying**
 - **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees** (fixes blood coloring in SD21)
+- **Made the following cheats repeatable**:
+  - `NEXTMAP`, `NEXTSECRET`, `SUMMONR`, `IDDF##`, `IDDET`, `MDK`
+- **Made the `IDDF##` cheats display a message when a key is found**
 
 ## Bug Fixes
 
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Wrong message when clearing specific automap marks**
+- **_[Crosshair] Horizontal-Autoaim Indicators_ not being cleared when activating freecam**

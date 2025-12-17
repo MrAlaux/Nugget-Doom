@@ -187,6 +187,8 @@ void HU_UpdateCrosshair(void)
 
     // [Nugget] /=============================================================
 
+    crosshair.side = 0; // Horizontal-autoaim indicators
+
     // Freecam
     if (R_FreecamOn())
     {
@@ -217,8 +219,6 @@ void HU_UpdateCrosshair(void)
         }
         else { crosshair.amc = 0; }
     }
-
-    crosshair.side = 0; // Horizontal-autoaim indicators
 
     // [Nugget] =============================================================/
 

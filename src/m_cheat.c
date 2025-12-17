@@ -421,58 +421,58 @@ struct cheat_s cheat[] = {
 
   // [Nugget] /---------------------------------------------------------------
 
-  {"nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum}     },
-  {"fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo}        }, // Infinite ammo cheat
-  {"valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps}      }, // Fast weapons cheat
-  {"bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers}        }, // Shortcut for the two above cheats
-  {"gibbers",    NULL, not_net | not_demo, {.v = cheat_gibbers}        }, // Everything gibs
-  {"riotmode",   NULL, not_net | not_demo, {.v = cheat_riotmode}       },
-  {"resurrect",  NULL, not_net | not_demo, {.v = cheat_resurrect}      },
-  {"idres",      NULL, not_net | not_demo, {.v = cheat_resurrect}      }, // 'RESURRECT' alternative
-  {"idfly",      NULL, not_net | not_demo, {.v = cheat_fly}            },
-  {"nextmap",    NULL, not_net | not_demo, {.v = cheat_normalexit}     },
-  {"nextsecret", NULL, not_net | not_demo, {.v = cheat_secretexit}     },
-  {"turbo",      NULL, not_net | not_demo, {.v = cheat_turbo},         },
-  {"turbo",      NULL, not_net | not_demo, {.s = cheat_turbox},     -3 },
+  { "nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum} },
+  { "fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo} }, // ------- Infinite ammo cheat
+  { "valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps} }, // ----- Fast weapons cheat
+  { "bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers} }, // ------- Shortcut for the two above cheats
+  { "gibbers",    NULL, not_net | not_demo, {.v = cheat_gibbers} }, // ------- Everything gibs
+  { "riotmode",   NULL, not_net | not_demo, {.v = cheat_riotmode} },
+  { "resurrect",  NULL, not_net | not_demo, {.v = cheat_resurrect} },
+  { "idres",      NULL, not_net | not_demo, {.v = cheat_resurrect} }, // ----- 'RESURRECT' alternative
+  { "idfly",      NULL, not_net | not_demo, {.v = cheat_fly} },
+  { "nextmap",    NULL, not_net | not_demo, {.v = cheat_normalexit}, .repeatable = true },
+  { "nextsecret", NULL, not_net | not_demo, {.v = cheat_secretexit}, .repeatable = true },
+  { "turbo",      NULL, not_net | not_demo, {.v = cheat_turbo}, },
+  { "turbo",      NULL, not_net | not_demo, {.s = cheat_turbox}, -3 },
 
-  {"summon",  NULL, not_net | not_demo, {.v = cheat_summon}      }, // Summon "Menu"
-  {"summone", NULL, not_net | not_demo, {.v = cheat_summone0}    }, // Summon Enemy "Menu"
-  {"summone", NULL, not_net | not_demo, {.s = cheat_summone}, -3 }, // Summon a hostile mobj
-  {"summonf", NULL, not_net | not_demo, {.v = cheat_summonf0}    }, // Summon Friend "Menu"
-  {"summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // Summon a friendly mobj
-  {"summonr", NULL, not_net | not_demo, {.v = cheat_summonr}     }, // Repeat last summon
+  { "summon",  NULL, not_net | not_demo, {.v = cheat_summon} }, // --------------------- Summon "Menu"
+  { "summone", NULL, not_net | not_demo, {.v = cheat_summone0} }, // ------------------- Summon Enemy "Menu"
+  { "summone", NULL, not_net | not_demo, {.s = cheat_summone}, -3 }, // ---------------- Summon a hostile mobj
+  { "summonf", NULL, not_net | not_demo, {.v = cheat_summonf0} }, // ------------------- Summon Friend "Menu"
+  { "summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // ---------------- Summon a friendly mobj
+  { "summonr", NULL, not_net | not_demo, {.v = cheat_summonr}, .repeatable = true }, //  Repeat last summon
 
-  {"iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key}      },
-  {"iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
-  {"iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
-  {"iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
-  {"iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0 },
-  {"iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2 },
-  {"iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1 },
-  {"iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5 },
-  {"iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3 },
-  {"iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4 },
+  { "iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key} },
+  { "iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
+  { "iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
+  { "iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
+  { "iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0, .repeatable = true },
+  { "iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2, .repeatable = true },
+  { "iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1, .repeatable = true },
+  { "iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5, .repeatable = true },
+  { "iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3, .repeatable = true },
+  { "iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4, .repeatable = true },
 
-  {"iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit} }, // Exit finder
-  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget}  }, // Give info on the current linetarget
-  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}      }, // Show hitscan trails
-  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}         },
-  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}     }, // MDK Fist
-  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}     }, // Explosive hitscan
+  { "iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit}, .repeatable = true }, // --- Exit finder
+  { "linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget} }, // ------------------------ Give info on the current linetarget
+  { "trails",     NULL, not_net | not_demo, {.v = cheat_trails} }, // ---------------------------- Show hitscan trails
+  { "mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}, .repeatable = true },
+  { "saitama",    NULL, not_net | not_demo, {.v = cheat_saitama} }, // --------------------------- MDK Fist
+  { "boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan} }, // --------------------------- Explosive hitscan
 
-  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
-  {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
-  {"fovsky",     NULL, not_net | not_demo, {.v = cheat_fovsky}   },
-  {"castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
+  { "fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
+  { "dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
+  { "fovsky",     NULL, not_net | not_demo, {.v = cheat_fovsky} },
+  { "castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
 
-  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
-  {"flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
-  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}  },
+  { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
+  { "flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
+  { "idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf} },
 
   #ifdef NUGMAGIC
 
-  {"ggg", NULL, 0, {.v = cheat_magic},  .repeatable = true },
-  {"hhh", NULL, 0, {.v = cheat_magic2}, .repeatable = true },
+  { "ggg", NULL, 0, {.v = cheat_magic},  .repeatable = true },
+  { "hhh", NULL, 0, {.v = cheat_magic2}, .repeatable = true },
 
   #endif
 
@@ -809,9 +809,13 @@ static void cheat_reveal_keyxx(int key)
       if (mobj->type == MT_MISC4 + key)
       {
         found = true;
+
         followplayer = false;
         AM_SetMapCenter(mobj->x, mobj->y);
+
         P_SetTarget(&last_mobj, mobj);
+
+        displaymsg("Key Finder: key found");
         break;
       }
     }
