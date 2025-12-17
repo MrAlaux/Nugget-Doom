@@ -3855,7 +3855,7 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
 
     { // [Nugget] HUD/menu shadows
       const patch_t *const patch = V_CachePatchName("M_THERMM", PU_CACHE);
-      V_SetShadowCrop(SHORT(patch->width) - M_THRM_STEP);
+      V_SetPatchCrop(0, SHORT(patch->width) - M_THRM_STEP, 0, 0, true);
     }
 
     for (i = 0; i < thermWidth; i++)
@@ -3864,7 +3864,7 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
         xx += 8;
     }
 
-    V_SetShadowCrop(0); // [Nugget] HUD/menu shadows
+    V_ClearPatchCrop(); // [Nugget] HUD/menu shadows
 
     V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 

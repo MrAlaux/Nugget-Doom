@@ -705,7 +705,7 @@ static void DrawSetupThermo(const setup_menu_t *s, int x, int y, int width,
 
     patch_t *patch = V_CachePatchName("M_THERMM", PU_CACHE);
 
-    V_SetShadowCrop(SHORT(patch->width) - M_THRM_STEP); // [Nugget] HUD/menu shadows
+    V_SetPatchCrop(0, SHORT(patch->width) - M_THRM_STEP, 0, 0, true); // [Nugget] HUD/menu shadows
 
     for (i = 0; i < width + 1; i++)
     {
@@ -713,7 +713,7 @@ static void DrawSetupThermo(const setup_menu_t *s, int x, int y, int width,
         xx += M_THRM_STEP;
     }
 
-    V_SetShadowCrop(0); // [Nugget] HUD/menu shadows
+    V_ClearPatchCrop(); // [Nugget] HUD/menu shadows
 
     V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 
@@ -2253,8 +2253,10 @@ static setup_menu_t stat_settings3[] = {
 
     // [Nugget] /-------------------------------------------------------------
 
+    {"Health/Ammo Bars", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_bars"}},
+
     {"Horizontal-Autoaim Indicators", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_indicators"}},
-    
+
     {"Detection of Fuzzy Targets", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_fuzzy"}},
 
     // [Nugget] -------------------------------------------------------------/
@@ -2416,6 +2418,7 @@ void UpdateCrosshairItems(void) // [Nugget] Global
 
     DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair");
     DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair_tran_pct");
+    DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair_bars");
 
     DisableItem(
         !(hud_crosshair_on

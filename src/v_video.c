@@ -271,6 +271,31 @@ byte cr_bright3[256],
      cr_gray_vc[256],  // `V_Colorize()` only
      nightvision[256]; // Night-vision visor
 
+static int crop_l = 0, crop_r = 0, crop_t = 0, crop_b = 0;
+
+static boolean crop = false, crop_shadow = false;
+
+void V_SetPatchCrop(
+  const int left,
+  const int right,
+  const int top,
+  const int bottom,
+  const boolean shadow_only
+) {
+  crop_l = MAX(0, left);
+  crop_r = MAX(0, right);
+  crop_t = MAX(0, top);
+  crop_b = MAX(0, bottom);
+
+  crop_shadow = shadow_only;
+}
+
+void V_ClearPatchCrop(void)
+{
+  crop_l = crop_r = crop_t = crop_b = 0;
+  crop_shadow = false;
+}
+
 // HUD/menu shadows ----------------------------------------------------------
 
 boolean hud_menu_shadows;
@@ -281,8 +306,6 @@ byte *shadow_tranmap = NULL;
 static boolean drawshadows   = true,
                drawingshadow = false;
 
-static int shadowcrop = 0;
-
 void V_InitShadowTranMap(void)
 {
   shadow_tranmap = R_GetGenericTranMap(hud_menu_shadows_filter_pct);
@@ -291,11 +314,6 @@ void V_InitShadowTranMap(void)
 void V_ToggleShadows(const boolean on)
 {
   drawshadows = on;
-}
-
-void V_SetShadowCrop(const int value)
-{
-  shadowcrop = MAX(0, value);
 }
 
 // [Nugget] =================================================================/
@@ -387,6 +405,8 @@ DRAW_COLUMN(
   ]
 )
 
+static int crop_y1 = 0, crop_y1l = 0, crop_y2 = 0, crop_y2l = 0;
+
 // [Nugget] -----------------------------------------------------------------/
 
 static void DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
@@ -428,6 +448,25 @@ static void DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
             patchcol->y2 = y2lookup[SCREENHEIGHT - 1];
         }
 
+        // [Nugget]
+        if (crop)
+        {
+          if (crop_t && patchcol->y1 < crop_y1l)
+          {
+            if (patchcol->y2 < crop_y1l) { continue; }
+
+            patchcol->y1 = crop_y1l;
+            patchcol->frac -= (columntop - crop_y1) << FRACBITS;
+          }
+
+          if (crop_b)
+          {
+            if (crop_y2l < patchcol->y1) { continue; }
+
+            patchcol->y2 = MIN(crop_y2l, patchcol->y2);
+          }
+        }
+
         // SoM: The failsafes should be completely redundant now...
         // haleyjd 05/13/08: fix clipping; y2lookup not clamped properly
         if ((column->length > 0 && patchcol->y2 < patchcol->y1)
@@ -453,7 +492,27 @@ static void DrawPatchInternal(int x, int y, patch_t *patch, boolean flipped)
 
     w = SHORT(patch->width);
 
-    if (drawingshadow) { w -= shadowcrop; } // [Nugget] HUD/menu shadows
+    // [Nugget]
+    if (!crop_shadow || drawingshadow)
+    {
+        crop = true;
+
+        x += crop_l;
+        w -= crop_r;
+
+        if (crop_t)
+        {
+            crop_y1  = y - SHORT(patch->topoffset) + crop_t;
+            crop_y1l = y1lookup[BETWEEN(0, SCREENHEIGHT, crop_y1)];
+        }
+
+        if (crop_b)
+        {
+            crop_y2  = y - SHORT(patch->topoffset) + SHORT(patch->height) - crop_b - 1;
+            crop_y2l = y2lookup[BETWEEN(0, SCREENHEIGHT, crop_y2)];
+        }
+    }
+    else { crop = false; }
 
     // calculate edges of the shape
     if (flipped)
@@ -533,6 +592,9 @@ static void DrawPatchInternal(int x, int y, patch_t *patch, boolean flipped)
     {
         startfrac += xiscale * (patchcol.x - x1);
     }
+
+    // [Nugget]
+    if (crop && crop_l) { startfrac += xiscale * x1lookup[crop_l]; }
 
     {
         column_t *column;

@@ -142,6 +142,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Crosshair:**
   - Opacity setting
   - Vertical-only target lock-on
+  - Health/ammo bars
   - Horizontal-autoaim indicators
   - Option to account for fuzzy targets [i.b. From Doom With Love]
   - Dedicated toggle button

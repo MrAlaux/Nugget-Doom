@@ -183,6 +183,9 @@ void V_DrawPatchTRTL(int x, int y, struct patch_s *patch, byte *outr, byte *tl);
 extern int automap_overlay_darkening;
 extern int menu_backdrop_darkening;
 
+void V_SetPatchCrop(int left, int right, int top, int bottom, boolean shadow_only);
+void V_ClearPatchCrop(void);
+
 // HUD/menu shadows ----------------------------------------------------------
 
 extern boolean hud_menu_shadows;
@@ -190,7 +193,6 @@ extern int hud_menu_shadows_filter_pct;
 
 void V_InitShadowTranMap(void);
 void V_ToggleShadows(const boolean on);
-void V_SetShadowCrop(const int value);
 
 // ---------------------------------------------------------------------------
 

@@ -48,6 +48,7 @@ int hud_crosshair_target_color;
 // [Nugget]
 boolean hud_crosshair_on; // Crosshair toggle
 int     hud_crosshair_tran_pct; // Translucent crosshair
+boolean hud_crosshair_bars; // Health/ammo bars
 boolean hud_crosshair_indicators; // Horizontal-autoaim indicators
 boolean hud_crosshair_fuzzy; // Account for fuzzy targets
 
@@ -57,7 +58,13 @@ typedef struct
     int w, h, x, y;
     byte *cr;
 
-    // [Nugget] Horizontal-autoaim indicators
+    // [Nugget] ==============================================================
+
+    // Health/ammo bars
+    patch_t *hlpatch, *ampatch;
+    int hlw, hlh, hlc, amw, amh, amc; // Width, height and crop for each
+
+    // Horizontal-autoaim indicators
     patch_t *lpatch, *rpatch;
     int lw, lh, rw, rh;
     int side;
@@ -91,6 +98,10 @@ void HU_InitCrosshair(void)
             }
         }
     }
+
+    // [Nugget]
+    crosshair.lpatch = crosshair.rpatch =
+    crosshair.hlpatch = crosshair.ampatch = NULL;
 }
 
 void HU_StartCrosshair(void)
@@ -108,18 +119,33 @@ void HU_StartCrosshair(void)
         crosshair.patch = NULL;
     }
 
-    // [Nugget] Horizontal-autoaim indicators --------------------------------
+    // [Nugget] ==============================================================
+
+    // Health/ammo bars ------------------------------------------------------
+
+    if (crosshair.hlpatch) { Z_ChangeTag(crosshair.hlpatch, PU_CACHE); }
+    if (crosshair.ampatch) { Z_ChangeTag(crosshair.ampatch, PU_CACHE); }
+
+    crosshair.hlpatch = V_CachePatchName("CROSSHLB", PU_STATIC);
+    crosshair.hlw = SHORT(crosshair.hlpatch->width);
+    crosshair.hlh = SHORT(crosshair.hlpatch->height) / 2;
+
+    crosshair.ampatch = V_CachePatchName("CROSSAMB", PU_STATIC);
+    crosshair.amw = SHORT(crosshair.ampatch->width);
+    crosshair.amh = SHORT(crosshair.ampatch->height) / 2;
+
+    // Horizontal-autoaim indicators -----------------------------------------
 
     if (crosshair.lpatch) { Z_ChangeTag(crosshair.lpatch, PU_CACHE); }
     if (crosshair.rpatch) { Z_ChangeTag(crosshair.rpatch, PU_CACHE); }
 
     crosshair.lpatch = V_CachePatchName("CROSSIL", PU_STATIC);
     crosshair.lw = SHORT(crosshair.lpatch->width);
-    crosshair.lh = SHORT(crosshair.lpatch->height)/2;
+    crosshair.lh = SHORT(crosshair.lpatch->height) / 2;
 
     crosshair.rpatch = V_CachePatchName("CROSSIR", PU_STATIC);
     crosshair.rw = SHORT(crosshair.rpatch->width);
-    crosshair.rh = SHORT(crosshair.rpatch->height)/2;
+    crosshair.rh = SHORT(crosshair.rpatch->height) / 2;
 }
 
 mobj_t *crosshair_target; // [Alaux] Lock crosshair on target
@@ -159,14 +185,42 @@ void HU_UpdateCrosshair(void)
     crosshair.y = (screenblocks <= 10) ? (SCREENHEIGHT - ST_HEIGHT) / 2
                                        : SCREENHEIGHT / 2;
 
-    // [Nugget] Freecam
+    // [Nugget] /=============================================================
+
+    // Freecam
     if (R_FreecamOn())
     {
-      crosshair.cr = colrngs[hud_crosshair_color];
-      return;
+        crosshair.cr = colrngs[hud_crosshair_color];
+        return;
     }
 
-    crosshair.side = 0; // [Nugget] Horizontal-autoaim indicators
+    // Health/ammo bars
+    if (STRICTMODE(hud_crosshair_bars))
+    {
+        extern int maxhealth;
+
+        const int hlh = SHORT(crosshair.hlpatch->height); // Use full height
+
+        crosshair.hlc = hlh - ceil((float) hlh * ST_GetStatusBarHealth() / maxhealth);
+        crosshair.hlc = MAX(0, crosshair.hlc);
+
+        const ammotype_t ammo = weaponinfo[plr->readyweapon].ammo;
+
+        if (ammo != am_noammo)
+        {
+            const int amh = SHORT(crosshair.ampatch->height),
+                      ammo = plr->ammo[weaponinfo[plr->readyweapon].ammo],
+                      maxammo = plr->maxammo[weaponinfo[plr->readyweapon].ammo];
+
+            crosshair.amc = amh - ceil((float) amh * ammo / maxammo);
+            crosshair.amc = MAX(0, crosshair.amc);
+        }
+        else { crosshair.amc = 0; }
+    }
+
+    crosshair.side = 0; // Horizontal-autoaim indicators
+
+    // [Nugget] =============================================================/
 
     boolean invul = ST_PlayerInvulnerable(plr);
 
@@ -253,7 +307,7 @@ void HU_UpdateCrosshairLock(int x, int y)
 
     // [Nugget] Vertical-only lock-on
     if (hud_crosshair_lockon == crosslockon_full)
-      crosshair.x = (x << FRACBITS) / video.xscale - video.deltaw;
+        crosshair.x = (x << FRACBITS) / video.xscale - video.deltaw;
 
     crosshair.y = (y << FRACBITS) / video.yscale;
 }
@@ -286,18 +340,59 @@ void HU_DrawCrosshair(void)
                          crosshair.cr, xhair_tranmap);
     }
 
-    // [Nugget] Horizontal-autoaim indicators --------------------------------
+    // [Nugget] ==============================================================
 
+    int hlx = 0, amx = 0;
+    boolean drew_bars = false;
+
+    // Health/ammo bars
+    if (STRICTMODE(hud_crosshair_bars) && !R_FreecamOn())
+    {
+        drew_bars = true;
+
+        const int bar_offset = MAX(6, crosshair.w);
+
+        hlx = bar_offset - (SHORT(crosshair.patch->width) % 2) + crosshair.hlw,
+        amx = bar_offset;
+
+        V_SetPatchCrop(0, 0, crosshair.hlc, 0, false);
+
+        V_DrawPatchTRTL2(
+            crosshair.x - hlx,
+            y - crosshair.hlh,
+            crosshair.hlpatch,
+            crosshair.cr,
+            xhair_tranmap
+        );
+
+        V_SetPatchCrop(0, 0, crosshair.amc, 0, false);
+
+        V_DrawPatchTRTL2(
+            crosshair.x + amx,
+            y - crosshair.amh,
+            crosshair.ampatch,
+            crosshair.cr,
+            xhair_tranmap
+        );
+
+        V_ClearPatchCrop();
+    }
+
+    // Horizontal-autoaim indicators
     if (crosshair.side == -1)
     {
-        V_DrawPatchTRTL2(crosshair.x - crosshair.w - crosshair.lw,
-                                   y - crosshair.lh,
-                         crosshair.lpatch, crosshair.cr, xhair_tranmap);
+        const int x = crosshair.x - (drew_bars ? hlx : crosshair.w) - crosshair.lw;
+
+        V_DrawPatchTRTL2(
+            x, y - crosshair.lh, crosshair.lpatch, crosshair.cr, xhair_tranmap
+        );
     }
     else if (crosshair.side == 1)
     {
-        V_DrawPatchTRTL2(crosshair.x + crosshair.w,
-                                   y - crosshair.rh,
-                         crosshair.rpatch, crosshair.cr, xhair_tranmap);
+        const int x = crosshair.x + (drew_bars ? amx + crosshair.amw : crosshair.w);
+
+        V_DrawPatchTRTL2(
+            x, y - crosshair.rh, crosshair.rpatch, crosshair.cr, xhair_tranmap
+        );
     }
 }

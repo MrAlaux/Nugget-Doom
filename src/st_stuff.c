@@ -102,7 +102,17 @@ static patch_t *font_extras[HU_FONTEXTRAS] = { NULL };
 
 // Animated health/armor counts ----------------------------------------------
 
-static int smooth_health = 100, smooth_armor = 0;
+static int sbar_health = 100, sbar_armor = 0;
+
+int ST_GetStatusBarHealth(void)
+{
+  return sbar_health;
+}
+
+int ST_GetStatusBarArmor(void)
+{
+  return sbar_armor;
+}
 
 // Key blinking --------------------------------------------------------------
 
@@ -625,12 +635,12 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
     {
         case sbn_health:
             // [Nugget] Animated health/armor counts
-            result = smooth_health;
+            result = sbar_health;
             break;
 
         case sbn_armor:
             // [Nugget] Animated health/armor counts
-            result = smooth_armor;
+            result = sbar_armor;
             break;
 
         case sbn_frags:
@@ -1213,8 +1223,8 @@ static void UpdateStatusBar(player_t *player)
     statusbar = &sbardef->statusbars[st_nughud ? 0 : barindex]; // [Nugget] NUGHUD
 
     // [Nugget] Animated health/armor counts
-    smooth_health = SmoothCount(smooth_health, player->health);
-    smooth_armor  = SmoothCount(smooth_armor,  player->armorpoints);
+    sbar_health = SmoothCount(sbar_health, player->health);
+    sbar_armor  = SmoothCount(sbar_armor,  player->armorpoints);
 
     // [Nugget] Key blinking /------------------------------------------------
 
@@ -2228,8 +2238,8 @@ void ST_Start(void)
     const player_t *const player = &players[displayplayer];
 
     // Animated health/armor counts
-    smooth_health = player->health;
-    smooth_armor  = player->armorpoints;
+    sbar_health = player->health;
+    sbar_armor  = player->armorpoints;
 
     // Key blinking
     memset(keyblinkkeys, 0, sizeof(keyblinkkeys));
@@ -2846,8 +2856,8 @@ static void DrawNughudGraphics(void)
       );
     }
 
-    const int health = smooth_health,
-               armor = smooth_armor;
+    const int health = sbar_health,
+               armor = sbar_armor;
 
     DrawNughudBar(&nughud.healthbar, nhhlbar, health, maxhealth);
     DrawNughudBar(&nughud.armorbar,  nharbar,  armor, max_armor/2);
@@ -3840,20 +3850,28 @@ void ST_BindSTSVariables(void)
             0, 0, 2, ss_stat, wad_no,
             "Change crosshair color when locking on target (1 = Highlight; 2 = Health)");
 
-  // [Nugget] Vertical-only option
+  // [Nugget] /---------------------------------------------------------------
+
+  // Vertical-only option
   M_BindNum("hud_crosshair_lockon", &hud_crosshair_lockon, NULL,
             0, 0, 2, ss_stat, wad_no,
             "Lock crosshair on target (1 = Vertically only; 2 = Fully)");
 
-  // [Nugget] Horizontal autoaim indicators
+  // Health/ammo bars
+  M_BindBool("hud_crosshair_bars", &hud_crosshair_bars, NULL,
+             false, ss_stat, wad_no,
+             "Health/ammo bars besides the crosshair");
+
+  // Horizontal-autoaim indicators
   M_BindBool("hud_crosshair_indicators", &hud_crosshair_indicators, NULL,
              false, ss_stat, wad_no,
              "Horizontal-autoaim indicators for crosshair");
 
-  // [Nugget]
   M_BindBool("hud_crosshair_fuzzy", &hud_crosshair_fuzzy, NULL,
              false, ss_stat, wad_no,
              "Account for fuzzy targets when coloring and/or locking-on");
+
+  // [Nugget] ---------------------------------------------------------------/
 
   M_BindNum("hud_crosshair_color", &hud_crosshair_color, NULL,
             CR_GRAY, CR_BRICK, CR_NONE, ss_stat, wad_no,

@@ -62,7 +62,7 @@
 
 #define plyr (players+consoleplayer)     /* the console player */
 
-// [Nugget] Testing cheat /------------
+// [Nugget] Testing cheats /--------------------------------------------------
 
 //#define NUGMAGIC
 
@@ -72,19 +72,19 @@ int nugmagic = 0;
 
 static void cheat_magic(void)
 {
-  
+  nugmagic = !nugmagic;
 }
 
 int nugmagic2 = 0;
 
 static void cheat_magic2(void)
 {
-  
+  nugmagic2 = !nugmagic2;
 }
 
 #endif
 
-// [Nugget] --------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
 //-----------------------------------------------------------------------------
 //
@@ -471,8 +471,8 @@ struct cheat_s cheat[] = {
 
   #ifdef NUGMAGIC
 
-  {"ggg", NULL, 0, {.v = cheat_magic}},
-  {"hhh", NULL, 0, {.v = cheat_magic2}},
+  {"ggg", NULL, 0, {.v = cheat_magic},  .repeatable = true },
+  {"hhh", NULL, 0, {.v = cheat_magic2}, .repeatable = true },
 
   #endif
 
