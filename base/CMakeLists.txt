@@ -20,8 +20,13 @@ set(BASE_SOURCES
     all-all/cross06.png
     all-all/cross07.png
     all-all/cross08.png
-    all-all/crossil.png # [Nugget]
-    all-all/crossir.png # [Nugget]
+
+    # [Nugget]
+    all-all/crossamb.png
+    all-all/crosshlb.png
+    all-all/crossil.png
+    all-all/crossir.png
+
     all-all/crpurple.lmp
     all-all/crred.lmp
     all-all/crtan.lmp
