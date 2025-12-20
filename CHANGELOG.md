@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Radial Fog_** setting
 - **_[Crosshair] Health/Ammo Bars_** setting
 - **_Translucent [Weapon] When Invisible_** setting
 - **NUGHUD Weapon icon**

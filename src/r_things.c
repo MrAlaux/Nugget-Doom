@@ -587,34 +587,42 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   spryscale = vis->scale;
   sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
 
-  // [Nugget] Sprite shadows
-  if (vis->yscale > 0) { spryscale = vis->yscale; }
+  // [Nugget] /===============================================================
 
-  // [Nugget] Thing lighting /------------------------------------------------
+  if (vis->yscale > 0) { spryscale = vis->yscale; } // Sprite shadows
 
-  boolean percolumn_lighting;
+  // Thing lighting, radial fog ----------------------------------------------
+
+  int lightindex = 0;
+
+  boolean percolumn_lighting = false,
+          do_sprite_radial_fog = false;
 
   fixed_t pcl_offset = 0;
   fixed_t pcl_cosine = 0, pcl_sine = 0;
-  int pcl_lightindex = 0;
 
-  if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
-      && !vis->fullbright && dc_colormap[0] && !fixedcolormap)
+  if (!vis->fullbright && dc_colormap[0] && !fixedcolormap)
   {
-    percolumn_lighting = true;
+    do_sprite_radial_fog = do_radial_fog;
 
-    pcl_offset = (SHORT(patch->leftoffset) << FRACBITS) - vis->xiscale/2;
+    if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
+    {
+      percolumn_lighting = true;
 
-    const int angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
+      pcl_offset = (SHORT(patch->leftoffset) << FRACBITS) - vis->xiscale/2;
 
-    pcl_cosine = finecosine[angle];
-    pcl_sine   =   finesine[angle];
+      const int angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
 
-    pcl_lightindex = STRICTMODE(!diminishing_lighting) ? 0 : R_GetLightIndex(spryscale);
+      pcl_cosine = finecosine[angle];
+      pcl_sine   =   finesine[angle];
+
+      if (diminishing_lighting && !do_sprite_radial_fog)
+      { lightindex = R_GetLightIndex(spryscale, 0); }
+    }
+    else { spritelights = scalelight[vis->lightnum]; }
   }
-  else { percolumn_lighting = false; }
 
-  // [Nugget] ---------------------------------------------------------------/
+  // [Nugget] ===============================================================/
 
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
@@ -625,7 +633,18 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
       else if (texturecolumn >= SHORT(patch->width))
         break;
 
-      // [Nugget] Thing lighting
+      // [Nugget] /===========================================================
+
+      // Radial fog
+      if (do_sprite_radial_fog)
+      {
+        lightindex = R_GetLightIndex(spryscale, dc_x);
+
+        if (!percolumn_lighting)
+        { dc_colormap[0] = spritelights[lightindex]; }
+      }
+
+      // Thing lighting
       if (percolumn_lighting)
       {
         fixed_t offset = frac - pcl_offset;
@@ -635,11 +654,13 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                     + extralight;
+        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                           + extralight;
 
-        dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][pcl_lightindex];
+        dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
       }
+
+      // [Nugget] ===========================================================/
 
       column = (column_t *)((byte *) patch +
                             LONG(patch->columnofs[texturecolumn]));
@@ -655,7 +676,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
 boolean flipcorpses = false;
 
-static void R_ProjectSprite (mobj_t* thing)
+static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 {
   fixed_t   gzt;               // killough 3/27/98
   fixed_t   tx, txc;
@@ -681,7 +702,7 @@ static void R_ProjectSprite (mobj_t* thing)
   if (thing == R_GetFreecamMobj() && !R_ChasecamOn()) { return; }
 
   // andrewj: voxel support
-  if (VX_ProjectVoxel (thing))
+  if (VX_ProjectVoxel (thing, lightnum)) // [Nugget] Pass lightnum
       return;
 
   // [AM] Interpolate between current and last position,
@@ -859,6 +880,7 @@ static void R_ProjectSprite (mobj_t* thing)
 
   // [Nugget]
   vis->xscale = vis->yscale = 0;
+  vis->lightnum = lightnum;
   vis->fullbright = false;
   vis->flipped = flip;
 
@@ -890,15 +912,18 @@ static void R_ProjectSprite (mobj_t* thing)
   else
     {      // diminished light
       const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                        ? 0 : R_GetLightIndex(xscale);
+                        ? 0 : R_GetLightIndex(xscale, 0); // [Nugget] X
 
       // [Nugget] Thing lighting
       if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
       {
-        const int lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
-                           + extralight;
+        int new_lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
+                         + extralight;
 
-        spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+        new_lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+
+        vis->lightnum = new_lightnum;
+        spritelights = scalelight[new_lightnum];
       }
 
       vis->colormap[0] = spritelights[index];
@@ -1024,7 +1049,8 @@ static void R_ProjectSprite (mobj_t* thing)
 
   const fixed_t shadow_iscale = FixedDiv(FRACUNIT, shadow_xscale);
 
-  if (flip) {
+  if (flip)
+  {
     shadow_vis->startfrac = spritewidth[lump]-1;
     shadow_vis->xiscale = -shadow_iscale;
   }
@@ -1079,7 +1105,7 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   // Handle all things in sector.
 
   for (thing = sec->thinglist; thing; thing = thing->snext)
-    R_ProjectSprite(thing);
+    R_ProjectSprite(thing, BETWEEN(0, LIGHTLEVELS-1, lightnum)); // [Nugget] Pass lightnum
 
   if (STRICTMODE(draw_nearby_sprites))
   {
@@ -1115,7 +1141,7 @@ void R_NearbySprites (void)
       else
         spritelights = scalelight[lightnum];
 
-      R_ProjectSprite(thing);
+      R_ProjectSprite(thing, BETWEEN(0, LIGHTLEVELS-1, lightnum)); // [Nugget] Pass lightnum
     }
   }
 
@@ -1230,7 +1256,8 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
 
   // [Nugget]
   vis->yscale = 0;
-  vis->fullbright = true; // Thing lighting: set true to make per-column lighting not apply to psprites
+  vis->lightnum = 0;
+  vis->fullbright = true; // Don't apply per-column lighting and radial fog
   vis->flipped = flip;
 
   if (flip)
@@ -1264,7 +1291,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   else
   {
     // [Nugget]
-    const int index = (STRICTMODE(!diminishing_lighting)) ? 0 : MAXLIGHTSCALE-1;
+    const int index = STRICTMODE(!diminishing_lighting) ? 0 : MAXLIGHTSCALE-1;
 
     vis->colormap[0] = spritelights[index];  // local light
     vis->colormap[1] = fullcolormap;

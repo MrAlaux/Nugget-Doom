@@ -76,6 +76,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Thing Lighting Mode_** setting
   - _Hitbox_ suggested by [@fragglet](https://github.com/fragglet)
   - _Per-column_ inspired by PSX Hexen
+- **_Radial Fog_** setting
+  - The fidelity of the effect on floors and ceilings can be tuned through the CFG-only `radial_plane_fog_fidelity` CVAR;
+    greater values increase fidelity but cause more stutter
 - **_Flip Levels_** setting
 - **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
 - **_No Berserk Tint_** setting

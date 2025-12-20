@@ -138,6 +138,8 @@ int extra_level_brightness;               // level brightness feature
 
 // [Nugget] /=================================================================
 
+static int viewwidth_nonwide; // Brought from below
+
 static fixed_t nughud_viewpitch;
 
 fixed_t R_GetNughudViewPitch(void)
@@ -182,6 +184,8 @@ boolean vertical_lockon;
 spriteshadows_t sprite_shadows;
 int sprite_shadows_tran_pct;
 thinglighting_t thing_lighting_mode;
+boolean radial_fog;
+int radial_plane_fog_fidelity;
 boolean flip_levels;
 static int lowres_pixel_width;
 static int lowres_pixel_height;
@@ -196,6 +200,99 @@ int pspr_translucency_pct;
 int zoom_fov;
 boolean comp_powerrunout;
 
+// Radial fog ----------------------------------------------------------------
+
+static int R_GetLightIndexVanilla(fixed_t scale, int x);
+
+static int R_GetLightIndexRadFog(fixed_t scale, const int x)
+{
+  scale = FixedMul(scale, finecosine[xtoviewangle[x] >> ANGLETOFINESHIFT]);
+
+  const int index = ((int64_t) scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
+
+  return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+}
+
+int (*R_GetLightIndex)(fixed_t scale, int x) = R_GetLightIndexVanilla;
+
+int light_distance_shift_bits;
+
+uint16_t ** planedistlight = NULL,
+          *  spandistlight = NULL;
+
+boolean do_radial_fog = false;
+
+static boolean init_radfog = false;
+
+boolean R_InitDistLightTablesPending(void)
+{
+  return init_radfog;
+}
+
+void R_DeferredInitDistLightTables(void)
+{
+  init_radfog = true;
+}
+
+void R_InitDistLightTables(void)
+{
+  static int max_width = 0, max_light_distance = 0;
+
+  const int old_width = max_width;
+
+  if (planedistlight && planedistlight[0] && old_width < video.width)
+  {
+    for (int i = 0;  i < max_light_distance;  i++)
+    { Z_Free(planedistlight[i]); }
+
+    planedistlight[0] = NULL;
+  }
+
+  do_radial_fog = STRICTMODE(radial_fog && diminishing_lighting);
+
+  if (!do_radial_fog)
+  {
+    R_GetLightIndex = R_GetLightIndexVanilla;
+    return;
+  }
+
+  R_GetLightIndex = R_GetLightIndexRadFog;
+
+  light_distance_shift_bits = 18 - radial_plane_fog_fidelity;
+  max_light_distance = 1 << (27 - light_distance_shift_bits);
+
+  if (!planedistlight)
+  { planedistlight = Z_Malloc(sizeof(*planedistlight) * max_light_distance, PU_STATIC, 0); }
+
+  max_width = MAX(max_width, video.width);
+
+  if (old_width < max_width)
+  {
+    for (int i = 0;  i < max_light_distance;  i++)
+    { planedistlight[i] = Z_Malloc(sizeof(**planedistlight) * (max_width + 1), PU_STATIC, 0); }
+  }
+
+  const int width = viewwidth + 1, half_width = (width / 2) + (width % 2);
+
+  for (int i = 0;  i < max_light_distance;  i++)
+  {
+    uint16_t *const cur_spandistlight = planedistlight[i];
+
+    const fixed_t base_distance = (i << light_distance_shift_bits) >> LIGHTZSHIFT;
+
+    for (int x = 0;  x < half_width;  x++)
+    {
+      const fixed_t distance = FixedMul(
+        base_distance, finesecant[xtoviewangle[x] >> ANGLETOFINESHIFT]
+      );
+
+      cur_spandistlight[x] = cur_spandistlight[width - 1 - x] = MIN(MAXLIGHTZ-1, distance);
+    }
+  }
+
+  init_radfog = false;
+}
+
 // FOV effects ---------------------------------------------------------------
 
 static boolean teleporter_zoom;
@@ -206,8 +303,8 @@ typedef struct fovfx_s {
   float old, current, target;
 } fovfx_t;
 
-static fovfx_t fovfx[NUMFOVFX]; // FOV effects (recoil, teleport)
-static int     zoomed = 0;      // Current zoom state
+static fovfx_t fovfx[NUMFOVFX] = {0}; // FOV effects (recoil, teleport)
+static int     zoomed = 0; // ---------- Current zoom state
 
 void R_ClearFOVFX(void)
 {
@@ -228,16 +325,21 @@ void R_SetFOVFX(const int fx)
 {
   if (strictmode) { return; }
 
-  switch (fx) {
+  switch (fx)
+  {
     case FOVFX_ZOOM:
       // Handled by `R_Get/SetZoom()`
       break;
 
     case FOVFX_TELEPORT:
+    {
       if (!teleporter_zoom) { break; }
+
       R_SetZoom(ZOOM_RESET);
       fovfx[FOVFX_TELEPORT].target = 50;
+
       break;
+    }
   }
 }
 
@@ -260,6 +362,9 @@ void R_SetZoom(const int state)
   }
   else { zoomed = ZOOM_OFF; }
 }
+
+static void R_InitTextureMapping(void);
+static void R_SetupFreelook(void);
 
 static void ProcessFOVEffects(void)
 {
@@ -385,6 +490,7 @@ static void ProcessFOVEffects(void)
   if (r_fov != targetfov)
   {
     r_fov = targetfov;
+
     R_ExecuteSetViewSize();
     R_FillBackScreen();
   }
@@ -778,7 +884,7 @@ angle_t R_PointToAngleCrispy(fixed_t x, fixed_t y)
 
 // [crispy] in widescreen mode, make sure the same number of horizontal
 // pixels shows the same part of the game scene as in regular rendering mode
-static int scaledviewwidth_nonwide, viewwidth_nonwide;
+static int scaledviewwidth_nonwide; // [Nugget] Moved `viewwidth_nonwide` above
 static fixed_t centerxfrac_nonwide;
 
 //
@@ -895,6 +1001,9 @@ static void R_InitTextureMapping(void)
 
   vx_clipangle = clipangle - ((fov << ANGLETOFINESHIFT) - ANG90);
   CalcMaxProjectSlope(fov);
+
+  // [Nugget] Radial fog
+  R_DeferredInitDistLightTables();
 }
 
 //
@@ -961,6 +1070,13 @@ void R_InitLightTables (void)
       LIGHTZSHIFT = 20;
   }
 
+  // [Nugget] Radial fog
+  if (STRICTMODE(radial_fog))
+  {
+    LIGHTZSHIFT = MIN(LIGHTZSHIFT, 18 - radial_plane_fog_fidelity);
+    MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
+  }
+
   scalelightfixed = Z_Malloc(MAXLIGHTSCALE * sizeof(*scalelightfixed), PU_STATIC, 0);
 
   // killough 4/4/98: dynamic colormaps
@@ -1002,6 +1118,8 @@ void R_InitLightTables (void)
             c_zlight[t][i][j] = colormaps[t] + level;
         }
     }
+
+  R_DeferredInitDistLightTables(); // [Nugget] Radial fog
 }
 
 boolean setsmoothlight;
@@ -1017,7 +1135,8 @@ void R_SmoothLight(void)
   P_SegLengths(true);
 }
 
-int R_GetLightIndex(fixed_t scale)
+// [Nugget] Static, added X parameter
+static int R_GetLightIndexVanilla(const fixed_t scale, const int x)
 {
   const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
   return BETWEEN(0, MAXLIGHTSCALE - 1, index);
@@ -1225,7 +1344,14 @@ void R_ExecuteSetViewSize (void)
 
 void R_Init (void)
 {
-  r_fov = custom_fov; // [Nugget]
+  // [Nugget] /---------------------------------------------------------------
+
+  for (int i = 0;  i < FINEANGLES;  i++)
+  { finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]); }
+
+  r_fov = custom_fov;
+
+  // [Nugget] ---------------------------------------------------------------/
 
   R_InitData();
   R_SetViewSize(screenblocks);
@@ -1894,6 +2020,8 @@ void R_InitAnyRes(void)
   R_InitSpritesRes();
   R_InitBufferRes();
   R_InitPlanesRes();
+
+  R_DeferredInitDistLightTables(); // [Nugget] Radial fog
 }
 
 void R_BindRenderVariables(void)
@@ -1935,6 +2063,15 @@ void R_BindRenderVariables(void)
   M_BindNum("thing_lighting_mode", &thing_lighting_mode, NULL,
             THINGLIGHTING_ORIGIN, THINGLIGHTING_ORIGIN, NUM_THINGLIGHTING-1, ss_display, wad_yes,
             "Thing lighting mode (0 = Origin (vanilla); 1 = Hitbox; 2 = Per-column)");
+
+  M_BindBool("radial_fog", &radial_fog, NULL,
+             false, ss_display, wad_yes,
+             "Radial fog (diminishing lighting)");
+
+  // (CFG-only)
+  M_BindNum("radial_plane_fog_fidelity", &radial_plane_fog_fidelity, NULL,
+            1, 0, 4, ss_none, wad_yes,
+            "Fidelity of radial fog for planes (higher values cause more stutter)");
 
   // [Nugget] ---------------------------------------------------------------/
 

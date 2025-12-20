@@ -969,6 +969,8 @@ static void cheat_dimlight(void)
 
   diminishing_lighting = !diminishing_lighting;
   displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
+
+  R_DeferredInitDistLightTables();
 }
 
 static void cheat_fovsky(void)

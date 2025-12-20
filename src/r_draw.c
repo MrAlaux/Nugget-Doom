@@ -870,6 +870,63 @@ void (*R_DrawTLColumn)(void) = DrawColumnTL;
 void (*R_DrawTranslatedColumn)(void) = DrawColumnTR;
 void (*R_DrawSpan)(void) = DrawSpan;
 
+// [Nugget] Radial fog /------------------------------------------------------
+
+#define DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, dest_index) \
+{ \
+  ytemp = (ds_yfrac >> 10) & 0x0FC0; \
+  xtemp = (ds_xfrac >> 16) & 0x003F; \
+  spot = xtemp | ytemp; \
+  ds_xfrac += ds_xstep; \
+  ds_yfrac += ds_ystep; \
+  src = ds_source[spot]; \
+  \
+  ds_colormap[0] = planezlight[*sdl++]; \
+  \
+  dest[dest_index] = SRCPIXEL; \
+}
+
+#define R_DRAW_SPAN_RADFOG(NAME, SRCPIXEL)             \
+    static void DrawSpanWithRadialFog##NAME(void)      \
+    {                                                  \
+        byte *dest = ylookup[ds_y] + columnofs[ds_x1]; \
+        byte src;                                      \
+                                                       \
+        unsigned count = ds_x2 - ds_x1 + 1;            \
+                                                       \
+        unsigned xtemp, ytemp, spot;                   \
+                                                       \
+        const uint16_t *sdl = spandistlight + ds_x1;   \
+                                                       \
+        while (count >= 4)                             \
+        {                                              \
+            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 0);       \
+            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 1);       \
+            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 2);       \
+            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 3);       \
+                                                       \
+            dest += 4;                                 \
+            count -= 4;                                \
+        }                                              \
+                                                       \
+        while (count)                                  \
+        {                                              \
+            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 0);       \
+                                                       \
+            dest++;                                    \
+            count--;                                   \
+        }                                              \
+    }
+
+R_DRAW_SPAN_RADFOG(, ds_colormap[0][src])
+R_DRAW_SPAN_RADFOG(Brightmap, ds_colormap[ds_brightmap[src]][src])
+
+#undef DRAW_SPAN_RADFOG_PIXEL
+
+void (*R_DrawSpanWithRadialFog)(void) = DrawSpanWithRadialFog;
+
+// [Nugget] -----------------------------------------------------------------/
+
 void R_InitDrawFunctions(void)
 {
     boolean local_brightmaps = (STRICTMODE(brightmaps) || force_brightmaps);
@@ -880,6 +937,8 @@ void R_InitDrawFunctions(void)
         R_DrawTLColumn = DrawColumnTLBrightmap;
         R_DrawTranslatedColumn = DrawColumnTRBrightmap;
         R_DrawSpan = DrawSpanBrightmap;
+
+        R_DrawSpanWithRadialFog = DrawSpanWithRadialFogBrightmap; // [Nugget] Radial fog
     }
     else
     {
@@ -887,6 +946,8 @@ void R_InitDrawFunctions(void)
         R_DrawTLColumn = DrawColumnTL;
         R_DrawTranslatedColumn = DrawColumnTR;
         R_DrawSpan = DrawSpan;
+
+        R_DrawSpanWithRadialFog = DrawSpanWithRadialFog; // [Nugget] Radial fog
     }
 
     // [Nugget] Sprite shadows

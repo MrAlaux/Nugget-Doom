@@ -4048,6 +4048,7 @@ setup_menu_t display_settings1[] = {
     {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = V_InitShadowTranMap},
     {"Sprite Shadows",               S_CHOICE|S_STRICT,       N_X, M_SPC, {"sprite_shadows"}, .strings_id = str_sprite_shadows, .action = R_InitShadowTranMap},
     {"Thing Lighting Mode",          S_CHOICE|S_STRICT,       N_X, M_SPC, {"thing_lighting_mode"}, .strings_id = str_thing_lighting},
+    {"Radial Fog",                   S_ONOFF,                 N_X, M_SPC, {"radial_fog"}, .action = SmoothLight},
     {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
     {"No Berserk Tint",              S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_berserk_tint"}},
     {"No Radiation Suit Tint",       S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_radsuit_tint"}},

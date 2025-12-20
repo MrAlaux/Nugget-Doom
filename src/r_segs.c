@@ -169,7 +169,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
         if (!fixedcolormap)      // calculate lighting
           {                             // killough 11/98:
             const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                              ? 0 : R_GetLightIndex(spryscale);
+                              ? 0 : R_GetLightIndex(spryscale, dc_x); // [Nugget] X
 
             // [crispy] brightmaps for two sided mid-textures
             dc_brightmap = texturebrightmap[texnum];
@@ -380,7 +380,7 @@ static void R_RenderSegLoop (void)
       if (segtextured)
         {
           const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                            ? 0 : R_GetLightIndex(rw_scale);
+                            ? 0 : R_GetLightIndex(rw_scale, rw_x); // [Nugget] X
 
           // calculate texture offset
           angle_t angle =(rw_centerangle+xtoviewangle[rw_x])>>ANGLETOFINESHIFT;

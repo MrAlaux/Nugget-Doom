@@ -509,7 +509,7 @@ static boolean VX_CheckFrustum (fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
 }
 
 
-boolean VX_ProjectVoxel (mobj_t * thing)
+boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 {
 	if (!STRICTMODE(voxels_rendering))
 		return false;
@@ -695,6 +695,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 
 	// [Nugget]
 	vis->yscale = 0;
+	vis->lightnum = lightnum;
 	vis->fullbright = false;
 	vis->flipped = false;
 
@@ -717,15 +718,18 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 	{
 		// diminished light
 		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-											? 0 : R_GetLightIndex(xscale);
+		                  ? 0 : R_GetLightIndex(xscale, 0);
 
 		// [Nugget] Thing lighting
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
 		{
-			const int lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
-			                   + extralight;
+			int new_lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
+			                 + extralight;
 
-			spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+			new_lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+
+			vis->lightnum = new_lightnum;
+			spritelights = scalelight[new_lightnum];
 		}
 
 		vis->colormap[0] = spritelights[index];
@@ -741,7 +745,7 @@ boolean VX_ProjectVoxel (mobj_t * thing)
 		HU_UpdateCrosshairLock
 		(
 			BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS),
-      // [Nugget] Removed `actualheight`
+			// [Nugget] Removed `actualheight`
 			BETWEEN(0, viewheight - 1, (centeryfrac + FixedMul(viewz - gz - crosshair_target->height/2, xscale)) >> FRACBITS)
 		);
 
@@ -860,40 +864,56 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 	int linesize = video.pitch;
 	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
-	// [Nugget] Thing lighting /------------------------------------------------
+	// iterate over screen columns
+	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
+
+	const fixed_t ux2 = MAX(Cx, Bx); // [Nugget] Calculate once
+
+	// [Nugget] Thing lighting, radial fog /------------------------------------
 
 	const byte *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
-	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
-			&& !spr->fullbright && spr->colormap[0] && !fixedcolormap)
+	byte lightnum = spr->lightnum;
+
+	boolean do_voxel_radial_fog = false;
+
+	if (!spr->fullbright && spr->colormap[0] && !fixedcolormap)
 	{
-		const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
-									yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
+		do_voxel_radial_fog = do_radial_fog;
 
-		const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
+		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
+		{
+			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
+			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
 
-		const fixed_t cosine = finecosine[angle],
-										sine =   finesine[angle];
+			const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
 
-		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
-									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
+			const fixed_t cosine = finecosine[angle],
+			                sine =   finesine[angle];
 
-		int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-								 + extralight;
+			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
+			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-		const int lightindex = STRICTMODE(!diminishing_lighting)
-													 ? 0 : R_GetLightIndex(B_xscale);
+			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+			                       + extralight;
 
-		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+			lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+
+			if (!do_voxel_radial_fog)
+			{
+				const int lightindex = STRICTMODE(!diminishing_lighting)
+				                       ? 0 : R_GetLightIndex(B_xscale, (ux2 - ux) / 2);
+
+				colormap[0] = scalelight[lightnum][lightindex];
+			}
+			else { spritelights = scalelight[lightnum]; }
+		}
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
 
-	// iterate over screen columns
-	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
-
-	for (; ux < ((Cx > Bx) ? Cx : Bx) ; ux += FRACUNIT)
+	for (; ux < ux2 ; ux += FRACUNIT)
 	{
 		// clip horizontally
 		if (ux >= ((spr->x2 + 1) << FRACBITS)) break;
@@ -916,6 +936,10 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 		const byte * end  = &v->data[ofs2];
 
 		byte top, len, face;
+
+		// [Nugget] Radial fog
+		if (do_voxel_radial_fog)
+		{ colormap[0] = spritelights[R_GetLightIndex(scale, ux >> FRACBITS)]; }
 
 		for (; slab < end ; slab += len)
 		{
@@ -1105,37 +1129,55 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	const int linesize = video.pitch;
 	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
-	// [Nugget] Thing lighting /------------------------------------------------
+	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
+
+	const fixed_t ux2 = MAX(Cx, Bx);
+
+	// [Nugget] Thing lighting, radial fog /------------------------------------
 
 	const byte *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
-	if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN
-			&& !spr->fullbright && spr->colormap[0] && !fixedcolormap)
+	byte lightnum = spr->lightnum;
+
+	boolean do_voxel_radial_fog = false;
+
+	if (!spr->fullbright && spr->colormap[0] && !fixedcolormap)
 	{
-		const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
-									yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
+		do_voxel_radial_fog = do_radial_fog;
 
-		const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
+		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
+		{
+			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
+			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
 
-		const fixed_t cosine = finecosine[angle],
-										sine =   finesine[angle];
+			const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
 
-		const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
-									gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
+			const fixed_t cosine = finecosine[angle],
+			                sine =   finesine[angle];
 
-		int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-								 + extralight;
+			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
+			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-		const int lightindex = STRICTMODE(!diminishing_lighting)
-													 ? 0 : R_GetLightIndex(midscale);
+			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+			                       + extralight;
 
-		colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+			lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+
+			if (!do_voxel_radial_fog)
+			{
+				const int lightindex = STRICTMODE(!diminishing_lighting)
+				                       ? 0 : R_GetLightIndex(midscale, (ux2 - ux) / 2);
+
+				colormap[0] = scalelight[lightnum][lightindex];
+			}
+			else { spritelights = scalelight[lightnum]; }
+		}
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
 
-	for (fixed_t ux = ((Ax - 1) | FRACMASK) + 1;  ux < MAX(Cx, Bx);  ux += FRACUNIT)
+	for (; ux < ux2;  ux += FRACUNIT)
 	{
 		if (ux >= ((spr->x2 + 1) << FRACBITS)) break;
 		if (ux <  ((spr->x1    ) << FRACBITS)) continue;
@@ -1145,6 +1187,10 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 		const byte *      slab = &v->data[ofs1],
 		           *const  end = &v->data[ofs2];
+
+		// [Nugget] Radial fog
+		if (do_voxel_radial_fog)
+		{ colormap[0] = spritelights[R_GetLightIndex(midscale, ux >> FRACBITS)]; }
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{
@@ -1326,6 +1372,9 @@ void VX_DrawVoxel (vissprite_t * spr)
 	vx_eye_x = v->x_pivot + FixedMul (delta_x, c) + FixedMul (delta_y, s);
 	vx_eye_y = v->y_pivot + FixedMul (delta_x, s) - FixedMul (delta_y, c);
 
+	// [Nugget] Radial fog
+	spritelights = scalelight[spr->lightnum];
+
 	VX_RecursiveDraw (spr, 0, 0, v->x_size, v->y_size);
 }
 
@@ -1393,5 +1442,5 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   subsector_t sub = { .sector = &sector };
   thing.subsector = &sub;
 
-  return VX_ProjectVoxel(&thing);
+  return VX_ProjectVoxel(&thing, 0);
 }

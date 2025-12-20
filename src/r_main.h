@@ -152,6 +152,7 @@ extern boolean vertical_lockon;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
+extern boolean radial_fog;
 extern boolean flip_levels;
 extern boolean nightvision_visor;
 extern fakecontrast_t fake_contrast;
@@ -175,6 +176,19 @@ int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
 
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
+
+// Radial fog ----------------------------------------------------------------
+
+extern int light_distance_shift_bits;
+
+extern lighttable_t **planezlight;
+extern uint16_t **planedistlight, *spandistlight;
+
+extern boolean do_radial_fog;
+
+boolean R_InitDistLightTablesPending(void);
+void    R_DeferredInitDistLightTables(void);
+void    R_InitDistLightTables(void);
 
 // FOV effects ---------------------------------------------------------------
 
@@ -248,7 +262,9 @@ extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 // [Nugget] =================================================================/
 
 void R_InitLightTables(void);                // killough 8/9/98
-int R_GetLightIndex(fixed_t scale);
+
+// [Nugget] Made function pointer, added X parameter
+extern int (*R_GetLightIndex)(fixed_t scale, int x);
 
 extern boolean setsizeneeded;
 void R_ExecuteSetViewSize(void);

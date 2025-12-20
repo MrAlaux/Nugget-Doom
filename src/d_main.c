@@ -324,6 +324,10 @@ void D_Display (void)
       borderdrawcount = true;
     }
 
+  // [Nugget] Radial fog
+  if (R_InitDistLightTablesPending())
+  { R_InitDistLightTables(); }
+
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
 

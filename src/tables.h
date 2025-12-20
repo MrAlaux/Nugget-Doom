@@ -48,6 +48,9 @@ extern const fixed_t finesine[5*FINEANGLES/4];
 // Re-use data, is just PI/2 pahse shift.
 extern const fixed_t *const finecosine;
 
+// [Nugget]
+extern fixed_t finesecant[FINEANGLES];
+
 // Effective size is 4096.
 extern const fixed_t finetangent[FINEANGLES/2];
 

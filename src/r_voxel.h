@@ -25,7 +25,7 @@ void VX_Init (void);
 void VX_ClearVoxels (void);
 
 struct mobj_s;
-boolean VX_ProjectVoxel (struct mobj_s * thing);
+boolean VX_ProjectVoxel (struct mobj_s * thing, byte lightnum); // [Nugget] Lightnum
 
 struct vissprite_s;
 void VX_DrawVoxel (struct vissprite_s * vis);

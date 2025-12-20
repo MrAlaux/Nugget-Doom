@@ -2117,6 +2117,9 @@ const angle_t tantoangle[2049] = {
   536870912
 };
 
+// [Nugget]
+fixed_t finesecant[FINEANGLES];
+
 //----------------------------------------------------------------------------
 //
 // $Log: tables.c,v $

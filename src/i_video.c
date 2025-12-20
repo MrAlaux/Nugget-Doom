@@ -1513,7 +1513,8 @@ static void ResetLogicalSize(void)
 
     int width, height;
 
-    if (!stretch_to_fit) {
+    if (!stretch_to_fit)
+    {
       width = video.width;
       height = actualheight;
     }

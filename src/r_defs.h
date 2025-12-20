@@ -391,6 +391,7 @@ typedef struct vissprite_s
   // [Nugget]
   fixed_t xscale, yscale;
   byte *tranmap;
+  byte lightnum;
   boolean fullbright;
   boolean flipped;
 } vissprite_t;

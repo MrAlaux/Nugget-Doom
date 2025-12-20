@@ -92,7 +92,7 @@ static int *spanstart = NULL;                // killough 2/8/98
 // texture mapping
 //
 
-static lighttable_t **planezlight;
+lighttable_t **planezlight; // [Nugget] Global
 static fixed_t planeheight;
 
 // killough 2/8/98: make variables static
@@ -210,15 +210,38 @@ static void R_MapPlane(int y, int x1, int x2)
   ds_xfrac =  viewx + FixedMul(viewcos, distance) + (dx * ds_xstep) + xoffs;
   ds_yfrac = -viewy - FixedMul(viewsin, distance) + (dx * ds_ystep) + yoffs;
 
+  // [Nugget] Radial fog
+  void (*DrawSpan)(void) = R_DrawSpan;
+
   if (!(ds_colormap[0] = ds_colormap[1] = fixedcolormap))
     {
+      boolean do_plane_radial_fog = do_radial_fog; // [Nugget] Radial fog
+
       index = distance >> LIGHTZSHIFT;
       if (index >= MAXLIGHTZ )
+      {
         index = MAXLIGHTZ-1;
+        do_plane_radial_fog = false;
+      }
 
-      if (STRICTMODE(!diminishing_lighting)) { index = MAXLIGHTZ-1; } // [Nugget]
+      // [Nugget]
+      if (STRICTMODE(!diminishing_lighting))
+      {
+        index = MAXLIGHTZ-1;
+        do_plane_radial_fog = false;
+      }
 
-      ds_colormap[0] = planezlight[index];
+      // [Nugget] Radial fog
+      if (do_plane_radial_fog)
+      {
+        DrawSpan = R_DrawSpanWithRadialFog;
+        spandistlight = planedistlight[distance >> light_distance_shift_bits];
+      }
+      else
+      {
+        ds_colormap[0] = planezlight[index];
+      }
+
       ds_colormap[1] = fullcolormap;
     }
 
@@ -226,7 +249,7 @@ static void R_MapPlane(int y, int x1, int x2)
   ds_x1 = x1;
   ds_x2 = x2;
 
-  R_DrawSpan();
+  DrawSpan();
 }
 
 //
