@@ -1126,9 +1126,6 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
-	const int linesize = video.pitch;
-	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
-
 	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
 
 	const fixed_t ux2 = MAX(Cx, Bx);
@@ -1142,7 +1139,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!spr->fullbright && spr->colormap[0] && !fixedcolormap)
+	if (!spr->fullbright && !shadow && !fixedcolormap)
 	{
 		do_voxel_radial_fog = do_radial_fog;
 
@@ -1177,20 +1174,28 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] ---------------------------------------------------------------/
 
+	const int linesize = video.pitch;
+	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const fixed_t x1 =  spr->x1      << FRACBITS,
+	              x2 = (spr->x2 + 1) << FRACBITS;
+
 	for (; ux < ux2;  ux += FRACUNIT)
 	{
-		if (ux >= ((spr->x2 + 1) << FRACBITS)) break;
-		if (ux <  ((spr->x1    ) << FRACBITS)) continue;
+		if (ux >= x2) break;
+		if (ux <  x1) continue;
 
-		const fixed_t clip_y1 =  ((int) mceilingclip[ux >> FRACBITS] + 1) << FRACBITS,
-		              clip_y2 = (((int) mfloorclip  [ux >> FRACBITS]    ) << FRACBITS) - 1;
+		const int uxi = ux >> FRACBITS;
+
+		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
+		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
 
 		const byte *      slab = &v->data[ofs1],
 		           *const  end = &v->data[ofs2];
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = spritelights[R_GetLightIndex(midscale, ux >> FRACBITS)]; }
+		{ colormap[0] = spritelights[R_GetLightIndex(midscale, uxi)]; }
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{
@@ -1222,7 +1227,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 			if (shadow)
 			{
-				dc_x  = ux  >> FRACBITS;
+				dc_x  = uxi;
 				dc_yl = uy1 >> FRACBITS;
 				dc_yh = uy2 >> FRACBITS;
 
@@ -1231,6 +1236,8 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 				continue;
 			}
+
+			byte *const dest2 = dest + uxi;
 
 			for (fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;  uy <= uy2;  uy += FRACUNIT)
 			{
@@ -1241,7 +1248,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				const byte src = slab[i],
 				           pix = colormap[spr->brightmap[src]][src];
 
-				dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+				dest2[(uy >> FRACBITS) * linesize] = pix;
 			}
 		}
 	}

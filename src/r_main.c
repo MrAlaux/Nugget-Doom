@@ -491,8 +491,23 @@ static void ProcessFOVEffects(void)
   {
     r_fov = targetfov;
 
-    R_ExecuteSetViewSize();
-    R_FillBackScreen();
+    // Run only a few parts of `R_ExecuteSetViewSize()`
+
+    R_InitTextureMapping();
+    R_SetupFreelook();
+
+    if (r_fov == FOV_DEFAULT)
+    {
+      skyiscale = FixedDiv(SCREENWIDTH, viewwidth_nonwide);
+    }
+    else
+    {
+      skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
+    }
+
+    skyiscalediff = (custom_fov == FOV_DEFAULT)
+                  ? FRACUNIT
+                  : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
   }
 }
 
@@ -1293,13 +1308,9 @@ void R_ExecuteSetViewSize (void)
 
   // [Nugget] FOV-based sky stretching;
   // we intentionally use `custom_fov` to disregard any FOV effects
-  if (custom_fov == FOV_DEFAULT)
-  {
-    skyiscalediff = FRACUNIT;
-  }
-  else {
-    skyiscalediff = tan(custom_fov * M_PI / 360.0) * FRACUNIT;
-  }
+  skyiscalediff = (custom_fov == FOV_DEFAULT)
+                ? FRACUNIT
+                : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
 
   for (i=0 ; i<viewwidth ; i++)
     {
