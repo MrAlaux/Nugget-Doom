@@ -2433,8 +2433,6 @@ void D_DoomMain(void)
 
   D_SetSavegameDirectory();
 
-  V_InitColorTranslation(); //jff 4/24/98 load color translation lumps
-
   // killough 2/22/98: copyright / "modified game" / SPA banners removed
 
   // Ty 04/08/98 - Add 5 lines of misc. data, only if nonblank
@@ -2470,6 +2468,10 @@ void D_DoomMain(void)
 
   I_Printf(VB_INFO, "M_Init: Init miscellaneous info.");
   M_Init();
+
+  V_InitPalsColors();
+
+  V_InitColorTranslation(); //jff 4/24/98 load color translation lumps
 
   I_Printf(VB_INFO, "R_Init: Init DOOM refresh daemon - ");
   R_Init();

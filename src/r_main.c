@@ -131,6 +131,9 @@ lighttable_t **(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
 
+lighttable_t ***pal_colormaps;
+lighttable_t *basecolormap;
+
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
 int extralight;                           // bumped light from gun blasts
@@ -176,6 +179,10 @@ int R_GetLightLevelInPoint(
 
   return lightlevel;
 }
+
+// True-color rendering
+static int num_colormap_rows;
+int colormap_row_shift_bits;
 
 // CVARs ---------------------------------------------------------------------
 
@@ -1064,6 +1071,24 @@ void R_InitLightTables (void)
     Z_Free(c_zlight);
   }
 
+  num_colormap_rows = NUMCOLORMAPS;
+  colormap_row_shift_bits = COLORMAP_ROW_SHIFT_BITS;
+
+  if (truecolor_rendering)
+  {
+      LIGHTLEVELS = 256;
+      LIGHTSEGSHIFT = 0;
+      LIGHTBRIGHT = 16;
+      MAXLIGHTSCALE = 768;
+      LIGHTSCALESHIFT = 9;
+      MAXLIGHTZ = 2048;
+      LIGHTZSHIFT = 16;
+
+      num_colormap_rows = 256;
+      colormap_row_shift_bits = 0;
+  }
+  else
+
   if (smoothlight)
   {
       LIGHTLEVELS = 32;
@@ -1108,7 +1133,7 @@ void R_InitLightTables (void)
   //  for each level / distance combination.
   for (i=0; i< LIGHTLEVELS; i++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*num_colormap_rows/LIGHTLEVELS;
 
       for (cm = 0; cm < numcolormaps; ++cm)
       {
@@ -1124,11 +1149,11 @@ void R_InitLightTables (void)
           if (level < 0)
             level = 0;
           else
-            if (level >= NUMCOLORMAPS)
-              level = NUMCOLORMAPS-1;
+            if (level >= num_colormap_rows)
+              level = num_colormap_rows-1;
 
           // killough 3/20/98: Initialize multiple colormaps
-          level *= 256;
+          level *= 256 << colormap_row_shift_bits;
           for (t=0; t<numcolormaps; t++)         // killough 4/4/98
             c_zlight[t][i][j] = colormaps[t] + level;
         }
@@ -1324,7 +1349,7 @@ void R_ExecuteSetViewSize (void)
   //  for each level / scale combination.
   for (i=0; i<LIGHTLEVELS; i++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*num_colormap_rows/LIGHTLEVELS;
 
       for (j=0 ; j<MAXLIGHTSCALE ; j++)
         {                                       // killough 11/98:
@@ -1333,11 +1358,11 @@ void R_ExecuteSetViewSize (void)
           if (level < 0)
             level = 0;
 
-          if (level >= NUMCOLORMAPS)
-            level = NUMCOLORMAPS-1;
+          if (level >= num_colormap_rows)
+            level = num_colormap_rows-1;
 
           // killough 3/20/98: initialize multiple colormaps
-          level *= 256;
+          level *= 256 << colormap_row_shift_bits;
 
           for (t=0; t<numcolormaps; t++)     // killough 4/4/98
             c_scalelight[t][i][j] = colormaps[t] + level;
@@ -1983,7 +2008,7 @@ void R_RenderPlayerView (player_t* player)
     int first_y = (viewheight % ph) / 2,
         first_x;
 
-    byte *const dest = I_VideoBuffer;
+    pixel_t *const dest = I_VideoBuffer;
 
     for (y = viewwindowy;  y < (viewwindowy + viewheight);)
     {
@@ -1993,7 +2018,7 @@ void R_RenderPlayerView (player_t* player)
       {
         for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
         {
-          memset(
+          V_RGBSet(
             dest + ((y + y2) * video.pitch) + x,
             dest[
               ( (first_y ? viewwindowy + first_y

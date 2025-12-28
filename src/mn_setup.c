@@ -2778,6 +2778,12 @@ static setup_tab_t gen_tabs[] = {
     {NULL}
 };
 
+static void ToggleTrueColor(void)
+{
+    setsmoothlight = true;
+    setsizeneeded = true;
+}
+
 static int resolution_scale;
 
 static const char **GetResolutionScaleStrings(void)
@@ -2912,7 +2918,10 @@ void MN_ResetGamma(void)
 
 static setup_menu_t gen_settings1[] = {
 
-    // [Nugget] These first three items now report
+    {"True-color Rendering", S_ONOFF, CNTR_X, M_SPC, {"truecolor_rendering"},
+     .action = ToggleTrueColor},
+
+    // [Nugget] The following three items now report
     // the current resolution when sitting on them
 
     {"Resolution Scale", S_THERMO | S_THRM_SIZE11 | S_ACTION | S_RES, CNTR_X,

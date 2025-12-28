@@ -35,13 +35,13 @@ typedef enum {false, true} boolean;
 
 typedef uint8_t byte;
 
-typedef byte pixel_t;
+typedef uint32_t pixel_t;
 
 // This could be wider for >8 bit display. Indeed, true color support is
 // posibble precalculating 24bpp lightmap/colormap LUT. from darkening PLAYPAL
 // to all black. Could use even more than 32 levels.
 
-typedef byte lighttable_t;
+typedef pixel_t lighttable_t;
 
 // [FG] common definitions from Chocolate Doom
 

@@ -57,7 +57,7 @@ int viewwidth;
 int viewheight;
 int viewwindowx;
 int viewwindowy;
-static byte **ylookup = NULL;
+static pixel_t **ylookup = NULL;
 static int *columnofs = NULL;
 static int linesize; // killough 11/98
 
@@ -115,7 +115,7 @@ byte dc_skycolor;
                     dc_x);                                               \
         }                                                                \
                                                                          \
-        byte *dest = ylookup[dc_yl] + columnofs[dc_x];                   \
+        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                   \
                                                                          \
         const fixed_t fracstep = dc_iscale;                              \
         fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
@@ -179,9 +179,9 @@ DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
 // actual code differences are.
 
 DRAW_COLUMN(TL,
-    tranmap[(*dest << 8) + dc_colormap[0][src]])
+    tranmap[(V_IndexFromRGB(*dest) << 8) + V_IndexFromRGB(dc_colormap[0][src])])
 DRAW_COLUMN(TLBrightmap,
-    tranmap[(*dest << 8) + dc_colormap[dc_brightmap[src]][src]])
+    tranmap[(V_IndexFromRGB(*dest) << 8) + V_IndexFromRGB(dc_colormap[dc_brightmap[src]][src])])
 
 // [Nugget] Sprite shadows /--------------------------------------------------
 
@@ -201,10 +201,10 @@ void R_DrawColumnShadow(void)
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     do {
-        *dest = sprite_shadows_tranmap[*dest << 8];
+        *dest = sprite_shadows_tranmap[V_IndexFromRGB(*dest) << 8];
         dest += linesize; // killough 11/98
     } while (--count);
 }
@@ -231,7 +231,7 @@ void R_DrawSkyColumn(void)
     }
 #endif
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
@@ -277,9 +277,11 @@ void R_DrawSkyColumn(void)
         for (i = 0; i < n; ++i)
         {
             *dest = main_tranmap
-                [(main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]]
-                  << 8)
-                 + colormap[skycolor]];
+                [(main_tranmap[
+                    V_IndexFromRGB(colormap[source[0]] << 8)
+                  + V_IndexFromRGB(colormap[skycolor])
+                  ] << 8)
+                 + V_IndexFromRGB(colormap[skycolor])];
             dest += linesize;
             frac += fracstep;
         }
@@ -302,7 +304,8 @@ void R_DrawSkyColumn(void)
         for (i = 0; i < n; ++i)
         {
             *dest =
-                main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]];
+                main_tranmap[V_IndexFromRGB(colormap[source[0]] << 8)
+                             + V_IndexFromRGB(colormap[skycolor])];
             dest += linesize;
             frac += fracstep;
         }
@@ -437,7 +440,7 @@ static void DrawFuzzColumnOriginal(void)
     //  or blocky mode removed.
 
     // Does not work with blocky mode.
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     // Looks like an attempt at dithering,
     // using the colormap #6 (of 0-31, a bit brighter than average).
@@ -457,7 +460,7 @@ static void DrawFuzzColumnOriginal(void)
         // why_i_left_doom.html
 
         *dest =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
         dest += linesize; // killough 11/98
 
         ++fuzzpos;
@@ -471,7 +474,7 @@ static void DrawFuzzColumnOriginal(void)
     if (cutoff)
     {
         *dest = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
+            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
     }
 }
 
@@ -515,7 +518,7 @@ static void DrawFuzzColumnBlocky(void)
 
     ++count;
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -534,12 +537,12 @@ static void DrawFuzzColumnBlocky(void)
         lines += count & mask;
         count &= ~mask;
 
-        const byte fuzz =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+        const pixel_t fuzz =
+            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
 
         do
         {
-            memset(dest, fuzz, fuzzblockwidth);
+            V_RGBSet(dest, fuzz, fuzzblockwidth);
             dest += linesize;
         } while (--lines);
 
@@ -553,9 +556,9 @@ static void DrawFuzzColumnBlocky(void)
 
     if (cutoff)
     {
-        const byte fuzz = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+        const pixel_t fuzz = fullcolormap
+            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+        V_RGBSet(dest, fuzz, fuzzblocksize);
     }
 }
 
@@ -609,7 +612,7 @@ static void DrawFuzzColumnRefraction(void)
 
     ++count;
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -631,11 +634,11 @@ static void DrawFuzzColumnRefraction(void)
         lines += count & mask;
         count &= ~mask;
 
-        const byte fuzz = fullcolormap[dark + dest[linesize * offset]];
+        const pixel_t fuzz = fullcolormap[dark + V_IndexFromRGB(dest[linesize * offset])];
 
         do
         {
-            memset(dest, fuzz, fuzzblockwidth);
+            V_RGBSet(dest, fuzz, fuzzblockwidth);
             dest += linesize;
         } while (--lines);
 
@@ -652,9 +655,9 @@ static void DrawFuzzColumnRefraction(void)
 
     if (cutoff)
     {
-        const byte fuzz =
-            fullcolormap[dark + dest[linesize * (offset - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+        const pixel_t fuzz =
+            fullcolormap[dark + V_IndexFromRGB(dest[linesize * (offset - FUZZOFF) / 2])];
+        V_RGBSet(dest, fuzz, fuzzblocksize);
     }
 }
 
@@ -675,13 +678,13 @@ static void DrawFuzzColumnShadow(void)
     }
 #endif
 
-    byte *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     count++; // killough 1/99: minor tuning
 
     do
     {
-        *dest = fullcolormap[8 * 256 + *dest];
+        *dest = fullcolormap[8 * 256 + V_IndexFromRGB(*dest)];
 
         dest += linesize; // killough 11/98
     } while (--count);
@@ -803,7 +806,7 @@ byte *ds_source;
 #define R_DRAW_SPAN(NAME, SRCPIXEL)                    \
     static void DrawSpan##NAME(void)                   \
     {                                                  \
-        byte *dest = ylookup[ds_y] + columnofs[ds_x1]; \
+        pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1]; \
                                                        \
         unsigned count = ds_x2 - ds_x1 + 1;            \
                                                        \
@@ -889,7 +892,7 @@ void (*R_DrawSpan)(void) = DrawSpan;
 #define R_DRAW_SPAN_RADFOG(NAME, SRCPIXEL)             \
     static void DrawSpanWithRadialFog##NAME(void)      \
     {                                                  \
-        byte *dest = ylookup[ds_y] + columnofs[ds_x1]; \
+        pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1]; \
         byte src;                                      \
                                                        \
         unsigned count = ds_x2 - ds_x1 + 1;            \

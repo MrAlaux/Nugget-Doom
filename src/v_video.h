@@ -26,6 +26,9 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
+// [Nugget]
+#include "r_state.h"
+
 struct patch_s;
 
 //
@@ -56,7 +59,7 @@ extern byte *cr_dark;
 extern byte *cr_shaded;
 extern byte *cr_bright;
 
-extern byte invul_gray[];
+extern lighttable_t invul_gray[];
 
 // [Nugget]
 extern byte cr_bright3[],
@@ -186,6 +189,86 @@ extern int menu_backdrop_darkening;
 void V_SetPatchCrop(int left, int right, int top, int bottom, boolean shadow_only);
 void V_ClearPatchCrop(void);
 
+// True color ----------------------------------------------------------------
+
+extern int *palcolors, palscolors[14][256];
+
+void V_InitPalsColors(void);
+void V_SetPalColors(const int palette_index);
+
+// The upper byte corresponding to the alpha channel
+// actually stores the index from which the color derives
+
+#define PIXEL_INDEX_SHIFT 24
+#define PIXEL_RED_SHIFT   16
+#define PIXEL_GREEN_SHIFT 8
+#define PIXEL_BLUE_SHIFT  0
+
+#define PIXEL_INDEX_MASK (0xFF << PIXEL_INDEX_SHIFT)
+#define PIXEL_RED_MASK   (0xFF << PIXEL_RED_SHIFT)
+#define PIXEL_GREEN_MASK (0xFF << PIXEL_GREEN_SHIFT)
+#define PIXEL_BLUE_MASK  (0xFF << PIXEL_BLUE_SHIFT)
+
+inline static pixel_t V_IndexToRGB(const byte index)
+{
+  return basecolormap[index];
+}
+
+inline static pixel_t V_IndexToColormapRGB(const byte index)
+{
+  return fullcolormap[index];
+}
+
+inline static byte V_IndexFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_INDEX_MASK) >> PIXEL_INDEX_SHIFT;
+}
+
+inline static byte V_RedFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_RED_MASK) >> PIXEL_RED_SHIFT;
+}
+
+inline static byte V_GreenFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_GREEN_MASK) >> PIXEL_GREEN_SHIFT;
+}
+
+inline static byte V_BlueFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_BLUE_MASK) >> PIXEL_BLUE_SHIFT;
+}
+
+#define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
+inline static void V_RGBSet(pixel_t *const dest, const pixel_t color, const int count)
+{
+  for (int i = 0;  i < count;  i++) { dest[i] = color; }
+}
+
+inline static void V_RGBCopy(pixel_t *const dest, const pixel_t *const src, const int count)
+{
+  memcpy(dest, src, sizeof(pixel_t) * count);
+}
+
+inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const byte level, const byte maxlevel)
+{
+  return (a & PIXEL_INDEX_MASK)
+       | (((V_RedFromRGB(a)   * (maxlevel - level) / maxlevel)
+         + (V_RedFromRGB(b)   *             level  / maxlevel)) << PIXEL_RED_SHIFT)
+       | (((V_GreenFromRGB(a) * (maxlevel - level) / maxlevel)
+         + (V_GreenFromRGB(b) *             level  / maxlevel)) << PIXEL_GREEN_SHIFT)
+       | (((V_BlueFromRGB(a)  * (maxlevel - level) / maxlevel)
+         + (V_BlueFromRGB(b)  *             level  / maxlevel)) << PIXEL_BLUE_SHIFT);
+}
+
+inline static pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
+{
+  return (rgb & PIXEL_INDEX_MASK)
+       | ((V_RedFromRGB(rgb)   * (maxlevel - level) / maxlevel) << PIXEL_RED_SHIFT)
+       | ((V_GreenFromRGB(rgb) * (maxlevel - level) / maxlevel) << PIXEL_GREEN_SHIFT)
+       | ((V_BlueFromRGB(rgb)  * (maxlevel - level) / maxlevel) << PIXEL_BLUE_SHIFT);
+}
+
 // HUD/menu shadows ----------------------------------------------------------
 
 extern boolean hud_menu_shadows;
@@ -267,7 +350,10 @@ void V_GetBlock(int x, int y, int width, int height, pixel_t *dest);
 
 void V_PutBlock(int x, int y, int width, int height, pixel_t *src);
 
-void V_FillRect(int x, int y, int width, int height, byte color);
+#define V_FillRect(x, y, w, h, c) \
+  V_FillRectRGB(x, y, w, h, V_IndexToRGB(c))
+
+void V_FillRectRGB(int x, int y, int width, int height, pixel_t color);
 
 void V_TileBlock64(int line, int width, int height, const byte *src);
 

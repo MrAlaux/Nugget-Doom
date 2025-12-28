@@ -46,6 +46,11 @@ extern fixed_t *spritetopoffset;
 extern lighttable_t **colormaps;          // killough 3/20/98, 4/4/98
 extern lighttable_t *fullcolormap;        // killough 3/20/98
 
+// [Nugget]
+#define COLORMAP_ROW_SHIFT_BITS 3
+extern lighttable_t ***pal_colormaps;
+extern lighttable_t *basecolormap;
+
 extern int viewwidth;
 extern int scaledviewwidth;
 extern int scaledviewx;

@@ -862,7 +862,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 	boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
 	int linesize = video.pitch;
-	byte * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	// iterate over screen columns
 	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
@@ -871,7 +871,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const byte *colormap[2];
+	const lighttable_t *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
 	byte lightnum = spr->lightnum;
@@ -1132,7 +1132,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const byte *colormap[2];
+	const lighttable_t *colormap[2];
 	memcpy(colormap, spr->colormap, sizeof(spr->colormap));
 
 	byte lightnum = spr->lightnum;
@@ -1175,7 +1175,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	// [Nugget] ---------------------------------------------------------------/
 
 	const int linesize = video.pitch;
-	byte *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -1237,7 +1237,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				continue;
 			}
 
-			byte *const dest2 = dest + uxi;
+			pixel_t *const dest2 = dest + uxi;
 
 			for (fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;  uy <= uy2;  uy += FRACUNIT)
 			{
@@ -1337,7 +1337,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 		const byte * trans = translationtables - 256 +
 			( (spr->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
 
-		static byte new_colormap[256];
+		static lighttable_t new_colormap[256];
 
 		int i;
 		for (i = 0 ; i < 256 ; i++)
@@ -1348,10 +1348,12 @@ void VX_DrawVoxel (vissprite_t * spr)
 
 	if ((spr->mobjflags2 & MF2_COLOREDBLOOD) && (spr->colormap[0] != NULL))
 	{
-		static const byte * prev_trans = NULL, * prev_map = NULL;
-		const byte * trans = red2col[spr->color], * map = spr->colormap[0];
+		static const byte * prev_trans = NULL;
+    const lighttable_t * prev_map = NULL;
+		const byte * trans = red2col[spr->color];
+    const lighttable_t * map = spr->colormap[0];
 
-		static byte new_colormap[256];
+		static lighttable_t new_colormap[256];
 
 		if (prev_trans != trans || prev_map != map)
 		{

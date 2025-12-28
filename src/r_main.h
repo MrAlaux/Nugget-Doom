@@ -177,6 +177,9 @@ int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
 
+// True-color rendering
+extern int colormap_row_shift_bits;
+
 // Radial fog ----------------------------------------------------------------
 
 extern int light_distance_shift_bits;

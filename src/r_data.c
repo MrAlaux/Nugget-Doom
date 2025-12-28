@@ -961,7 +961,7 @@ void R_InitSpriteLumps(void)
 //
 
 invul_mode_t invul_mode;
-static byte invul_orig[256];
+static lighttable_t invul_orig[256];
 
 void R_InvulMode(void)
 {
@@ -972,15 +972,15 @@ void R_InvulMode(void)
   {
     case INVUL_VANILLA:
       default_comp[comp_skymap] = 1;
-      memcpy(&colormaps[0][256*32], invul_orig, 256);
+      V_RGBCopy(&colormaps[0][256 * (32*8)], invul_orig, 256);
       break;
     case INVUL_MBF:
       default_comp[comp_skymap] = 0;
-      memcpy(&colormaps[0][256*32], invul_orig, 256);
+      V_RGBCopy(&colormaps[0][256 * (32*8)], invul_orig, 256);
       break;
     case INVUL_GRAY:
       default_comp[comp_skymap] = 0;
-      memcpy(&colormaps[0][256*32], invul_gray, 256);
+      V_RGBCopy(&colormaps[0][256 * (32*8)], invul_gray, 256);
       break;
   }
 }
@@ -993,16 +993,80 @@ void R_InitColormaps(void)
   numcolormaps = lastcolormaplump - firstcolormaplump;
   colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, 0);
 
-  colormaps[0] = W_CacheLumpNum(W_GetNumForName("COLORMAP"), PU_STATIC);
+  byte **const orig_colormaps = Z_Malloc(sizeof(*orig_colormaps) * numcolormaps, PU_STATIC, 0);
+
+  orig_colormaps[0] = W_CacheLumpNum(W_GetNumForName("COLORMAP"), PU_STATIC);
 
   for (i=1; i<numcolormaps; i++)
-    colormaps[i] = W_CacheLumpNum(i+firstcolormaplump, PU_STATIC);
+    orig_colormaps[i] = W_CacheLumpNum(i+firstcolormaplump, PU_STATIC);
+
+  pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * 14, PU_STATIC, 0);
+
+  for (i = 0;  i < 14;  i++)
+  {
+    pal_colormaps[i] = Z_Malloc(sizeof(**pal_colormaps) * numcolormaps, PU_STATIC, 0);
+
+    for (int j = 0;  j < numcolormaps;  j++)
+    {
+      pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0);
+
+      for (int k = 0;  k < 32;  k++)
+      {
+        for (int m = 0;  m < 256;  m++)
+        {
+          const byte color_index = orig_colormaps[j][(k * 256) + m];
+
+          pal_colormaps[i][j][((k * 8) * 256) + m] = (color_index << PIXEL_INDEX_SHIFT)
+                                                   | palscolors[i][color_index];
+        }
+      }
+    }
+  }
+
+  const pixel_t black_colormap[256] = {0};
+
+  for (i = 0;  i < 14;  i++)
+  {
+    for (int j = 0;  j < numcolormaps;  j++)
+    {
+      for (int k = 0;  k < 32;  k++)
+      {
+        const lighttable_t
+          *const prev_colormap = pal_colormaps[i][j] + ((k * 8) * 256),
+          *const next_colormap = (k < 31)
+                               ? pal_colormaps[i][j] + (((k + 1) * 8) * 256)
+                               : black_colormap;
+
+        for (int l = 1;  l < 8;  l++)
+        {
+          lighttable_t *const current_colormap = pal_colormaps[i][j] + ((k * 8 + l) * 256);
+          const double factor = l / 8.0;
+
+          for (int m = 0;  m < 256;  m++)
+          {
+            const pixel_t a = prev_colormap[m],
+                          b = next_colormap[m];
+
+            const pixel_t color =
+              (a & PIXEL_INDEX_MASK)
+            | ((pixel_t) ((V_RedFromRGB(a)   * (1.0 - factor)) + (V_RedFromRGB(b)   * factor)) << PIXEL_RED_SHIFT)
+            | ((pixel_t) ((V_GreenFromRGB(a) * (1.0 - factor)) + (V_GreenFromRGB(b) * factor)) << PIXEL_GREEN_SHIFT)
+            | ((pixel_t) ((V_BlueFromRGB(a)  * (1.0 - factor)) + (V_BlueFromRGB(b)  * factor)) << PIXEL_BLUE_SHIFT);
+
+            current_colormap[m] = color;
+          }
+        }
+      }
+    }
+  }
+
+  colormaps = pal_colormaps[0];
 
   // [FG] dark/shaded color translation table
-  cr_dark = &colormaps[0][256*15];
-  cr_shaded = &colormaps[0][256*6];
+  cr_dark = (byte *) &colormaps[0][256 * (15*8)];
+  cr_shaded = (byte *) &colormaps[0][256 * (6*8)];
 
-  memcpy(invul_orig, &colormaps[0][256*32], 256);
+  V_RGBCopy(invul_orig, &colormaps[0][256 * (32*8)], 256);
   R_InvulMode();
 
   // [Nugget] Night-vision visor
@@ -1012,9 +1076,11 @@ void R_InitColormaps(void)
       // Guard against markers (empty lumps) among the actual colormaps
       if (colormaps[i] == NULL) { continue; }
 
-      memcpy(&colormaps[i][256*33], nightvision, 256);
+      memcpy(&colormaps[i][256 * (32*8 + 1)], nightvision, 256);
     }
   }
+
+  Z_Free(orig_colormaps);
 }
 
 // killough 4/4/98: get colormap number from name
