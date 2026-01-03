@@ -267,6 +267,10 @@ static int  f_y;
 static int  f_w;
 static int  f_h;
 
+// [Nugget] Ends of window on screen
+static int  f_x2;
+static int  f_y2;
+
 static mpoint_t m_paninc;    // how far the window pans each tic (map coords)
 static fixed_t mtof_zoommul; // how far the window zooms each tic (map coords)
 static fixed_t ftom_zoommul; // how far the window zooms each tic (fb coords)
@@ -400,6 +404,13 @@ static int highlight_timer;
 static int highlight_color[4];
 
 // ---------------------------------------------------------------------------
+
+static inline int MaybeFlipX(const int x)
+{
+  return STRICTMODE(flip_levels)
+         ? (f_x * 2) + (f_w - 1) - x
+         : x;
+}
 
 static int pointed_mark_index = -1;
 
@@ -793,6 +804,9 @@ static void AM_initScreenSize(void)
     f_w = V_ScaleX(MIN(SCREENWIDTH  - mm_x, mm_w));
     f_h = V_ScaleY(MIN(SCREENHEIGHT - mm_y, mm_h));
 
+    f_x2 = f_x + f_w;
+    f_y2 = f_y + f_h;
+
     return;
   }
 
@@ -801,6 +815,10 @@ static void AM_initScreenSize(void)
     f_h = video.height;
   else
     f_h = V_ScaleY(SCREENHEIGHT - ST_HEIGHT);
+
+  // [Nugget]
+  f_x2 = f_x + f_w;
+  f_y2 = f_y + f_h;
 }
 
 void AM_ResetScreenSize(void)
@@ -1630,6 +1648,7 @@ void AM_Ticker (void)
 static void AM_clearFB(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
+
   int h = f_h;
   byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
   while (h--)
@@ -1676,10 +1695,10 @@ static boolean AM_clipMline
 // [Nugget] Minimap: take `f_x` and `f_y` into account
 #define DOOUTCODE(oc, mx, my) \
   (oc) = 0; \
-  if ((my) < 0) (oc) |= TOP; \
-  else if ((my) >= f_y+f_h) (oc) |= BOTTOM; \
-  if ((mx) < 0) (oc) |= LEFT; \
-  else if ((mx) >= f_x+f_w) (oc) |= RIGHT;
+  if ((my) < f_y) (oc) |= TOP; \
+  else if ((my) >= f_y2) (oc) |= BOTTOM; \
+  if ((mx) < f_x) (oc) |= LEFT; \
+  else if ((mx) >= f_x2) (oc) |= RIGHT;
 
 
   // do trivial rejects and outcodes
@@ -1743,15 +1762,15 @@ static boolean AM_clipMline
     {
       dy = fl->a.y - fl->b.y;
       dx = fl->b.x - fl->a.x;
-      tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y+f_h)))/dy);
-      tmp.y = f_y+f_h-1; // [Nugget] Minimap: take `f_y` into account
+      tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y2)))/dy);
+      tmp.y = f_y2-1; // [Nugget] Minimap: take `f_y` into account
     }
     else if (outside & RIGHT)
     {
       dy = fl->b.y - fl->a.y;
       dx = fl->b.x - fl->a.x;
-      tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x+f_w-1 - fl->a.x))/dx);
-      tmp.x = f_x+f_w-1; // [Nugget] Minimap: take `f_x` into account
+      tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x2-1 - fl->a.x))/dx);
+      tmp.x = f_x2-1; // [Nugget] Minimap: take `f_x` into account
     }
     else if (outside & LEFT)
     {
@@ -1781,13 +1800,11 @@ static boolean AM_clipMline
 #undef DOOUTCODE
 
 // [Nugget] Factored out
-static void PUTDOT(int xx, int yy, int cc)
+static inline void PUTDOT(int xx, const int yy, const int cc)
 {
-  if (STRICTMODE(flip_levels)) { xx = f_x*2 + f_w - 1 - xx; } // [Nugget] Flip levels
+  xx = MaybeFlipX(xx); // [Nugget] Flip levels
 
-  // [Nugget] Minimap: take `f_x` and `f_y` into account
-  if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h))
-    I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+  I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
 }
 
 
@@ -1817,10 +1834,10 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   if
   (
     // [Nugget] Minimap: take `f_x` and `f_y` into account
-       fl->a.x < 0 || fl->a.x >= f_x+f_w
-    || fl->a.y < 0 || fl->a.y >= f_y+f_h
-    || fl->b.x < 0 || fl->b.x >= f_x+f_w
-    || fl->b.y < 0 || fl->b.y >= f_y+f_h
+       fl->a.x < f_x || fl->a.x >= f_x2
+    || fl->a.y < f_y || fl->a.y >= f_y2
+    || fl->b.x < f_x || fl->b.x >= f_x2
+    || fl->b.y < f_y || fl->b.y >= f_y2
   )
   {
     return;
@@ -1881,16 +1898,7 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 //
 static void AM_putWuDot(int x, int y, int color, int weight)
 {
-  // [Nugget] /---------------------------------------------------------------
-
-  // Flip levels
-  if (STRICTMODE(flip_levels)) { x = f_x*2 + f_w - 1 - x; }
-
-  // Minimap: take `f_x` and `f_y` into account
-  if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
-  { return; }
-
-  // [Nugget] ---------------------------------------------------------------/
+   x = MaybeFlipX(x); // [Nugget] Flip levels
 
    byte *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
@@ -2937,7 +2945,7 @@ static void AM_drawMarks(void)
 	fx = CXMTOF(pt.x);
 	fy = CYMTOF(pt.y);
 
-	if (STRICTMODE(flip_levels)) { fx = f_x*2 + f_w - 1 - fx; } // [Nugget] Flip levels
+	fx = MaybeFlipX(fx); // [Nugget] Flip levels
 
 	// [Nugget] /===============================================================
 
@@ -2983,7 +2991,7 @@ static void AM_drawMarks(void)
 	      fx += (video.xscale >> FRACBITS);
 
 	    // [Nugget] Minimap: take `f_x` and `f_y` into account
-	    if (fx >= f_x && fx < f_x+f_w - w && fy >= f_y && fy < f_y+f_h - h)
+	    if (fx >= f_x && fx < f_x2 - w && fy >= f_y && fy < f_y2 - h)
 	    {
 	      // [Nugget] Translation
 	      if (cr1 && cr2)
@@ -3028,9 +3036,9 @@ void AM_shadeScreen(void)
   // Minimap
   if (automapactive == AM_MINI)
   {
-    for (int x = f_x;  x < f_x+f_w;  x++)
+    for (int x = f_x;  x < f_x2;  x++)
     {
-      for (int y = f_y;  y < f_y+f_h;  y++)
+      for (int y = f_y;  y < f_y2;  y++)
       {
         const int pixel = y * video.pitch + x;
         I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];

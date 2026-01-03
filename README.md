@@ -394,7 +394,7 @@ Copyright:
  © 2020-2024 Fabian Greffrath;  
  © 2020-2024 Roman Fomin;  
  © 2021-2022 Ryan Krafnick;  
- © 2021-2025 Alaux;  
+ © 2021-2026 Alaux;  
  © 2022 Julia Nechaevskaya;  
  © 2022-2024 ceski;  
  © 2023 Andrew Apted;  
