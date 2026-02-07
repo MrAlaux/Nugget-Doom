@@ -49,7 +49,10 @@ extern const fixed_t finesine[5*FINEANGLES/4];
 extern const fixed_t *const finecosine;
 
 // [Nugget]
+extern float floatsine[FINEANGLES];
+extern float floatcosine[FINEANGLES];
 extern fixed_t finesecant[FINEANGLES];
+extern float floatsecant[FINEANGLES];
 
 // Effective size is 4096.
 extern const fixed_t finetangent[FINEANGLES/2];

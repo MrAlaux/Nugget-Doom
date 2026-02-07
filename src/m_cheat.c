@@ -73,6 +73,7 @@ int nugmagic = 0;
 static void cheat_magic(void)
 {
   nugmagic = !nugmagic;
+  displaymsg("Magic %s", nugmagic ? "true" : "false");
 }
 
 int nugmagic2 = 0;
@@ -80,6 +81,7 @@ int nugmagic2 = 0;
 static void cheat_magic2(void)
 {
   nugmagic2 = !nugmagic2;
+  displaymsg("Magic2 %s", nugmagic2 ? "true" : "false");
 }
 
 #endif

@@ -279,21 +279,27 @@ void R_InitDistLightTables(void)
     { planedistlight[i] = Z_Malloc(sizeof(**planedistlight) * (max_width + 1), PU_STATIC, 0); }
   }
 
-  const int width = viewwidth + 1, half_width = (width / 2) + (width % 2);
+  const int width = viewwidth + 1,
+            half_width = (width / 2) + (width % 2);
+
+  const int shift_bits = light_distance_shift_bits - LIGHTZSHIFT,
+            maxlightz = MAXLIGHTZ-1;
 
   for (int i = 0;  i < max_light_distance;  i++)
   {
-    uint16_t *const cur_spandistlight = planedistlight[i];
+    // spandistlight
+    uint16_t *sdll = planedistlight[i],
+             *sdlr = sdll + (width - 1);
 
-    const fixed_t base_distance = (i << light_distance_shift_bits) >> LIGHTZSHIFT;
+    const angle_t *xtva = xtoviewangle;
 
-    for (int x = 0;  x < half_width;  x++)
+    const fixed_t base_distance = i << shift_bits;
+
+    for (int x = 0;  x < half_width;  x++, sdll++, sdlr--, xtva++)
     {
-      const fixed_t distance = FixedMul(
-        base_distance, finesecant[xtoviewangle[x] >> ANGLETOFINESHIFT]
-      );
+      const fixed_t distance = base_distance * floatsecant[*xtva >> ANGLETOFINESHIFT];
 
-      cur_spandistlight[x] = cur_spandistlight[width - 1 - x] = MIN(MAXLIGHTZ-1, distance);
+      *sdll = *sdlr = MIN(maxlightz, distance);
     }
   }
 
@@ -1383,7 +1389,13 @@ void R_Init (void)
   // [Nugget] /---------------------------------------------------------------
 
   for (int i = 0;  i < FINEANGLES;  i++)
-  { finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]); }
+  {
+    floatsine[i] = (float) finesine[i] / FRACUNIT;
+    floatcosine[i] = (float) finecosine[i] / FRACUNIT;
+
+    finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]);
+    floatsecant[i] = (float) FRACUNIT / finecosine[i];
+  }
 
   r_fov = custom_fov;
 

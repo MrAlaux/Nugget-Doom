@@ -367,6 +367,7 @@ Help was provided by:
 - [_Brad Harding_](https://github.com/bradharding)
 - [_ceski_](https://github.com/ceski-1)
 - [_Fabian Greffrath_](https://github.com/fabiangreffrath)
+- _Korp_
 - [_melak47_](https://github.com/melak47)
 - [_Mikolah_](https://github.com/mykola-ambar)
 - [_Roman Fomin_ (a.k.a. _rfomin_)](https://github.com/rfomin)
@@ -394,7 +395,7 @@ Copyright:
  © 2020-2024 Fabian Greffrath;  
  © 2020-2024 Roman Fomin;  
  © 2021-2022 Ryan Krafnick;  
- © 2021-2025 Alaux;  
+ © 2021-2026 Alaux;  
  © 2022 Julia Nechaevskaya;  
  © 2022-2024 ceski;  
  © 2023 Andrew Apted;  

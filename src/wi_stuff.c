@@ -2248,7 +2248,8 @@ static int NumWidth(int n)
 
   int digits;
 
-  if (n) {
+  if (n)
+  {
     digits = 0;
 
     do { digits++; } while (n /= 10);
