@@ -2118,7 +2118,10 @@ const angle_t tantoangle[2049] = {
 };
 
 // [Nugget]
+float floatsine[FINEANGLES];
+float floatcosine[FINEANGLES];
 fixed_t finesecant[FINEANGLES];
+float floatsecant[FINEANGLES];
 
 //----------------------------------------------------------------------------
 //

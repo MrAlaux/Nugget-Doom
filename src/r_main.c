@@ -290,9 +290,7 @@ void R_InitDistLightTables(void)
 
     for (int x = 0;  x < half_width;  x++, sdll++, sdlr--, xtva++)
     {
-      const fixed_t distance = FixedMul(
-        base_distance, finesecant[*xtva >> ANGLETOFINESHIFT]
-      );
+      const fixed_t distance = base_distance * floatsecant[*xtva >> ANGLETOFINESHIFT];
 
       *sdll = *sdlr = MIN(maxlightz, distance);
     }
@@ -1366,7 +1364,13 @@ void R_Init (void)
   // [Nugget] /---------------------------------------------------------------
 
   for (int i = 0;  i < FINEANGLES;  i++)
-  { finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]); }
+  {
+    floatsine[i] = (float) finesine[i] / FRACUNIT;
+    floatcosine[i] = (float) finecosine[i] / FRACUNIT;
+
+    finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]);
+    floatsecant[i] = (float) FRACUNIT / finecosine[i];
+  }
 
   r_fov = custom_fov;
 

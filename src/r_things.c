@@ -965,9 +965,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
     return;
   }
 
-  fixed_t floorheight, shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
-
-  floorheight = R_PointInSubsector(interpx, interpy)->sector->interpfloorheight;
+  const fixed_t floorheight = R_PointInSubsector(interpx, interpy)->sector->interpfloorheight;
 
   if (viewz < floorheight + FRACUNIT) { return; }
 
@@ -975,11 +973,11 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   if (floordist >= 256*FRACUNIT) { return; }
 
-  floordist = floordist * 10/32;
+  floordist = floordist * 0.3125f;
   floordist = FixedMul(floordist, floordist / 8);
 
   int offset_divisor = 0;
-  fixed_t yscale_mult;
+  float yscale_mult;
 
   if (sprite_shadows == SPRITESHADOWS_3D)
   {
@@ -991,26 +989,28 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
     const angle_t angle = P_SlopeToPitch(FixedDiv(viewz - floorheight, shadow_dist));
 
-    yscale_mult = finesine[angle >> ANGLETOFINESHIFT] / SHADOW_HEIGHT_DIVISOR;
+    yscale_mult = floatsine[angle >> ANGLETOFINESHIFT] / SHADOW_HEIGHT_DIVISOR;
 
     floordist /= SHADOW_HEIGHT_DIVISOR * 10;
-    yscale_mult -= FixedMul(floordist, yscale_mult);
+    yscale_mult -= floordist * yscale_mult;
   }
   else {
-    #define BASE_YSCALE_MULT (FRACUNIT/10)
+    #define BASE_YSCALE_MULT 0.1f
     offset_divisor = 4;
 
-    floordist = FixedMul(floordist, BASE_YSCALE_MULT / 2);
-    yscale_mult = BASE_YSCALE_MULT - FixedMul(floordist, BASE_YSCALE_MULT);
+    floordist = floordist * (BASE_YSCALE_MULT / 2);
+    yscale_mult = BASE_YSCALE_MULT - (floordist * BASE_YSCALE_MULT);
   }
 
-  shadow_yscale = FixedMul(xscale, yscale_mult);
+  fixed_t shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
+
+  shadow_yscale = xscale * yscale_mult;
 
   if (shadow_yscale <= FRACUNIT * 3/256) { return; }
 
   shadow_xscale = FixedMul(xscale, FRACUNIT - floordist);
 
-  const fixed_t shadow_height = FixedMul(spriteheight[lump], yscale_mult);
+  const fixed_t shadow_height = spriteheight[lump] * yscale_mult;
 
   shadow_gz  = floorheight - shadow_height / offset_divisor;
   shadow_gzt = shadow_gz   + shadow_height;
