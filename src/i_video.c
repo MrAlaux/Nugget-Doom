@@ -100,7 +100,7 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
-boolean truecolor_rendering;
+truecolor_t truecolor_rendering;
 
 static const char *sdl_renderdriver = "";
 
@@ -1993,8 +1993,9 @@ void I_InitGraphics(void)
 
 void I_BindVideoVariables(void)
 {
-    // [Nugget] True color
-    BIND_BOOL(truecolor_rendering, false, "True-color rendering");
+    M_BindNum("truecolor_rendering", &truecolor_rendering, NULL,
+              TRUECOLOR_OFF, TRUECOLOR_OFF, NUM_TRUECOLOR-1, ss_gen, wad_no,
+              "True-color rendering (0 = Off; 1 = Hybrid; 2 = Full)");
 
     M_BindNum("current_video_height", &default_current_video_height,
               &current_video_height, 600, 200, UL, ss_none, wad_no,

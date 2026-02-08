@@ -373,6 +373,7 @@ enum
 
     // [Nugget] --------------------------------------------------------------
 
+    str_truecolor,
     str_bobbing_style,
     str_force_carousel,
     str_crosshair_lockon,
@@ -2778,8 +2779,13 @@ static setup_tab_t gen_tabs[] = {
     {NULL}
 };
 
-static void ToggleTrueColor(void)
+static const char *truecolor_strings[] = {
+  "Off", "Hybrid", "Full"
+};
+
+static void SetTrueColor(void)
 {
+    R_DeferredInitTrueColor();
     setsmoothlight = true;
     setsizeneeded = true;
 }
@@ -2918,8 +2924,8 @@ void MN_ResetGamma(void)
 
 static setup_menu_t gen_settings1[] = {
 
-    {"True-color Rendering", S_ONOFF, CNTR_X, M_SPC, {"truecolor_rendering"},
-     .action = ToggleTrueColor},
+    {"True-color Rendering", S_CHOICE, CNTR_X, M_SPC, {"truecolor_rendering"},
+     .strings_id = str_truecolor, .action = SetTrueColor},
 
     // [Nugget] The following three items now report
     // the current resolution when sitting on them
@@ -5885,6 +5891,7 @@ static const char **selectstrings[] = {
 
     // [Nugget] --------------------------------------------------------------
 
+    truecolor_strings,
     bobbing_style_strings,
     force_carousel_strings,
     crosshair_lockon_strings,

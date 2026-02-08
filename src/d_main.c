@@ -92,6 +92,7 @@
 // [Nugget]
 #include <time.h>
 #include "m_nughud.h"
+#include "r_data.h"
 
 // DEHacked support - Ty 03/09/97
 // killough 10/98:
@@ -313,6 +314,9 @@ void D_Display (void)
       else if (gamestate == GS_LEVEL)
         I_DynamicResolution();
     }
+
+  if (R_InitTrueColorPending())
+  { R_InitColormaps(); }
 
   if (setsmoothlight)
     R_SmoothLight();
