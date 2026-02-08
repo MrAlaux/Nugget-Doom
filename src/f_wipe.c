@@ -422,7 +422,7 @@ static int wipe_doFizzle(int width, int height, int ticks)
 
         while (rect.sh--)
         {
-            memcpy(dest, src, rect.sw);
+            V_RGBCopy(dest, src, rect.sw);
             src += width;
             dest += video.pitch;
         }
