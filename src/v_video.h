@@ -196,19 +196,6 @@ extern int *palcolors, palscolors[14][256];
 void V_InitPalsColors(void);
 void V_SetPalColors(const int palette_index);
 
-// The upper byte corresponding to the alpha channel
-// actually stores the index from which the color derives
-
-#define PIXEL_INDEX_SHIFT 24
-#define PIXEL_RED_SHIFT   16
-#define PIXEL_GREEN_SHIFT 8
-#define PIXEL_BLUE_SHIFT  0
-
-#define PIXEL_INDEX_MASK (0xFF << PIXEL_INDEX_SHIFT)
-#define PIXEL_RED_MASK   (0xFF << PIXEL_RED_SHIFT)
-#define PIXEL_GREEN_MASK (0xFF << PIXEL_GREEN_SHIFT)
-#define PIXEL_BLUE_MASK  (0xFF << PIXEL_BLUE_SHIFT)
-
 inline static pixel_t V_IndexToRGB(const byte index)
 {
   return basecolormap[index];
@@ -217,26 +204,6 @@ inline static pixel_t V_IndexToRGB(const byte index)
 inline static pixel_t V_IndexToColormapRGB(const byte index)
 {
   return fullcolormap[index];
-}
-
-inline static byte V_IndexFromRGB(const pixel_t rgb)
-{
-  return (rgb & PIXEL_INDEX_MASK) >> PIXEL_INDEX_SHIFT;
-}
-
-inline static byte V_RedFromRGB(const pixel_t rgb)
-{
-  return (rgb & PIXEL_RED_MASK) >> PIXEL_RED_SHIFT;
-}
-
-inline static byte V_GreenFromRGB(const pixel_t rgb)
-{
-  return (rgb & PIXEL_GREEN_MASK) >> PIXEL_GREEN_SHIFT;
-}
-
-inline static byte V_BlueFromRGB(const pixel_t rgb)
-{
-  return (rgb & PIXEL_BLUE_MASK) >> PIXEL_BLUE_SHIFT;
 }
 
 #define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)

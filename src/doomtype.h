@@ -37,6 +37,51 @@ typedef uint8_t byte;
 
 typedef uint32_t pixel_t;
 
+// [Nugget] /=================================================================
+
+// The upper byte corresponding to the alpha channel
+// actually stores the index from which the color derives
+
+#define PIXEL_INDEX_SHIFT 24
+#define PIXEL_RED_SHIFT   16
+#define PIXEL_GREEN_SHIFT 8
+#define PIXEL_BLUE_SHIFT  0
+
+#define PIXEL_INDEX_MASK (0xFF << PIXEL_INDEX_SHIFT)
+#define PIXEL_RED_MASK   (0xFF << PIXEL_RED_SHIFT)
+#define PIXEL_GREEN_MASK (0xFF << PIXEL_GREEN_SHIFT)
+#define PIXEL_BLUE_MASK  (0xFF << PIXEL_BLUE_SHIFT)
+
+inline static byte V_IndexFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_INDEX_MASK) >> PIXEL_INDEX_SHIFT;
+}
+
+inline static byte V_RedFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_RED_MASK) >> PIXEL_RED_SHIFT;
+}
+
+inline static byte V_GreenFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_GREEN_MASK) >> PIXEL_GREEN_SHIFT;
+}
+
+inline static byte V_BlueFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_BLUE_MASK) >> PIXEL_BLUE_SHIFT;
+}
+
+inline static pixel_t V_ComponentsToRGB(const byte index, const byte r, const byte g, const byte b)
+{
+  return (index << PIXEL_INDEX_SHIFT)
+       | (r << PIXEL_RED_SHIFT)
+       | (g << PIXEL_GREEN_SHIFT)
+       | (b << PIXEL_BLUE_SHIFT);
+}
+
+// [Nugget] =================================================================/
+
 // This could be wider for >8 bit display. Indeed, true color support is
 // posibble precalculating 24bpp lightmap/colormap LUT. from darkening PLAYPAL
 // to all black. Could use even more than 32 levels.
