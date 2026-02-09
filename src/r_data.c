@@ -1006,6 +1006,7 @@ void R_InitColormaps(void)
 {
   int i;
   static boolean init = true;
+  static const byte **orig_colormaps = NULL;
 
   if (init)
   {
@@ -1015,6 +1016,13 @@ void R_InitColormaps(void)
     lastcolormaplump  = W_GetNumForName("C_END");
     numcolormaps = lastcolormaplump - firstcolormaplump;
     colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, 0);
+
+    orig_colormaps = Z_Malloc(sizeof(*orig_colormaps) * numcolormaps, PU_STATIC, 0);
+
+    orig_colormaps[0] = W_CacheLumpName("COLORMAP", PU_STATIC);
+
+    for (i = 1;  i < numcolormaps;  i++)
+    { orig_colormaps[i] = W_CacheLumpNum(firstcolormaplump + i, PU_STATIC); }
 
     pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * 14, PU_STATIC, 0);
 
@@ -1028,13 +1036,6 @@ void R_InitColormaps(void)
       }
     }
   }
-
-  byte **const orig_colormaps = Z_Malloc(sizeof(*orig_colormaps) * numcolormaps, PU_STATIC, 0);
-
-  orig_colormaps[0] = W_CacheLumpNum(W_GetNumForName("COLORMAP"), PU_STATIC);
-
-  for (i=1; i<numcolormaps; i++)
-    orig_colormaps[i] = W_CacheLumpNum(i+firstcolormaplump, PU_STATIC);
 
   // Load the original colormap rows
   for (i = 0;  i < 14;  i++)
@@ -1054,70 +1055,73 @@ void R_InitColormaps(void)
     }
   }
 
-  for (i = 0;  i < 14;  i++)
+  if (truecolor_rendering)
   {
-    for (int j = 0;  j < numcolormaps;  j++)
+    for (i = 0;  i < 14;  i++)
     {
-      if (truecolor_rendering == TRUECOLOR_FULL)
+      for (int j = 0;  j < numcolormaps;  j++)
       {
-        // Shade rows after first one
-
-        const lighttable_t *const first_colormap = pal_colormaps[i][j];
-
-        for (int k = 1;  k < 256;  k++)
+        if (truecolor_rendering == TRUECOLOR_FULL)
         {
-          lighttable_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
+          // Shade rows after first one
 
-          const byte *const orig_colormap = orig_colormaps[j];
-          const int orig_colormap_row = (k / 8) * 256;
+          const lighttable_t *const first_colormap = pal_colormaps[i][j];
 
-          for (int m = 0;  m < 256;  m++)
+          for (int k = 1;  k < 256;  k++)
           {
-            const pixel_t rgb = V_ShadeRGB(first_colormap[m], k, 255);
+            lighttable_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
 
-            const byte index = orig_colormap[orig_colormap_row + m];
-
-            current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
-                                | (rgb & ~PIXEL_INDEX_MASK);
-          }
-        }
-      }
-      else {
-        // Calculate intermediate colormap rows
-
-        for (int k = 0;  k < 31;  k++)
-        {
-          const lighttable_t
-            *const prev_colormap = pal_colormaps[i][j] + ((k * 8) * 256),
-            *const next_colormap = pal_colormaps[i][j] + (((k + 1) * 8) * 256);
-
-          for (int l = 1;  l < 8;  l++)
-          {
-            lighttable_t *const current_colormap = pal_colormaps[i][j] + ((k * 8 + l) * 256);
-            const double factor = l / 8.0;
+            const byte *const orig_colormap = orig_colormaps[j];
+            const int orig_colormap_row = (k / 8) * 256;
 
             for (int m = 0;  m < 256;  m++)
             {
-              const pixel_t a = prev_colormap[m],
-                            b = next_colormap[m];
+              const pixel_t rgb = V_ShadeRGB(first_colormap[m], k, 255);
 
-              const pixel_t color =
-                (a & PIXEL_INDEX_MASK)
-              | ((pixel_t) ((V_RedFromRGB(a)   * (1.0 - factor)) + (V_RedFromRGB(b)   * factor)) << PIXEL_RED_SHIFT)
-              | ((pixel_t) ((V_GreenFromRGB(a) * (1.0 - factor)) + (V_GreenFromRGB(b) * factor)) << PIXEL_GREEN_SHIFT)
-              | ((pixel_t) ((V_BlueFromRGB(a)  * (1.0 - factor)) + (V_BlueFromRGB(b)  * factor)) << PIXEL_BLUE_SHIFT);
+              const byte index = orig_colormap[orig_colormap_row + m];
 
-              current_colormap[m] = color;
+              current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
+                                  | (rgb & ~PIXEL_INDEX_MASK);
             }
           }
         }
+        else {
+          // Calculate intermediate colormap rows
 
-        // Fill the remainder with the last colormap row
+          for (int k = 0;  k < 31;  k++)
+          {
+            const lighttable_t
+              *const prev_colormap = pal_colormaps[i][j] + ((k * 8) * 256),
+              *const next_colormap = pal_colormaps[i][j] + (((k + 1) * 8) * 256);
 
-        lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31 * 8) * 256);
+            for (int l = 1;  l < 8;  l++)
+            {
+              lighttable_t *const current_colormap = pal_colormaps[i][j] + ((k * 8 + l) * 256);
+              const double factor = l / 8.0;
 
-        for (int l = 1;  l < 8;  l++)
-        { memcpy(last_colormap + (l * 256), last_colormap, 256); }
+              for (int m = 0;  m < 256;  m++)
+              {
+                const pixel_t a = prev_colormap[m],
+                              b = next_colormap[m];
+
+                const pixel_t color =
+                  (a & PIXEL_INDEX_MASK)
+                | ((pixel_t) ((V_RedFromRGB(a)   * (1.0 - factor)) + (V_RedFromRGB(b)   * factor)) << PIXEL_RED_SHIFT)
+                | ((pixel_t) ((V_GreenFromRGB(a) * (1.0 - factor)) + (V_GreenFromRGB(b) * factor)) << PIXEL_GREEN_SHIFT)
+                | ((pixel_t) ((V_BlueFromRGB(a)  * (1.0 - factor)) + (V_BlueFromRGB(b)  * factor)) << PIXEL_BLUE_SHIFT);
+
+                current_colormap[m] = color;
+              }
+            }
+          }
+
+          // Fill the remainder with the last colormap row
+
+          lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31 * 8) * 256);
+
+          for (int l = 1;  l < 8;  l++)
+          { memcpy(last_colormap + (l * 256), last_colormap, 256); }
+        }
       }
     }
   }
@@ -1141,8 +1145,6 @@ void R_InitColormaps(void)
       memcpy(&colormaps[i][256 * (32*8 + 1)], nightvision, 256);
     }
   }
-
-  Z_Free(orig_colormaps);
 
   init_truecolor = false;
 }
