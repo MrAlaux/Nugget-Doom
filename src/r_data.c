@@ -1085,15 +1085,11 @@ void R_InitColormaps(void)
       else {
         // Calculate intermediate colormap rows
 
-        for (int k = 0;  k < 32;  k++)
+        for (int k = 0;  k < 31;  k++)
         {
-          static const pixel_t black_colormap[256] = {0};
-
           const lighttable_t
             *const prev_colormap = pal_colormaps[i][j] + ((k * 8) * 256),
-            *const next_colormap = (k < 31)
-                                 ? pal_colormaps[i][j] + (((k + 1) * 8) * 256)
-                                 : black_colormap;
+            *const next_colormap = pal_colormaps[i][j] + (((k + 1) * 8) * 256);
 
           for (int l = 1;  l < 8;  l++)
           {
@@ -1115,6 +1111,13 @@ void R_InitColormaps(void)
             }
           }
         }
+
+        // Fill the remainder with the last colormap row
+
+        lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31 * 8) * 256);
+
+        for (int l = 1;  l < 8;  l++)
+        { memcpy(last_colormap + (l * 256), last_colormap, 256); }
       }
     }
   }
