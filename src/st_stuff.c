@@ -1836,7 +1836,16 @@ static void DrawSolidBackground(void)
         b /= 2 * depth * (v1 - v0);
 
         // [FG] tune down to half saturation (for empiric reasons)
-        col = V_IndexToRGB(I_GetNearestColor(pal, r / 2, g / 2, b / 2));
+        col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
+
+        if (truecolor_rendering)
+        {
+          V_FillRectRGB(
+            0, v0, video.unscaledw, v1 - v0, V_ComponentsToRGB(col, r/2, g/2, b/2)
+          );
+
+          continue;
+        }
 
         V_FillRect(0, v0, video.unscaledw, v1 - v0, col);
     }
