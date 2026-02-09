@@ -23,6 +23,9 @@
 #ifndef __V_VIDEO__
 #define __V_VIDEO__
 
+// [Nugget]
+#include <string.h>
+
 #include "doomtype.h"
 #include "m_fixed.h"
 
