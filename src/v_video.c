@@ -457,7 +457,7 @@ static void (*drawcolfunc)(const patch_column_t *patchcol);
                     patchcol->y2, patchcol->x);                               \
         }                                                                     \
                                                                               \
-        pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);       \
+        pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);    \
                                                                               \
         const fixed_t fracstep = patchcol->step;                              \
         fixed_t frac =                                                        \

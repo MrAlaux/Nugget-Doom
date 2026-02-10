@@ -1074,9 +1074,11 @@ void R_InitColormaps(void)
             const byte *const orig_colormap = orig_colormaps[j];
             const int orig_colormap_row = (k / 8) * 256;
 
+            const double factor = (255 - k) / 255.0;
+
             for (int m = 0;  m < 256;  m++)
             {
-              const pixel_t rgb = V_ShadeRGB(first_colormap[m], k, 255);
+              const pixel_t rgb = V_ShadeRGB(first_colormap[m], factor);
 
               const byte index = orig_colormap[orig_colormap_row + m];
 
@@ -1100,18 +1102,7 @@ void R_InitColormaps(void)
               const double factor = l / 8.0;
 
               for (int m = 0;  m < 256;  m++)
-              {
-                const pixel_t a = prev_colormap[m],
-                              b = next_colormap[m];
-
-                const pixel_t color =
-                  (a & PIXEL_INDEX_MASK)
-                | ((pixel_t) ((V_RedFromRGB(a)   * (1.0 - factor)) + (V_RedFromRGB(b)   * factor)) << PIXEL_RED_SHIFT)
-                | ((pixel_t) ((V_GreenFromRGB(a) * (1.0 - factor)) + (V_GreenFromRGB(b) * factor)) << PIXEL_GREEN_SHIFT)
-                | ((pixel_t) ((V_BlueFromRGB(a)  * (1.0 - factor)) + (V_BlueFromRGB(b)  * factor)) << PIXEL_BLUE_SHIFT);
-
-                current_colormap[m] = color;
-              }
+              { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
             }
           }
 

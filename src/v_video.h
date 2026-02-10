@@ -220,23 +220,34 @@ inline static void V_RGBCopy(pixel_t *const dest, const pixel_t *const src, cons
   memcpy(dest, src, sizeof(pixel_t) * count);
 }
 
-inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const byte level, const byte maxlevel)
+inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const double factor)
 {
-  return (a & PIXEL_INDEX_MASK)
-       | (((V_RedFromRGB(a)   * (maxlevel - level) / maxlevel)
-         + (V_RedFromRGB(b)   *             level  / maxlevel)) << PIXEL_RED_SHIFT)
-       | (((V_GreenFromRGB(a) * (maxlevel - level) / maxlevel)
-         + (V_GreenFromRGB(b) *             level  / maxlevel)) << PIXEL_GREEN_SHIFT)
-       | (((V_BlueFromRGB(a)  * (maxlevel - level) / maxlevel)
-         + (V_BlueFromRGB(b)  *             level  / maxlevel)) << PIXEL_BLUE_SHIFT);
+  const byte
+    ar = V_RedFromRGB(a),
+    ag = V_GreenFromRGB(a),
+    ab = V_BlueFromRGB(a),
+    br = V_RedFromRGB(b),
+    bg = V_GreenFromRGB(b),
+    bb = V_BlueFromRGB(b);
+
+  #define CALC(a, b, shift) ( \
+    (pixel_t) ((a) + ((b) - (a)) * factor) << shift \
+  )
+
+  return ((factor >= 0.5 ? b : a) & PIXEL_INDEX_MASK)
+       | CALC(ar, br, PIXEL_RED_SHIFT)
+       | CALC(ag, bg, PIXEL_GREEN_SHIFT)
+       | CALC(ab, bb, PIXEL_BLUE_SHIFT);
+
+  #undef CALC
 }
 
-inline static pixel_t V_ShadeRGB(const pixel_t rgb, const int level, const int maxlevel)
+inline static pixel_t V_ShadeRGB(const pixel_t rgb, const double factor)
 {
   return (rgb & PIXEL_INDEX_MASK)
-       | ((V_RedFromRGB(rgb)   * (maxlevel - level) / maxlevel) << PIXEL_RED_SHIFT)
-       | ((V_GreenFromRGB(rgb) * (maxlevel - level) / maxlevel) << PIXEL_GREEN_SHIFT)
-       | ((V_BlueFromRGB(rgb)  * (maxlevel - level) / maxlevel) << PIXEL_BLUE_SHIFT);
+       | ((pixel_t) (V_RedFromRGB(rgb)   * factor) << PIXEL_RED_SHIFT)
+       | ((pixel_t) (V_GreenFromRGB(rgb) * factor) << PIXEL_GREEN_SHIFT)
+       | ((pixel_t) (V_BlueFromRGB(rgb)  * factor) << PIXEL_BLUE_SHIFT);
 }
 
 // HUD/menu shadows ----------------------------------------------------------
