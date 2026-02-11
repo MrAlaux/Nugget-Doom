@@ -1042,7 +1042,7 @@ void R_InitColormaps(void)
   {
     for (int j = 0;  j < numcolormaps;  j++)
     {
-      for (int k = 0;  k < 32;  k++)
+      for (int k = 0;  k < 33;  k++)
       {
         for (int m = 0;  m < 256;  m++)
         {
@@ -1117,23 +1117,26 @@ void R_InitColormaps(void)
     }
   }
 
-  colormaps = pal_colormaps[0];
+  V_SetPalColors(0);
 
   // [FG] dark/shaded color translation table
-  cr_dark = (byte *) &colormaps[0][256 * (15<<CRSB)];
-  cr_shaded = (byte *) &colormaps[0][256 * (6<<CRSB)];
+  cr_dark = (byte *) &orig_colormaps[0][256 * 15];
+  cr_shaded = (byte *) &orig_colormaps[0][256 * 6];
 
   V_RGBCopy(invul_orig, &colormaps[0][256 * (32<<CRSB)], 256);
   R_InvulMode();
 
   // [Nugget] Night-vision visor
   if (!beta_emulation) {
+    const int row_index = 256 * ((32<<CRSB) + 1);
+
     for (i = 0;  i < numcolormaps;  i++)
     {
       // Guard against markers (empty lumps) among the actual colormaps
       if (colormaps[i] == NULL) { continue; }
 
-      memcpy(&colormaps[i][256 * ((32<<CRSB) + 1)], nightvision, 256);
+      for (int j = 0;  j < 256;  j++)
+      { colormaps[i][row_index + j] = V_IndexToRGB(nightvision[j]); }
     }
   }
 

@@ -389,11 +389,15 @@ static void R_RenderSegLoop (void)
           texturecolumn >>= FRACBITS;
 
           // calculate lighting
-          dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
-          dc_colormap[1] = (!fixedcolormap &&
-                            (STRICTMODE(brightmaps) || force_brightmaps))
-                            ? fullcolormap
-                            : dc_colormap[0];
+          if (!fixedcolormap)
+          {
+            dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
+            dc_colormap[1] = (!fixedcolormap &&
+                              (STRICTMODE(brightmaps) || force_brightmaps))
+                              ? fullcolormap
+                              : dc_colormap[0];
+          }
+
           dc_x = rw_x;
           dc_iscale = 0xffffffffu / (unsigned)rw_scale;
         }

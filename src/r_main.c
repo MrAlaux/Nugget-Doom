@@ -1860,7 +1860,8 @@ void R_SetupFrame (player_t *player)
 
   if (player->fixedcolormap)
     {
-      const int pfixedcolormap = player->fixedcolormap << COLORMAP_ROW_SHIFT_BITS;
+      const int pfixedcolormap = (MIN(32, player->fixedcolormap) << COLORMAP_ROW_SHIFT_BITS)
+                               + MAX(0, player->fixedcolormap - 32);
 
       fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
         + pfixedcolormap*256;
@@ -1869,6 +1870,8 @@ void R_SetupFrame (player_t *player)
 
       for (i=0 ; i<MAXLIGHTSCALE ; i++)
         scalelightfixed[i] = pfixedcolormap * 256;
+
+      dc_colormap[0] = dc_colormap[1] = fixedcolormap;
     }
   else
     fixedcolormap = 0;
