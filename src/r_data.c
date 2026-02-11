@@ -1056,12 +1056,19 @@ void R_InitColormaps(void)
 
   if (truecolor_rendering == TRUECOLOR_FULL)
   {
+    // Shade rows after first one
+
+    byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
+
     for (i = 0;  i < 14;  i++)
     {
+      // For better support of palette tinting, we search for the color closest to black
+      // (which should hopefully have the same tint as the rest of the palette)
+      // and interpolate all colors to it
+      const pixel_t black = palscolors[i][I_GetNearestColor(playpal + 768*i, 0, 0, 0)];
+
       for (int j = 0;  j < numcolormaps;  j++)
       {
-        // Shade rows after first one
-
         const lighttable_t *const first_colormap = pal_colormaps[i][j];
 
         for (int k = 1;  k < 256;  k++)
@@ -1071,11 +1078,11 @@ void R_InitColormaps(void)
           const byte *const orig_colormap = orig_colormaps[j];
           const int orig_colormap_row = (k / (1<<CRSB)) * 256;
 
-          const double factor = (255 - k) / 255.0;
+          const double factor = k / 255.0;
 
           for (int m = 0;  m < 256;  m++)
           {
-            const pixel_t rgb = V_ShadeRGB(first_colormap[m], factor);
+            const pixel_t rgb = V_LerpRGB(first_colormap[m], black, factor);
 
             const byte index = orig_colormap[orig_colormap_row + m];
 
@@ -1088,12 +1095,12 @@ void R_InitColormaps(void)
   }
   else if (truecolor_rendering == TRUECOLOR_HYBRID)
   {
+    // Calculate intermediate colormap rows
+
     for (i = 0;  i < 14;  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
-        // Calculate intermediate colormap rows
-
         for (int k = 0;  k < 31;  k++)
         {
           const lighttable_t
