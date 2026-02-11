@@ -1054,64 +1054,68 @@ void R_InitColormaps(void)
     }
   }
 
-  if (truecolor_rendering)
+  if (truecolor_rendering == TRUECOLOR_FULL)
   {
     for (i = 0;  i < 14;  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
-        if (truecolor_rendering == TRUECOLOR_FULL)
+        // Shade rows after first one
+
+        const lighttable_t *const first_colormap = pal_colormaps[i][j];
+
+        for (int k = 1;  k < 256;  k++)
         {
-          // Shade rows after first one
+          lighttable_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
 
-          const lighttable_t *const first_colormap = pal_colormaps[i][j];
+          const byte *const orig_colormap = orig_colormaps[j];
+          const int orig_colormap_row = (k / (1<<CRSB)) * 256;
 
-          for (int k = 1;  k < 256;  k++)
+          const double factor = (255 - k) / 255.0;
+
+          for (int m = 0;  m < 256;  m++)
           {
-            lighttable_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
+            const pixel_t rgb = V_ShadeRGB(first_colormap[m], factor);
 
-            const byte *const orig_colormap = orig_colormaps[j];
-            const int orig_colormap_row = (k / (1<<CRSB)) * 256;
+            const byte index = orig_colormap[orig_colormap_row + m];
 
-            const double factor = (255 - k) / 255.0;
-
-            for (int m = 0;  m < 256;  m++)
-            {
-              const pixel_t rgb = V_ShadeRGB(first_colormap[m], factor);
-
-              const byte index = orig_colormap[orig_colormap_row + m];
-
-              current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
-                                  | (rgb & ~PIXEL_INDEX_MASK);
-            }
+            current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
+                                | (rgb & ~PIXEL_INDEX_MASK);
           }
         }
-        else {
-          // Calculate intermediate colormap rows
+      }
+    }
+  }
+  else if (truecolor_rendering == TRUECOLOR_HYBRID)
+  {
+    for (i = 0;  i < 14;  i++)
+    {
+      for (int j = 0;  j < numcolormaps;  j++)
+      {
+        // Calculate intermediate colormap rows
 
-          for (int k = 0;  k < 31;  k++)
-          {
-            const lighttable_t
-              *const prev_colormap = pal_colormaps[i][j] + ((k<<CRSB) * 256),
-              *const next_colormap = pal_colormaps[i][j] + (((k + 1) << CRSB) * 256);
-
-            for (int l = 1;  l < 1<<CRSB;  l++)
-            {
-              lighttable_t *const current_colormap = pal_colormaps[i][j] + (((k<<CRSB) + l) * 256);
-              const double factor = l / (double) (1<<CRSB);
-
-              for (int m = 0;  m < 256;  m++)
-              { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
-            }
-          }
-
-          // Fill the remainder with the last colormap row
-
-          lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+        for (int k = 0;  k < 31;  k++)
+        {
+          const lighttable_t
+            *const prev_colormap = pal_colormaps[i][j] + ((k<<CRSB) * 256),
+            *const next_colormap = pal_colormaps[i][j] + (((k + 1) << CRSB) * 256);
 
           for (int l = 1;  l < 1<<CRSB;  l++)
-          { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+          {
+            lighttable_t *const current_colormap = pal_colormaps[i][j] + (((k<<CRSB) + l) * 256);
+            const double factor = l / (double) (1<<CRSB);
+
+            for (int m = 0;  m < 256;  m++)
+            { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
+          }
         }
+
+        // Fill the remainder with the last colormap row
+
+        lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+
+        for (int l = 1;  l < 1<<CRSB;  l++)
+        { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
       }
     }
   }
