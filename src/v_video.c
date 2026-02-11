@@ -382,6 +382,8 @@ void V_InitPalsColors(void)
                       << PIXEL_BLUE_SHIFT);
     }
   }
+
+  R_DeferredInitTrueColor();
 }
 
 void V_SetPalColors(const int palette_index)
