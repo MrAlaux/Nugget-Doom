@@ -199,9 +199,19 @@ extern int *palcolors, palscolors[14][256];
 void V_InitPalsColors(void);
 void V_SetPalColors(const int palette_index);
 
+inline static void V_SetCurrentColormap(const int colormap_index)
+{
+  current_colormap = colormaps[colormap_index];
+}
+
+inline static lighttable_t *V_ColormapRowByIndex(const cmapindex_t row_index)
+{
+  return current_colormap + row_index;
+}
+
 inline static pixel_t V_IndexToRGB(const byte index)
 {
-  return basecolormap[index];
+  return current_colormap[index];
 }
 
 inline static pixel_t V_IndexToColormapRGB(const byte index)

@@ -732,7 +732,7 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 			spritelights = scalelight[new_lightnum];
 		}
 
-		vis->colormap[0] = spritelights[index];
+		vis->colormap[0] = V_ColormapRowByIndex(spritelights[index]);
 		vis->colormap[1] = fullcolormap;
 	}
 
@@ -905,7 +905,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(B_xscale, (ux2 - ux) / 2);
 
-				colormap[0] = scalelight[lightnum][lightindex];
+				colormap[0] = V_ColormapRowByIndex(scalelight[lightnum][lightindex]);
 			}
 			else { spritelights = scalelight[lightnum]; }
 		}
@@ -939,7 +939,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = spritelights[R_GetLightIndex(scale, ux >> FRACBITS)]; }
+		{ colormap[0] = V_ColormapRowByIndex(spritelights[R_GetLightIndex(scale, ux >> FRACBITS)]); }
 
 		for (; slab < end ; slab += len)
 		{
@@ -1166,7 +1166,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(midscale, (ux2 - ux) / 2);
 
-				colormap[0] = scalelight[lightnum][lightindex];
+				colormap[0] = V_ColormapRowByIndex(scalelight[lightnum][lightindex]);
 			}
 			else { spritelights = scalelight[lightnum]; }
 		}
@@ -1195,7 +1195,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = spritelights[R_GetLightIndex(midscale, uxi)]; }
+		{ colormap[0] = V_ColormapRowByIndex(spritelights[R_GetLightIndex(midscale, uxi)]); }
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{

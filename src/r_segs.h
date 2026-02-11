@@ -27,7 +27,7 @@ struct drawseg_s;
 void R_RenderMaskedSegRange(struct drawseg_s *ds, int x1, int x2);
 void R_StoreWallRange(int start, int stop);
 
-extern lighttable_t **walllights;
+extern cmapindex_t *walllights;
 
 #endif
 

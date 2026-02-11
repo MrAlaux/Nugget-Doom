@@ -39,6 +39,8 @@ typedef uint32_t pixel_t;
 
 // [Nugget] /=================================================================
 
+typedef uint_fast16_t cmapindex_t;
+
 // The upper byte corresponding to the alpha channel
 // actually stores the index from which the color derives
 

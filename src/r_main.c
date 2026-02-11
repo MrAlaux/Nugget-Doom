@@ -123,16 +123,16 @@ int LIGHTZSHIFT;
 // killough 4/4/98: support dynamic number of them as well
 
 int numcolormaps;
-lighttable_t ***(*c_scalelight) = NULL;
-lighttable_t ***(*c_zlight) = NULL;
-lighttable_t **(*scalelight) = NULL;
-lighttable_t **scalelightfixed = NULL;
-lighttable_t **(*zlight) = NULL;
+cmapindex_t **(*c_scalelight) = NULL;
+cmapindex_t **(*c_zlight) = NULL;
+cmapindex_t *(*scalelight) = NULL;
+cmapindex_t *scalelightfixed = NULL;
+cmapindex_t *(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
 
 lighttable_t ***pal_colormaps;
-lighttable_t *basecolormap;
+lighttable_t *base_colormap, *current_colormap;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -1161,7 +1161,7 @@ void R_InitLightTables (void)
           // killough 3/20/98: Initialize multiple colormaps
           level *= 256 << colormap_row_shift_bits;
           for (t=0; t<numcolormaps; t++)         // killough 4/4/98
-            c_zlight[t][i][j] = colormaps[t] + level;
+            c_zlight[t][i][j] = level;
         }
     }
 
@@ -1371,7 +1371,7 @@ void R_ExecuteSetViewSize (void)
           level *= 256 << colormap_row_shift_bits;
 
           for (t=0; t<numcolormaps; t++)     // killough 4/4/98
-            c_scalelight[t][i][j] = colormaps[t] + level;
+            c_scalelight[t][i][j] = level;
         }
     }
 
@@ -1856,6 +1856,8 @@ void R_SetupFrame (player_t *player)
   zlight = c_zlight[cm];
   scalelight = c_scalelight[cm];
 
+  V_SetCurrentColormap(cm);
+
   if (player->fixedcolormap)
     {
       fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
@@ -1864,7 +1866,7 @@ void R_SetupFrame (player_t *player)
       walllights = scalelightfixed;
 
       for (i=0 ; i<MAXLIGHTSCALE ; i++)
-        scalelightfixed[i] = fixedcolormap;
+        scalelightfixed[i] = player->fixedcolormap * 256;
     }
   else
     fixedcolormap = 0;
@@ -1994,7 +1996,10 @@ void R_RenderPlayerView (player_t* player)
 
   // [FG] update automap while playing
   if (automap_on)
+  {
+    V_SetCurrentColormap(0);
     return;
+  }
 
   // Check for new console commands.
   NetUpdate ();
@@ -2058,6 +2063,8 @@ void R_RenderPlayerView (player_t* player)
       else { y += ph; }
     }
   }
+
+  V_SetCurrentColormap(0);
 
   // Check for new console commands.
   NetUpdate ();

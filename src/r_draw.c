@@ -884,7 +884,7 @@ void (*R_DrawSpan)(void) = DrawSpan;
   ds_yfrac += ds_ystep; \
   src = ds_source[spot]; \
   \
-  ds_colormap[0] = planezlight[*sdl++]; \
+  ds_colormap[0] = V_ColormapRowByIndex(planezlight[*sdl++]); \
   \
   dest[dest_index] = SRCPIXEL; \
 }

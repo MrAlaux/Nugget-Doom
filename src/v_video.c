@@ -388,7 +388,8 @@ void V_SetPalColors(const int palette_index)
 {
   palcolors = palscolors[palette_index];
   colormaps = pal_colormaps[palette_index];
-  basecolormap = colormaps[0];
+
+  V_SetCurrentColormap(0);
 }
 
 // HUD/menu shadows ----------------------------------------------------------

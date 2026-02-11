@@ -1111,7 +1111,7 @@ void R_InitColormaps(void)
           lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31 * 8) * 256);
 
           for (int l = 1;  l < 8;  l++)
-          { memcpy(last_colormap + (l * 256), last_colormap, 256); }
+          { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
         }
       }
     }

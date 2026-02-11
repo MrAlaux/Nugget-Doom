@@ -107,7 +107,7 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 
-lighttable_t **spritelights;        // killough 1/25/98 made static
+cmapindex_t *spritelights;        // killough 1/25/98 made static
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c
@@ -641,7 +641,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         lightindex = R_GetLightIndex(spryscale, dc_x);
 
         if (!percolumn_lighting)
-        { dc_colormap[0] = spritelights[lightindex]; }
+        { dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]); }
       }
 
       // Thing lighting
@@ -657,7 +657,9 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
                            + extralight;
 
-        dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
+        dc_colormap[0] = V_ColormapRowByIndex(
+          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
+        );
       }
 
       // [Nugget] ===========================================================/
@@ -926,7 +928,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
         spritelights = scalelight[new_lightnum];
       }
 
-      vis->colormap[0] = spritelights[index];
+      vis->colormap[0] = V_ColormapRowByIndex(spritelights[index]);
       vis->colormap[1] = fullcolormap;
     }
 
@@ -1293,7 +1295,7 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
     // [Nugget]
     const int index = STRICTMODE(!diminishing_lighting) ? 0 : MAXLIGHTSCALE-1;
 
-    vis->colormap[0] = spritelights[index];  // local light
+    vis->colormap[0] = V_ColormapRowByIndex(spritelights[index]);  // local light
     vis->colormap[1] = fullcolormap;
   }
   vis->brightmap = R_BrightmapForState(psp->state - states);

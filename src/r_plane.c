@@ -92,7 +92,7 @@ static int *spanstart = NULL;                // killough 2/8/98
 // texture mapping
 //
 
-lighttable_t **planezlight; // [Nugget] Global
+cmapindex_t *planezlight; // [Nugget] Global
 static fixed_t planeheight;
 
 // killough 2/8/98: make variables static
@@ -239,7 +239,7 @@ static void R_MapPlane(int y, int x1, int x2)
       }
       else
       {
-        ds_colormap[0] = planezlight[index];
+        ds_colormap[0] = V_ColormapRowByIndex(planezlight[index]);
       }
 
       ds_colormap[1] = fullcolormap;

@@ -57,7 +57,7 @@ static int      midtexture;
 angle_t         rw_normalangle; // angle to line origin
 int             rw_angle1;
 fixed_t         rw_distance;
-lighttable_t    **walllights;
+cmapindex_t     *walllights;
 
 //
 // regular wall
@@ -173,7 +173,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
             // [crispy] brightmaps for two sided mid-textures
             dc_brightmap = texturebrightmap[texnum];
-            dc_colormap[0] = walllights[index];
+            dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
             dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                               ? fullcolormap
                               : dc_colormap[0];
@@ -389,7 +389,7 @@ static void R_RenderSegLoop (void)
           texturecolumn >>= FRACBITS;
 
           // calculate lighting
-          dc_colormap[0] = walllights[index];
+          dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
           dc_colormap[1] = (!fixedcolormap &&
                             (STRICTMODE(brightmaps) || force_brightmaps))
                             ? fullcolormap
