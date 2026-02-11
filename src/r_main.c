@@ -131,7 +131,7 @@ cmapindex_t *(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
 
-lighttable_t ***pal_colormaps;
+lighttable_t ***pal_colormaps = NULL;
 lighttable_t *base_colormap, *current_colormap;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
@@ -1860,13 +1860,15 @@ void R_SetupFrame (player_t *player)
 
   if (player->fixedcolormap)
     {
+      const int pfixedcolormap = player->fixedcolormap << COLORMAP_ROW_SHIFT_BITS;
+
       fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
-        + player->fixedcolormap*256*sizeof(lighttable_t);
+        + pfixedcolormap*256;
 
       walllights = scalelightfixed;
 
       for (i=0 ; i<MAXLIGHTSCALE ; i++)
-        scalelightfixed[i] = player->fixedcolormap * 256;
+        scalelightfixed[i] = pfixedcolormap * 256;
     }
   else
     fixedcolormap = 0;

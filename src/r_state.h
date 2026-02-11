@@ -48,6 +48,7 @@ extern lighttable_t *fullcolormap;        // killough 3/20/98
 
 // [Nugget]
 #define COLORMAP_ROW_SHIFT_BITS 3
+#define CRSB COLORMAP_ROW_SHIFT_BITS
 extern lighttable_t ***pal_colormaps;
 extern lighttable_t *base_colormap, *current_colormap;
 

@@ -460,7 +460,7 @@ static void DrawFuzzColumnOriginal(void)
         // why_i_left_doom.html
 
         *dest =
-            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+            fullcolormap[(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
         dest += linesize; // killough 11/98
 
         ++fuzzpos;
@@ -474,7 +474,7 @@ static void DrawFuzzColumnOriginal(void)
     if (cutoff)
     {
         *dest = fullcolormap
-            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
     }
 }
 
@@ -538,7 +538,7 @@ static void DrawFuzzColumnBlocky(void)
         count &= ~mask;
 
         const pixel_t fuzz =
-            fullcolormap[6 * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+            fullcolormap[(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
 
         do
         {
@@ -557,13 +557,13 @@ static void DrawFuzzColumnBlocky(void)
     if (cutoff)
     {
         const pixel_t fuzz = fullcolormap
-            [6 * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
         V_RGBSet(dest, fuzz, fuzzblocksize);
     }
 }
 
-#define FUZZDARK (6 * 256)
-#define FUZZPAL  256
+#define FUZZDARK ((6<<CRSB) * 256)
+#define FUZZPAL  (256<<CRSB)
 
 static const int fuzzdark[FUZZTABLE] =
 {
@@ -684,7 +684,7 @@ static void DrawFuzzColumnShadow(void)
 
     do
     {
-        *dest = fullcolormap[8 * 256 + V_IndexFromRGB(*dest)];
+        *dest = fullcolormap[(8<<CRSB) * 256 + V_IndexFromRGB(*dest)];
 
         dest += linesize; // killough 11/98
     } while (--count);

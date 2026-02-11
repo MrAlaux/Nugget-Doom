@@ -989,15 +989,15 @@ void R_InvulMode(void)
   {
     case INVUL_VANILLA:
       default_comp[comp_skymap] = 1;
-      V_RGBCopy(&colormaps[0][256 * (32*8)], invul_orig, 256);
+      V_RGBCopy(&colormaps[0][256 * (32<<CRSB)], invul_orig, 256);
       break;
     case INVUL_MBF:
       default_comp[comp_skymap] = 0;
-      V_RGBCopy(&colormaps[0][256 * (32*8)], invul_orig, 256);
+      V_RGBCopy(&colormaps[0][256 * (32<<CRSB)], invul_orig, 256);
       break;
     case INVUL_GRAY:
       default_comp[comp_skymap] = 0;
-      V_RGBCopy(&colormaps[0][256 * (32*8)], invul_gray, 256);
+      V_RGBCopy(&colormaps[0][256 * (32<<CRSB)], invul_gray, 256);
       break;
   }
 }
@@ -1048,8 +1048,8 @@ void R_InitColormaps(void)
         {
           const byte color_index = orig_colormaps[j][(k * 256) + m];
 
-          pal_colormaps[i][j][((k * 8) * 256) + m] = (color_index << PIXEL_INDEX_SHIFT)
-                                                   | palscolors[i][color_index];
+          pal_colormaps[i][j][((k<<CRSB) * 256) + m] = (color_index << PIXEL_INDEX_SHIFT)
+                                                     | palscolors[i][color_index];
         }
       }
     }
@@ -1072,7 +1072,7 @@ void R_InitColormaps(void)
             lighttable_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
 
             const byte *const orig_colormap = orig_colormaps[j];
-            const int orig_colormap_row = (k / 8) * 256;
+            const int orig_colormap_row = (k / (1<<CRSB)) * 256;
 
             const double factor = (255 - k) / 255.0;
 
@@ -1093,13 +1093,13 @@ void R_InitColormaps(void)
           for (int k = 0;  k < 31;  k++)
           {
             const lighttable_t
-              *const prev_colormap = pal_colormaps[i][j] + ((k * 8) * 256),
-              *const next_colormap = pal_colormaps[i][j] + (((k + 1) * 8) * 256);
+              *const prev_colormap = pal_colormaps[i][j] + ((k<<CRSB) * 256),
+              *const next_colormap = pal_colormaps[i][j] + (((k + 1) << CRSB) * 256);
 
-            for (int l = 1;  l < 8;  l++)
+            for (int l = 1;  l < 1<<CRSB;  l++)
             {
-              lighttable_t *const current_colormap = pal_colormaps[i][j] + ((k * 8 + l) * 256);
-              const double factor = l / 8.0;
+              lighttable_t *const current_colormap = pal_colormaps[i][j] + (((k<<CRSB) + l) * 256);
+              const double factor = l / (double) (1<<CRSB);
 
               for (int m = 0;  m < 256;  m++)
               { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
@@ -1108,9 +1108,9 @@ void R_InitColormaps(void)
 
           // Fill the remainder with the last colormap row
 
-          lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31 * 8) * 256);
+          lighttable_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
 
-          for (int l = 1;  l < 8;  l++)
+          for (int l = 1;  l < 1<<CRSB;  l++)
           { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
         }
       }
@@ -1120,10 +1120,10 @@ void R_InitColormaps(void)
   colormaps = pal_colormaps[0];
 
   // [FG] dark/shaded color translation table
-  cr_dark = (byte *) &colormaps[0][256 * (15*8)];
-  cr_shaded = (byte *) &colormaps[0][256 * (6*8)];
+  cr_dark = (byte *) &colormaps[0][256 * (15<<CRSB)];
+  cr_shaded = (byte *) &colormaps[0][256 * (6<<CRSB)];
 
-  V_RGBCopy(invul_orig, &colormaps[0][256 * (32*8)], 256);
+  V_RGBCopy(invul_orig, &colormaps[0][256 * (32<<CRSB)], 256);
   R_InvulMode();
 
   // [Nugget] Night-vision visor
@@ -1133,7 +1133,7 @@ void R_InitColormaps(void)
       // Guard against markers (empty lumps) among the actual colormaps
       if (colormaps[i] == NULL) { continue; }
 
-      memcpy(&colormaps[i][256 * (32*8 + 1)], nightvision, 256);
+      memcpy(&colormaps[i][256 * ((32<<CRSB) + 1)], nightvision, 256);
     }
   }
 
