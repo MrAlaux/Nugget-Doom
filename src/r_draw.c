@@ -179,9 +179,9 @@ DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
 // actual code differences are.
 
 DRAW_COLUMN(TL,
-    tranmap[(V_IndexFromRGB(*dest) << 8) + V_IndexFromRGB(dc_colormap[0][src])])
+    V_IndexToRGB(tranmap[(V_IndexFromRGB(*dest) << 8) + V_IndexFromRGB(dc_colormap[0][src])]))
 DRAW_COLUMN(TLBrightmap,
-    tranmap[(V_IndexFromRGB(*dest) << 8) + V_IndexFromRGB(dc_colormap[dc_brightmap[src]][src])])
+    V_IndexToRGB(tranmap[(V_IndexFromRGB(*dest) << 8) + V_IndexFromRGB(dc_colormap[dc_brightmap[src]][src])]))
 
 // [Nugget] Sprite shadows /--------------------------------------------------
 
@@ -204,7 +204,7 @@ void R_DrawColumnShadow(void)
     pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     do {
-        *dest = sprite_shadows_tranmap[V_IndexFromRGB(*dest) << 8];
+        *dest = V_IndexToRGB(sprite_shadows_tranmap[V_IndexFromRGB(*dest) << 8]);
         dest += linesize; // killough 11/98
     } while (--count);
 }
@@ -278,10 +278,11 @@ void R_DrawSkyColumn(void)
         {
             *dest = main_tranmap
                 [(main_tranmap[
-                    V_IndexFromRGB(colormap[source[0]] << 8)
+                    (V_IndexFromRGB(colormap[source[0]]) << 8)
                   + V_IndexFromRGB(colormap[skycolor])
                   ] << 8)
                  + V_IndexFromRGB(colormap[skycolor])];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }
@@ -304,8 +305,9 @@ void R_DrawSkyColumn(void)
         for (i = 0; i < n; ++i)
         {
             *dest =
-                main_tranmap[V_IndexFromRGB(colormap[source[0]] << 8)
+                main_tranmap[(V_IndexFromRGB(colormap[source[0]]) << 8)
                              + V_IndexFromRGB(colormap[skycolor])];
+            *dest = V_IndexToRGB(*dest);
             dest += linesize;
             frac += fracstep;
         }

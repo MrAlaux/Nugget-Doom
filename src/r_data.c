@@ -1048,8 +1048,7 @@ void R_InitColormaps(void)
         {
           const byte color_index = orig_colormaps[j][(k * 256) + m];
 
-          pal_colormaps[i][j][((k<<CRSB) * 256) + m] = (color_index << PIXEL_INDEX_SHIFT)
-                                                     | palscolors[i][color_index];
+          pal_colormaps[i][j][((k<<CRSB) * 256) + m] = palscolors[i][color_index];
         }
       }
     }

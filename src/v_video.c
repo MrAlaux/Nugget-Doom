@@ -374,12 +374,13 @@ void V_InitPalsColors(void)
       a_lo = 0.0f + a_lo;
 
       // Calculate final color values
-      pc[j] = ((byte) ((a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]))
-                      << PIXEL_RED_SHIFT)
-            | ((byte) ((a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]))
-                      << PIXEL_GREEN_SHIFT)
-            | ((byte) ((a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]))
-                      << PIXEL_BLUE_SHIFT);
+      pc[j] = (j << PIXEL_INDEX_SHIFT)
+            | ((pixel_t) ((a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]))
+                         << PIXEL_RED_SHIFT)
+            | ((pixel_t) ((a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]))
+                         << PIXEL_GREEN_SHIFT)
+            | ((pixel_t) ((a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]))
+                         << PIXEL_BLUE_SHIFT);
     }
   }
 
