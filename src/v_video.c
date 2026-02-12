@@ -1332,9 +1332,6 @@ void V_Init(void)
     }
     y2lookup[SCREENHEIGHT - 1] = video.height - 1;
     y1lookup[SCREENHEIGHT] = y2lookup[SCREENHEIGHT] = video.height;
-
-    // [Nugget] True color
-    V_SetPalColors(0);
 }
 
 // Set the buffer that the code draws to.
