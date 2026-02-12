@@ -2966,7 +2966,8 @@ static setup_menu_t gen_settings1[] = {
     {"FOV", S_THERMO | S_THRM_SIZE11, CNTR_X, M_THRM_SPC, {"fov"},
      .action = UpdateFOV},
 
-    {"Gamma Correction", S_THERMO, CNTR_X, M_THRM_SPC, {"gamma2"},
+    // [Nugget] S_ACTION
+    {"Gamma Correction", S_THERMO|S_ACTION, CNTR_X, M_THRM_SPC, {"gamma2"},
      .strings_id = str_gamma, .action = MN_ResetGamma},
 
     {"Extra Lighting", S_THERMO | S_STRICT, CNTR_X,
@@ -4093,7 +4094,7 @@ setup_menu_t display_settings1[] = {
 
 void SetPalette(void)
 {
-    V_InitPalsColors();
+    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
 }
 
 static setup_menu_t display_settings2[] = {

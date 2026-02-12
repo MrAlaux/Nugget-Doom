@@ -1029,62 +1029,26 @@ int gamma2;
 
 void I_SetPalette(byte *palette)
 {
-#if 0
+    static int old_gamma, old_red = -1, old_green, old_blue, old_saturation, old_contrast;
 
-    // haleyjd
-    int i;
-    const byte *const gamma = gammatable[gamma2];
-    SDL_Color colors[256];
-
-    if (noblit) // killough 8/11/98
+    if (old_gamma != gamma2
+        || old_red != red_intensity || old_green != green_intensity || old_blue != blue_intensity
+        || old_saturation != color_saturation || old_contrast != color_contrast)
     {
-        return;
+      // If this is the first time the function is called, we've already initialized
+      // and don't have to do it again just yet
+      if (old_red != -1)
+      {
+        V_InitPalsColors();
+      }
+
+      old_gamma = gamma2;
+      old_red = red_intensity;
+      old_green = green_intensity;
+      old_blue = blue_intensity;
+      old_saturation = color_saturation;
+      old_contrast = color_contrast;
     }
-
-    for (i = 0; i < 256; ++i)
-    {
-        // [Nugget] Color settings
-
-        const byte r = gamma[*palette++] * red_intensity   / 100,
-                   g = gamma[*palette++] * green_intensity / 100,
-                   b = gamma[*palette++] * blue_intensity  / 100;
-
-        // [PN] Contrast adjustment
-
-        const int contrast_adjustment = 128 * (100 - color_contrast) / 100;
-
-        int channels[3] = {
-            ((int) r * color_contrast / 100) + contrast_adjustment,
-            ((int) g * color_contrast / 100) + contrast_adjustment,
-            ((int) b * color_contrast / 100) + contrast_adjustment
-        };
-
-        channels[0] = BETWEEN(0, 255, channels[0]);
-        channels[1] = BETWEEN(0, 255, channels[1]);
-        channels[2] = BETWEEN(0, 255, channels[2]);
-
-        // [JN] Saturation floats, high and low.
-        // If saturation has been modified (< 100), set high and low
-        // values according to saturation level. Sum of r,g,b channels
-        // and floats must be 1.0 to get proper colors.
-
-        float a_hi = I_SaturationPercent[color_saturation],
-              a_lo = a_hi / 2.0f;
-
-        a_hi = 1.0f - a_hi;
-        a_lo = 0.0f + a_lo;
-
-        // Calculate final color values
-        colors[i].r = (a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]);
-        colors[i].g = (a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]);
-        colors[i].b = (a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]);
-
-        colors[i].a = 0xffu;
-    }
-
-    SDL_SetPaletteColors(screenbuffer->format->palette, colors, 0, 256);
-
-#endif
 
     V_SetPalColors((palette - (byte *) W_CacheLumpName("PLAYPAL", PU_CACHE)) / 768);
 
