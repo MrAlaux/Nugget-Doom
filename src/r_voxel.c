@@ -1004,7 +1004,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					uy = clip_y1;
 
 				byte src = slab[0];
-				byte pix = colormap[spr->brightmap[src]][src];
+				pixel_t pix = colormap[spr->brightmap[src]][src];
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
@@ -1019,7 +1019,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					uy = clip_y2;
 
 				byte src = slab[len - 1];
-				byte pix = colormap[spr->brightmap[src]][src];
+				pixel_t pix = colormap[spr->brightmap[src]][src];
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
@@ -1039,7 +1039,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					if (i >= len) i = len - 1;
 
 					byte src = slab[i];
-					byte pix = colormap[spr->brightmap[src]][src];
+					pixel_t pix = colormap[spr->brightmap[src]][src];
 
 					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
 				}
@@ -1245,8 +1245,8 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 				i = BETWEEN(0, len - 1, i);
 
-				const byte src = slab[i],
-				           pix = colormap[spr->brightmap[src]][src];
+				const byte src = slab[i];
+				const pixel_t pix = colormap[spr->brightmap[src]][src];
 
 				dest2[(uy >> FRACBITS) * linesize] = pix;
 			}
