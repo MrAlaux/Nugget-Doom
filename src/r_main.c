@@ -1085,7 +1085,7 @@ void R_InitLightTables (void)
       LIGHTLEVELS = 256;
       LIGHTSEGSHIFT = 0;
       LIGHTBRIGHT = 16;
-      MAXLIGHTSCALE = 768;
+      MAXLIGHTSCALE = 384;
       LIGHTSCALESHIFT = 9;
       MAXLIGHTZ = 2048;
       LIGHTZSHIFT = 16;
