@@ -1857,6 +1857,9 @@ static void DrawBackground(const char *name)
 {
     if (st_refresh_background)
     {
+        R_FillBackScreen();
+        R_DrawViewBorder();
+
         V_UseBuffer(st_backing_screen);
 
         if (st_solidbackground)
@@ -2717,6 +2720,8 @@ void ST_refreshBackground(void)
   st_refresh_background = true;
 
   // Status-Bar chunks -------------------------------------------------------
+
+  if (!st_bar) { return; }
 
   patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
 

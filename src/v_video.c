@@ -48,6 +48,7 @@
 
 // [Nugget]
 #include "i_gamma.h"
+#include "st_stuff.h"
 
 pixel_t *I_VideoBuffer;
 
@@ -393,6 +394,8 @@ void V_SetPalColors(const int palette_index)
   colormaps = pal_colormaps[palette_index];
 
   V_SetCurrentColormap(0);
+
+  ST_refreshBackground();
 }
 
 // HUD/menu shadows ----------------------------------------------------------

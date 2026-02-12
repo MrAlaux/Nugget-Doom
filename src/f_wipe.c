@@ -100,6 +100,9 @@ static int wipe_doColorXForm(int width, int height, int ticks)
 
 static int wipe_exit(int width, int height, int ticks)
 {
+    // [Nugget]
+    V_PutBlock(0, 0, width, height, wipe_scr_end);
+
     Z_Free(wipe_scr_start);
     Z_Free(wipe_scr_end);
     return 0;
