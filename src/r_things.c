@@ -969,12 +969,12 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   if (viewz < floorheight + FRACUNIT) { return; }
 
-  fixed_t floordist = MAX(0, interpz - floorheight);
+  float floordist = MAX(0, interpz - floorheight) / (float) FRACUNIT;
 
-  if (floordist >= 256*FRACUNIT) { return; }
+  if (floordist >= 256.0f) { return; }
 
-  floordist = floordist * 0.3125f;
-  floordist = FixedMul(floordist, floordist / 8);
+  floordist *= 0.3125f;
+  floordist = floordist * (floordist * 0.125f);
 
   int offset_divisor = 0;
   float yscale_mult;
@@ -998,7 +998,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
     #define BASE_YSCALE_MULT 0.1f
     offset_divisor = 4;
 
-    floordist = floordist * (BASE_YSCALE_MULT / 2);
+    floordist = floordist * BASE_YSCALE_MULT / 2;
     yscale_mult = BASE_YSCALE_MULT - (floordist * BASE_YSCALE_MULT);
   }
 
@@ -1008,7 +1008,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   if (shadow_yscale <= FRACUNIT * 3/256) { return; }
 
-  shadow_xscale = FixedMul(xscale, FRACUNIT - floordist);
+  shadow_xscale = xscale * (1.0f - floordist);
 
   const fixed_t shadow_height = spriteheight[lump] * yscale_mult;
 
