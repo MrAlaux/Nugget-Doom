@@ -2783,11 +2783,15 @@ static const char *truecolor_strings[] = {
   "Off", "Hybrid", "Full"
 };
 
+static void UpdateSmoothLightItem(void);
+
 static void SetTrueColor(void)
 {
     R_DeferredInitTrueColor();
     setsmoothlight = true;
     setsizeneeded = true;
+
+    UpdateSmoothLightItem();
 }
 
 static int resolution_scale;
@@ -3842,6 +3846,12 @@ static setup_menu_t gen_settings5[] = {
 
     MI_END
 };
+
+// [Nugget]
+static void UpdateSmoothLightItem(void)
+{
+  DisableItem(truecolor_rendering, gen_settings5, "smoothlight");
+}
 
 const char *default_skill_strings[] = {
     // dummy first option because defaultskill is 1-based
@@ -6021,6 +6031,7 @@ void MN_SetupResetMenu(void)
     DisableItem(!(extra_gibbing[EXGIB_FIST] || extra_gibbing[EXGIB_CSAW] || extra_gibbing[EXGIB_SSG]),
                 enem_settings1, "extra_gibbing");
 
+    UpdateSmoothLightItem();
     UpdateVerticalLockonItem();
     UpdatePaletteItems();
     MN_UpdateDoom1SSGItem();
