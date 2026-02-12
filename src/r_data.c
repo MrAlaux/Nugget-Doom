@@ -1058,18 +1058,17 @@ void R_InitColormaps(void)
   {
     // Shade rows after first one
 
-    byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
-
     for (i = 0;  i < 14;  i++)
     {
-      // For better support of palette tinting, we search for the color closest to black
-      // (which should hopefully have the same tint as the rest of the palette)
-      // and interpolate all colors to it
-      const pixel_t black = palscolors[i][I_GetNearestColor(playpal + 768*i, 0, 0, 0)];
-
       for (int j = 0;  j < numcolormaps;  j++)
       {
         const lighttable_t *const first_colormap = pal_colormaps[i][j];
+
+        // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
+        // this lets us maintain some colormap effects (e.g. vanilla brightmaps, fog) and also palette tinting
+        // (the colormap row were interpolating towards is already colored as per the current palette)
+        lighttable_t last_colormap[256];
+        memcpy(last_colormap, first_colormap + ((31<<CRSB) * 256), sizeof(*last_colormap) * 256);
 
         for (int k = 1;  k < 256;  k++)
         {
@@ -1082,7 +1081,7 @@ void R_InitColormaps(void)
 
           for (int m = 0;  m < 256;  m++)
           {
-            const pixel_t rgb = V_LerpRGB(first_colormap[m], black, factor);
+            const pixel_t rgb = V_LerpRGB(first_colormap[m], last_colormap[m], factor);
 
             const byte index = orig_colormap[orig_colormap_row + m];
 
