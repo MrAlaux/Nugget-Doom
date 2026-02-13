@@ -123,13 +123,16 @@ int LIGHTZSHIFT;
 // killough 4/4/98: support dynamic number of them as well
 
 int numcolormaps;
-lighttable_t ***(*c_scalelight) = NULL;
-lighttable_t ***(*c_zlight) = NULL;
-lighttable_t **(*scalelight) = NULL;
-lighttable_t **scalelightfixed = NULL;
-lighttable_t **(*zlight) = NULL;
+cmapoffset_t **(*c_scalelight) = NULL;
+cmapoffset_t **(*c_zlight) = NULL;
+cmapoffset_t *(*scalelight) = NULL;
+cmapoffset_t *scalelightfixed = NULL;
+cmapoffset_t *(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
+
+lighttable_t ***pal_colormaps = NULL;
+lighttable_t *base_colormap, *current_colormap;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -176,6 +179,10 @@ int R_GetLightLevelInPoint(
 
   return lightlevel;
 }
+
+// True-color rendering
+static int num_colormap_rows;
+int colormap_row_shift_bits;
 
 // CVARs ---------------------------------------------------------------------
 
@@ -1070,6 +1077,24 @@ void R_InitLightTables (void)
     Z_Free(c_zlight);
   }
 
+  num_colormap_rows = NUMCOLORMAPS;
+  colormap_row_shift_bits = COLORMAP_ROW_SHIFT_BITS;
+
+  if (truecolor_rendering)
+  {
+      LIGHTLEVELS = 256;
+      LIGHTSEGSHIFT = 0;
+      LIGHTBRIGHT = 16;
+      MAXLIGHTSCALE = 384;
+      LIGHTSCALESHIFT = 9;
+      MAXLIGHTZ = 2048;
+      LIGHTZSHIFT = 16;
+
+      num_colormap_rows = 256;
+      colormap_row_shift_bits = 0;
+  }
+  else
+
   if (smoothlight)
   {
       LIGHTLEVELS = 32;
@@ -1114,7 +1139,7 @@ void R_InitLightTables (void)
   //  for each level / distance combination.
   for (i=0; i< LIGHTLEVELS; i++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*num_colormap_rows/LIGHTLEVELS;
 
       for (cm = 0; cm < numcolormaps; ++cm)
       {
@@ -1130,13 +1155,13 @@ void R_InitLightTables (void)
           if (level < 0)
             level = 0;
           else
-            if (level >= NUMCOLORMAPS)
-              level = NUMCOLORMAPS-1;
+            if (level >= num_colormap_rows)
+              level = num_colormap_rows-1;
 
           // killough 3/20/98: Initialize multiple colormaps
-          level *= 256;
+          level *= 256 << colormap_row_shift_bits;
           for (t=0; t<numcolormaps; t++)         // killough 4/4/98
-            c_zlight[t][i][j] = colormaps[t] + level;
+            c_zlight[t][i][j] = level;
         }
     }
 
@@ -1330,7 +1355,7 @@ void R_ExecuteSetViewSize (void)
   //  for each level / scale combination.
   for (i=0; i<LIGHTLEVELS; i++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*num_colormap_rows/LIGHTLEVELS;
 
       for (j=0 ; j<MAXLIGHTSCALE ; j++)
         {                                       // killough 11/98:
@@ -1339,14 +1364,14 @@ void R_ExecuteSetViewSize (void)
           if (level < 0)
             level = 0;
 
-          if (level >= NUMCOLORMAPS)
-            level = NUMCOLORMAPS-1;
+          if (level >= num_colormap_rows)
+            level = num_colormap_rows-1;
 
           // killough 3/20/98: initialize multiple colormaps
-          level *= 256;
+          level *= 256 << colormap_row_shift_bits;
 
           for (t=0; t<numcolormaps; t++)     // killough 4/4/98
-            c_scalelight[t][i][j] = colormaps[t] + level;
+            c_scalelight[t][i][j] = level;
         }
     }
 
@@ -1831,15 +1856,22 @@ void R_SetupFrame (player_t *player)
   zlight = c_zlight[cm];
   scalelight = c_scalelight[cm];
 
+  V_SetCurrentColormap(cm);
+
   if (player->fixedcolormap)
     {
+      const int pfixedcolormap = (MIN(32, player->fixedcolormap) << COLORMAP_ROW_SHIFT_BITS)
+                               + MAX(0, player->fixedcolormap - 32);
+
       fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
-        + player->fixedcolormap*256*sizeof(lighttable_t);
+        + pfixedcolormap*256;
 
       walllights = scalelightfixed;
 
       for (i=0 ; i<MAXLIGHTSCALE ; i++)
-        scalelightfixed[i] = fixedcolormap;
+        scalelightfixed[i] = pfixedcolormap * 256;
+
+      dc_colormap[0] = dc_colormap[1] = fixedcolormap;
     }
   else
     fixedcolormap = 0;
@@ -1969,7 +2001,10 @@ void R_RenderPlayerView (player_t* player)
 
   // [FG] update automap while playing
   if (automap_on)
+  {
+    V_SetCurrentColormap(0);
     return;
+  }
 
   // Check for new console commands.
   NetUpdate ();
@@ -1995,7 +2030,7 @@ void R_RenderPlayerView (player_t* player)
     int first_y = (viewheight % ph) / 2,
         first_x;
 
-    byte *const dest = I_VideoBuffer;
+    pixel_t *const dest = I_VideoBuffer;
 
     for (y = viewwindowy;  y < (viewwindowy + viewheight);)
     {
@@ -2005,7 +2040,7 @@ void R_RenderPlayerView (player_t* player)
       {
         for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
         {
-          memset(
+          V_RGBSet(
             dest + ((y + y2) * video.pitch) + x,
             dest[
               ( (first_y ? viewwindowy + first_y
@@ -2033,6 +2068,8 @@ void R_RenderPlayerView (player_t* player)
       else { y += ph; }
     }
   }
+
+  V_SetCurrentColormap(0);
 
   // Check for new console commands.
   NetUpdate ();
