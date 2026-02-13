@@ -3041,7 +3041,10 @@ void AM_shadeScreen(void)
       for (int y = f_y;  y < f_y2;  y++)
       {
         const int pixel = y * video.pitch + x;
-        I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + V_IndexFromRGB(I_VideoBuffer[pixel])];
+
+        I_VideoBuffer[pixel] = colormaps[0][
+          (automap_overlay_darkening<<CRSB) * 256 + V_IndexFromRGB(I_VideoBuffer[pixel])
+        ];
       }
     }
   }
