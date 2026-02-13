@@ -2715,21 +2715,13 @@ void ST_SetKeyBlink(player_t* player, int blue, int yellow, int red)
 
 // NUGHUD --------------------------------------------------------------------
 
+// Status-Bar chunks
+static boolean st_refresh_chunkbg = true;
+
 void ST_refreshBackground(void)
 {
   st_refresh_background = true;
-
-  // Status-Bar chunks -------------------------------------------------------
-
-  if (!st_bar) { return; }
-
-  patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
-
-  V_UseBuffer(st_bar);
-
-  V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
-
-  V_RestoreBuffer();
+  st_refresh_chunkbg = true; // Status-Bar chunks
 }
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align)
@@ -2837,6 +2829,19 @@ static void DrawNughudGraphics(void)
   const player_t *const plyr = &players[displayplayer];
 
   // Status-Bar chunks -------------------------------------------------------
+
+  if (st_refresh_chunkbg)
+  {
+    st_refresh_chunkbg = false;
+
+    patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
+
+    V_UseBuffer(st_bar);
+
+    V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
+
+    V_RestoreBuffer();
+  }
 
   for (int i = 0;  i < NUMSBCHUNKS;  i++)
   {
