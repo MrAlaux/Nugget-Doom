@@ -56,7 +56,7 @@ extern fixed_t pspriteiscale;
 
 extern boolean flipcorpses;
 
-extern cmapindex_t *spritelights;
+extern cmapoffset_t *spritelights;
 
 extern boolean draw_nearby_sprites;
 

@@ -204,9 +204,15 @@ inline static void V_SetCurrentColormap(const int colormap_index)
   current_colormap = colormaps[colormap_index];
 }
 
-inline static lighttable_t *V_ColormapRowByIndex(const cmapindex_t row_index)
+inline static lighttable_t *V_ColormapRowByIndex(const cmapoffset_t row_index)
 {
   return current_colormap + row_index;
+}
+
+// Avoids shifting right then left
+inline static uint_fast16_t V_TranMapRowFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_INDEX_MASK) >> (PIXEL_INDEX_SHIFT - 8);
 }
 
 inline static pixel_t V_IndexToRGB(const byte index)

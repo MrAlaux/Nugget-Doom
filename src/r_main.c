@@ -123,11 +123,11 @@ int LIGHTZSHIFT;
 // killough 4/4/98: support dynamic number of them as well
 
 int numcolormaps;
-cmapindex_t **(*c_scalelight) = NULL;
-cmapindex_t **(*c_zlight) = NULL;
-cmapindex_t *(*scalelight) = NULL;
-cmapindex_t *scalelightfixed = NULL;
-cmapindex_t *(*zlight) = NULL;
+cmapoffset_t **(*c_scalelight) = NULL;
+cmapoffset_t **(*c_zlight) = NULL;
+cmapoffset_t *(*scalelight) = NULL;
+cmapoffset_t *scalelightfixed = NULL;
+cmapoffset_t *(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
 

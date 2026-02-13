@@ -107,7 +107,7 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 
-cmapindex_t *spritelights;        // killough 1/25/98 made static
+cmapoffset_t *spritelights;        // killough 1/25/98 made static
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c

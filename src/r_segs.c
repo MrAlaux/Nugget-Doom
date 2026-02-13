@@ -57,7 +57,7 @@ static int      midtexture;
 angle_t         rw_normalangle; // angle to line origin
 int             rw_angle1;
 fixed_t         rw_distance;
-cmapindex_t     *walllights;
+cmapoffset_t     *walllights;
 
 //
 // regular wall

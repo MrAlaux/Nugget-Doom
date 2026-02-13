@@ -92,7 +92,7 @@ static int *spanstart = NULL;                // killough 2/8/98
 // texture mapping
 //
 
-cmapindex_t *planezlight; // [Nugget] Global
+cmapoffset_t *planezlight; // [Nugget] Global
 static fixed_t planeheight;
 
 // killough 2/8/98: make variables static

@@ -490,15 +490,15 @@ static void (*drawcolfunc)(const patch_column_t *patchcol);
 DRAW_COLUMN(, source[frac >> FRACBITS])
 DRAW_COLUMN(TR, translation[source[frac >> FRACBITS]])
 DRAW_COLUMN(TRTR, translation2[translation1[source[frac >> FRACBITS]]])
-DRAW_COLUMN(TL, tranmap[(V_IndexFromRGB(*dest) << 8) + source[frac >> FRACBITS]])
-DRAW_COLUMN(TRTL, tranmap[(V_IndexFromRGB(*dest) << 8) + translation[source[frac >> FRACBITS]]])
+DRAW_COLUMN(TL, tranmap[V_TranMapRowFromRGB(*dest) + source[frac >> FRACBITS]])
+DRAW_COLUMN(TRTL, tranmap[V_TranMapRowFromRGB(*dest) + translation[source[frac >> FRACBITS]]])
 
 // [Nugget] /-----------------------------------------------------------------
 
 DRAW_COLUMN(
   TRTRTL,
   tranmap[
-    (V_IndexFromRGB(*dest) << 8)
+    V_TranMapRowFromRGB(*dest)
   + translation2[translation1[source[frac >> FRACBITS]]]
   ]
 )
@@ -506,7 +506,7 @@ DRAW_COLUMN(
 DRAW_COLUMN(
   Translucent2,
   tranmap[
-    (V_IndexFromRGB(*dest) << 8)
+    V_TranMapRowFromRGB(*dest)
   + (translation2 ? translation2[translation1[source[frac >> FRACBITS]]] :
      translation1 ?              translation1[source[frac >> FRACBITS]]  :
                                               source[frac >> FRACBITS]   )
@@ -1042,7 +1042,7 @@ void V_ShadowRect(int x, int y, int width, int height)
         {
           pixel_t *const d = &dest[x];
 
-          *d = V_IndexToRGB(shadow_tranmap[V_IndexFromRGB(*d) << 8]);
+          *d = V_IndexToRGB(shadow_tranmap[V_TranMapRowFromRGB(*d)]);
         }
 
         dest += linesize;

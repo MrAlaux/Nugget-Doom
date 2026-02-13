@@ -39,7 +39,7 @@ typedef uint32_t pixel_t;
 
 // [Nugget] /=================================================================
 
-typedef uint_fast16_t cmapindex_t;
+typedef uint_fast16_t cmapoffset_t;
 
 // The upper byte corresponding to the alpha channel
 // actually stores the index from which the color derives
@@ -50,6 +50,7 @@ typedef uint_fast16_t cmapindex_t;
 #define PIXEL_BLUE_SHIFT  0
 
 #define PIXEL_INDEX_MASK (0xFF << PIXEL_INDEX_SHIFT)
+#define PIXEL_COLOR_MASK (~PIXEL_INDEX_MASK)
 #define PIXEL_RED_MASK   (0xFF << PIXEL_RED_SHIFT)
 #define PIXEL_GREEN_MASK (0xFF << PIXEL_GREEN_SHIFT)
 #define PIXEL_BLUE_MASK  (0xFF << PIXEL_BLUE_SHIFT)

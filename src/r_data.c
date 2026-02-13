@@ -1086,7 +1086,7 @@ void R_InitColormaps(void)
             const byte index = orig_colormap[orig_colormap_row + m];
 
             current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
-                                | (rgb & ~PIXEL_INDEX_MASK);
+                                | (rgb & PIXEL_COLOR_MASK);
           }
         }
       }
