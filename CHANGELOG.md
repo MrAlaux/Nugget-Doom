@@ -24,3 +24,4 @@
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Wrong message when clearing specific automap marks**
 - **_[Crosshair] Horizontal-Autoaim Indicators_ not being cleared when activating freecam**
+- **_Air Absorption_ menu item not being disabled when the _Sound Module_ weren't set to _OpenAL 3D_**
