@@ -2801,6 +2801,11 @@ void D_BindMiscVariables(void)
              false, ss_none, wad_yes,
              "Use ratios for stats in intermission screen");
 
+  // (CFG-only)
+  M_BindBool("inter_entering_delay", &inter_entering_delay, NULL,
+             false, ss_none, wad_yes,
+             "Increase the duration of the \"Entering\" screen in Doom 2's intermission screen");
+
   M_BindNum("no_page_ticking", &no_page_ticking, NULL,
             0, 0, 2, ss_misc, wad_no,
             "Play internal demos (0 = Always; 1 = Not in menus; 2 = Never)");

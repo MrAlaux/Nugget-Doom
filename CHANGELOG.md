@@ -5,6 +5,7 @@
 - **_Translucent [Weapon] When Invisible_** setting
 - **NUGHUD Weapon icon**
 - **Pressing _Place [Automap] Mark_ while over a mark now changes that mark's color**
+- Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen**
 
 ## Changes
 

@@ -90,7 +90,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - _Diminishing lighting_ (a.k.a. fog) refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
-- **Intermission ratio stats** setting, to use ratios for the stats on the intermission screen (CFG-only: `inter_ratio_stats`) [i.b. Heretic]
 - **Color settings** [p.f. International Doom]
   - _Contrast_ by [@pvictress](https://github.com/pvictress)
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
@@ -260,6 +259,9 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
+- **Intermission ratio stats** setting, to use ratios for the stats on the intermission screen (CFG-only: `inter_ratio_stats`) [i.b. Heretic]
+- Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen** (CFG-only: `inter_entering_delay`)
+  - When enabled, said state can also be accelerated like previous states by pressing the _Fire_ or _Use_ buttons
 - **When dying with freelook enabled, the camera is pitched towards the killer**
 - **Extended character cast** [partially p.f. Crispy Doom]
   - _Turn_ buttons to rotate
