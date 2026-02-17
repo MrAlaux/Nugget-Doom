@@ -14,6 +14,7 @@
 - **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees** (fixes blood coloring in SD21)
 - **Made the following cheats repeatable**:
   - `NEXTMAP`, `NEXTSECRET`, `SUMMONR`, `IDDF##`, `IDDET`, `MDK`
+- **Optimized drawing of dark minimap background**
 - **Made the `IDDF##` cheats display a message when a key is found**
 
 ## Bug Fixes

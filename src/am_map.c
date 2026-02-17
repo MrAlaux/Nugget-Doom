@@ -3036,16 +3036,27 @@ void AM_shadeScreen(void)
   // Minimap
   if (automapactive == AM_MINI)
   {
-    for (int x = f_x;  x < f_x2;  x++)
+    const lighttable_t *const colormap = colormaps[0] + (automap_overlay_darkening * 256);
+
+    const int pitch = video.pitch,
+              width = f_x2 - f_x;
+
+    pixel_t       *           row = I_VideoBuffer + (f_y * pitch + f_x);
+    pixel_t const *const last_row = row + ((f_y2 - f_y) * pitch);
+
+    for (; row < last_row;  row += pitch)
     {
-      for (int y = f_y;  y < f_y2;  y++)
-      {
-        const int pixel = y * video.pitch + x;
-        I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];
-      }
+      pixel_t *           pixel = row;
+      pixel_t *const last_pixel = pixel + width;
+
+      for (; pixel < last_pixel;  pixel++)
+      { *pixel = colormap[*pixel]; }
     }
+
+    return;
   }
-  else if (!MN_MenuIsShaded())
+
+  if (!MN_MenuIsShaded())
     V_ShadeScreen(automap_overlay_darkening); // [Nugget] Parameterized
 }
 
