@@ -5,6 +5,7 @@
 - **_Translucent [Weapon] When Invisible_** setting
 - **NUGHUD Weapon icon**
 - **Pressing _Place [Automap] Mark_ while over a mark now changes that mark's color**
+- Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen**
 
 ## Changes
 
@@ -14,11 +15,14 @@
 - **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees** (fixes blood coloring in SD21)
 - **Made the following cheats repeatable**:
   - `NEXTMAP`, `NEXTSECRET`, `SUMMONR`, `IDDF##`, `IDDET`, `MDK`
+- **Optimized drawing of dark minimap background**
 - **Made the `IDDF##` cheats display a message when a key is found**
 
 ## Bug Fixes
 
+- **Crash when loading a save with the minimap enabled right after launch**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Wrong message when clearing specific automap marks**
 - **_[Crosshair] Horizontal-Autoaim Indicators_ not being cleared when activating freecam**
+- **_Air Absorption_ menu item not being disabled when the _Sound Module_ weren't set to _OpenAL 3D_**

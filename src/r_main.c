@@ -249,8 +249,7 @@ void R_InitDistLightTables(void)
 
   if (planedistlight && planedistlight[0] && old_width < video.width)
   {
-    for (int i = 0;  i < max_light_distance;  i++)
-    { Z_Free(planedistlight[i]); }
+    Z_Free(planedistlight[0]);
 
     planedistlight[0] = NULL;
   }
@@ -275,12 +274,15 @@ void R_InitDistLightTables(void)
 
   if (old_width < max_width)
   {
+    uint16_t *const all_spandistlight = Z_Malloc(
+      sizeof(**planedistlight) * max_light_distance * max_width, PU_STATIC, 0
+    );
+
     for (int i = 0;  i < max_light_distance;  i++)
-    { planedistlight[i] = Z_Malloc(sizeof(**planedistlight) * (max_width + 1), PU_STATIC, 0); }
+    { planedistlight[i] = all_spandistlight + (max_width * i); }
   }
 
-  const int width = viewwidth + 1,
-            half_width = (width / 2) + (width % 2);
+  const int width = viewwidth - 1;
 
   const int shift_bits = light_distance_shift_bits - LIGHTZSHIFT,
             maxlightz = MAXLIGHTZ-1;
@@ -289,13 +291,13 @@ void R_InitDistLightTables(void)
   {
     // spandistlight
     uint16_t *sdll = planedistlight[i],
-             *sdlr = sdll + (width - 1);
+             *sdlr = sdll + width;
 
     const angle_t *xtva = xtoviewangle;
 
     const fixed_t base_distance = i << shift_bits;
 
-    for (int x = 0;  x < half_width;  x++, sdll++, sdlr--, xtva++)
+    for (; sdll <= sdlr;  sdll++, sdlr--, xtva++)
     {
       const fixed_t distance = base_distance * floatsecant[*xtva >> ANGLETOFINESHIFT];
 

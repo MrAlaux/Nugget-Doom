@@ -2485,7 +2485,7 @@ int ST_GetMessageFontHeight(void)
 {
   int height = 8;
 
-  if (!sbardef) { return height; }
+  if (!sbardef || !statusbar) { return height; }
 
   const sbarelem_t *child;
   array_foreach(child, statusbar->children)

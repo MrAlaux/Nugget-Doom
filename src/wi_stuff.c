@@ -51,6 +51,7 @@
 // [Nugget] CVARs
 altinterpic_t alt_interpic;
 boolean inter_ratio_stats;
+boolean inter_entering_delay;
 
 #define LARGENUMBER 1994
 
@@ -1336,11 +1337,13 @@ static void WI_End(void)
 // Args:    none
 // Returns: void
 //
-static void WI_initNoState(void)
+static void WI_initNoState(const boolean long_wait) // [Nugget] Parameter
 {
   state = NoState;
   acceleratestage = 0;
-  cnt = 10;
+
+  // [Nugget] Optional longer delay
+  cnt = (casual_play && inter_entering_delay && long_wait) ? TICRATE*3 : 10;
 }
 
 
@@ -1354,7 +1357,8 @@ static void WI_updateNoState(void)
 {
   WI_updateAnimatedBack();
 
-  if (!--cnt)
+  // [Nugget] Allow acceleration if the longer delay is enabled
+  if (!--cnt || (CASUALPLAY(inter_entering_delay) && acceleratestage))
     {
       WI_End();
       G_WorldDone();
@@ -1414,7 +1418,7 @@ static void WI_updateShowNextLoc(void)
   WI_updateAnimatedBack();
 
   if (!--cnt || acceleratestage)
-    WI_initNoState();
+    WI_initNoState(false);
   else
     snl_pointeron = (cnt & 31) < 20;
 }
@@ -1656,7 +1660,7 @@ static void WI_updateDeathmatchStats(void)
             if (NextLocAnimation())
               WI_initShowNextLoc();
             if ( gamemode == commercial)
-              WI_initNoState();
+              WI_initNoState(true);
             else
               WI_initShowNextLoc();
           }
@@ -1967,7 +1971,7 @@ static void WI_updateNetgameStats(void)
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
                   if ( gamemode == commercial )
-                    WI_initNoState();
+                    WI_initNoState(true);
                   else
                     WI_initShowNextLoc();
                 }
@@ -2216,7 +2220,7 @@ static void WI_updateStats(void)
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
                   else if (gamemode == commercial)
-                    WI_initNoState();
+                    WI_initNoState(true);
                   else
                     WI_initShowNextLoc();
                 }

@@ -4251,6 +4251,7 @@ void MN_UpdateDynamicResolutionItem(void)
 void MN_UpdateAdvancedSoundItems(boolean toggle)
 {
     DisableItem(toggle, gen_settings2, "snd_hrtf");
+    DisableItem(toggle, sfx_settings1, "snd_absorption"); // [Nugget]
     DisableItem(toggle, sfx_settings1, "snd_doppler");
 }
 
