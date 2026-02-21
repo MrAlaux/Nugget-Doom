@@ -66,6 +66,8 @@ typedef enum
 extern invul_mode_t invul_mode;
 
 // [Nugget]
+boolean R_InitTrueColorPending(void);
+void R_DeferredInitTrueColor(void);
 byte *R_GetGenericTranMap(const int filter_pct);
 void R_InitMessageFadeoutTranMaps(void);
 

@@ -23,8 +23,14 @@
 #ifndef __V_VIDEO__
 #define __V_VIDEO__
 
+// [Nugget]
+#include <string.h>
+
 #include "doomtype.h"
 #include "m_fixed.h"
+
+// [Nugget]
+#include "r_state.h"
 
 struct patch_s;
 
@@ -56,7 +62,7 @@ extern byte *cr_dark;
 extern byte *cr_shaded;
 extern byte *cr_bright;
 
-extern byte invul_gray[];
+extern lighttable_t invul_gray[];
 
 // [Nugget]
 extern byte cr_bright3[],
@@ -186,6 +192,80 @@ extern int menu_backdrop_darkening;
 void V_SetPatchCrop(int left, int right, int top, int bottom, boolean shadow_only);
 void V_ClearPatchCrop(void);
 
+// True color ----------------------------------------------------------------
+
+extern int *palcolors, palscolors[14][256];
+
+void V_InitPalsColors(void);
+void V_SetPalColors(const int palette_index);
+
+inline static void V_SetCurrentColormap(const int colormap_index)
+{
+  current_colormap = colormaps[colormap_index];
+}
+
+inline static lighttable_t *V_ColormapRowByIndex(const cmapoffset_t row_index)
+{
+  return current_colormap + row_index;
+}
+
+// Avoids shifting right then left
+inline static uint_fast16_t V_TranMapRowFromRGB(const pixel_t rgb)
+{
+  return (rgb & PIXEL_INDEX_MASK) >> (PIXEL_INDEX_SHIFT - 8);
+}
+
+inline static pixel_t V_IndexToRGB(const byte index)
+{
+  return current_colormap[index];
+}
+
+inline static pixel_t V_IndexToColormapRGB(const byte index)
+{
+  return fullcolormap[index];
+}
+
+#define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
+inline static void V_RGBSet(pixel_t *const dest, const pixel_t color, const int count)
+{
+  for (int i = 0;  i < count;  i++) { dest[i] = color; }
+}
+
+inline static void V_RGBCopy(pixel_t *const dest, const pixel_t *const src, const int count)
+{
+  memcpy(dest, src, sizeof(pixel_t) * count);
+}
+
+inline static pixel_t V_LerpRGB(const pixel_t a, const pixel_t b, const double factor)
+{
+  const byte
+    ar = V_RedFromRGB(a),
+    ag = V_GreenFromRGB(a),
+    ab = V_BlueFromRGB(a),
+    br = V_RedFromRGB(b),
+    bg = V_GreenFromRGB(b),
+    bb = V_BlueFromRGB(b);
+
+  #define CALC(a, b, shift) ( \
+    (pixel_t) ((a) + ((b) - (a)) * factor) << shift \
+  )
+
+  return ((factor >= 0.5 ? b : a) & PIXEL_INDEX_MASK)
+       | CALC(ar, br, PIXEL_RED_SHIFT)
+       | CALC(ag, bg, PIXEL_GREEN_SHIFT)
+       | CALC(ab, bb, PIXEL_BLUE_SHIFT);
+
+  #undef CALC
+}
+
+inline static pixel_t V_ShadeRGB(const pixel_t rgb, const double factor)
+{
+  return (rgb & PIXEL_INDEX_MASK)
+       | ((pixel_t) (V_RedFromRGB(rgb)   * factor) << PIXEL_RED_SHIFT)
+       | ((pixel_t) (V_GreenFromRGB(rgb) * factor) << PIXEL_GREEN_SHIFT)
+       | ((pixel_t) (V_BlueFromRGB(rgb)  * factor) << PIXEL_BLUE_SHIFT);
+}
+
 // HUD/menu shadows ----------------------------------------------------------
 
 extern boolean hud_menu_shadows;
@@ -267,7 +347,10 @@ void V_GetBlock(int x, int y, int width, int height, pixel_t *dest);
 
 void V_PutBlock(int x, int y, int width, int height, pixel_t *src);
 
-void V_FillRect(int x, int y, int width, int height, byte color);
+#define V_FillRect(x, y, w, h, c) \
+  V_FillRectRGB(x, y, w, h, V_IndexToRGB(c))
+
+void V_FillRectRGB(int x, int y, int width, int height, pixel_t color);
 
 void V_TileBlock64(int line, int width, int height, const byte *src);
 

@@ -1650,10 +1650,10 @@ static void AM_clearFB(int color)
   // [Nugget] Minimap: take `f_x` and `f_y` into account
 
   int h = f_h;
-  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
   while (h--)
   {
-    memset(src, color, f_w);
+    V_IndexSet(src, color, f_w);
     src += video.pitch;
   }
 }
@@ -1804,7 +1804,7 @@ static inline void PUTDOT(int xx, const int yy, const int cc)
 {
   xx = MaybeFlipX(xx); // [Nugget] Flip levels
 
-  I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+  I_VideoBuffer[(yy) * video.pitch + (xx)] = V_IndexToRGB(cc);
 }
 
 
@@ -1900,15 +1900,15 @@ static void AM_putWuDot(int x, int y, int color, int weight)
 {
    x = MaybeFlipX(x); // [Nugget] Flip levels
 
-   byte *dest = &I_VideoBuffer[y * video.pitch + x];
+   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;
 
    fg = fg2rgb[color];
-   bg = bg2rgb[*dest];
+   bg = bg2rgb[V_IndexFromRGB(*dest)];
    fg = (fg + bg) | 0x1f07c1f;
-   *dest = RGB32k[0][0][fg & (fg >> 15)];
+   *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
 }
 
 
@@ -3036,7 +3036,7 @@ void AM_shadeScreen(void)
   // Minimap
   if (automapactive == AM_MINI)
   {
-    const lighttable_t *const colormap = colormaps[0] + (automap_overlay_darkening * 256);
+    const lighttable_t *const colormap = colormaps[0] + ((automap_overlay_darkening<<CRSB) * 256);
 
     const int pitch = video.pitch,
               width = f_x2 - f_x;
@@ -3050,7 +3050,7 @@ void AM_shadeScreen(void)
       pixel_t *const last_pixel = pixel + width;
 
       for (; pixel < last_pixel;  pixel++)
-      { *pixel = colormap[*pixel]; }
+      { *pixel = colormap[V_IndexFromRGB(*pixel)]; }
     }
 
     return;
