@@ -63,8 +63,14 @@ unsigned long rngseed = 1993;   // killough 3/26/98: The seed
 
 int wrndindex = 0, w2rndindex = 0; // [Nugget] Second random function
 
+// [Nugget]
+int rng_override = -1;
+
 int P_Random(pr_class_t pr_class)
 {
+  // [Nugget]
+  if (rng_override >= 0) { return rng_override; }
+
   // killough 2/16/98:  We always update both sets of random number
   // generators, to ensure repeatability if the demo_compatibility
   // flag is changed while the program is running. Changing the
@@ -130,6 +136,9 @@ void M_ClearRandom (void)
 // [crispy] our own private random function
 int Woof_Random(void)
 {
+  // [Nugget]
+  if (rng_override >= 0) { return rng_override; }
+
   wrndindex = (wrndindex+1)&0xff;
   return rndtable[wrndindex];
 }
@@ -137,6 +146,8 @@ int Woof_Random(void)
 // [Nugget] Second random function
 int Woof2_Random(void)
 {
+  if (rng_override >= 0) { return rng_override; }
+
   w2rndindex = (w2rndindex+1)&0xff;
   return rndtable[w2rndindex];
 }
