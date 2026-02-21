@@ -6,6 +6,7 @@
 - **NUGHUD Weapon icon**
 - **Pressing _Place [Automap] Mark_ while over a mark now changes that mark's color**
 - Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen**
+- RNG override developer cheat
 
 ## Changes
 
@@ -21,6 +22,7 @@
 ## Bug Fixes
 
 - **Crash when loading a save with the minimap enabled right after launch**
+- **Desync related to bullet puffs**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Wrong message when clearing specific automap marks**

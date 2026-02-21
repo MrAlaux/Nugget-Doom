@@ -2220,7 +2220,7 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
 
   // [Nugget] ================================================================
 
-  if (no_hit)
+  if (casual_play && no_hit)
   {
     // No lines nor things were hit; spawn a puff if we hit a plane
 

@@ -48,7 +48,11 @@ typedef enum {
   not_menu = 8,
   not_deh  = 16,
   beta_only = 32,                  // killough 7/24/98
-  not_net = not_dm | not_coop
+  not_net = not_dm | not_coop,
+
+  // [Nugget]
+  devmode_only_bit = 65536,
+  devmode_only = devmode_only_bit|not_demo|not_net
 } cheat_when_t;
 
 #define CHEAT_ARGS_MAX 8

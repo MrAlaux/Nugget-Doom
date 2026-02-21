@@ -58,6 +58,7 @@
 // [Nugget]
 #include "am_map.h"
 #include "f_finale.h"
+#include "m_random.h"
 #include "r_main.h"
 
 #define plyr (players+consoleplayer)     /* the console player */
@@ -186,6 +187,8 @@ static void cheat_saitama(void);     // MDK Fist
 static void cheat_boomcan(void);     // Explosive hitscan
 
 static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
+static void cheat_myrng(void);
+static void cheat_myrngx(char *buf);
 static void cheat_dimlight(void);
 static void cheat_fovsky(void);
 static void cheat_castcall(void);
@@ -462,10 +465,12 @@ struct cheat_s cheat[] = {
   { "saitama",    NULL, not_net | not_demo, {.v = cheat_saitama} }, // --------------------------- MDK Fist
   { "boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan} }, // --------------------------- Explosive hitscan
 
-  { "fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
-  { "dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
-  { "fovsky",     NULL, not_net | not_demo, {.v = cheat_fovsky} },
-  { "castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
+  { "fauxdemo",   NULL, devmode_only, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
+  { "myrng",        NULL, devmode_only, {.v = cheat_myrng} },
+  { "myrng",        NULL, devmode_only, {.s = cheat_myrngx}, -3 },
+  { "dimlight",   NULL, devmode_only, {.v = cheat_dimlight} },
+  { "fovsky",     NULL, devmode_only, {.v = cheat_fovsky} },
+  { "castcall",   NULL, devmode_only, {.v = cheat_castcall} },
 
   { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
   { "flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
@@ -954,8 +959,6 @@ static void cheat_boomcan(void)
 // Emulates demo/net-play state, for debugging
 static void cheat_fauxdemo(void)
 {
-  if (!nugget_devmode) { return; }
-
   extern void D_UpdateCasualPlay(void);
 
   fauxdemo = !fauxdemo;
@@ -965,10 +968,43 @@ static void cheat_fauxdemo(void)
   displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
 }
 
+static void cheat_myrng(void)
+{
+  if (rng_override >= 0)
+  {
+    rng_override = -1;
+    displaymsg("RNG Override: Value cleared. Enter new value");
+  }
+  else { displaymsg("RNG Override: Enter value"); }
+}
+
+static void cheat_myrngx(char *buf)
+{
+  int value;
+
+  if (!isdigit(buf[0]) || !isdigit(buf[1]) || !isdigit(buf[2]))
+  {
+    displaymsg("RNG Override: Digits only");
+    return;
+  }
+
+  value = (buf[0] - '0') * 100
+        + (buf[1] - '0') * 10
+        + (buf[2] - '0');
+
+  if (value < 0 || 255 < value)
+  {
+    displaymsg("RNG Override: 0-255 only");
+    return;
+  }
+
+  rng_override = value;
+
+  displaymsg("RNG Override: %i", rng_override);
+}
+
 static void cheat_dimlight(void)
 {
-  if (!nugget_devmode) { return; }
-
   diminishing_lighting = !diminishing_lighting;
   displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
 
@@ -977,8 +1013,6 @@ static void cheat_dimlight(void)
 
 static void cheat_fovsky(void)
 {
-  if (!nugget_devmode) { return; }
-
   extern boolean fov_stretchsky;
 
   fov_stretchsky = !fov_stretchsky;
@@ -987,8 +1021,6 @@ static void cheat_fovsky(void)
 
 static void cheat_castcall(void)
 {
-  if (!nugget_devmode) { return; }
-
   F_StartFinale();
   F_StartCast();
 }
@@ -1922,7 +1954,8 @@ static boolean CheatAllowed(cheat_when_t when)
            && !(when & not_coop && netgame && !deathmatch)
            && !(when & not_demo && (demorecording || demoplayback))
            && !(when & not_menu && menuactive)
-           && !(when & beta_only && !beta_emulation);
+           && !(when & beta_only && !beta_emulation)
+           && !(when & devmode_only_bit && !nugget_devmode); // [Nugget]
 }
 
 // The cheat detection function was replaced with a version from Chocolate Doom
