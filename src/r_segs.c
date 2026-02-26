@@ -460,7 +460,7 @@ static void R_RenderSegLoop (void)
           texturecolumn >>= FRACBITS;
 
           // calculate lighting
-          if (!fixedcolormap)
+          if (!fixedcolormapoffset)
           {
             if (truecolor_rendering)
             {

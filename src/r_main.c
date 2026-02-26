@@ -1982,7 +1982,6 @@ void R_SetupFrame (player_t *player)
       }
     else
       fixedcolormap32 = NULL;
-
   }
   else
   {

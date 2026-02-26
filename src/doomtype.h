@@ -41,7 +41,7 @@ typedef byte pixel_t;
 
 typedef uint32_t pixel32_t;
 
-typedef uint_fast16_t cmapoffset_t;
+typedef uint_fast32_t cmapoffset_t;
 
 // The upper byte corresponding to the alpha channel
 // actually stores the index from which the color derives

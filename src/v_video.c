@@ -231,7 +231,7 @@ void V_InitColorTranslation(void)
         // formula is taken from dcolors.c preseving "Carmack's typo"
         // https://doomwiki.org/wiki/Carmack%27s_typo
         int gray = (red * 0.299 + green * 0.587 + blue * 0.144) * 255;
-        invul_gray[i] = palscolors[0][I_GetNearestColor(playpal, gray, gray, gray)];
+        invul_gray[i] = I_GetNearestColor(playpal, gray, gray, gray);
     }
 
     // [Nugget] ==============================================================
