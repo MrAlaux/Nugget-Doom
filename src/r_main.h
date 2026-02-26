@@ -180,7 +180,6 @@ int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
 
 // True-color rendering
 void R_InitColorFunctions(void);
-extern int colormap_row_shift_bits;
 
 // Radial fog ----------------------------------------------------------------
 

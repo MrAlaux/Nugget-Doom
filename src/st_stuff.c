@@ -1846,6 +1846,8 @@ static void DrawSolidBackground(void)
               0, v0, video.unscaledw, v1 - v0, V_ComponentsToRGB(col, r/2, g/2, b/2)
             );
         }
+
+        return;
     }
 
     // [FG] separate colors for the top rows
@@ -1862,14 +1864,14 @@ static void DrawSolidBackground(void)
             {
                 pixel_t *c = st_backing_screen + V_ScaleY(y) * video.pitch
                              + V_ScaleX(x);
-                r += V_RedFromRGB(*c);
-                g += V_GreenFromRGB(*c);
-                b += V_BlueFromRGB(*c);
+                r += pal[3 * c[0] + 0];
+                g += pal[3 * c[0] + 1];
+                b += pal[3 * c[0] + 2];
 
                 c += V_ScaleX(width - 2 * x - 1);
-                r += V_RedFromRGB(*c);
-                g += V_GreenFromRGB(*c);
-                b += V_BlueFromRGB(*c);
+                r += pal[3 * c[0] + 0];
+                g += pal[3 * c[0] + 1];
+                b += pal[3 * c[0] + 2];
             }
         }
 

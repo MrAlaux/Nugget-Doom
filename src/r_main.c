@@ -185,7 +185,6 @@ int R_GetLightLevelInPoint(
 
 // True-color rendering
 static int num_colormap_rows;
-int colormap_row_shift_bits;
 
 // CVARs ---------------------------------------------------------------------
 
