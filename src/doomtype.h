@@ -35,9 +35,11 @@ typedef enum {false, true} boolean;
 
 typedef uint8_t byte;
 
-typedef uint32_t pixel_t;
+typedef byte pixel_t;
 
 // [Nugget] /=================================================================
+
+typedef uint32_t pixel32_t;
 
 typedef uint_fast16_t cmapoffset_t;
 
@@ -55,27 +57,27 @@ typedef uint_fast16_t cmapoffset_t;
 #define PIXEL_GREEN_MASK (0xFF << PIXEL_GREEN_SHIFT)
 #define PIXEL_BLUE_MASK  (0xFF << PIXEL_BLUE_SHIFT)
 
-inline static byte V_IndexFromRGB(const pixel_t rgb)
+inline static byte V_IndexFromRGB(const pixel32_t rgb)
 {
   return (rgb & PIXEL_INDEX_MASK) >> PIXEL_INDEX_SHIFT;
 }
 
-inline static byte V_RedFromRGB(const pixel_t rgb)
+inline static byte V_RedFromRGB(const pixel32_t rgb)
 {
   return (rgb & PIXEL_RED_MASK) >> PIXEL_RED_SHIFT;
 }
 
-inline static byte V_GreenFromRGB(const pixel_t rgb)
+inline static byte V_GreenFromRGB(const pixel32_t rgb)
 {
   return (rgb & PIXEL_GREEN_MASK) >> PIXEL_GREEN_SHIFT;
 }
 
-inline static byte V_BlueFromRGB(const pixel_t rgb)
+inline static byte V_BlueFromRGB(const pixel32_t rgb)
 {
   return (rgb & PIXEL_BLUE_MASK) >> PIXEL_BLUE_SHIFT;
 }
 
-inline static pixel_t V_ComponentsToRGB(const byte index, const byte r, const byte g, const byte b)
+inline static pixel32_t V_ComponentsToRGB(const byte index, const byte r, const byte g, const byte b)
 {
   return (index << PIXEL_INDEX_SHIFT)
        | (r << PIXEL_RED_SHIFT)
@@ -90,6 +92,7 @@ inline static pixel_t V_ComponentsToRGB(const byte index, const byte r, const by
 // to all black. Could use even more than 32 levels.
 
 typedef pixel_t lighttable_t;
+typedef pixel32_t lighttable32_t;
 
 // [FG] common definitions from Chocolate Doom
 

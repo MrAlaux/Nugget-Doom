@@ -41,6 +41,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "i_video.h"
+
 // OPTIMIZE: closed two sided lines as single sided
 
 // killough 1/6/98: replaced globals with statics where appropriate
@@ -89,9 +92,130 @@ static int    *maskedtexturecol; // [FG] 32-bit integer math
 // R_RenderMaskedSegRange
 //
 
-void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
+static void (*RenderMaskedSegRangeLoop)(int x1, int x2, int texnum) = NULL;
+
+static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
 {
   column_t *col;
+
+  if (fixedcolormap)
+    dc_colormap[0] = dc_colormap[1] = fixedcolormap;
+
+  // draw the columns
+  for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
+    if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
+      {
+        if (!fixedcolormap)      // calculate lighting
+          {                             // killough 11/98:
+            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                              ? 0 : R_GetLightIndex(spryscale, dc_x); // [Nugget] X
+
+            // [crispy] brightmaps for two sided mid-textures
+            dc_brightmap = texturebrightmap[texnum];
+            dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
+            dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                              ? fullcolormap
+                              : dc_colormap[0];
+          }
+
+        // killough 3/2/98:
+        //
+        // This calculation used to overflow and cause crashes in Doom:
+        //
+        // sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+        //
+        // This code fixes it, by using double-precision intermediate
+        // arithmetic and by skipping the drawing of 2s normals whose
+        // mapping to screen coordinates is totally out of range:
+
+        {
+          int64_t t = ((int64_t) centeryfrac << FRACBITS) -
+            (int64_t) dc_texturemid * spryscale;
+          if (t + (int64_t) textureheight[texnum] * spryscale < 0 ||
+              t > (int64_t) video.height << FRACBITS*2)
+            continue;        // skip if the texture is out of screen's range
+          sprtopscreen = (int64_t)(t >> FRACBITS); // [FG] 64-bit integer math
+        }
+
+        dc_iscale = 0xffffffffu / (unsigned) spryscale;
+
+        // killough 1/25/98: here's where Medusa came in, because
+        // it implicitly assumed that the column was all one patch.
+        // Originally, Doom did not construct complete columns for
+        // multipatched textures, so there were no header or trailer
+        // bytes in the column referred to below, which explains
+        // the Medusa effect. The fix is to construct true columns
+        // when forming multipatched textures (see r_data.c).
+
+        // draw the texture
+        col = (column_t *)(R_GetColumnMasked(texnum, maskedtexturecol[dc_x]) - 3);
+        R_DrawMaskedColumn (col);
+        maskedtexturecol[dc_x] = INT_MAX; // [FG] 32-bit integer math
+      }
+}
+
+static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
+{
+  column_t *col;
+
+  if (fixedcolormap32)
+    dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
+
+  // draw the columns
+  for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
+    if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
+      {
+        if (!fixedcolormap32)      // calculate lighting
+          {                             // killough 11/98:
+            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                              ? 0 : R_GetLightIndex(spryscale, dc_x); // [Nugget] X
+
+            // [crispy] brightmaps for two sided mid-textures
+            dc_brightmap = texturebrightmap[texnum];
+            dc_colormap32[0] = V_ColormapRowByIndex32(walllights[index]);
+            dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                              ? fullcolormap32
+                              : dc_colormap32[0];
+          }
+
+        // killough 3/2/98:
+        //
+        // This calculation used to overflow and cause crashes in Doom:
+        //
+        // sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+        //
+        // This code fixes it, by using double-precision intermediate
+        // arithmetic and by skipping the drawing of 2s normals whose
+        // mapping to screen coordinates is totally out of range:
+
+        {
+          int64_t t = ((int64_t) centeryfrac << FRACBITS) -
+            (int64_t) dc_texturemid * spryscale;
+          if (t + (int64_t) textureheight[texnum] * spryscale < 0 ||
+              t > (int64_t) video.height << FRACBITS*2)
+            continue;        // skip if the texture is out of screen's range
+          sprtopscreen = (int64_t)(t >> FRACBITS); // [FG] 64-bit integer math
+        }
+
+        dc_iscale = 0xffffffffu / (unsigned) spryscale;
+
+        // killough 1/25/98: here's where Medusa came in, because
+        // it implicitly assumed that the column was all one patch.
+        // Originally, Doom did not construct complete columns for
+        // multipatched textures, so there were no header or trailer
+        // bytes in the column referred to below, which explains
+        // the Medusa effect. The fix is to construct true columns
+        // when forming multipatched textures (see r_data.c).
+
+        // draw the texture
+        col = (column_t *)(R_GetColumnMasked(texnum, maskedtexturecol[dc_x]) - 3);
+        R_DrawMaskedColumn (col);
+        maskedtexturecol[dc_x] = INT_MAX; // [FG] 32-bit integer math
+      }
+}
+
+void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
+{
   int      lightnum;
   int      texnum;
   sector_t tempsec;      // killough 4/13/98
@@ -159,60 +283,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
   dc_texturemid += curline->sidedef->rowoffset;
 
-  if (fixedcolormap)
-    dc_colormap[0] = dc_colormap[1] = fixedcolormap;
-
-  // draw the columns
-  for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
-    if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
-      {
-        if (!fixedcolormap)      // calculate lighting
-          {                             // killough 11/98:
-            const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                              ? 0 : R_GetLightIndex(spryscale, dc_x); // [Nugget] X
-
-            // [crispy] brightmaps for two sided mid-textures
-            dc_brightmap = texturebrightmap[texnum];
-            dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
-            dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                              ? fullcolormap
-                              : dc_colormap[0];
-          }
-
-        // killough 3/2/98:
-        //
-        // This calculation used to overflow and cause crashes in Doom:
-        //
-        // sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-        //
-        // This code fixes it, by using double-precision intermediate
-        // arithmetic and by skipping the drawing of 2s normals whose
-        // mapping to screen coordinates is totally out of range:
-
-        {
-          int64_t t = ((int64_t) centeryfrac << FRACBITS) -
-            (int64_t) dc_texturemid * spryscale;
-          if (t + (int64_t) textureheight[texnum] * spryscale < 0 ||
-              t > (int64_t) video.height << FRACBITS*2)
-            continue;        // skip if the texture is out of screen's range
-          sprtopscreen = (int64_t)(t >> FRACBITS); // [FG] 64-bit integer math
-        }
-
-        dc_iscale = 0xffffffffu / (unsigned) spryscale;
-
-        // killough 1/25/98: here's where Medusa came in, because
-        // it implicitly assumed that the column was all one patch.
-        // Originally, Doom did not construct complete columns for
-        // multipatched textures, so there were no header or trailer
-        // bytes in the column referred to below, which explains
-        // the Medusa effect. The fix is to construct true columns
-        // when forming multipatched textures (see r_data.c).
-
-        // draw the texture
-        col = (column_t *)(R_GetColumnMasked(texnum, maskedtexturecol[dc_x]) - 3);
-        R_DrawMaskedColumn (col);
-        maskedtexturecol[dc_x] = INT_MAX; // [FG] 32-bit integer math
-      }
+  RenderMaskedSegRangeLoop(x1, x2, texnum);
 
   // [FG] reset column drawing function
   colfunc = R_DrawColumn;
@@ -391,11 +462,22 @@ static void R_RenderSegLoop (void)
           // calculate lighting
           if (!fixedcolormap)
           {
-            dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
-            dc_colormap[1] = (!fixedcolormap &&
-                              (STRICTMODE(brightmaps) || force_brightmaps))
-                              ? fullcolormap
-                              : dc_colormap[0];
+            if (truecolor_rendering)
+            {
+              dc_colormap32[0] = V_ColormapRowByIndex32(walllights[index]);
+              dc_colormap32[1] = (!fixedcolormap32 &&
+                                (STRICTMODE(brightmaps) || force_brightmaps))
+                                ? fullcolormap32
+                                : dc_colormap32[0];
+            }
+            else
+            {
+              dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
+              dc_colormap[1] = (!fixedcolormap &&
+                                (STRICTMODE(brightmaps) || force_brightmaps))
+                                ? fullcolormap
+                                : dc_colormap[0];
+            }
           }
 
           dc_x = rw_x;
@@ -797,7 +879,7 @@ void R_StoreWallRange(const int start, const int stop)
       //  use different light tables
       //  for horizontal / vertical / diagonal
       // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-      if (!fixedcolormap)
+      if (!fixedcolormapoffset)
         {
           int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
 
@@ -922,6 +1004,18 @@ void R_StoreWallRange(const int start, const int stop)
       ds_p->bsilheight = INT_MAX;
     }
   ds_p++;
+}
+
+void R_InitSegsColorFunctions(void)
+{
+  if (truecolor_rendering)
+  {
+    RenderMaskedSegRangeLoop = RenderMaskedSegRangeLoop32;
+  }
+  else
+  {
+    RenderMaskedSegRangeLoop = RenderMaskedSegRangeLoop8;
+  }
 }
 
 //----------------------------------------------------------------------------

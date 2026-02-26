@@ -87,6 +87,7 @@ void R_SmoothLight(void);
 
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
+extern lighttable32_t *fixedcolormap32;
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
@@ -178,6 +179,7 @@ int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
 
 // True-color rendering
+void R_InitColorFunctions(void);
 extern int colormap_row_shift_bits;
 
 // Radial fog ----------------------------------------------------------------

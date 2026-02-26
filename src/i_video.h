@@ -61,6 +61,7 @@ void I_SetPalette(byte *palette);
 void I_FinishUpdate(void);
 
 void I_ReadScreen(pixel_t *dst);
+void I_ReadScreen32(pixel32_t *dst);
 
 void I_ResetScreen(void); // killough 10/98
 void I_ToggleVsync(void); // [JN] Calls native SDL vsync toggle
@@ -91,13 +92,12 @@ typedef enum truecolor_e {
   NUM_TRUECOLOR
 } truecolor_t;
 
-extern truecolor_t truecolor_rendering;
-
-extern int red_intensity, green_intensity, blue_intensity;
-extern int color_saturation, color_contrast;
+extern truecolor_t truecolor_rendering, cvar_truecolor_rendering;
 
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
+
+void I_GetPalette(byte *colors, const byte *palette);
 
 // [Nugget] -----------------------------------------------------------------/
 

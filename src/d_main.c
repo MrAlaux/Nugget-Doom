@@ -307,6 +307,9 @@ void D_Display (void)
       wipe_StartScreen(0, 0, video.width, video.height);
     }
 
+  if (R_InitColorPending())
+  { R_InitColormaps(); }
+
   if (!wipe)
     {
       if (resetneeded)
@@ -314,9 +317,6 @@ void D_Display (void)
       else if (gamestate == GS_LEVEL)
         I_DynamicResolution();
     }
-
-  if (R_InitTrueColorPending())
-  { R_InitColormaps(); }
 
   if (setsmoothlight)
     R_SmoothLight();

@@ -72,6 +72,7 @@
 int viewangleoffset;
 int validcount = 1;         // increment every time a check is made
 lighttable_t *fixedcolormap;
+lighttable32_t *fixedcolormap32 = NULL;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
 fixed_t  projection;
@@ -131,8 +132,10 @@ cmapoffset_t *(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
 
-lighttable_t ***pal_colormaps = NULL;
-lighttable_t *base_colormap, *current_colormap;
+lighttable32_t ***pal_colormaps = NULL;
+lighttable32_t *fullcolormap32 = NULL;
+lighttable32_t **colormaps32 = NULL;
+cmapoffset_t fixedcolormapoffset = 0;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -206,6 +209,106 @@ int pspr_invis_translucent;
 int pspr_translucency_pct;
 int zoom_fov;
 boolean comp_powerrunout;
+
+// ---------------------------------------------------------------------------
+
+static void ApplyBlockPostProcess(void)
+{
+  int y, x, y2;
+
+  const int pw = lowres_pixel_width,
+            ph = lowres_pixel_height;
+
+  int first_y = (viewheight % ph) / 2,
+      first_x;
+
+  pixel_t *const dest = I_VideoBuffer;
+
+  for (y = viewwindowy;  y < (viewwindowy + viewheight);)
+  {
+    first_x = (viewwidth % pw) / 2;
+
+    for (x = viewwindowx;  x < (viewwindowx + viewwidth);)
+    {
+      for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
+      {
+        memset(
+          dest + ((y + y2) * video.pitch) + x,
+          dest[
+            ( (first_y ? viewwindowy + first_y
+                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
+            + (first_x ? viewwindowx + first_x
+                       : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
+          ],
+          first_x ? first_x : MIN(pw, (viewwindowx + viewwidth) - x)
+        );
+      }
+
+      if (first_x)
+      {
+        x += first_x;
+        first_x = 0;
+      }
+      else { x += pw; }
+    }
+
+    if (first_y)
+    {
+      y += first_y;
+      first_y = 0;
+    }
+    else { y += ph; }
+  }
+}
+
+static void ApplyBlockPostProcess32(void)
+{
+  int y, x, y2;
+
+  const int pw = lowres_pixel_width,
+            ph = lowres_pixel_height;
+
+  int first_y = (viewheight % ph) / 2,
+      first_x;
+
+  pixel32_t *const dest = I_VideoBuffer32;
+
+  for (y = viewwindowy;  y < (viewwindowy + viewheight);)
+  {
+    first_x = (viewwidth % pw) / 2;
+
+    for (x = viewwindowx;  x < (viewwindowx + viewwidth);)
+    {
+      for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
+      {
+        V_RGBSet(
+          dest + ((y + y2) * video.pitch) + x,
+          dest[
+            ( (first_y ? viewwindowy + first_y
+                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
+            + (first_x ? viewwindowx + first_x
+                       : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
+          ],
+          first_x ? first_x : MIN(pw, (viewwindowx + viewwidth) - x)
+        );
+      }
+
+      if (first_x)
+      {
+        x += first_x;
+        first_x = 0;
+      }
+      else { x += pw; }
+    }
+
+    if (first_y)
+    {
+      y += first_y;
+      first_y = 0;
+    }
+    else { y += ph; }
+  }
+}
 
 // Radial fog ----------------------------------------------------------------
 
@@ -1080,7 +1183,6 @@ void R_InitLightTables (void)
   }
 
   num_colormap_rows = NUMCOLORMAPS;
-  colormap_row_shift_bits = COLORMAP_ROW_SHIFT_BITS;
 
   if (truecolor_rendering)
   {
@@ -1093,7 +1195,6 @@ void R_InitLightTables (void)
       LIGHTZSHIFT = 16;
 
       num_colormap_rows = 256;
-      colormap_row_shift_bits = 0;
   }
   else
 
@@ -1161,7 +1262,7 @@ void R_InitLightTables (void)
               level = num_colormap_rows-1;
 
           // killough 3/20/98: Initialize multiple colormaps
-          level *= 256 << colormap_row_shift_bits;
+          level *= 256;
           for (t=0; t<numcolormaps; t++)         // killough 4/4/98
             c_zlight[t][i][j] = level;
         }
@@ -1370,7 +1471,7 @@ void R_ExecuteSetViewSize (void)
             level = num_colormap_rows-1;
 
           // killough 3/20/98: initialize multiple colormaps
-          level *= 256 << colormap_row_shift_bits;
+          level *= 256;
 
           for (t=0; t<numcolormaps; t++)     // killough 4/4/98
             c_scalelight[t][i][j] = level;
@@ -1414,7 +1515,6 @@ void R_Init (void)
   // [FG] spectre drawing mode
   R_SetFuzzColumnMode();
 
-  colfunc = R_DrawColumn;
   R_InitDrawFunctions();
 }
 
@@ -1854,29 +1954,56 @@ void R_SetupFrame (player_t *player)
   else
     cm = 0;
 
-  fullcolormap = colormaps[cm];
+  V_SetCurrentColormap(cm);
+
   zlight = c_zlight[cm];
   scalelight = c_scalelight[cm];
 
-  V_SetCurrentColormap(cm);
+  fixedcolormapoffset = 0;
 
-  if (player->fixedcolormap)
-    {
-      const int pfixedcolormap = (MIN(32, player->fixedcolormap) << COLORMAP_ROW_SHIFT_BITS)
-                               + MAX(0, player->fixedcolormap - 32);
+  if (truecolor_rendering)
+  {
+    if (player->fixedcolormap)
+      {
+        // Only the first 32 original rows are expanded and should be shifted
+        const int cmaprow = (MIN(32, player->fixedcolormap) << COLORMAP_ROW_SHIFT_BITS)
+                          + MAX(0, player->fixedcolormap - 32);
 
-      fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
-        + pfixedcolormap*256;
+        fixedcolormapoffset = cmaprow * 256;
 
-      walllights = scalelightfixed;
+        fixedcolormap32 = fullcolormap32   // killough 3/20/98: use fullcolormap
+          + fixedcolormapoffset;
 
-      for (i=0 ; i<MAXLIGHTSCALE ; i++)
-        scalelightfixed[i] = pfixedcolormap * 256;
+        walllights = scalelightfixed;
 
-      dc_colormap[0] = dc_colormap[1] = fixedcolormap;
-    }
+        for (i=0 ; i<MAXLIGHTSCALE ; i++)
+          scalelightfixed[i] = fixedcolormapoffset;
+
+        dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
+      }
+    else
+      fixedcolormap32 = NULL;
+
+  }
   else
-    fixedcolormap = 0;
+  {
+    if (player->fixedcolormap)
+      {
+        fixedcolormapoffset = player->fixedcolormap * 256;
+
+        fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
+          + fixedcolormapoffset;
+
+        walllights = scalelightfixed;
+
+        for (i=0 ; i<MAXLIGHTSCALE ; i++)
+          scalelightfixed[i] = fixedcolormapoffset;
+
+        dc_colormap[0] = dc_colormap[1] = fixedcolormap;
+      }
+    else
+      fixedcolormap = 0;
+  }
 
   validcount++;
 }
@@ -1900,32 +2027,9 @@ int autodetect_hom = 0;       // killough 2/7/98: HOM autodetection flag
 
 static boolean no_killough_face; // [Nugget]
 
-//
-// R_RenderView
-//
-void R_RenderPlayerView (player_t* player)
-{
-  R_ClearStats();
+static void (*DrawHOMDetector)(void) = NULL;
 
-  ProcessFOVEffects(); // [Nugget]
-
-  R_SetupFrame (player);
-
-  // Clear buffers.
-  R_ClearClipSegs ();
-  R_ClearDrawSegs ();
-  R_ClearPlanes ();
-  R_ClearSprites ();
-  VX_ClearVoxels ();
-
-  if (autodetect_hom)
-    { // killough 2/10/98: add flashing red HOM indicators
-      pixel_t c[47*47];
-      int i , color = !flashing_hom || (gametic % 20) < 9 ? 0xb0 : 0;
-      V_FillRect(scaledviewx, scaledviewy, scaledviewwidth, scaledviewheight, color);
-      for (i=0;i<47*47;i++)
-        {
-          char t =
+static const char *const killough =
 "/////////////////////////////////////////////////////////////////////////////"
 "/////////////////////////////////////////////////////////////////////////////"
 "///////jkkkkklk////////////////////////////////////hkllklklkklkj/////////////"
@@ -1979,13 +2083,69 @@ void R_RenderPlayerView (player_t* player)
 "//////////////////////////////c\3f\206\203\201\200\200\200\200\200\201\203bdc"
 "////////////////////////////////g\3\211\206\202\\\201\200\201\202\203dde/////"
 "/////////////////////////////\234\3db\203\203\203\203adec////////////////////"
-"/////////////////hffed\211de////////////////////"[i];
-          c[i] = t=='/' ? color : t;
-        }
-      if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8
-          && !no_killough_face) // [Nugget]
-        V_DrawBlock(scaledviewx +  scaledviewwidth/2 - 24,
-                    scaledviewy + scaledviewheight/2 - 24, 47, 47, c);
+"/////////////////hffed\211de////////////////////";
+
+static void DrawHOMDetector8(void)
+{
+  pixel_t c[47*47];
+  int i , color = !flashing_hom || (gametic % 20) < 9 ? 0xb0 : 0;
+
+  V_FillRect(scaledviewx, scaledviewy, scaledviewwidth, scaledviewheight, color);
+
+  if (no_killough_face) { return; } // [Nugget]
+
+  for (i=0;i<47*47;i++)
+    {
+      char t = killough[i];
+      c[i] = t=='/' ? color : t;
+    }
+
+  if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8) 
+    V_DrawBlock(scaledviewx +  scaledviewwidth/2 - 24,
+                scaledviewy + scaledviewheight/2 - 24, 47, 47, c);
+}
+
+static void DrawHOMDetector32(void)
+{
+  pixel32_t c[47*47];
+  int i , color = !flashing_hom || (gametic % 20) < 9 ? 0xb0 : 0;
+
+  V_FillRect(scaledviewx, scaledviewy, scaledviewwidth, scaledviewheight, color);
+
+  if (no_killough_face) { return; } // [Nugget]
+
+  for (i=0;i<47*47;i++)
+    {
+      char t = killough[i];
+      c[i] = V_IndexToRGB(t=='/' ? color : t);
+    }
+
+  if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8)
+    V_DrawBlock32(scaledviewx +  scaledviewwidth/2 - 24,
+                  scaledviewy + scaledviewheight/2 - 24, 47, 47, c);
+}
+
+//
+// R_RenderView
+//
+void R_RenderPlayerView (player_t* player)
+{
+  R_ClearStats();
+
+  ProcessFOVEffects(); // [Nugget]
+
+  R_SetupFrame (player);
+
+  // Clear buffers.
+  R_ClearClipSegs ();
+  R_ClearDrawSegs ();
+  R_ClearPlanes ();
+  R_ClearSprites ();
+  VX_ClearVoxels ();
+
+  if (autodetect_hom)
+    { // killough 2/10/98: add flashing red HOM indicators
+      DrawHOMDetector();
       R_DrawViewBorder();
     }
 
@@ -2024,51 +2184,11 @@ void R_RenderPlayerView (player_t* player)
   if (!strictmode && current_video_height == SCREENHEIGHT
       && (lowres_pixel_width > 1 || lowres_pixel_height > 1))
   {
-    int y, x, y2;
-
-    const int pw = lowres_pixel_width,
-              ph = lowres_pixel_height;
-
-    int first_y = (viewheight % ph) / 2,
-        first_x;
-
-    pixel_t *const dest = I_VideoBuffer;
-
-    for (y = viewwindowy;  y < (viewwindowy + viewheight);)
+    if (truecolor_rendering)
     {
-      first_x = (viewwidth % pw) / 2;
-
-      for (x = viewwindowx;  x < (viewwindowx + viewwidth);)
-      {
-        for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
-        {
-          V_RGBSet(
-            dest + ((y + y2) * video.pitch) + x,
-            dest[
-              ( (first_y ? viewwindowy + first_y
-                         : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
-              + (first_x ? viewwindowx + first_x
-                         : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
-            ],
-            first_x ? first_x : MIN(pw, (viewwindowx + viewwidth) - x)
-          );
-        }
-
-        if (first_x)
-        {
-          x += first_x;
-          first_x = 0;
-        }
-        else { x += pw; }
-      }
-
-      if (first_y)
-      {
-        y += first_y;
-        first_y = 0;
-      }
-      else { y += ph; }
+      ApplyBlockPostProcess32();
     }
+    else { ApplyBlockPostProcess(); }
   }
 
   V_SetCurrentColormap(0);
@@ -2084,6 +2204,18 @@ void R_InitAnyRes(void)
   R_InitPlanesRes();
 
   R_DeferredInitDistLightTables(); // [Nugget] Radial fog
+}
+
+void R_InitColorFunctions(void)
+{
+  if (truecolor_rendering)
+  {
+    DrawHOMDetector = DrawHOMDetector32;
+  }
+  else
+  {
+    DrawHOMDetector = DrawHOMDetector8;
+  }
 }
 
 void R_BindRenderVariables(void)

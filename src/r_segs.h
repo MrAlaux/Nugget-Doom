@@ -29,6 +29,8 @@ void R_StoreWallRange(int start, int stop);
 
 extern cmapoffset_t *walllights;
 
+void R_InitSegsColorFunctions(void);
+
 #endif
 
 //----------------------------------------------------------------------------

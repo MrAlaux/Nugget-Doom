@@ -2785,9 +2785,10 @@ static const char *truecolor_strings[] = {
 
 static void UpdateSmoothLightItem(void);
 
-static void SetTrueColor(void)
+static void InitColor(void)
 {
-    R_DeferredInitTrueColor();
+    resetneeded = true;
+    R_DeferredInitColor();
     setsmoothlight = true;
     setsizeneeded = true;
 
@@ -2929,7 +2930,7 @@ void MN_ResetGamma(void)
 static setup_menu_t gen_settings1[] = {
 
     {"True-color Rendering", S_CHOICE, CNTR_X, M_SPC, {"truecolor_rendering"},
-     .strings_id = str_truecolor, .action = SetTrueColor},
+     .strings_id = str_truecolor, .action = InitColor},
 
     // [Nugget] The following three items now report
     // the current resolution when sitting on them
@@ -3851,7 +3852,7 @@ static setup_menu_t gen_settings5[] = {
 // [Nugget]
 static void UpdateSmoothLightItem(void)
 {
-  DisableItem(truecolor_rendering, gen_settings5, "smoothlight");
+  DisableItem(cvar_truecolor_rendering, gen_settings5, "smoothlight");
 }
 
 const char *default_skill_strings[] = {

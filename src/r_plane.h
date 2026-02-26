@@ -51,6 +51,8 @@ void R_InitPlanesRes(void);
 
 void R_InitVisplanesRes(void);
 
+void R_InitPlanesColorFunctions(void);
+
 #endif
 
 //----------------------------------------------------------------------------

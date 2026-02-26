@@ -75,6 +75,8 @@ void R_InitSpritesRes(void);
 
 void R_NearbySprites(void);
 
+void R_InitThingsColorFunctions(void);
+
 #endif
 
 //----------------------------------------------------------------------------

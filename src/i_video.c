@@ -58,6 +58,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "r_segs.h"
+#include "r_things.h"
+
 #include "spng.h"
 
 // [FG] set the application icon
@@ -100,12 +104,14 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
-truecolor_t truecolor_rendering;
+truecolor_t truecolor_rendering, cvar_truecolor_rendering;
+
+static void InitColorFunctions(void);
 
 static const char *sdl_renderdriver = "";
 
-int red_intensity, green_intensity, blue_intensity;
-int color_saturation, color_contrast;
+static int red_intensity, green_intensity, blue_intensity;
+static int color_saturation, color_contrast;
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -932,14 +938,21 @@ void I_ReadScreen(pixel_t *dst)
     V_GetBlock(0, 0, video.width, video.height, dst);
 }
 
+void I_ReadScreen32(pixel32_t *dst)
+{
+    V_GetBlock32(0, 0, video.width, video.height, dst);
+}
+
 //
 // killough 10/98: init disk icon
 //
 
+static void (*I_InitDiskFlash)(void) = NULL;
+
 static pixel_t *diskflash, *old_data;
 static vrect_t disk;
 
-static void I_InitDiskFlash(void)
+static void I_InitDiskFlash8(void)
 {
     pixel_t *temp;
 
@@ -969,6 +982,38 @@ static void I_InitDiskFlash(void)
     Z_Free(temp);
 }
 
+static pixel32_t *diskflash32, *old_data32;
+
+static void I_InitDiskFlash32(void)
+{
+    pixel32_t *temp;
+
+    disk.x = 0;
+    disk.y = 0;
+    disk.w = 16;
+    disk.h = 16;
+
+    V_ScaleRect(&disk);
+
+    temp = Z_Malloc(disk.sw * disk.sh * sizeof(*temp), PU_STATIC, 0);
+
+    if (diskflash32)
+    {
+        Z_Free(diskflash32);
+        Z_Free(old_data32);
+    }
+
+    diskflash32 = Z_Malloc(disk.sw * disk.sh * sizeof(*diskflash32), PU_STATIC, 0);
+    old_data32 = Z_Malloc(disk.sw * disk.sh * sizeof(*old_data32), PU_STATIC, 0);
+
+    V_GetBlock32(0, 0, disk.sw, disk.sh, temp);
+    V_DrawPatch(-video.deltaw, 0, V_CachePatchName("STDISK", PU_CACHE));
+    V_GetBlock32(0, 0, disk.sw, disk.sh, diskflash32);
+    V_PutBlock32(0, 0, disk.sw, disk.sh, temp);
+
+    Z_Free(temp);
+}
+
 //
 // killough 10/98: draw disk icon
 //
@@ -987,10 +1032,20 @@ static void I_DrawDiskIcon(void)
 
     if (disk_to_draw >= DISK_ICON_THRESHOLD)
     {
-        V_GetBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
-                   disk.sh, old_data);
-        V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
-                   disk.sh, diskflash);
+        if (truecolor_rendering)
+        {
+            V_GetBlock32(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                         disk.sh, old_data32);
+            V_PutBlock32(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                         disk.sh, diskflash32);
+        }
+        else
+        {
+            V_GetBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                       disk.sh, old_data);
+            V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                       disk.sh, diskflash);
+        }
 
         disk_to_restore = 1;
     }
@@ -1014,8 +1069,16 @@ static void I_RestoreDiskBackground(void)
 
     if (disk_to_restore)
     {
-        V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
-                   disk.sh, old_data);
+        if (truecolor_rendering)
+        {
+            V_PutBlock32(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                         disk.sh, old_data32);
+        }
+        else
+        {
+            V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                       disk.sh, old_data);
+        }
 
         disk_to_restore = 0;
     }
@@ -1027,39 +1090,147 @@ static void I_RestoreDiskBackground(void)
 
 int gamma2;
 
+// [Nugget]:
+// [JN] Saturation percent array.
+// 0.66 = 0% saturation, 0.0 = 100% saturation.
+const float I_SaturationPercent[101] =
+{
+  0.660000f, 0.653400f, 0.646800f, 0.640200f, 0.633600f,
+  0.627000f, 0.620400f, 0.613800f, 0.607200f, 0.600600f,
+  0.594000f, 0.587400f, 0.580800f, 0.574200f, 0.567600f,
+  0.561000f, 0.554400f, 0.547800f, 0.541200f, 0.534600f,
+  0.528000f, 0.521400f, 0.514800f, 0.508200f, 0.501600f,
+  0.495000f, 0.488400f, 0.481800f, 0.475200f, 0.468600f,
+  0.462000f, 0.455400f, 0.448800f, 0.442200f, 0.435600f,
+  0.429000f, 0.422400f, 0.415800f, 0.409200f, 0.402600f,
+  0.396000f, 0.389400f, 0.382800f, 0.376200f, 0.369600f,
+  0.363000f, 0.356400f, 0.349800f, 0.343200f, 0.336600f,
+  0.330000f, 0.323400f, 0.316800f, 0.310200f, 0.303600f,
+  0.297000f, 0.290400f, 0.283800f, 0.277200f, 0.270600f,
+  0.264000f, 0.257400f, 0.250800f, 0.244200f, 0.237600f,
+  0.231000f, 0.224400f, 0.217800f, 0.211200f, 0.204600f,
+  0.198000f, 0.191400f, 0.184800f, 0.178200f, 0.171600f,
+  0.165000f, 0.158400f, 0.151800f, 0.145200f, 0.138600f,
+  0.132000f, 0.125400f, 0.118800f, 0.112200f, 0.105600f,
+  0.099000f, 0.092400f, 0.085800f, 0.079200f, 0.072600f,
+  0.066000f, 0.059400f, 0.052800f, 0.046200f, 0.039600f,
+  0.033000f, 0.026400f, 0.019800f, 0.013200f, 0,
+  0
+};
+
+void I_GetPalette(byte *const colors, const byte *palette)
+{
+    const byte *const gamma = gammatable[gamma2];
+
+    for (int i = 0;  i < 256;  i++)
+    {
+        // [Nugget] Color settings
+
+        const byte r = gamma[*palette++] * red_intensity   / 100,
+                   g = gamma[*palette++] * green_intensity / 100,
+                   b = gamma[*palette++] * blue_intensity  / 100;
+
+        // [PN] Contrast adjustment
+
+        const int contrast_adjustment = 128 * (100 - color_contrast) / 100;
+
+        int channels[3] = {
+            ((int) r * color_contrast / 100) + contrast_adjustment,
+            ((int) g * color_contrast / 100) + contrast_adjustment,
+            ((int) b * color_contrast / 100) + contrast_adjustment
+        };
+
+        channels[0] = BETWEEN(0, 255, channels[0]);
+        channels[1] = BETWEEN(0, 255, channels[1]);
+        channels[2] = BETWEEN(0, 255, channels[2]);
+
+        // [JN] Saturation floats, high and low.
+        // If saturation has been modified (< 100), set high and low
+        // values according to saturation level. Sum of r,g,b channels
+        // and floats must be 1.0 to get proper colors.
+
+        float a_hi = I_SaturationPercent[color_saturation],
+              a_lo = a_hi / 2.0f;
+
+        a_hi = 1.0f - a_hi;
+        a_lo = 0.0f + a_lo;
+
+        // Calculate final color values
+        colors[(i * 3) + 0] = (a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]);
+        colors[(i * 3) + 1] = (a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]);
+        colors[(i * 3) + 2] = (a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]);
+    }
+}
+
 void I_SetPalette(byte *palette)
 {
-    static int old_gamma, old_red = -1, old_green, old_blue, old_saturation, old_contrast;
-
-    if (old_gamma != gamma2
-        || old_red != red_intensity || old_green != green_intensity || old_blue != blue_intensity
-        || old_saturation != color_saturation || old_contrast != color_contrast)
+    if (truecolor_rendering)
     {
-      // If this is the first time the function is called, we've already initialized
-      // and don't have to do it again just yet
-      if (old_red != -1)
-      {
-        V_InitPalsColors();
-      }
+        static int old_gamma, old_red = -1, old_green, old_blue, old_saturation, old_contrast;
 
-      old_gamma = gamma2;
-      old_red = red_intensity;
-      old_green = green_intensity;
-      old_blue = blue_intensity;
-      old_saturation = color_saturation;
-      old_contrast = color_contrast;
+        if (old_gamma != gamma2
+            || old_red != red_intensity || old_green != green_intensity || old_blue != blue_intensity
+            || old_saturation != color_saturation || old_contrast != color_contrast)
+        {
+            // If this is the first time the function is called, we've already initialized
+            // and don't have to do it again just yet
+            if (old_red != -1)
+            { V_InitPalsColors(); }
+
+            old_gamma = gamma2;
+            old_red = red_intensity;
+            old_green = green_intensity;
+            old_blue = blue_intensity;
+            old_saturation = color_saturation;
+            old_contrast = color_contrast;
+        }
+
+        V_SetPalColors((palette - (byte *) W_CacheLumpName("PLAYPAL", PU_CACHE)) / 768);
+
+        if (vga_porch_flash)
+        {
+            // "flash" the pillars/letterboxes with palette changes,
+            // emulating VGA "porch" behaviour
+            SDL_SetRenderDrawColor(
+                renderer,
+                V_RedFromRGB(palcolors[0]),
+                V_GreenFromRGB(palcolors[0]),
+                V_BlueFromRGB(palcolors[0]),
+                SDL_ALPHA_OPAQUE
+            );
+        }
+
+        return;
     }
 
-    V_SetPalColors((palette - (byte *) W_CacheLumpName("PLAYPAL", PU_CACHE)) / 768);
+    // haleyjd
+    int i;
+    SDL_Color colors[256];
+
+    if (noblit) // killough 8/11/98
+    {
+        return;
+    }
+
+    byte playpal_colors[768];
+    I_GetPalette(playpal_colors, palette);
+
+    for (i = 0; i < 256; ++i)
+    {
+        colors[i].r = playpal_colors[(i * 3) + 0];
+        colors[i].g = playpal_colors[(i * 3) + 1];
+        colors[i].b = playpal_colors[(i * 3) + 2];
+
+        colors[i].a = 0xffu;
+    }
+
+    SDL_SetPaletteColors(screenbuffer->format->palette, colors, 0, 256);
 
     if (vga_porch_flash)
     {
         // "flash" the pillars/letterboxes with palette changes,
         // emulating VGA "porch" behaviour
-        SDL_SetRenderDrawColor(renderer,
-                               V_RedFromRGB(palcolors[0]),
-                               V_GreenFromRGB(palcolors[0]),
-                               V_BlueFromRGB(palcolors[0]),
+        SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b,
                                SDL_ALPHA_OPAQUE);
     }
 }
@@ -1832,11 +2003,22 @@ static void CreateSurfaces(int w, int h)
         SDL_FreeSurface(screenbuffer);
     }
 
-    screenbuffer = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
-    SDL_SetSurfaceBlendMode(screenbuffer, SDL_BLENDMODE_NONE);
-    SDL_FillRect(screenbuffer, NULL, 0);
+    if (truecolor_rendering)
+    {
+      screenbuffer = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
+      SDL_SetSurfaceBlendMode(screenbuffer, SDL_BLENDMODE_NONE);
+      SDL_FillRect(screenbuffer, NULL, 0);
 
-    I_VideoBuffer = screenbuffer->pixels;
+      I_VideoBuffer32 = screenbuffer->pixels;
+    }
+    else
+    {
+      screenbuffer = SDL_CreateRGBSurface(0, w, h, 8, 0, 0, 0, 0);
+      SDL_FillRect(screenbuffer, NULL, 0);
+
+      I_VideoBuffer = screenbuffer->pixels;
+    }
+
     V_RestoreBuffer();
 
     if (argbbuffer != NULL)
@@ -1911,6 +2093,8 @@ void I_ResetScreen(void)
 
     widescreen = default_widescreen;
 
+    InitColorFunctions();
+
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
@@ -1944,6 +2128,9 @@ void I_InitGraphics(void)
 
     I_InitVideoParms();
     I_InitGraphicsMode(); // killough 10/98
+
+    InitColorFunctions();
+
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
@@ -1955,9 +2142,32 @@ void I_InitGraphics(void)
     I_ResetRelativeMouseState();
 }
 
+static void InitColorFunctions(void)
+{
+    if (truecolor_rendering)
+    {
+        I_InitDiskFlash = I_InitDiskFlash32;
+    }
+    else
+    {
+        I_InitDiskFlash = I_InitDiskFlash8;
+    }
+
+    AM_InitColorFunctions();
+    R_InitColorFunctions();
+    R_InitDrawColorFunctions();
+    R_InitDrawFunctions();
+    R_InitPlanesColorFunctions();
+    R_InitSegsColorFunctions();
+    R_InitThingsColorFunctions();
+    R_SetFuzzColumnMode();
+    V_InitColorFunctions();
+    VX_SetVoxelRenderingMode();
+}
+
 void I_BindVideoVariables(void)
 {
-    M_BindNum("truecolor_rendering", &truecolor_rendering, NULL,
+    M_BindNum("truecolor_rendering", &cvar_truecolor_rendering, NULL,
               TRUECOLOR_OFF, TRUECOLOR_OFF, NUM_TRUECOLOR-1, ss_gen, wad_no,
               "True-color rendering (0 = Off; 1 = Hybrid; 2 = Full)");
 
