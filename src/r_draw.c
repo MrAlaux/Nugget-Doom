@@ -1743,7 +1743,6 @@ void R_FillBackScreen(void)
         }
 
         V_UseBuffer32(background_buffer32);
-
     }
     else
     {
@@ -1803,7 +1802,8 @@ void R_VideoErase(int x, int y, int w, int h)
 
 void R_DrawViewBorder(void)
 {
-    if (scaledviewwidth == video.unscaledw || background_buffer == NULL)
+    if (scaledviewwidth == video.unscaledw
+        || (truecolor_rendering ? !background_buffer32 : !background_buffer))
     {
         return;
     }
