@@ -1054,25 +1054,12 @@ void R_InitColormaps(void)
   {
     pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * 14, PU_STATIC, 0);
 
-    // Allocate and load the original colormap rows
     for (i = 0;  i < 14;  i++)
     {
       pal_colormaps[i] = Z_Malloc(sizeof(**pal_colormaps) * numcolormaps, PU_STATIC, 0);
 
       for (int j = 0;  j < numcolormaps;  j++)
-      {
-        pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0);
-
-        for (int k = 0;  k < 33;  k++)
-        {
-          for (int m = 0;  m < 256;  m++)
-          {
-            const byte color_index = colormaps[j][(k * 256) + m];
-
-            pal_colormaps[i][j][((k<<CRSB) * 256) + m] = palscolors[i][color_index];
-          }
-        }
-      }
+      { pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0); }
     }
   }
   else if (!truecolor_rendering && pal_colormaps)
@@ -1122,6 +1109,23 @@ static void InitColormaps8(void)
 
 static void InitColormaps32(void)
 {
+  // Load original colormap rows
+  for (int i = 0;  i < 14;  i++)
+  {
+    for (int j = 0;  j < numcolormaps;  j++)
+    {
+      for (int k = 0;  k < 33;  k++)
+      {
+        for (int m = 0;  m < 256;  m++)
+        {
+          const byte color_index = colormaps[j][(k * 256) + m];
+
+          pal_colormaps[i][j][((k<<CRSB) * 256) + m] = palscolors[i][color_index];
+        }
+      }
+    }
+  }
+
   if (truecolor_rendering == TRUECOLOR_FULL)
   {
     // Shade rows after first one
@@ -1134,18 +1138,17 @@ static void InitColormaps32(void)
 
         // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
         // this lets us maintain some colormap effects (e.g. vanilla brightmaps, fog) and also palette tinting
-        // (the colormap row were interpolating towards is already colored as per the current palette)
-        lighttable32_t last_colormap[256];
-        memcpy(last_colormap, first_colormap + ((31<<CRSB) * 256), sizeof(*last_colormap) * 256);
+        // (the colormap row we're interpolating towards is already colored as per the current palette)
+        lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
 
-        for (int k = 1;  k < 256;  k++)
+        for (int k = 1;  k < 248;  k++)
         {
           lighttable32_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
 
           const byte *const orig_colormap = colormaps[j];
           const int orig_colormap_row = (k / (1<<CRSB)) * 256;
 
-          const double factor = k / 255.0;
+          const double factor = k / 247.0;
 
           for (int m = 0;  m < 256;  m++)
           {
@@ -1157,6 +1160,10 @@ static void InitColormaps32(void)
                                 | (rgb & PIXEL_COLOR_MASK);
           }
         }
+
+        // Fill the remainder with the last colormap row
+        for (int l = 1;  l < 1<<CRSB;  l++)
+        { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
       }
     }
   }
