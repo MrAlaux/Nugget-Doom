@@ -987,20 +987,19 @@ void R_InvulMode(void)
     if (colormaps32 == NULL || beta_emulation)
       return;
 
-    switch (STRICTMODE(invul_mode))
+    const int mode = STRICTMODE(invul_mode);
+
+    default_comp[comp_skymap] = (mode == INVUL_VANILLA);
+
+    const byte *const invul_colormap = (mode == INVUL_GRAY) ? invul_gray : invul_orig;
+
+    for (int i = 0;  i < 14;  i++)
     {
-      case INVUL_VANILLA:
-        default_comp[comp_skymap] = 1;
-        V_IndexCopy(&colormaps32[0][256 * (32<<CRSB)], invul_orig, 256);
-        break;
-      case INVUL_MBF:
-        default_comp[comp_skymap] = 0;
-        V_IndexCopy(&colormaps32[0][256 * (32<<CRSB)], invul_orig, 256);
-        break;
-      case INVUL_GRAY:
-        default_comp[comp_skymap] = 0;
-        V_IndexCopy(&colormaps32[0][256 * (32<<CRSB)], invul_gray, 256);
-        break;
+      pixel32_t *dest = &pal_colormaps[i][0][256 * (32<<CRSB)];
+      const pixel_t *src = invul_colormap;
+
+      for (int j = 0;  j < 256;  j++)
+      { *dest++ = palscolors[i][*src++]; }
     }
 
     return;
@@ -1201,21 +1200,26 @@ static void InitColormaps32(void)
     }
   }
 
-  V_SetPalColors(0);
-
   // [Nugget] Night-vision visor
   if (!beta_emulation)
   {
     const int row_index = 256 * ((32<<CRSB) + 1);
 
-    for (int i = 0;  i < numcolormaps;  i++)
+    for (int i = 0;  i < 14;  i++)
     {
-      // Guard against markers (empty lumps) among the actual colormaps
-      if (colormaps32[i] == NULL) { continue; }
+      V_SetPalColors(i);
 
-      V_IndexCopy(&colormaps32[i][row_index], nightvision, 256);
+      for (int j = 0;  j < numcolormaps;  j++)
+      {
+        // Guard against markers (empty lumps) among the actual colormaps
+        if (colormaps32[j] == NULL) { continue; }
+
+        V_IndexCopy(&colormaps32[j][row_index], nightvision, 256);
+      }
     }
   }
+
+  V_SetPalColors(0);
 }
 
 // killough 4/4/98: get colormap number from name
