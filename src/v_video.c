@@ -1128,7 +1128,7 @@ void V_ShadowRect8(int x, int y, int width, int height)
         {
           pixel_t *const d = &dest[x];
 
-          *d = shadow_tranmap[*d];
+          *d = shadow_tranmap[*d << 8];
         }
 
         dest += linesize;
