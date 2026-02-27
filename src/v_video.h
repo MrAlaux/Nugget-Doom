@@ -223,13 +223,7 @@ inline static uint_fast16_t V_TranMapRowFromRGB(const pixel32_t rgb)
 
 inline static pixel32_t V_IndexToRGB(const pixel_t index)
 {
-  // Should use palcolors
-  return fullcolormap32[index];
-}
-
-inline static pixel32_t V_IndexToColormapRGB(const pixel_t index)
-{
-  return fullcolormap32[index];
+  return palcolors[index];
 }
 
 #define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
