@@ -1113,6 +1113,12 @@ static void InitColormaps32(void)
   {
     for (int j = 0;  j < numcolormaps;  j++)
     {
+      if (colormaps[j] == NULL)
+      {
+        pal_colormaps[i][j] = NULL;
+        continue;
+      }
+
       for (int k = 0;  k < 33;  k++)
       {
         for (int m = 0;  m < 256;  m++)
@@ -1133,6 +1139,8 @@ static void InitColormaps32(void)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
+        if (pal_colormaps[i][j] == NULL) { continue; }
+
         const lighttable32_t *const first_colormap = pal_colormaps[i][j];
 
         // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
@@ -1174,6 +1182,8 @@ static void InitColormaps32(void)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
+        if (pal_colormaps[i][j] == NULL) { continue; }
+
         for (int k = 0;  k < 31;  k++)
         {
           const lighttable32_t
