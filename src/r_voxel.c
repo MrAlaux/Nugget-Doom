@@ -279,6 +279,9 @@ static boolean VX_Load (int spr, int frame)
 }
 
 
+// [Nugget]
+static byte dummy_translation[256];
+
 void VX_Init (void)
 {
 	int spr, frame;
@@ -319,6 +322,10 @@ void VX_Init (void)
 	{
 		I_Printf (VB_INFO, "done.");
 	}
+
+	// [Nugget]
+	for (int i = 0;  i < 256;  i++)
+	{ dummy_translation[i] = i; }
 }
 
 //------------------------------------------------------------------------
@@ -1006,7 +1013,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					uy = clip_y1;
 
 				byte src = slab[0];
-				pixel_t pix = colormap[spr->brightmap[src]][src];
+				pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
@@ -1021,7 +1028,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					uy = clip_y2;
 
 				byte src = slab[len - 1];
-				pixel_t pix = colormap[spr->brightmap[src]][src];
+				pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
@@ -1041,7 +1048,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					if (i >= len) i = len - 1;
 
 					byte src = slab[i];
-					pixel_t pix = colormap[spr->brightmap[src]][src];
+					pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
 				}
@@ -1266,7 +1273,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 					uy = clip_y1;
 
 				byte src = slab[0];
-				pixel32_t pix = colormap[spr->brightmap[src]][src];
+				pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
@@ -1281,7 +1288,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 					uy = clip_y2;
 
 				byte src = slab[len - 1];
-				pixel32_t pix = colormap[spr->brightmap[src]][src];
+				pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
@@ -1301,7 +1308,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 					if (i >= len) i = len - 1;
 
 					byte src = slab[i];
-					pixel32_t pix = colormap[spr->brightmap[src]][src];
+					pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
 				}
@@ -1510,7 +1517,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				i = BETWEEN(0, len - 1, i);
 
 				const byte src = slab[i];
-				const pixel_t pix = colormap[spr->brightmap[src]][src];
+				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				dest2[(uy >> FRACBITS) * linesize] = pix;
 			}
@@ -1716,7 +1723,7 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 				i = BETWEEN(0, len - 1, i);
 
 				const byte src = slab[i];
-				const pixel32_t pix = colormap[spr->brightmap[src]][src];
+				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				dest2[(uy >> FRACBITS) * linesize] = pix;
 			}
@@ -1807,43 +1814,21 @@ void VX_DrawVoxel (vissprite_t * spr)
 
 	// handle translated colors (for players in coop or deathmatch).
 	// we build a new map, rather than complicate the slab drawing code.
-#if 0
-	if ((spr->mobjflags & MF_TRANSLATION) && (spr->colormap[0] != NULL))
+	// [Nugget] For simplicity, let's just "complicate the slab drawing code":
+	// always pass the source color through a translation table, selected here
+	if ((spr->mobjflags2 & MF2_COLOREDBLOOD) && !(spr->mobjflags & MF_SHADOW))
 	{
-		const byte * trans = translationtables - 256 +
+		dc_translation = red2col[spr->color];
+	}
+	else if ((spr->mobjflags & MF_TRANSLATION) && !(spr->mobjflags & MF_SHADOW))
+	{
+		dc_translation = translationtables - 256 +
 			( (spr->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
-
-		static lighttable_t new_colormap[256];
-
-		int i;
-		for (i = 0 ; i < 256 ; i++)
-			new_colormap[i] = spr->colormap[0][trans[i]];
-
-		spr->colormap[0] = new_colormap;
 	}
-
-	if ((spr->mobjflags2 & MF2_COLOREDBLOOD) && (spr->colormap[0] != NULL))
+	else
 	{
-		static const byte * prev_trans = NULL;
-    const lighttable_t * prev_map = NULL;
-		const byte * trans = red2col[spr->color];
-    const lighttable_t * map = spr->colormap[0];
-
-		static lighttable_t new_colormap[256];
-
-		if (prev_trans != trans || prev_map != map)
-		{
-			int i;
-			for (i = 0 ; i < 256 ; i++)
-				new_colormap[i] = map[trans[i]];
-
-			prev_trans = trans;
-			prev_map = map;
-		}
-
-		spr->colormap[0] = new_colormap;
+		dc_translation = dummy_translation;
 	}
-#endif
 
 	// perform reverse transform, place camera in relation to model
 
