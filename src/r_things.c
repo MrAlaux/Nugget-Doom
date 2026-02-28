@@ -1154,7 +1154,7 @@ static int queued_weapon_voxels = 0; // [Nugget] Weapon voxels
 // R_DrawPSprite
 //
 
-void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent flashes
+void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Translucent flashes
 {
   fixed_t       tx;
   int           x1, x2;
@@ -1164,6 +1164,9 @@ void R_DrawPSprite (pspdef_t *psp, boolean translucent) // [Nugget] Translucent 
   boolean       flip;
   vissprite_t   *vis;
   vissprite_t   avis;
+
+  // [Nugget] Translucent flashes
+  const boolean translucent = is_flash && STRICTMODE(pspr_translucency_pct < 100);
 
   // [Nugget] Weapon voxels
   if (VX_ProjectWeaponVoxel(psp, translucent))
@@ -1374,6 +1377,27 @@ void R_DrawPlayerSprites(void)
   if (hud_crosshair_on) // [Nugget] Use crosshair toggle
     HU_DrawCrosshair();
 
+  // [Nugget] Translucent flashes: don't make them translucent
+  // if the base weapon sprite is blank
+  // /------------------------------------------------------------------------
+
+  boolean weapon_not_blank = true;
+
+  {
+    const state_t
+      *const weapon_state = viewplayer->psprites[ps_weapon].state,
+      *const  flash_state = viewplayer->psprites[ps_flash].state;
+
+    if (flash_state
+        && weapon_state
+        && R_GetActualSpriteHeight(weapon_state->sprite, weapon_state->frame)->height <= 0)
+    {
+      weapon_not_blank = false;
+    }
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
+
   queued_weapon_voxels = 0; // [Nugget] Weapon voxels
 
   // add all active psprites
@@ -1382,7 +1406,7 @@ void R_DrawPlayerSprites(void)
        i < ((strictmode || a11y_weapon_pspr) ? NUMPSPRITES : ps_flash);
        i++,psp++)
     if (psp->state)
-      R_DrawPSprite (psp, i == ps_flash && STRICTMODE(pspr_translucency_pct < 100)); // [Nugget] Translucent flashes
+      R_DrawPSprite (psp, i == ps_flash && weapon_not_blank); // [Nugget] Translucent flashes
 
   // [Nugget] Weapon voxels
   if (queued_weapon_voxels)
