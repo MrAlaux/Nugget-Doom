@@ -446,9 +446,21 @@ static const actualspriteheight_t *CalculateActualSpriteHeight(const int lump)
   return &actual_sprite_heights[array_size(actual_sprite_heights) - 1];
 }
 
-const actualspriteheight_t *R_GetActualSpriteHeight(int sprite, int frame)
+const actualspriteheight_t *R_GetActualSpriteHeight(const int sprite, int frame)
 {
-  const int lump = firstspritelump + sprites[sprite].spriteframes[frame].lump[0];
+  static const actualspriteheight_t dummy = {0};
+
+  if (sprite >= num_sprites)
+  { return &dummy; }
+
+  const spritedef_t *const sprdef = &sprites[sprite];
+
+  frame &= FF_FRAMEMASK;
+
+  if (frame >= sprdef->numframes)
+  { return &dummy; }
+
+  const int lump = firstspritelump + sprdef->spriteframes[frame].lump[0];
 
   for (int i = 0;  i < array_size(actual_sprite_heights);  i++)
   {
@@ -1165,18 +1177,6 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   vissprite_t   *vis;
   vissprite_t   avis;
 
-  // [Nugget] Translucent flashes
-  const boolean translucent = is_flash && STRICTMODE(pspr_translucency_pct < 100);
-
-  // [Nugget] Weapon voxels
-  if (VX_ProjectWeaponVoxel(psp, translucent))
-  {
-    queued_weapon_voxels++;
-    return;
-  }
-  // If any are queued, don't draw sprites
-  else if (queued_weapon_voxels) { return; }
-
   // decide which patch to use
 
 #ifdef RANGECHECK
@@ -1194,6 +1194,18 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
 #endif
 
   sprframe = &sprdef->spriteframes[psp->state->frame & FF_FRAMEMASK];
+
+  // [Nugget] Translucent flashes
+  const boolean translucent = is_flash && STRICTMODE(pspr_translucency_pct < 100);
+
+  // [Nugget] Weapon voxels
+  if (VX_ProjectWeaponVoxel(psp, translucent))
+  {
+    queued_weapon_voxels++;
+    return;
+  }
+  // If any are queued, don't draw sprites
+  else if (queued_weapon_voxels) { return; }
 
   lump = sprframe->lump[0];
   flip = (boolean) sprframe->flip[0];
