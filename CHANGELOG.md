@@ -21,6 +21,7 @@
 
 ## Bug Fixes
 
+- **Crash when the player becomes a zombie**
 - **Crash when loading a save with the minimap enabled right after launch**
 - **Desync related to bullet puffs**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**

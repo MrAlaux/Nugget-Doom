@@ -555,9 +555,10 @@ static void P_NuggetBobbing(player_t* player)
 {
   pspdef_t *psp = player->psprites;
 
-  if (((player->attackdown || psp->state->misc1) // [FG] not attacking means idle
-       && STRICTMODE(center_weapon) != WEAPON_BOBBING)
-      || !psp->state || (player->switching && !switch_bob))
+  if (!psp->state
+      || (player->switching && !switch_bob)
+      || ((player->attackdown || psp->state->misc1) // [FG] not attacking means idle
+          && STRICTMODE(center_weapon) != WEAPON_BOBBING))
   {
     return;
   }
