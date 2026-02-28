@@ -24,7 +24,9 @@
 
 - **Crash when the player becomes a zombie**
 - **Crash when loading a save with the minimap enabled right after launch**
+- **Potential crashes related to a state's sprite and frame indices exceeding their respective limits**
 - **Desync related to bullet puffs**
+- **Weapon becoming completely translucent if translucent flashes were enabled and the base sprite were blank**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Wrong message when clearing specific automap marks**
