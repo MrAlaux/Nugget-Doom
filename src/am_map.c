@@ -1795,6 +1795,10 @@ static boolean AM_clipMline
       return false; // trivially outside
   }
 
+  // [Nugget] Flip levels
+  fl->a.x = MaybeFlipX(fl->a.x);
+  fl->b.x = MaybeFlipX(fl->b.x);
+
   return true;
 }
 #undef DOOUTCODE
@@ -1802,8 +1806,6 @@ static boolean AM_clipMline
 // [Nugget] Factored out
 static inline void PUTDOT(int xx, const int yy, const int cc)
 {
-  xx = MaybeFlipX(xx); // [Nugget] Flip levels
-
   I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
 }
 
@@ -1857,6 +1859,21 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   x = fl->a.x;
   y = fl->a.y;
 
+  // [Nugget] Optimize straight horizontal lines
+  if (dx && !dy)
+  {
+    if (dx < 0)
+    {
+      x += dx;
+      dx = -dx;
+    }
+
+    pixel_t *const dest = I_VideoBuffer + (y * video.pitch) + x;
+    memset(dest, color, dx);
+
+    return;
+  }
+
   if (ax > ay)
   {
     d = ay - ax/2;
@@ -1898,8 +1915,6 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 //
 static void AM_putWuDot(int x, int y, int color, int weight)
 {
-   x = MaybeFlipX(x); // [Nugget] Flip levels
-
    byte *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
