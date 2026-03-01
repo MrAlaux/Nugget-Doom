@@ -29,6 +29,7 @@
 - **Weapon becoming completely translucent if translucent flashes were enabled and the base sprite were blank**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
+- **Level-title announcement not fading out when _Message Fadeout_ were enabled and the author were displayed on a separate line**
 - **Wrong message when clearing specific automap marks**
 - **_[Crosshair] Horizontal-Autoaim Indicators_ not being cleared when activating freecam**
 - **_Air Absorption_ menu item not being disabled when the _Sound Module_ weren't set to _OpenAL 3D_**

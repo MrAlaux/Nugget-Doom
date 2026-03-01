@@ -1811,29 +1811,47 @@ static boolean AM_clipMline
       return false; // trivially outside
   }
 
+  // [Nugget] Flip levels
+  fl->a.x = MaybeFlipX(fl->a.x);
+  fl->b.x = MaybeFlipX(fl->b.x);
+
   return true;
 }
 #undef DOOUTCODE
 
-// [Nugget] Factored out /----------------------------------------------------
+// [Nugget] /=================================================================
+
+// Factored out --------------------------------------------------------------
 
 static void (*PUTDOT)(int xx, int yy, int cc) = NULL;
 
-static void PUTDOT8(int xx, const int yy, const int cc)
+static void PUTDOT8(const int xx, const int yy, const int cc)
 {
-  xx = MaybeFlipX(xx); // [Nugget] Flip levels
-
   I_VideoBuffer[(yy) * video.pitch + (xx)] = cc;
 }
 
-static void PUTDOT32(int xx, const int yy, const int cc)
+static void PUTDOT32(const int xx, const int yy, const int cc)
 {
-  xx = MaybeFlipX(xx); // [Nugget] Flip levels
-
   I_VideoBuffer32[(yy) * video.pitch + (xx)] = V_IndexToRGB(cc);
 }
 
-// [Nugget] -----------------------------------------------------------------/
+// ---------------------------------------------------------------------------
+
+static void (*PutLine)(int x, int y, int dx, int color) = NULL;
+
+static void PutLine8(const int x, const int y, const int dx, const int color)
+{
+  pixel_t *const dest = I_VideoBuffer + (y * video.pitch) + x;
+  memset(dest, color, dx);
+}
+
+static void PutLine32(const int x, const int y, const int dx, const int color)
+{
+  pixel32_t *const dest = I_VideoBuffer32 + (y * video.pitch) + x;
+  V_IndexSet(dest, color, dx);
+}
+
+// [Nugget] =================================================================/
 
 
 //
@@ -1885,6 +1903,20 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   x = fl->a.x;
   y = fl->a.y;
 
+  // [Nugget] Optimize straight horizontal lines
+  if (dx && !dy)
+  {
+    if (dx < 0)
+    {
+      x += dx;
+      dx = -dx;
+    }
+
+    PutLine(x, y, dx, color);
+
+    return;
+  }
+
   if (ax > ay)
   {
     d = ay - ax/2;
@@ -1929,8 +1961,6 @@ static void (*AM_putWuDot)(int x, int y, int color, int weight) = NULL;
 
 static void AM_putWuDot8(int x, int y, int color, int weight)
 {
-   x = MaybeFlipX(x); // [Nugget] Flip levels
-
    pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
@@ -1944,8 +1974,6 @@ static void AM_putWuDot8(int x, int y, int color, int weight)
 
 static void AM_putWuDot32(int x, int y, int color, int weight)
 {
-   x = MaybeFlipX(x); // [Nugget] Flip levels
-
    pixel32_t *dest = &I_VideoBuffer32[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
@@ -3279,12 +3307,14 @@ void AM_InitColorFunctions(void)
     AM_putWuDot = AM_putWuDot32;
     AM_shadeMinimap = AM_shadeMinimap32;
     PUTDOT = PUTDOT32;
+    PutLine = PutLine32;
   }
   else {
     AM_clearFB = AM_clearFB8;
     AM_putWuDot = AM_putWuDot8;
     AM_shadeMinimap = AM_shadeMinimap8;
     PUTDOT = PUTDOT8;
+    PutLine = PutLine8;
   }
 }
 
