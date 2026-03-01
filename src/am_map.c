@@ -1653,11 +1653,12 @@ static void AM_clearFB8(int color)
   // [Nugget] Minimap: take `f_x` and `f_y` into account
 
   int h = f_h;
-  pixel_t *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *dest = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+
   while (h--)
   {
-    memset(src, color, f_w);
-    src += video.pitch;
+    memset(dest, color, f_w);
+    dest += video.pitch;
   }
 }
 
@@ -1666,11 +1667,14 @@ static void AM_clearFB32(int color)
   // [Nugget] Minimap: take `f_x` and `f_y` into account
 
   int h = f_h;
-  pixel32_t *src = I_VideoBuffer32 + ((f_y * video.pitch) + f_x);
+  pixel32_t *dest = I_VideoBuffer32 + ((f_y * video.pitch) + f_x);
+
+  const pixel32_t color32 = V_IndexToRGB(color);
+
   while (h--)
   {
-    V_IndexSet(src, color, f_w);
-    src += video.pitch;
+    V_RGBSet(dest, color32, f_w);
+    dest += video.pitch;
   }
 }
 
