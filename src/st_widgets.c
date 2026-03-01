@@ -454,7 +454,8 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
         --widget->duration_left;
 
         // [Nugget] Message fadeout
-        FadeOutLine(&widget->lines[array_size(widget->lines) - 1], widget->duration_left);
+        for (int i = 0;  i < array_size(widget->lines);  i++)
+        { FadeOutLine(&widget->lines[i], widget->duration_left); }
     }
     else
     {
