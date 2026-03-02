@@ -183,7 +183,7 @@ int R_GetLightLevelInPoint(
   return lightlevel;
 }
 
-// True-color rendering
+// True color
 static int num_colormap_rows;
 
 // CVARs ---------------------------------------------------------------------
@@ -1510,6 +1510,7 @@ void R_Init (void)
   // [FG] spectre drawing mode
   R_SetFuzzColumnMode();
 
+  // [Nugget] `colfunc` initialized in this function
   R_InitDrawFunctions();
 }
 
@@ -1967,7 +1968,7 @@ void R_SetupFrame (player_t *player)
 
         fixedcolormapoffset = cmaprow * 256;
 
-        fixedcolormap32 = fullcolormap32   // killough 3/20/98: use fullcolormap
+        fixedcolormap32 = fullcolormap32
           + fixedcolormapoffset;
 
         walllights = scalelightfixed;

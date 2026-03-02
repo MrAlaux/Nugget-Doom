@@ -84,16 +84,6 @@ extern boolean screenvisible;
 
 // [Nugget] /-----------------------------------------------------------------
 
-typedef enum truecolor_e {
-  TRUECOLOR_OFF,
-  TRUECOLOR_HYBRID,
-  TRUECOLOR_FULL,
-
-  NUM_TRUECOLOR
-} truecolor_t;
-
-extern truecolor_t truecolor_rendering, cvar_truecolor_rendering;
-
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
 

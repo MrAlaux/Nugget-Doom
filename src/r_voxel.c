@@ -1013,7 +1013,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					uy = clip_y1;
 
 				byte src = slab[0];
-				pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+				pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
@@ -1028,7 +1028,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					uy = clip_y2;
 
 				byte src = slab[len - 1];
-				pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+				pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
@@ -1048,7 +1048,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 					if (i >= len) i = len - 1;
 
 					byte src = slab[i];
-					pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+					pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
 				}
@@ -1223,7 +1223,6 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 			fixed_t uy2 = uy1 + (fixed_t) len * scale;
 			fixed_t uy0 = uy1;
 
-			// clip the slab vertically
 			if (uy1 >= clip_y2) uy1 = clip_y2;
 			if (uy2 <= clip_y1) uy2 = clip_y1;
 
@@ -1273,7 +1272,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 					uy = clip_y1;
 
 				byte src = slab[0];
-				pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+				pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
@@ -1288,7 +1287,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 					uy = clip_y2;
 
 				byte src = slab[len - 1];
-				pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+				pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
@@ -1308,7 +1307,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 					if (i >= len) i = len - 1;
 
 					byte src = slab[i];
-					pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+					pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
 				}
@@ -1517,7 +1516,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				i = BETWEEN(0, len - 1, i);
 
 				const byte src = slab[i];
-				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 				dest2[(uy >> FRACBITS) * linesize] = pix;
 			}
@@ -1723,7 +1722,7 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 				i = BETWEEN(0, len - 1, i);
 
 				const byte src = slab[i];
-				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
 				dest2[(uy >> FRACBITS) * linesize] = pix;
 			}

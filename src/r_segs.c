@@ -41,9 +41,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-// [Nugget]
-#include "i_video.h"
-
 // OPTIMIZE: closed two sided lines as single sided
 
 // killough 1/6/98: replaced globals with statics where appropriate
@@ -161,16 +158,14 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
   if (fixedcolormap32)
     dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
 
-  // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
-    if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
+    if (maskedtexturecol[dc_x] != INT_MAX)
       {
-        if (!fixedcolormap32)      // calculate lighting
-          {                             // killough 11/98:
+        if (!fixedcolormap32)
+          {
             const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
                               ? 0 : R_GetLightIndex(spryscale, dc_x); // [Nugget] X
 
-            // [crispy] brightmaps for two sided mid-textures
             dc_brightmap = texturebrightmap[texnum];
             dc_colormap32[0] = V_ColormapRowByIndex32(walllights[index]);
             dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
@@ -178,39 +173,20 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
                               : dc_colormap32[0];
           }
 
-        // killough 3/2/98:
-        //
-        // This calculation used to overflow and cause crashes in Doom:
-        //
-        // sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-        //
-        // This code fixes it, by using double-precision intermediate
-        // arithmetic and by skipping the drawing of 2s normals whose
-        // mapping to screen coordinates is totally out of range:
-
         {
           int64_t t = ((int64_t) centeryfrac << FRACBITS) -
             (int64_t) dc_texturemid * spryscale;
           if (t + (int64_t) textureheight[texnum] * spryscale < 0 ||
               t > (int64_t) video.height << FRACBITS*2)
-            continue;        // skip if the texture is out of screen's range
-          sprtopscreen = (int64_t)(t >> FRACBITS); // [FG] 64-bit integer math
+            continue;
+          sprtopscreen = (int64_t)(t >> FRACBITS);
         }
 
         dc_iscale = 0xffffffffu / (unsigned) spryscale;
 
-        // killough 1/25/98: here's where Medusa came in, because
-        // it implicitly assumed that the column was all one patch.
-        // Originally, Doom did not construct complete columns for
-        // multipatched textures, so there were no header or trailer
-        // bytes in the column referred to below, which explains
-        // the Medusa effect. The fix is to construct true columns
-        // when forming multipatched textures (see r_data.c).
-
-        // draw the texture
         col = (column_t *)(R_GetColumnMasked(texnum, maskedtexturecol[dc_x]) - 3);
         R_DrawMaskedColumn (col);
-        maskedtexturecol[dc_x] = INT_MAX; // [FG] 32-bit integer math
+        maskedtexturecol[dc_x] = INT_MAX;
       }
 }
 
@@ -460,6 +436,7 @@ static void R_RenderSegLoop (void)
           texturecolumn >>= FRACBITS;
 
           // calculate lighting
+          // [Nugget] Check for fixed colormap
           if (!fixedcolormapoffset)
           {
             if (truecolor_rendering)

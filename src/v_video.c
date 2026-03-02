@@ -47,7 +47,6 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include "i_gamma.h"
 #include "st_stuff.h"
 
 pixel_t *I_VideoBuffer;
@@ -159,7 +158,7 @@ crange_idx_e V_CRByName(const char *name)
 
 int v_lightest_color, v_darkest_color;
 
-lighttable_t invul_gray[256];
+byte invul_gray[256];
 
 // killough 5/2/98: tiny engine driven by table above
 void V_InitColorTranslation(void)
@@ -303,6 +302,9 @@ void V_ClearPatchCrop(void)
 }
 
 // True color ----------------------------------------------------------------
+
+truecolor_t truecolor_rendering = TRUECOLOR_OFF,
+            cvar_truecolor_rendering;
 
 int *palcolors = NULL, palscolors[14][256];
 
@@ -475,8 +477,6 @@ static int crop_y1 = 0, crop_y1l = 0, crop_y2 = 0, crop_y2l = 0;
 
 // [Nugget] -----------------------------------------------------------------/
 
-// [Nugget] True-color rendering /--------------------------------------------
-
 #define DRAW_COLUMN32(NAME, SRCPIXEL)                                         \
     static void DrawPatchColumn32##NAME(const patch_column_t *patchcol)       \
     {                                                                         \
@@ -538,8 +538,6 @@ DRAW_COLUMN32(
                                               source[frac >> FRACBITS]   )
   ]
 )
-
-// [Nugget] -----------------------------------------------------------------/
 
 static void DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
                              column_t *column)
@@ -1080,7 +1078,6 @@ void V_FillRectRGB(int x, int y, int width, int height, pixel32_t color)
 
     ClipRect(&dstrect);
 
-    // clipped away completely?
     if (dstrect.cw <= 0 || dstrect.ch <= 0)
     {
         return;
@@ -1146,7 +1143,6 @@ void V_ShadowRect32(int x, int y, int width, int height)
 
     ClipRect(&dstrect);
 
-    // clipped away completely?
     if (dstrect.cw <= 0 || dstrect.ch <= 0)
     {
         return;
@@ -1263,7 +1259,6 @@ void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
 
     ClipRect(&srcrect);
 
-    // clipped away completely?
     if (srcrect.cw <= 0 || srcrect.ch <= 0)
     {
         return;
@@ -1278,7 +1273,6 @@ void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
 
     ClipRect(&dstrect);
 
-    // clipped away completely?
     if (dstrect.cw <= 0 || dstrect.ch <= 0)
     {
         return;
@@ -1286,7 +1280,6 @@ void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
 
     ScaleClippedRect(&dstrect);
 
-    // use the smaller of the two scaled rect widths / heights
     usew = (srcrect.sw < dstrect.sw ? srcrect.sw : dstrect.sw);
     useh = (srcrect.sh < dstrect.sh ? srcrect.sh : dstrect.sh);
 
@@ -1379,13 +1372,11 @@ void V_DrawBlock32(int x, int y, int width, int height, pixel32_t *src)
 
     ClipRect(&dstrect);
 
-    // clipped away completely?
     if (dstrect.cw <= 0 || dstrect.ch <= 0)
     {
         return;
     }
 
-    // change in origin due to clipping
     int dx = dstrect.cx1 - x;
     int dy = dstrect.cy1 - y;
 

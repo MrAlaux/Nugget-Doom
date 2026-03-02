@@ -515,7 +515,7 @@ typedef struct
     int pos;
 } chatline_t;
 
-static chatline_t chatlines[MAXPLAYERS];
+static chatline_t chatlines[MAXPLAYERS]; // [Nugget] Renamed
 
 static void ClearChatLine(chatline_t *line)
 {

@@ -3434,7 +3434,7 @@ static boolean DoLoadGame(boolean do_load_autosave)
   G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
 
   // [Nugget] True color: remove `R_ExecuteSetViewSize()`
-  // and `R_FilLBackScreen()` calls from here
+  // and `R_FillBackScreen()` calls from here
 
   // killough 12/98: support -recordfrom and -loadgame -playdemo
   if (!command_loadgame)

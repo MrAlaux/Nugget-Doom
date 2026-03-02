@@ -62,7 +62,7 @@ extern byte *cr_dark;
 extern byte *cr_shaded;
 extern byte *cr_bright;
 
-extern lighttable_t invul_gray[];
+extern byte invul_gray[];
 
 // [Nugget]
 extern byte cr_bright3[],
@@ -198,6 +198,16 @@ void V_SetPatchCrop(int left, int right, int top, int bottom, boolean shadow_onl
 void V_ClearPatchCrop(void);
 
 // True color ----------------------------------------------------------------
+
+typedef enum truecolor_e {
+  TRUECOLOR_OFF,
+  TRUECOLOR_HYBRID,
+  TRUECOLOR_FULL,
+
+  NUM_TRUECOLOR
+} truecolor_t;
+
+extern truecolor_t truecolor_rendering, cvar_truecolor_rendering;
 
 extern int *palcolors, palscolors[14][256];
 

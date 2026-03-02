@@ -46,7 +46,7 @@ extern fixed_t *spritetopoffset;
 extern lighttable_t **colormaps;          // killough 3/20/98, 4/4/98
 extern lighttable_t *fullcolormap;        // killough 3/20/98
 
-// [Nugget] True-color rendering
+// [Nugget] True color
 #define COLORMAP_ROW_SHIFT_BITS 3
 #define CRSB COLORMAP_ROW_SHIFT_BITS
 extern lighttable32_t ***pal_colormaps;

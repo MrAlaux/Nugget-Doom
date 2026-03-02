@@ -339,7 +339,6 @@ int wipe_renderMelt32(int width, int height, int ticks)
 {
     boolean done = true;
 
-    // Scale up and then down to handle arbitrary dimensions with integer math
     int vertblocksize = height * 100 / WIPE_ROWS;
     int horizblocksize = width * 100 / wipe_columns;
     int currcol;
@@ -452,7 +451,7 @@ int wipe_EndScreen(int x, int y, int width, int height)
     {
         wipe_scr32_end = Z_Malloc(size * sizeof(*wipe_scr32_end), PU_STATIC, NULL);
         I_ReadScreen32(wipe_scr32_end);
-        V_DrawBlock32(x, y, width, height, wipe_scr32_start); // restore start scr.
+        V_DrawBlock32(x, y, width, height, wipe_scr32_start);
     }
     else
     {
@@ -631,18 +630,14 @@ static int wipe_doFizzle32(int width, int height, int ticks)
 
     for (unsigned p = 0; p < pixperframe; p++)
     {
-        // seperate random value into x/y pair
-
         unsigned int x = rndval >> rndbits_y;
         unsigned int y = rndval & ((1 << rndbits_y) - 1);
-
-        // advance to next random element
 
         rndval = (rndval >> 1) ^ (rndval & 1 ? 0 : rndmask);
 
         if (x >= video.unscaledw || y >= WIPE_ROWS)
         {
-            if (rndval == 0) // entire sequence has been completed
+            if (rndval == 0)
             {
                 return true;
             }
@@ -651,7 +646,6 @@ static int wipe_doFizzle32(int width, int height, int ticks)
             continue;
         }
 
-        // copy one pixel
         vrect_t rect = {x, y, 1, 1};
         V_ScaleRect(&rect);
 
@@ -665,7 +659,7 @@ static int wipe_doFizzle32(int width, int height, int ticks)
             dest += video.pitch;
         }
 
-        if (rndval == 0) // entire sequence has been completed
+        if (rndval == 0)
         {
             return true;
         }

@@ -533,7 +533,7 @@ static void DrawSkyDef(visplane_t *pl)
         if (STRICTMODE_COMP(comp_skymap)
             || !(dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32))
         {
-            dc_colormap32[0] = dc_colormap32[1] = fullcolormap32; // killough 3/20/98
+            dc_colormap32[0] = dc_colormap32[1] = fullcolormap32;
         }
     }
     else
@@ -630,7 +630,7 @@ static void do_draw_mbf_sky(visplane_t *pl)
         if (STRICTMODE_COMP(comp_skymap)
             || !(dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32))
         {
-            dc_colormap32[0] = dc_colormap32[1] = fullcolormap32; // killough 3/20/98
+            dc_colormap32[0] = dc_colormap32[1] = fullcolormap32;
         }
     }
     else

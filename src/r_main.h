@@ -178,7 +178,7 @@ int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
 
-// True-color rendering
+// True color
 void R_InitColorFunctions(void);
 
 // Radial fog ----------------------------------------------------------------

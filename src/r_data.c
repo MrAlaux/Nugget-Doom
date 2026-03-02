@@ -52,12 +52,11 @@
 
 // [Nugget]
 #include "hu_crosshair.h"
-#include "i_video.h"
 #include "st_widgets.h"
 
 // [Nugget] /=================================================================
 
-// True-color rendering ------------------------------------------------------
+// True color ----------------------------------------------------------------
 
 static boolean init_color = false;
 
@@ -1030,8 +1029,10 @@ static void InitColormaps8(void), InitColormaps32(void);
 void R_InitColormaps(void)
 {
   int i;
-  static boolean init = true;
+  static boolean init = true; // [Nugget]
 
+  // [Nugget] The function may be called more than once;
+  // initialize this stuff only once
   if (init)
   {
     init = false;

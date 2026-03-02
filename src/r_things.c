@@ -1498,7 +1498,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
       && !STRICTMODE(pspr_invis_translucent)) // [Nugget] Translucent weapon when invisible
   {
     vis->colormap[0] = vis->colormap[1] = 0;                    // shadow draw
-    vis->mobjflags |= MF_SHADOW;
+    vis->mobjflags |= MF_SHADOW; // [Nugget] Give corresponding flag
   }
   else if (fixedcolormapoffset)
     vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;           // fixed color

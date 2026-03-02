@@ -44,7 +44,7 @@ typedef uint32_t pixel32_t;
 typedef uint_fast32_t cmapoffset_t;
 
 // The upper byte corresponding to the alpha channel
-// actually stores the index from which the color derives
+// is used to store a palette index, should be the one closest to the RGB color
 
 #define PIXEL_INDEX_SHIFT 24
 #define PIXEL_RED_SHIFT   16

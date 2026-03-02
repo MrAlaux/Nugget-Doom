@@ -29,9 +29,6 @@
 #include "r_main.h"
 #include "v_video.h"
 
-// [Nugget]
-#include "i_video.h"
-
 static const char snapshot_str[] = "NUGGETDOOM_SNAPSHOT";
 static const int snapshot_len = arrlen(snapshot_str);
 static const int snapshot_size = (SCREENWIDTH * SCREENHEIGHT) * sizeof(pixel_t);

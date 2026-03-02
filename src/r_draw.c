@@ -259,18 +259,6 @@ DRAW_COLUMN(TLBrightmap,
 DRAW_COLUMN32(, dc_colormap32[0][src])
 DRAW_COLUMN32(Brightmap, dc_colormap32[dc_brightmap[src]][src])
 
-// Here is the version of R_DrawColumn that deals with translucent  // phares
-// textures and sprites. It's identical to R_DrawColumn except      //    |
-// for the spot where the color index is stuffed into *dest. At     //    V
-// that point, the existing color index and the new color index
-// are mapped through the TRANMAP lump filters to get a new color
-// index whose RGB values are the average of the existing and new
-// colors.
-//
-// Since we're concerned about performance, the 'translucent or
-// opaque' decision is made outside this routine, not down where the
-// actual code differences are.
-
 DRAW_COLUMN32(TL,
     V_IndexToRGB(tranmap[V_TranMapRowFromRGB(*dest) + V_IndexFromRGB(dc_colormap32[0][src])]))
 DRAW_COLUMN32(TLBrightmap,
@@ -317,7 +305,7 @@ static void DrawColumnShadow32(void)
 
     do {
         *dest = V_IndexToRGB(sprite_shadows_tranmap[V_TranMapRowFromRGB(*dest)]);
-        dest += linesize; // killough 11/98
+        dest += linesize;
     } while (--count);
 }
 
@@ -492,9 +480,6 @@ void DrawSkyColumn32(void)
     const lighttable32_t *colormap = dc_colormap32[0];
     const byte skycolor = dc_skycolor;
 
-    // Fill in the median color here
-    // Have two intermediary fade lines, using the main_tranmap structure
-
     int i, n;
 
     if (frac < -2 * FRACUNIT)
@@ -545,7 +530,6 @@ void DrawSkyColumn32(void)
         }
     }
 
-    // Now it's on the edge
     if (frac < 0)
     {
         n = (-frac + fracstep - 1) / fracstep;
@@ -572,7 +556,7 @@ void DrawSkyColumn32(void)
 
     int heightmask = dc_texheight - 1;
 
-    if (dc_texheight & heightmask) // not a power of 2 -- killough
+    if (dc_texheight & heightmask)
     {
         heightmask++;
         heightmask <<= FRACBITS;
@@ -585,7 +569,7 @@ void DrawSkyColumn32(void)
         do
         {
             *dest = colormap[source[frac >> FRACBITS]];
-            dest += linesize; // killough 11/98
+            dest += linesize;
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
@@ -594,13 +578,13 @@ void DrawSkyColumn32(void)
     }
     else
     {
-        while ((count -= 2) >= 0) // texture height is a power of 2 -- killough
+        while ((count -= 2) >= 0)
         {
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += linesize; // killough 11/98
+            dest += linesize;
             frac += fracstep;
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += linesize; // killough 11/98
+            dest += linesize;
             frac += fracstep;
         }
         if (count & 1)
@@ -944,8 +928,6 @@ static void DrawFuzzColumnShadow(void)
     } while (--count);
 }
 
-// [Nugget] True-color rendering /--------------------------------------------
-
 static void DrawFuzzColumn32Original(void)
 {
     boolean cutoff = false;
@@ -1177,8 +1159,6 @@ static void DrawFuzzColumn32Shadow(void)
         dest += linesize;
     } while (--count);
 }
-
-// [Nugget] -----------------------------------------------------------------/
 
 fuzzmode_t fuzzmode;
 void (*R_DrawFuzzColumn)(void) = DrawFuzzColumnOriginal;
@@ -1601,6 +1581,7 @@ void R_InitDrawFunctions(void)
         R_DrawSpanWithRadialFog = DrawSpanWithRadialFog; // [Nugget] Radial fog
     }
 
+    // [Nugget] Initialize here
     colfunc = R_DrawColumn;
 
     // [Nugget] Sprite shadows
@@ -1657,7 +1638,7 @@ void R_InitBuffer(void)
         for (i = viewheight; i--;)
         {
             ylookup32[i] =
-                I_VideoBuffer32 + (i + viewwindowy) * linesize; // killough 11/98
+                I_VideoBuffer32 + (i + viewwindowy) * linesize;
         }
 
         if (background_buffer32 != NULL)
@@ -1734,7 +1715,6 @@ void R_FillBackScreen(void)
 
     if (truecolor_rendering)
     {
-        // Allocate the background buffer if necessary
         if (background_buffer32 == NULL)
         {
             int size = video.pitch * video.height;

@@ -1810,7 +1810,6 @@ static void DrawSolidBackground(void)
 
     if (truecolor_rendering)
     {
-        // [FG] separate colors for the top rows
         for (v = 0; v < arrlen(vstep); v++)
         {
             int x, y;
@@ -1839,7 +1838,6 @@ static void DrawSolidBackground(void)
             g /= 2 * depth * (v1 - v0);
             b /= 2 * depth * (v1 - v0);
 
-            // [FG] tune down to half saturation (for empiric reasons)
             col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
 
             V_FillRectRGB(
@@ -1892,6 +1890,7 @@ static void DrawBackground(const char *name)
 {
     if (st_refresh_background)
     {
+        // [Nugget] Redraw back screen
         R_FillBackScreen();
         R_DrawViewBorder();
 
