@@ -52,9 +52,26 @@
 
 // [Nugget]
 #include "hu_crosshair.h"
+#include "i_video.h"
 #include "st_widgets.h"
 
-// [Nugget] /-----------------------------------------------------------------
+// [Nugget] /=================================================================
+
+// True-color rendering ------------------------------------------------------
+
+static boolean init_color = false;
+
+boolean R_InitColorPending(void)
+{
+  return init_color;
+}
+
+void R_DeferredInitColor(void)
+{
+  init_color = true;
+}
+
+// ---------------------------------------------------------------------------
 
 // Brought from below
 #define TSC 12        /* number of fixed point digits in filter percent */
@@ -143,7 +160,7 @@ void R_InitMessageFadeoutTranMaps(void)
   { R_GetGenericTranMap(i * 10); }
 }
 
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 //
 // Graphics.
@@ -961,10 +978,33 @@ void R_InitSpriteLumps(void)
 //
 
 invul_mode_t invul_mode;
-static byte invul_orig[256];
+static lighttable_t invul_orig[256];
 
 void R_InvulMode(void)
 {
+  if (truecolor_rendering)
+  {
+    if (colormaps32 == NULL || beta_emulation)
+      return;
+
+    const int mode = STRICTMODE(invul_mode);
+
+    default_comp[comp_skymap] = (mode == INVUL_VANILLA);
+
+    const byte *const invul_colormap = (mode == INVUL_GRAY) ? invul_gray : invul_orig;
+
+    for (int i = 0;  i < 14;  i++)
+    {
+      pixel32_t *dest = &pal_colormaps[i][0][256 * (32<<CRSB)];
+      const pixel_t *src = invul_colormap;
+
+      for (int j = 0;  j < 256;  j++)
+      { *dest++ = palscolors[i][*src++]; }
+    }
+
+    return;
+  }
+
   if (colormaps == NULL || beta_emulation)
     return;
 
@@ -985,29 +1025,77 @@ void R_InvulMode(void)
   }
 }
 
+static void InitColormaps8(void), InitColormaps32(void);
+
 void R_InitColormaps(void)
 {
   int i;
-  firstcolormaplump = W_GetNumForName("C_START");
-  lastcolormaplump  = W_GetNumForName("C_END");
-  numcolormaps = lastcolormaplump - firstcolormaplump;
-  colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, 0);
+  static boolean init = true;
 
-  colormaps[0] = W_CacheLumpNum(W_GetNumForName("COLORMAP"), PU_STATIC);
+  if (init)
+  {
+    init = false;
 
-  for (i=1; i<numcolormaps; i++)
-    colormaps[i] = W_CacheLumpNum(i+firstcolormaplump, PU_STATIC);
+    firstcolormaplump = W_GetNumForName("C_START");
+    lastcolormaplump  = W_GetNumForName("C_END");
+    numcolormaps = lastcolormaplump - firstcolormaplump;
+    colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, 0);
 
-  // [FG] dark/shaded color translation table
-  cr_dark = &colormaps[0][256*15];
-  cr_shaded = &colormaps[0][256*6];
+    colormaps[0] = W_CacheLumpName("COLORMAP", PU_STATIC);
 
-  memcpy(invul_orig, &colormaps[0][256*32], 256);
+    for (i = 1;  i < numcolormaps;  i++)
+    { colormaps[i] = W_CacheLumpNum(firstcolormaplump + i, PU_STATIC); }
+
+    // [FG] dark/shaded color translation table
+    cr_dark = (byte *) &colormaps[0][256*15];
+    cr_shaded = (byte *) &colormaps[0][256*6];
+
+    memcpy(invul_orig, &colormaps[0][256*32], 256);
+  }
+
+  if (truecolor_rendering && !pal_colormaps)
+  {
+    pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * 14, PU_STATIC, 0);
+
+    for (i = 0;  i < 14;  i++)
+    {
+      pal_colormaps[i] = Z_Malloc(sizeof(**pal_colormaps) * numcolormaps, PU_STATIC, 0);
+
+      for (int j = 0;  j < numcolormaps;  j++)
+      { pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0); }
+    }
+  }
+  else if (!truecolor_rendering && pal_colormaps)
+  {
+    for (i = 0;  i < 14;  i++)
+    {
+      for (int j = 0;  j < numcolormaps;  j++)
+      { Z_Free(pal_colormaps[i][j]); }
+
+      Z_Free(pal_colormaps[i]);
+    }
+
+    Z_Free(pal_colormaps);
+    pal_colormaps = NULL;
+  }
+
+  if (truecolor_rendering)
+  {
+    InitColormaps32();
+  }
+  else { InitColormaps8(); }
+
   R_InvulMode();
 
+  init_color = false;
+}
+
+static void InitColormaps8(void)
+{
   // [Nugget] Night-vision visor
-  if (!beta_emulation) {
-    for (i = 0;  i < numcolormaps;  i++)
+  if (!beta_emulation)
+  {
+    for (int i = 0;  i < numcolormaps;  i++)
     {
       // Guard against markers (empty lumps) among the actual colormaps
       if (colormaps[i] == NULL) { continue; }
@@ -1015,6 +1103,132 @@ void R_InitColormaps(void)
       memcpy(&colormaps[i][256*33], nightvision, 256);
     }
   }
+}
+
+static void InitColormaps32(void)
+{
+  // Load original colormap rows
+  for (int i = 0;  i < 14;  i++)
+  {
+    for (int j = 0;  j < numcolormaps;  j++)
+    {
+      if (colormaps[j] == NULL)
+      {
+        pal_colormaps[i][j] = NULL;
+        continue;
+      }
+
+      for (int k = 0;  k < 33;  k++)
+      {
+        for (int m = 0;  m < 256;  m++)
+        {
+          const byte color_index = colormaps[j][(k * 256) + m];
+
+          pal_colormaps[i][j][((k<<CRSB) * 256) + m] = palscolors[i][color_index];
+        }
+      }
+    }
+  }
+
+  if (truecolor_rendering == TRUECOLOR_FULL)
+  {
+    // Shade rows after first one
+
+    for (int i = 0;  i < 14;  i++)
+    {
+      for (int j = 0;  j < numcolormaps;  j++)
+      {
+        if (pal_colormaps[i][j] == NULL) { continue; }
+
+        const lighttable32_t *const first_colormap = pal_colormaps[i][j];
+
+        // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
+        // this lets us maintain some colormap effects (e.g. vanilla brightmaps, fog) and also palette tinting
+        // (the colormap row we're interpolating towards is already colored as per the current palette)
+        lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+
+        for (int k = 1;  k < 248;  k++)
+        {
+          lighttable32_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
+
+          const byte *const orig_colormap = colormaps[j];
+          const int orig_colormap_row = (k / (1<<CRSB)) * 256;
+
+          const double factor = k / 247.0;
+
+          for (int m = 0;  m < 256;  m++)
+          {
+            const pixel32_t rgb = V_LerpRGB(first_colormap[m], last_colormap[m], factor);
+
+            const byte index = orig_colormap[orig_colormap_row + m];
+
+            current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
+                                | (rgb & PIXEL_COLOR_MASK);
+          }
+        }
+
+        // Fill the remainder with the last colormap row
+        for (int l = 1;  l < 1<<CRSB;  l++)
+        { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+      }
+    }
+  }
+  else if (truecolor_rendering == TRUECOLOR_HYBRID)
+  {
+    // Calculate intermediate colormap rows
+
+    for (int i = 0;  i < 14;  i++)
+    {
+      for (int j = 0;  j < numcolormaps;  j++)
+      {
+        if (pal_colormaps[i][j] == NULL) { continue; }
+
+        for (int k = 0;  k < 31;  k++)
+        {
+          const lighttable32_t
+            *const prev_colormap = pal_colormaps[i][j] + ((k<<CRSB) * 256),
+            *const next_colormap = pal_colormaps[i][j] + (((k + 1) << CRSB) * 256);
+
+          for (int l = 1;  l < 1<<CRSB;  l++)
+          {
+            lighttable32_t *const current_colormap = pal_colormaps[i][j] + (((k<<CRSB) + l) * 256);
+            const double factor = l / (double) (1<<CRSB);
+
+            for (int m = 0;  m < 256;  m++)
+            { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
+          }
+        }
+
+        // Fill the remainder with the last colormap row
+
+        lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+
+        for (int l = 1;  l < 1<<CRSB;  l++)
+        { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+      }
+    }
+  }
+
+  // [Nugget] Night-vision visor
+  if (!beta_emulation)
+  {
+    const int row_index = 256 * ((32<<CRSB) + 1);
+
+    for (int i = 0;  i < 14;  i++)
+    {
+      V_SetPalColors(i);
+
+      for (int j = 0;  j < numcolormaps;  j++)
+      {
+        // Guard against markers (empty lumps) among the actual colormaps
+        if (colormaps32[j] == NULL) { continue; }
+
+        V_IndexCopy(&colormaps32[j][row_index], nightvision, 256);
+      }
+    }
+  }
+
+  V_SetPalColors(0);
 }
 
 // killough 4/4/98: get colormap number from name

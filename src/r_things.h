@@ -56,7 +56,7 @@ extern fixed_t pspriteiscale;
 
 extern boolean flipcorpses;
 
-extern lighttable_t **spritelights;
+extern cmapoffset_t *spritelights;
 
 extern boolean draw_nearby_sprites;
 
@@ -74,6 +74,8 @@ void R_ClipVisSprite(vissprite_t *vis, int xl, int xh);
 void R_InitSpritesRes(void);
 
 void R_NearbySprites(void);
+
+void R_InitThingsColorFunctions(void);
 
 #endif
 

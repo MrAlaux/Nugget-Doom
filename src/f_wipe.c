@@ -48,9 +48,13 @@ static int wipe_columns;
 // SCREEN WIPE PACKAGE
 //
 
-static byte *wipe_scr_start;
-static byte *wipe_scr_end;
-static byte *wipe_scr;
+static pixel_t *wipe_scr_start;
+static pixel_t *wipe_scr_end;
+static pixel_t *wipe_scr;
+
+static pixel32_t *wipe_scr32_start;
+static pixel32_t *wipe_scr32_end;
+static pixel32_t *wipe_scr32;
 
 // [FG] cross-fading screen wipe implementation
 
@@ -58,7 +62,15 @@ static int fade_tick;
 
 static int wipe_initColorXForm(int width, int height, int ticks)
 {
-    V_PutBlock(0, 0, width, height, wipe_scr_start);
+    if (truecolor_rendering)
+    {
+        V_PutBlock32(0, 0, width, height, wipe_scr32_start);
+    }
+    else
+    {
+        V_PutBlock(0, 0, width, height, wipe_scr_start);
+    }
+
     fade_tick = 0;
     return 0;
 }
@@ -74,22 +86,46 @@ static int wipe_doColorXForm(int width, int height, int ticks)
     if (!strictmode && wipe_speed_percentage != 100)
     { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
 
-    for (int y = 0; y < height; y++)
+    if (truecolor_rendering)
     {
-        byte *sta = wipe_scr_start + y * width;
-        byte *end = wipe_scr_end + y * width;
-        byte *dst = wipe_scr + y * video.pitch;
-
-        for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
         {
-            unsigned int *fg2rgb = Col2RGB8[fade_tick];
-            unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
-            unsigned int fg, bg;
+            pixel32_t *sta = wipe_scr32_start + y * width;
+            pixel32_t *end = wipe_scr32_end + y * width;
+            pixel32_t *dst = wipe_scr32 + y * video.pitch;
 
-            fg = fg2rgb[end[x]];
-            bg = bg2rgb[sta[x]];
-            fg = (fg + bg) | 0x1f07c1f;
-            dst[x] = RGB32k[0][0][fg & (fg >> 15)];
+            for (int x = 0; x < width; x++)
+            {
+                unsigned int *fg2rgb = Col2RGB8[fade_tick];
+                unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
+                unsigned int fg, bg;
+
+                fg = fg2rgb[V_IndexFromRGB(end[x])];
+                bg = bg2rgb[V_IndexFromRGB(sta[x])];
+                fg = (fg + bg) | 0x1f07c1f;
+                dst[x] = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
+            }
+        }
+    }
+    else
+    {
+        for (int y = 0; y < height; y++)
+        {
+            pixel_t *sta = wipe_scr_start + y * width;
+            pixel_t *end = wipe_scr_end + y * width;
+            pixel_t *dst = wipe_scr + y * video.pitch;
+
+            for (int x = 0; x < width; x++)
+            {
+                unsigned int *fg2rgb = Col2RGB8[fade_tick];
+                unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
+                unsigned int fg, bg;
+
+                fg = fg2rgb[end[x]];
+                bg = bg2rgb[sta[x]];
+                fg = (fg + bg) | 0x1f07c1f;
+                dst[x] = RGB32k[0][0][fg & (fg >> 15)];
+            }
         }
     }
 
@@ -100,8 +136,21 @@ static int wipe_doColorXForm(int width, int height, int ticks)
 
 static int wipe_exit(int width, int height, int ticks)
 {
-    Z_Free(wipe_scr_start);
-    Z_Free(wipe_scr_end);
+    if (truecolor_rendering)
+    {
+        V_PutBlock32(0, 0, width, height, wipe_scr32_end);
+
+        Z_Free(wipe_scr32_start);
+        Z_Free(wipe_scr32_end);
+    }
+    else
+    {
+        V_PutBlock(0, 0, width, height, wipe_scr_end);
+
+        Z_Free(wipe_scr_start);
+        Z_Free(wipe_scr_end);
+    }
+
     return 0;
 }
 
@@ -119,7 +168,14 @@ static int wipe_initMelt(int width, int height, int ticks)
     prevy = ybuff2;
 
     // copy start screen to main screen
-    V_PutBlock(0, 0, width, height, wipe_scr_start);
+    if (truecolor_rendering)
+    {
+        V_PutBlock32(0, 0, width, height, wipe_scr32_start);
+    }
+    else
+    {
+        V_PutBlock(0, 0, width, height, wipe_scr_start);
+    }
 
     // setup initial column positions (y<0 => not ready to scroll yet)
     curry[0] = -(M_Random() % 16);
@@ -191,8 +247,13 @@ static int wipe_doMelt(int width, int height, int ticks)
     return done;
 }
 
+int wipe_renderMelt32(int width, int height, int ticks);
+
 int wipe_renderMelt(int width, int height, int ticks)
 {
+    if (truecolor_rendering)
+    { return wipe_renderMelt32(width, height, ticks); }
+
     boolean done = true;
 
     // Scale up and then down to handle arbitrary dimensions with integer math
@@ -274,6 +335,89 @@ int wipe_renderMelt(int width, int height, int ticks)
     return done;
 }
 
+int wipe_renderMelt32(int width, int height, int ticks)
+{
+    boolean done = true;
+
+    // Scale up and then down to handle arbitrary dimensions with integer math
+    int vertblocksize = height * 100 / WIPE_ROWS;
+    int horizblocksize = width * 100 / wipe_columns;
+    int currcol;
+    int currcolend;
+    int currrow;
+
+    V_UseBuffer32(wipe_scr32);
+    V_PutBlock32(0, 0, width, height, wipe_scr32_end);
+    V_RestoreBuffer();
+
+    for (int col = 0; col < wipe_columns; ++col)
+    {
+        int current;
+        if (uncapped)
+        {
+            current = FixedToInt(
+                LerpFixed(IntToFixed(prevy[col]), IntToFixed(curry[col])));
+        }
+        else
+        {
+            current = curry[col];
+        }
+
+        if (current < 0)
+        {
+            currcol = col * horizblocksize / 100;
+            currcolend = (col + 1) * horizblocksize / 100;
+            for (; currcol < currcolend; ++currcol)
+            {
+                pixel32_t *source = wipe_scr32_start + currcol;
+                pixel32_t *dest = wipe_scr32 + currcol;
+
+                for (int i = 0; i < height; ++i)
+                {
+                    *dest = *source;
+                    dest += video.pitch;
+                    source += width;
+                }
+            }
+        }
+        else if (current < WIPE_ROWS)
+        {
+            currcol = col * horizblocksize / 100;
+            currcolend = (col + 1) * horizblocksize / 100;
+
+            currrow = current * vertblocksize / 100;
+
+            for (; currcol < currcolend; ++currcol)
+            {
+                pixel32_t *source = wipe_scr32_start + currcol;
+                pixel32_t *dest = wipe_scr32 + currcol + (currrow * video.pitch);
+
+                for (int i = 0; i < height - currrow; ++i)
+                {
+                    *dest = *source;
+                    dest += video.pitch;
+                    source += width;
+                }
+            }
+
+            done = false;
+        }
+    }
+
+    for (currcol = wipe_columns * horizblocksize / 100; currcol < width; ++currcol)
+    {
+        pixel32_t *dest = wipe_scr32 + currcol;
+
+        for (int i = 0; i < height; ++i)
+        {
+            *dest = V_IndexToRGB(v_darkest_color);
+            dest += video.pitch;
+        }
+    }
+
+    return done;
+}
+
 static int wipe_exitMelt(int width, int height, int ticks)
 {
     Z_Free(ybuff1);
@@ -285,17 +429,38 @@ static int wipe_exitMelt(int width, int height, int ticks)
 int wipe_StartScreen(int x, int y, int width, int height)
 {
     int size = width * height;
-    wipe_scr_start = Z_Malloc(size * sizeof(*wipe_scr_start), PU_STATIC, NULL);
-    I_ReadScreen(wipe_scr_start);
+
+    if (truecolor_rendering)
+    {
+        wipe_scr32_start = Z_Malloc(size * sizeof(*wipe_scr32_start), PU_STATIC, NULL);
+        I_ReadScreen32(wipe_scr32_start);
+    }
+    else
+    {
+        wipe_scr_start = Z_Malloc(size * sizeof(*wipe_scr_start), PU_STATIC, NULL);
+        I_ReadScreen(wipe_scr_start);
+    }
+
     return 0;
 }
 
 int wipe_EndScreen(int x, int y, int width, int height)
 {
     int size = width * height;
-    wipe_scr_end = Z_Malloc(size * sizeof(*wipe_scr_end), PU_STATIC, NULL);
-    I_ReadScreen(wipe_scr_end);
-    V_DrawBlock(x, y, width, height, wipe_scr_start); // restore start scr.
+
+    if (truecolor_rendering)
+    {
+        wipe_scr32_end = Z_Malloc(size * sizeof(*wipe_scr32_end), PU_STATIC, NULL);
+        I_ReadScreen32(wipe_scr32_end);
+        V_DrawBlock32(x, y, width, height, wipe_scr32_start); // restore start scr.
+    }
+    else
+    {
+        wipe_scr_end = Z_Malloc(size * sizeof(*wipe_scr_end), PU_STATIC, NULL);
+        I_ReadScreen(wipe_scr_end);
+        V_DrawBlock(x, y, width, height, wipe_scr_start); // restore start scr.
+    }
+
     return 0;
 }
 
@@ -370,14 +535,87 @@ static int wipe_initFizzle(int width, int height, int ticks)
 
     rndmask = rndmasks[rndbits - 17];
 
-    V_PutBlock(0, 0, width, height, wipe_scr_start);
+    if (truecolor_rendering)
+    {
+        V_PutBlock32(0, 0, width, height, wipe_scr32_start);
+    }
+    else
+    {
+        V_PutBlock(0, 0, width, height, wipe_scr_start);
+    }
 
     lastrndval = 0;
 
     return 0;
 }
 
+static int wipe_doFizzle32(int width, int height, int ticks);
+
 static int wipe_doFizzle(int width, int height, int ticks)
+{
+    if (truecolor_rendering)
+    { return wipe_doFizzle32(width, height, ticks); }
+
+    if (ticks <= 0)
+    {
+        return false;
+    }
+
+    int pixperframe = (video.unscaledw * WIPE_ROWS) >> 5;
+    unsigned int rndval = lastrndval;
+
+    // [Nugget] Screen Wipe speed
+    if (!strictmode && wipe_speed_percentage != 100)
+    { pixperframe = MAX(1, pixperframe * wipe_speed_percentage / 100); }
+
+    for (unsigned p = 0; p < pixperframe; p++)
+    {
+        // seperate random value into x/y pair
+
+        unsigned int x = rndval >> rndbits_y;
+        unsigned int y = rndval & ((1 << rndbits_y) - 1);
+
+        // advance to next random element
+
+        rndval = (rndval >> 1) ^ (rndval & 1 ? 0 : rndmask);
+
+        if (x >= video.unscaledw || y >= WIPE_ROWS)
+        {
+            if (rndval == 0) // entire sequence has been completed
+            {
+                return true;
+            }
+
+            p--;
+            continue;
+        }
+
+        // copy one pixel
+        vrect_t rect = {x, y, 1, 1};
+        V_ScaleRect(&rect);
+
+        pixel_t *src = wipe_scr_end + rect.sy * width + rect.sx;
+        pixel_t *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
+
+        while (rect.sh--)
+        {
+            memcpy(dest, src, rect.sw);
+            src += width;
+            dest += video.pitch;
+        }
+
+        if (rndval == 0) // entire sequence has been completed
+        {
+            return true;
+        }
+    }
+
+    lastrndval = rndval;
+
+    return false;
+}
+
+static int wipe_doFizzle32(int width, int height, int ticks)
 {
     if (ticks <= 0)
     {
@@ -417,12 +655,12 @@ static int wipe_doFizzle(int width, int height, int ticks)
         vrect_t rect = {x, y, 1, 1};
         V_ScaleRect(&rect);
 
-        byte *src = wipe_scr_end + rect.sy * width + rect.sx;
-        byte *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
+        pixel32_t *src = wipe_scr32_end + rect.sy * width + rect.sx;
+        pixel32_t *dest = wipe_scr32 + rect.sy * video.pitch + rect.sx;
 
         while (rect.sh--)
         {
-            memcpy(dest, src, rect.sw);
+            V_RGBCopy(dest, src, rect.sw);
             src += width;
             dest += video.pitch;
         }
@@ -464,7 +702,14 @@ static int wipe_doFade(int width, int height, int ticks)
     if (!strictmode && wipe_speed_percentage != 100)
     { ticks = MAX(1, ticks * wipe_speed_percentage / 100); }
 
-    V_PutBlock(0, 0, width, height, fadeIn ? wipe_scr_end : wipe_scr_start);
+    if (truecolor_rendering)
+    {
+        V_PutBlock32(0, 0, width, height, fadeIn ? wipe_scr32_end : wipe_scr32_start);
+    }
+    else
+    {
+        V_PutBlock(0, 0, width, height, fadeIn ? wipe_scr_end : wipe_scr_start);
+    }
 
     V_ShadeScreen(screenshade);
 
@@ -526,7 +771,16 @@ int wipe_ScreenWipe(int wipeno, int x, int y, int width, int height, int ticks)
     if (!go) // initial stuff
     {
         go = 1;
-        wipe_scr = I_VideoBuffer;
+
+        if (truecolor_rendering)
+        {
+            wipe_scr32 = I_VideoBuffer32;
+        }
+        else
+        {
+            wipe_scr = I_VideoBuffer;
+        }
+
         wipes[wipeno].init(width, height, ticks);
     }
 

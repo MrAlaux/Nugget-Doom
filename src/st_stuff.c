@@ -163,6 +163,7 @@ static void UpdateNughudOn(void)
 
 // Used for Status-Bar chunks
 static pixel_t *st_bar = NULL;
+static pixel32_t *st_bar32 = NULL;
 static int stbar_height = 32;
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align);
@@ -243,6 +244,7 @@ static void UpdateNughudStacks(void);
 
 // graphics are drawn to a backing screen and blitted to the real screen
 static pixel_t *st_backing_screen = NULL;
+static pixel32_t *st_backing_screen32 = NULL;
 
 // [Nugget] Animated health/armor counts
 static boolean hud_animated_counts;
@@ -1806,20 +1808,62 @@ static void DrawSolidBackground(void)
     const int depth = 16;
     int v;
 
+    if (truecolor_rendering)
+    {
+        // [FG] separate colors for the top rows
+        for (v = 0; v < arrlen(vstep); v++)
+        {
+            int x, y;
+            const int v0 = vstep[v][0], v1 = vstep[v][1];
+            unsigned r = 0, g = 0, b = 0;
+            pixel32_t col;
+
+            for (y = v0; y < v1; y++)
+            {
+                for (x = 0; x < depth; x++)
+                {
+                    pixel32_t *c = st_backing_screen32 + V_ScaleY(y) * video.pitch
+                                 + V_ScaleX(x);
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+
+                    c += V_ScaleX(width - 2 * x - 1);
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+                }
+            }
+
+            r /= 2 * depth * (v1 - v0);
+            g /= 2 * depth * (v1 - v0);
+            b /= 2 * depth * (v1 - v0);
+
+            // [FG] tune down to half saturation (for empiric reasons)
+            col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
+
+            V_FillRectRGB(
+              0, v0, video.unscaledw, v1 - v0, V_ComponentsToRGB(col, r/2, g/2, b/2)
+            );
+        }
+
+        return;
+    }
+
     // [FG] separate colors for the top rows
     for (v = 0; v < arrlen(vstep); v++)
     {
         int x, y;
         const int v0 = vstep[v][0], v1 = vstep[v][1];
         unsigned r = 0, g = 0, b = 0;
-        byte col;
+        pixel_t col;
 
         for (y = v0; y < v1; y++)
         {
             for (x = 0; x < depth; x++)
             {
-                byte *c = st_backing_screen + V_ScaleY(y) * video.pitch
-                          + V_ScaleX(x);
+                pixel_t *c = st_backing_screen + V_ScaleY(y) * video.pitch
+                             + V_ScaleX(x);
                 r += pal[3 * c[0] + 0];
                 g += pal[3 * c[0] + 1];
                 b += pal[3 * c[0] + 2];
@@ -1848,7 +1892,17 @@ static void DrawBackground(const char *name)
 {
     if (st_refresh_background)
     {
-        V_UseBuffer(st_backing_screen);
+        R_FillBackScreen();
+        R_DrawViewBorder();
+
+        if (truecolor_rendering)
+        {
+            V_UseBuffer32(st_backing_screen32);
+        }
+        else
+        {
+            V_UseBuffer(st_backing_screen);
+        }
 
         if (st_solidbackground)
         {
@@ -1881,7 +1935,14 @@ static void DrawBackground(const char *name)
         st_refresh_background = false;
     }
 
-    V_CopyRect(0, 0, st_backing_screen, video.unscaledw, ST_HEIGHT, 0, ST_Y);
+    if (truecolor_rendering)
+    {
+        V_CopyRect32(0, 0, st_backing_screen32, video.unscaledw, ST_HEIGHT, 0, ST_Y);
+    }
+    else
+    {
+        V_CopyRect(0, 0, st_backing_screen, video.unscaledw, ST_HEIGHT, 0, ST_Y);
+    }
 }
 
 static void DrawCenteredMessage(void)
@@ -2382,13 +2443,29 @@ void ST_Init(void)
 void ST_InitRes(void)
 {
     // killough 11/98: allocate enough for hires
-    st_backing_screen =
-        Z_Malloc(video.pitch * V_ScaleY(ST_HEIGHT) * sizeof(*st_backing_screen),
-                 PU_RENDERER, 0);
+    if (truecolor_rendering)
+    {
+        st_backing_screen32 =
+            Z_Malloc(video.pitch * V_ScaleY(ST_HEIGHT) * sizeof(*st_backing_screen32),
+                     PU_RENDERER, 0);
+    }
+    else
+    {
+        st_backing_screen =
+            Z_Malloc(video.pitch * V_ScaleY(ST_HEIGHT) * sizeof(*st_backing_screen),
+                     PU_RENDERER, 0);
+    }
 
-  // [Nugget] Status-Bar chunks
-  // More than necessary (we only use the section visible in 4:3), but so be it
-  st_bar = Z_Malloc((video.pitch * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+    // [Nugget] Status-Bar chunks
+    // More than necessary (we only use the section visible in 4:3), but so be it
+    if (truecolor_rendering)
+    {
+        st_bar32 = Z_Malloc((video.pitch * V_ScaleY(stbar_height)) * sizeof(*st_bar32), PU_RENDERER, 0);
+    }
+    else
+    {
+        st_bar = Z_Malloc((video.pitch * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+    }
 }
 
 const char **ST_StatusbarList(void)
@@ -2703,19 +2780,13 @@ void ST_SetKeyBlink(player_t* player, int blue, int yellow, int red)
 
 // NUGHUD --------------------------------------------------------------------
 
+// Status-Bar chunks
+static boolean st_refresh_chunkbg = true;
+
 void ST_refreshBackground(void)
 {
   st_refresh_background = true;
-
-  // Status-Bar chunks -------------------------------------------------------
-
-  patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
-
-  V_UseBuffer(st_bar);
-
-  V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
-
-  V_RestoreBuffer();
+  st_refresh_chunkbg = true; // Status-Bar chunks
 }
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align)
@@ -2778,7 +2849,14 @@ static void DrawNughudSBChunk(const nughud_sbchunk_t *const chunk)
   sh = MIN(ST_HEIGHT - chunk->sy, sh);
   sh = MIN(SCREENHEIGHT - y,      sh);
 
-  V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
+  if (truecolor_rendering)
+  {
+    V_CopyRect32(sx, sy, st_bar32, sw, sh, x, y);
+  }
+  else
+  {
+    V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
+  }
 }
 
 static void DrawNughudBar(
@@ -2823,6 +2901,26 @@ static void DrawNughudGraphics(void)
   const player_t *const plyr = &players[displayplayer];
 
   // Status-Bar chunks -------------------------------------------------------
+
+  if (st_refresh_chunkbg)
+  {
+    st_refresh_chunkbg = false;
+
+    patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
+
+    if (truecolor_rendering)
+    {
+      V_UseBuffer32(st_bar32);
+    }
+    else
+    {
+      V_UseBuffer(st_bar);
+    }
+
+    V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
+
+    V_RestoreBuffer();
+  }
 
   for (int i = 0;  i < NUMSBCHUNKS;  i++)
   {

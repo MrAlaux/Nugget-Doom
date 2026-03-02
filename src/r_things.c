@@ -53,7 +53,9 @@
 #include "st_stuff.h"
 #include "wi_stuff.h"
 
-// [Nugget] Thing lighting
+// [Nugget] /=================================================================
+
+// Thing lighting
 int R_CalculateHitboxLightNum(
   const fixed_t x,
   const fixed_t y,
@@ -84,6 +86,102 @@ int R_CalculateHitboxLightNum(
   return (lightlevel / 9) >> LIGHTSEGSHIFT;
 }
 
+static void ApplyFlipPostProcess(void)
+{
+  const int pitch = video.pitch,
+            width = viewwidth - 1;
+
+  pixel_t *                 row = I_VideoBuffer + (viewwindowy * pitch + viewwindowx);
+  pixel_t const *const last_row = row + (viewheight * pitch);
+
+  const int half_viewwidth = viewwidth / 2;
+
+  for (; row < last_row;  row += pitch)
+  {
+    pixel_t *restrict  left = row,
+            *restrict right = left + width;
+
+    int16_t count = half_viewwidth;
+
+    #define SWAP() \
+        temp = *left; \
+       *left = *right; \
+      *right = temp; \
+      left++; \
+      right--;
+
+    while (count >= 8)
+    {
+      pixel_t temp;
+
+      SWAP(); SWAP(); SWAP(); SWAP();
+      SWAP(); SWAP(); SWAP(); SWAP();
+
+      count -= 8;
+    }
+
+    while (count)
+    {
+      pixel_t temp;
+
+      SWAP();
+
+      count--;
+    }
+
+    #undef SWAP
+  }
+}
+
+static void ApplyFlipPostProcess32(void)
+{
+  const int pitch = video.pitch,
+            width = viewwidth - 1;
+
+  pixel32_t *                 row = I_VideoBuffer32 + (viewwindowy * pitch + viewwindowx);
+  pixel32_t const *const last_row = row + (viewheight * pitch);
+
+  const int half_viewwidth = viewwidth / 2;
+
+  for (; row < last_row;  row += pitch)
+  {
+    pixel32_t *restrict  left = row,
+              *restrict right = left + width;
+
+    int16_t count = half_viewwidth;
+
+    #define SWAP() \
+        temp = *left; \
+       *left = *right; \
+      *right = temp; \
+      left++; \
+      right--;
+
+    while (count >= 8)
+    {
+      pixel32_t temp;
+
+      SWAP(); SWAP(); SWAP(); SWAP();
+      SWAP(); SWAP(); SWAP(); SWAP();
+
+      count -= 8;
+    }
+
+    while (count)
+    {
+      pixel32_t temp;
+
+      SWAP();
+
+      count--;
+    }
+
+    #undef SWAP
+  }
+}
+
+// [Nugget] =================================================================/
+
 #define MINZ        (FRACUNIT*4)
 #define MAXZ        (FRACUNIT*8192)
 #define BASEYCENTER 100
@@ -107,7 +205,7 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 
-lighttable_t **spritelights;        // killough 1/25/98 made static
+cmapoffset_t *spritelights;        // killough 1/25/98 made static
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c
@@ -538,15 +636,149 @@ void R_DrawMaskedColumn(column_t *column)
 //  mfloorclip and mceilingclip should also be set.
 //
 
+static void (*DrawVisSpriteLoop)(
+  vissprite_t *vis,
+  fixed_t frac,
+  patch_t *patch,
+  int lightindex,
+  boolean do_sprite_radial_fog,
+  boolean percolumn_lighting,
+  fixed_t pcl_offset,
+  fixed_t pcl_cosine,
+  fixed_t pcl_sine
+) = NULL;
+
+static void DrawVisSpriteLoop8(
+  vissprite_t *const vis,
+  fixed_t frac,
+  patch_t *const patch,
+  int lightindex,
+  const boolean do_sprite_radial_fog,
+  const boolean percolumn_lighting,
+  const fixed_t pcl_offset,
+  const fixed_t pcl_cosine,
+  const fixed_t pcl_sine
+) {
+  column_t *column;
+  int texturecolumn;
+
+  dc_colormap[0] = V_ColormapRowByIndex(vis->colormap[0]);
+  dc_colormap[1] = V_ColormapRowByIndex(vis->colormap[1]);
+
+  for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
+    {
+      texturecolumn = frac>>FRACBITS;
+
+      if (texturecolumn < 0)
+        continue;
+      else if (texturecolumn >= SHORT(patch->width))
+        break;
+
+      // [Nugget] /===========================================================
+
+      // Radial fog
+      if (do_sprite_radial_fog)
+      {
+        lightindex = R_GetLightIndex(spryscale, dc_x);
+
+        if (!percolumn_lighting)
+        { dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]); }
+      }
+
+      // Thing lighting
+      if (percolumn_lighting)
+      {
+        fixed_t offset = frac - pcl_offset;
+
+        if (vis->flipped) { offset = -offset; }
+
+        const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
+                      gy = vis->gy + FixedMul(offset, pcl_sine);
+
+        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                           + extralight;
+
+        dc_colormap[0] = V_ColormapRowByIndex(
+          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
+        );
+      }
+
+      // [Nugget] ===========================================================/
+
+      column = (column_t *)((byte *) patch +
+                            LONG(patch->columnofs[texturecolumn]));
+      R_DrawMaskedColumn (column);
+    }
+}
+
+static void DrawVisSpriteLoop32(
+  vissprite_t *const vis,
+  fixed_t frac,
+  patch_t *const patch,
+  int lightindex,
+  const boolean do_sprite_radial_fog,
+  const boolean percolumn_lighting,
+  const fixed_t pcl_offset,
+  const fixed_t pcl_cosine,
+  const fixed_t pcl_sine
+) {
+  column_t *column;
+  int texturecolumn;
+
+  dc_colormap32[0] = V_ColormapRowByIndex32(vis->colormap[0]);
+  dc_colormap32[1] = V_ColormapRowByIndex32(vis->colormap[1]);
+
+  for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
+    {
+      texturecolumn = frac>>FRACBITS;
+
+      if (texturecolumn < 0)
+        continue;
+      else if (texturecolumn >= SHORT(patch->width))
+        break;
+
+      // [Nugget] /===========================================================
+
+      // Radial fog
+      if (do_sprite_radial_fog)
+      {
+        lightindex = R_GetLightIndex(spryscale, dc_x);
+
+        if (!percolumn_lighting)
+        { dc_colormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex]); }
+      }
+
+      // Thing lighting
+      if (percolumn_lighting)
+      {
+        fixed_t offset = frac - pcl_offset;
+
+        if (vis->flipped) { offset = -offset; }
+
+        const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
+                      gy = vis->gy + FixedMul(offset, pcl_sine);
+
+        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                           + extralight;
+
+        dc_colormap32[0] = V_ColormapRowByIndex32(
+          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
+        );
+      }
+
+      // [Nugget] ===========================================================/
+
+      column = (column_t *)((byte *) patch +
+                            LONG(patch->columnofs[texturecolumn]));
+      R_DrawMaskedColumn (column);
+    }
+}
+
 void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 {
-  column_t *column;
-  int      texturecolumn;
   fixed_t  frac;
   patch_t  *patch = V_CachePatchNum (vis->patch+firstspritelump, PU_CACHE);
 
-  dc_colormap[0] = vis->colormap[0];
-  dc_colormap[1] = vis->colormap[1];
   dc_brightmap = vis->brightmap;
 
   // killough 4/11/98: rearrange and handle translucent sprites
@@ -559,7 +791,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   }
   else
 
-  if (!dc_colormap[0])   // NULL colormap = shadow draw
+  if (vis->mobjflags & MF_SHADOW)   // NULL colormap = shadow draw
     colfunc = R_DrawFuzzColumn;    // killough 3/14/98
   else
     // [FG] colored blood and gibs
@@ -613,7 +845,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   fixed_t pcl_offset = 0;
   fixed_t pcl_cosine = 0, pcl_sine = 0;
 
-  if (!vis->fullbright && dc_colormap[0] && !fixedcolormap)
+  if (!vis->fullbright && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapoffset)
   {
     do_sprite_radial_fog = do_radial_fog;
 
@@ -636,48 +868,18 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
   // [Nugget] ===============================================================/
 
-  for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
-    {
-      texturecolumn = frac>>FRACBITS;
+  DrawVisSpriteLoop(
+    vis,
+    frac,
+    patch,
+    lightindex,
+    do_sprite_radial_fog,
+    percolumn_lighting,
+    pcl_offset,
+    pcl_cosine,
+    pcl_sine
+  );
 
-      if (texturecolumn < 0)
-        continue;
-      else if (texturecolumn >= SHORT(patch->width))
-        break;
-
-      // [Nugget] /===========================================================
-
-      // Radial fog
-      if (do_sprite_radial_fog)
-      {
-        lightindex = R_GetLightIndex(spryscale, dc_x);
-
-        if (!percolumn_lighting)
-        { dc_colormap[0] = spritelights[lightindex]; }
-      }
-
-      // Thing lighting
-      if (percolumn_lighting)
-      {
-        fixed_t offset = frac - pcl_offset;
-
-        if (vis->flipped) { offset = -offset; }
-
-        const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
-                      gy = vis->gy + FixedMul(offset, pcl_sine);
-
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
-
-        dc_colormap[0] = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex];
-      }
-
-      // [Nugget] ===========================================================/
-
-      column = (column_t *)((byte *) patch +
-                            LONG(patch->columnofs[texturecolumn]));
-      R_DrawMaskedColumn (column);
-    }
   colfunc = R_DrawColumn;         // killough 3/14/98
 }
 
@@ -913,12 +1115,12 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   // get light level
   if (thing->flags & MF_SHADOW)
-    vis->colormap[0] = vis->colormap[1] = NULL;               // shadow draw
-  else if (fixedcolormap)
-    vis->colormap[0] = vis->colormap[1] = fixedcolormap;      // fixed map
+    vis->colormap[0] = vis->colormap[1] = 0;               // shadow draw
+  else if (fixedcolormapoffset)
+    vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;      // fixed map
   else if (frame & FF_FULLBRIGHT)
   {
-    vis->colormap[0] = vis->colormap[1] = fullcolormap;       // full bright  // killough 3/20/98
+    vis->colormap[0] = vis->colormap[1] = 0;       // full bright  // killough 3/20/98
     vis->fullbright = true; // [Nugget]
   }
   else
@@ -939,7 +1141,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
       }
 
       vis->colormap[0] = spritelights[index];
-      vis->colormap[1] = fullcolormap;
+      vis->colormap[1] = 0;
     }
 
   vis->brightmap = R_BrightmapForState(thing->state - states);
@@ -1294,13 +1496,15 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   // killough 7/11/98: beta psprites did not draw shadows
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation
       && !STRICTMODE(pspr_invis_translucent)) // [Nugget] Translucent weapon when invisible
-
-    vis->colormap[0] = vis->colormap[1] = NULL;                    // shadow draw
-  else if (fixedcolormap)
-    vis->colormap[0] = vis->colormap[1] = fixedcolormap;           // fixed color
+  {
+    vis->colormap[0] = vis->colormap[1] = 0;                    // shadow draw
+    vis->mobjflags |= MF_SHADOW;
+  }
+  else if (fixedcolormapoffset)
+    vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;           // fixed color
   else if (psp->state->frame & FF_FULLBRIGHT)
   {
-    vis->colormap[0] = vis->colormap[1] = fullcolormap;            // full bright // killough 3/20/98
+    vis->colormap[0] = vis->colormap[1] = 0;            // full bright // killough 3/20/98
     vis->fullbright = true; // [Nugget]
   }
   else
@@ -1309,7 +1513,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
     const int index = STRICTMODE(!diminishing_lighting) ? 0 : MAXLIGHTSCALE-1;
 
     vis->colormap[0] = spritelights[index];  // local light
-    vis->colormap[1] = fullcolormap;
+    vis->colormap[1] = 0;
   }
   vis->brightmap = R_BrightmapForState(psp->state - states);
 
@@ -1759,55 +1963,29 @@ void R_DrawMasked(void)
   // [Nugget] Flip levels
   if (STRICTMODE(flip_levels))
   {
-    const int pitch = video.pitch,
-              width = viewwidth - 1;
-
-    pixel_t *                 row = I_VideoBuffer + (viewwindowy * pitch + viewwindowx);
-    pixel_t const *const last_row = row + (viewheight * pitch);
-
-    const int half_viewwidth = viewwidth / 2;
-
-    for (; row < last_row;  row += pitch)
+    if (truecolor_rendering)
     {
-      pixel_t *restrict  left = row,
-              *restrict right = left + width;
-
-      int16_t count = half_viewwidth;
-
-      #define SWAP() \
-          temp = *left; \
-         *left = *right; \
-        *right = temp; \
-        left++; \
-        right--;
-
-      while (count >= 8)
-      {
-        pixel_t temp;
-
-        SWAP(); SWAP(); SWAP(); SWAP();
-        SWAP(); SWAP(); SWAP(); SWAP();
-
-        count -= 8;
-      }
-
-      while (count)
-      {
-        pixel_t temp;
-
-        SWAP();
-
-        count--;
-      }
-
-      #undef SWAP
+      ApplyFlipPostProcess32();
     }
+    else { ApplyFlipPostProcess(); }
   }
 
   // draw the psprites on top of everything
   //  but does not draw on side views
   if (!viewangleoffset)
     R_DrawPlayerSprites ();
+}
+
+void R_InitThingsColorFunctions(void)
+{
+  if (truecolor_rendering)
+  {
+    DrawVisSpriteLoop = DrawVisSpriteLoop32;
+  }
+  else
+  {
+    DrawVisSpriteLoop = DrawVisSpriteLoop8;
+  }
 }
 
 //----------------------------------------------------------------------------

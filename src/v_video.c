@@ -46,11 +46,17 @@
 #include "w_wad.h" // needed for color translation lump lookup
 #include "z_zone.h"
 
+// [Nugget]
+#include "i_gamma.h"
+#include "st_stuff.h"
+
 pixel_t *I_VideoBuffer;
+pixel32_t *I_VideoBuffer32;
 
 // The screen buffer that the v_video.c code draws to.
 
 static pixel_t *dest_screen = NULL;
+static pixel32_t *dest_screen32 = NULL;
 
 // jff 2/18/98 palette color ranges for translation
 // jff 4/24/98 now pointers set to predefined lumps to allow overloading
@@ -153,7 +159,7 @@ crange_idx_e V_CRByName(const char *name)
 
 int v_lightest_color, v_darkest_color;
 
-byte invul_gray[256];
+lighttable_t invul_gray[256];
 
 // killough 5/2/98: tiny engine driven by table above
 void V_InitColorTranslation(void)
@@ -296,6 +302,57 @@ void V_ClearPatchCrop(void)
   crop_shadow = false;
 }
 
+// True color ----------------------------------------------------------------
+
+int *palcolors = NULL, palscolors[14][256];
+
+void V_InitPalsColors(void)
+{
+  const byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
+
+  for (int i = 0;  i < 14;  i++)
+  {
+    int *const pc = palscolors[i];
+
+    byte colors[768];
+    I_GetPalette(colors, playpal + (768 * i));
+
+    for (int j = 0;  j < 256;  j++)
+    {
+      pc[j] = V_ComponentsToRGB(
+        j, colors[(j * 3) + 0], colors[(j * 3) + 1], colors[(j * 3) + 2]
+      );
+    }
+  }
+
+  R_DeferredInitColor();
+}
+
+void V_SetPalColors(const int palette_index)
+{
+  palcolors = palscolors[palette_index];
+
+  if (!truecolor_rendering || !pal_colormaps) { return; }
+
+  colormaps32 = pal_colormaps[palette_index];
+
+  V_SetCurrentColormap(0);
+
+  ST_refreshBackground();
+}
+
+void V_SetCurrentColormap(const int colormap_index)
+{
+  if (truecolor_rendering)
+  {
+    fullcolormap32 = colormaps32[colormap_index];
+  }
+  else
+  {
+    fullcolormap = colormaps[colormap_index];
+  }
+}
+
 // HUD/menu shadows ----------------------------------------------------------
 
 boolean hud_menu_shadows;
@@ -348,7 +405,7 @@ static byte *translation1, *translation2;
 static void (*drawcolfunc)(const patch_column_t *patchcol);
 
 #define DRAW_COLUMN(NAME, SRCPIXEL)                                           \
-    static void DrawPatchColumn##NAME(const patch_column_t *patchcol)         \
+    static void DrawPatchColumn8##NAME(const patch_column_t *patchcol)        \
     {                                                                         \
         int count = patchcol->y2 - patchcol->y1 + 1;                          \
                                                                               \
@@ -362,7 +419,7 @@ static void (*drawcolfunc)(const patch_column_t *patchcol);
                     patchcol->y2, patchcol->x);                               \
         }                                                                     \
                                                                               \
-        byte *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);       \
+        pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);    \
                                                                               \
         const fixed_t fracstep = patchcol->step;                              \
         fixed_t frac =                                                        \
@@ -391,6 +448,12 @@ DRAW_COLUMN(TRTR, translation2[translation1[source[frac >> FRACBITS]]])
 DRAW_COLUMN(TL, tranmap[(*dest << 8) + source[frac >> FRACBITS]])
 DRAW_COLUMN(TRTL, tranmap[(*dest << 8) + translation[source[frac >> FRACBITS]]])
 
+static void (*DrawPatchColumn)(const patch_column_t *patchcol) = NULL;
+static void (*DrawPatchColumnTR)(const patch_column_t *patchcol) = NULL;
+static void (*DrawPatchColumnTRTR)(const patch_column_t *patchcol) = NULL;
+static void (*DrawPatchColumnTL)(const patch_column_t *patchcol) = NULL;
+static void (*DrawPatchColumnTRTL)(const patch_column_t *patchcol) = NULL;
+
 // [Nugget] /-----------------------------------------------------------------
 
 DRAW_COLUMN(TRTRTL, tranmap[(*dest << 8) + translation2[translation1[source[frac >> FRACBITS]]]])
@@ -405,7 +468,76 @@ DRAW_COLUMN(
   ]
 )
 
+static void (*DrawPatchColumnTRTRTL)(const patch_column_t *patchcol) = NULL;
+static void (*DrawPatchColumnTranslucent2)(const patch_column_t *patchcol) = NULL;
+
 static int crop_y1 = 0, crop_y1l = 0, crop_y2 = 0, crop_y2l = 0;
+
+// [Nugget] -----------------------------------------------------------------/
+
+// [Nugget] True-color rendering /--------------------------------------------
+
+#define DRAW_COLUMN32(NAME, SRCPIXEL)                                         \
+    static void DrawPatchColumn32##NAME(const patch_column_t *patchcol)       \
+    {                                                                         \
+        int count = patchcol->y2 - patchcol->y1 + 1;                          \
+                                                                              \
+        if (count <= 0)                                                       \
+            return;                                                           \
+                                                                              \
+        if ((unsigned int)patchcol->x >= (unsigned int)video.width            \
+            || (unsigned int)patchcol->y1 >= (unsigned int)video.height)      \
+        {                                                                     \
+            I_Error("DrawColumn" #NAME ": %i to %i at %i", patchcol->y1,      \
+                    patchcol->y2, patchcol->x);                               \
+        }                                                                     \
+                                                                              \
+        pixel32_t *dest = V_ADDRESS(dest_screen32, patchcol->x, patchcol->y1); \
+                                                                              \
+        const fixed_t fracstep = patchcol->step;                              \
+        fixed_t frac =                                                        \
+            patchcol->frac + ((patchcol->y1 * fracstep) & FRACMASK);          \
+                                                                              \
+        const byte *source = patchcol->source;                                \
+                                                                              \
+        while ((count -= 2) >= 0)                                             \
+        {                                                                     \
+            *dest = V_IndexToRGB(SRCPIXEL);                                   \
+            dest += linesize;                                                 \
+            frac += fracstep;                                                 \
+            *dest = V_IndexToRGB(SRCPIXEL);                                   \
+            dest += linesize;                                                 \
+            frac += fracstep;                                                 \
+        }                                                                     \
+        if (count & 1)                                                        \
+        {                                                                     \
+            *dest = V_IndexToRGB(SRCPIXEL);                                   \
+        }                                                                     \
+    }
+
+DRAW_COLUMN32(, source[frac >> FRACBITS])
+DRAW_COLUMN32(TR, translation[source[frac >> FRACBITS]])
+DRAW_COLUMN32(TRTR, translation2[translation1[source[frac >> FRACBITS]]])
+DRAW_COLUMN32(TL, tranmap[V_TranMapRowFromRGB(*dest) + source[frac >> FRACBITS]])
+DRAW_COLUMN32(TRTL, tranmap[V_TranMapRowFromRGB(*dest) + translation[source[frac >> FRACBITS]]])
+
+DRAW_COLUMN32(
+  TRTRTL,
+  tranmap[
+    V_TranMapRowFromRGB(*dest)
+  + translation2[translation1[source[frac >> FRACBITS]]]
+  ]
+)
+
+DRAW_COLUMN32(
+  Translucent2,
+  tranmap[
+    V_TranMapRowFromRGB(*dest)
+  + (translation2 ? translation2[translation1[source[frac >> FRACBITS]]] :
+     translation1 ?              translation1[source[frac >> FRACBITS]]  :
+                                              source[frac >> FRACBITS]   )
+  ]
+)
 
 // [Nugget] -----------------------------------------------------------------/
 
@@ -805,21 +937,45 @@ void V_DrawPatchFullScreen(patch_t *patch)
     DrawPatchInternal(x, 0, patch, false);
 }
 
-void V_ShadeScreen(const int level) // [Nugget]
-{
-    const byte *darkcolormap = &colormaps[0][level * 256];
+void (*V_ShadeScreen)(int level) = NULL;
 
-    byte *row = dest_screen;
+static void V_ShadeScreen8(const int level) // [Nugget]
+{
+    const lighttable_t *darkcolormap = &colormaps[0][level * 256];
+
+    pixel_t *row = dest_screen;
     int height = video.height;
 
     while (height--)
     {
         int width = video.width;
-        byte *col = row;
+        pixel_t *col = row;
 
         while (width--)
         {
-            *col = darkcolormap[*col];
+           *col = darkcolormap[*col];
+            ++col;
+        }
+
+        row += linesize;
+    }
+}
+
+static void V_ShadeScreen32(const int level) // [Nugget]
+{
+    const lighttable32_t *darkcolormap = &colormaps32[0][level * 256 << COLORMAP_ROW_SHIFT_BITS];
+
+    pixel32_t *row = dest_screen32;
+    int height = video.height;
+
+    while (height--)
+    {
+        int width = video.width;
+        pixel32_t *col = row;
+
+        while (width--)
+        {
+           *col = darkcolormap[V_IndexFromRGB(*col)];
             ++col;
         }
 
@@ -878,7 +1034,9 @@ static void ScaleClippedRect(vrect_t *rect)
     rect->sh = y2lookup[rect->cy2] - rect->sy + 1;
 }
 
-void V_FillRect(int x, int y, int width, int height, byte color)
+void (*V_FillRect)(int x, int y, int width, int height, pixel_t color) = NULL;
+
+static void V_FillRect8(int x, int y, int width, int height, pixel_t color)
 {
     vrect_t dstrect;
 
@@ -897,7 +1055,7 @@ void V_FillRect(int x, int y, int width, int height, byte color)
 
     ScaleClippedRect(&dstrect);
 
-    byte *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+    pixel_t *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
     while (dstrect.sh--)
     {
@@ -906,8 +1064,12 @@ void V_FillRect(int x, int y, int width, int height, byte color)
     }
 }
 
-// [Nugget]
-void V_ShadowRect(int x, int y, int width, int height)
+static void V_FillRect32(int x, int y, int width, int height, pixel_t color)
+{
+  V_FillRectRGB(x, y, width, height, V_IndexToRGB(color));
+}
+
+void V_FillRectRGB(int x, int y, int width, int height, pixel32_t color)
 {
     vrect_t dstrect;
 
@@ -926,13 +1088,45 @@ void V_ShadowRect(int x, int y, int width, int height)
 
     ScaleClippedRect(&dstrect);
 
-    byte *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+    pixel32_t *dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+
+    while (dstrect.sh--)
+    {
+        V_RGBSet(dest, color, dstrect.sw);
+        dest += linesize;
+    }
+}
+
+// [Nugget] /-----------------------------------------------------------------
+
+void (*V_ShadowRect)(int x, int y, int width, int height) = NULL;
+
+void V_ShadowRect8(int x, int y, int width, int height)
+{
+    vrect_t dstrect;
+
+    dstrect.x = x;
+    dstrect.y = y;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    ClipRect(&dstrect);
+
+    // clipped away completely?
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    ScaleClippedRect(&dstrect);
+
+    pixel_t *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
     while (dstrect.sh--)
     {
         for (int x = 0;  x < dstrect.sw;  x++)
         {
-          byte *const d = &dest[x];
+          pixel_t *const d = &dest[x];
 
           *d = shadow_tranmap[*d << 8];
         }
@@ -940,6 +1134,42 @@ void V_ShadowRect(int x, int y, int width, int height)
         dest += linesize;
     }
 }
+
+void V_ShadowRect32(int x, int y, int width, int height)
+{
+    vrect_t dstrect;
+
+    dstrect.x = x;
+    dstrect.y = y;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    ClipRect(&dstrect);
+
+    // clipped away completely?
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    ScaleClippedRect(&dstrect);
+
+    pixel32_t *dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+
+    while (dstrect.sh--)
+    {
+        for (int x = 0;  x < dstrect.sw;  x++)
+        {
+          pixel32_t *const d = &dest[x];
+
+          *d = V_IndexToRGB(shadow_tranmap[V_TranMapRowFromRGB(*d)]);
+        }
+
+        dest += linesize;
+    }
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 //
 // V_CopyRect
@@ -953,7 +1183,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
                 int destx, int desty)
 {
     vrect_t srcrect, dstrect;
-    byte *src, *dest;
+    pixel_t *src, *dest;
     int usew, useh;
 
 #ifdef RANGECHECK
@@ -1010,6 +1240,67 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
     }
 }
 
+void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
+                  int destx, int desty)
+{
+    vrect_t srcrect, dstrect;
+    pixel32_t *src, *dest;
+    int usew, useh;
+
+#ifdef RANGECHECK
+    if (srcx + width < 0 || srcy + height < 0 || srcx >= video.unscaledw
+        || srcy >= SCREENHEIGHT || destx + width < 0 || desty + height < 0
+        || destx >= video.unscaledw || desty >= SCREENHEIGHT)
+    {
+        I_Error("Bad V_CopyRect");
+    }
+#endif
+
+    srcrect.x = srcx;
+    srcrect.y = srcy;
+    srcrect.w = width;
+    srcrect.h = height;
+
+    ClipRect(&srcrect);
+
+    // clipped away completely?
+    if (srcrect.cw <= 0 || srcrect.ch <= 0)
+    {
+        return;
+    }
+
+    ScaleClippedRect(&srcrect);
+
+    dstrect.x = destx;
+    dstrect.y = desty;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    ClipRect(&dstrect);
+
+    // clipped away completely?
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    ScaleClippedRect(&dstrect);
+
+    // use the smaller of the two scaled rect widths / heights
+    usew = (srcrect.sw < dstrect.sw ? srcrect.sw : dstrect.sw);
+    useh = (srcrect.sh < dstrect.sh ? srcrect.sh : dstrect.sh);
+
+    src = V_ADDRESS(source, srcrect.sx, srcrect.sy);
+    dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+
+    while (useh--)
+    {
+        V_RGBCopy(dest, src, usew);
+        src += linesize;
+        dest += linesize;
+    }
+}
+
 //
 // V_DrawBlock
 //
@@ -1021,8 +1312,8 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
 
 void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
 {
-    const byte *source;
-    byte *dest;
+    const pixel_t *source;
+    pixel_t *dest;
     vrect_t dstrect;
 
     dstrect.x = x;
@@ -1051,7 +1342,7 @@ void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
         int w;
         fixed_t xfrac, yfrac;
         int xtex, ytex;
-        byte *row;
+        pixel_t *row;
 
         yfrac = 0;
 
@@ -1075,9 +1366,67 @@ void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
     }
 }
 
-void V_TileBlock64(int line, int width, int height, const byte *src)
+void V_DrawBlock32(int x, int y, int width, int height, pixel32_t *src)
 {
-    byte *dest, *row;
+    const pixel32_t *source;
+    pixel32_t *dest;
+    vrect_t dstrect;
+
+    dstrect.x = x;
+    dstrect.y = y;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    ClipRect(&dstrect);
+
+    // clipped away completely?
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    // change in origin due to clipping
+    int dx = dstrect.cx1 - x;
+    int dy = dstrect.cy1 - y;
+
+    ScaleClippedRect(&dstrect);
+
+    source = src + dy * width + dx;
+    dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+
+    {
+        int w;
+        fixed_t xfrac, yfrac;
+        int xtex, ytex;
+        pixel32_t *row;
+
+        yfrac = 0;
+
+        while (dstrect.sh--)
+        {
+            row = dest;
+            w = dstrect.sw;
+            xfrac = 0;
+            ytex = (yfrac >> FRACBITS) * width;
+
+            while (w--)
+            {
+                xtex = (xfrac >> FRACBITS);
+                *row++ = source[ytex + xtex];
+                xfrac += video.xstep;
+            }
+
+            dest += linesize;
+            yfrac += video.ystep;
+        }
+    }
+}
+
+void (*V_TileBlock64)(int line, int width, int height, const byte *src) = NULL;
+
+static void V_TileBlock64_8(int line, int width, int height, const byte *src)
+{
+    pixel_t *dest, *row;
     fixed_t xfrac, yfrac;
     int xtex, ytex, h;
     vrect_t dstrect;
@@ -1113,6 +1462,44 @@ void V_TileBlock64(int line, int width, int height, const byte *src)
     }
 }
 
+static void V_TileBlock64_32(int line, int width, int height, const byte *src)
+{
+    pixel32_t *dest, *row;
+    fixed_t xfrac, yfrac;
+    int xtex, ytex, h;
+    vrect_t dstrect;
+
+    dstrect.x = 0;
+    dstrect.y = line;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    V_ScaleRect(&dstrect);
+
+    h = dstrect.sh;
+    yfrac = dstrect.sy * video.ystep;
+
+    dest = dest_screen32;
+
+    while (h--)
+    {
+        int w = dstrect.sw;
+        row = dest;
+        xfrac = 0;
+        ytex = ((yfrac >> FRACBITS) & 63) << 6;
+
+        while (w--)
+        {
+            xtex = (xfrac >> FRACBITS) & 63;
+            *row++ = V_IndexToRGB(src[ytex + xtex]);
+            xfrac += video.xstep;
+        }
+
+        dest += linesize;
+        yfrac += video.ystep;
+    }
+}
+
 //
 // V_GetBlock
 //
@@ -1123,9 +1510,9 @@ void V_TileBlock64(int line, int width, int height, const byte *src)
 // No return value
 //
 
-void V_GetBlock(int x, int y, int width, int height, byte *dest)
+void V_GetBlock(int x, int y, int width, int height, pixel_t *dest)
 {
-    byte *src;
+    pixel_t *src;
 
 #ifdef RANGECHECK
     if (x < 0 || x + width > video.width || y < 0 || y + height > video.height)
@@ -1144,11 +1531,32 @@ void V_GetBlock(int x, int y, int width, int height, byte *dest)
     }
 }
 
+void V_GetBlock32(int x, int y, int width, int height, pixel32_t *dest)
+{
+    pixel32_t *src;
+
+#ifdef RANGECHECK
+    if (x < 0 || x + width > video.width || y < 0 || y + height > video.height)
+    {
+        I_Error("Bad V_GetBlock");
+    }
+#endif
+
+    src = V_ADDRESS(dest_screen32, x, y);
+
+    while (height--)
+    {
+        V_RGBCopy(dest, src, width);
+        src += linesize;
+        dest += width;
+    }
+}
+
 // [FG] non hires-scaling variant of V_DrawBlock, used in disk icon drawing
 
-void V_PutBlock(int x, int y, int width, int height, byte *src)
+void V_PutBlock(int x, int y, int width, int height, pixel_t *src)
 {
-    byte *dest;
+    pixel_t *dest;
 
 #ifdef RANGECHECK
     if (x < 0 || x + width > video.width || y < 0 || y + height > video.height)
@@ -1162,6 +1570,27 @@ void V_PutBlock(int x, int y, int width, int height, byte *src)
     while (height--)
     {
         memcpy(dest, src, width);
+        dest += linesize;
+        src += width;
+    }
+}
+
+void V_PutBlock32(int x, int y, int width, int height, pixel32_t *src)
+{
+    pixel32_t *dest;
+
+#ifdef RANGECHECK
+    if (x < 0 || x + width > video.width || y < 0 || y + height > video.height)
+    {
+        I_Error("Bad V_PutBlock");
+    }
+#endif
+
+    dest = V_ADDRESS(dest_screen32, x, y);
+
+    while (height--)
+    {
+        V_RGBCopy(dest, src, width);
         dest += linesize;
         src += width;
     }
@@ -1236,10 +1665,21 @@ void V_UseBuffer(pixel_t *buffer)
     dest_screen = buffer;
 }
 
+void V_UseBuffer32(pixel32_t *buffer)
+{
+    dest_screen32 = buffer;
+}
+
 // Restore screen buffer to the i_video screen buffer.
 
 void V_RestoreBuffer(void)
 {
+    if (truecolor_rendering)
+    {
+      dest_screen32 = I_VideoBuffer32;
+      return;
+    }
+
     dest_screen = I_VideoBuffer;
 }
 
@@ -1303,6 +1743,40 @@ void V_ScreenShot(void)
                  sfx_oof
                  : gamemode == commercial ? sfx_radio
                                           : sfx_tink, PITCH_NONE);
+}
+
+void V_InitColorFunctions(void)
+{
+    if (truecolor_rendering)
+    {
+        DrawPatchColumn = DrawPatchColumn32;
+        DrawPatchColumnTR = DrawPatchColumn32TR;
+        DrawPatchColumnTRTR = DrawPatchColumn32TRTR;
+        DrawPatchColumnTL = DrawPatchColumn32TL;
+        DrawPatchColumnTRTL = DrawPatchColumn32TRTL;
+        DrawPatchColumnTRTRTL = DrawPatchColumn32TRTRTL;
+        DrawPatchColumnTranslucent2 = DrawPatchColumn32Translucent2;
+
+        V_FillRect = V_FillRect32;
+        V_ShadeScreen = V_ShadeScreen32;
+        V_ShadowRect = V_ShadowRect32;
+        V_TileBlock64 = V_TileBlock64_32;
+    }
+    else
+    {
+        DrawPatchColumn = DrawPatchColumn8;
+        DrawPatchColumnTR = DrawPatchColumn8TR;
+        DrawPatchColumnTRTR = DrawPatchColumn8TRTR;
+        DrawPatchColumnTL = DrawPatchColumn8TL;
+        DrawPatchColumnTRTL = DrawPatchColumn8TRTL;
+        DrawPatchColumnTRTRTL = DrawPatchColumn8TRTRTL;
+        DrawPatchColumnTranslucent2 = DrawPatchColumn8Translucent2;
+
+        V_FillRect = V_FillRect8;
+        V_ShadeScreen = V_ShadeScreen8;
+        V_ShadowRect = V_ShadowRect8;
+        V_TileBlock64 = V_TileBlock64_8;
+    }
 }
 
 //----------------------------------------------------------------------------

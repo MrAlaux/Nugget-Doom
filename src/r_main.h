@@ -77,8 +77,8 @@ extern int MAXLIGHTZ;
 extern int LIGHTZSHIFT;
 
 // killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
-extern lighttable_t **(*scalelight);
-extern lighttable_t **(*zlight);
+extern cmapoffset_t *(*scalelight);
+extern cmapoffset_t *(*zlight);
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -87,6 +87,7 @@ void R_SmoothLight(void);
 
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
+extern lighttable32_t *fixedcolormap32;
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
@@ -177,11 +178,14 @@ int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
 
+// True-color rendering
+void R_InitColorFunctions(void);
+
 // Radial fog ----------------------------------------------------------------
 
 extern int light_distance_shift_bits;
 
-extern lighttable_t **planezlight;
+extern cmapoffset_t *planezlight;
 extern uint16_t **planedistlight, *spandistlight;
 
 extern boolean do_radial_fog;

@@ -1483,13 +1483,7 @@ static void G_DoLoadLevel(void)
   R_ClearShake();
 
   // Alt. intermission background
-  if (WI_AltInterpicOn())
-  {
-    R_SetViewSize(screenblocks);
-    R_ExecuteSetViewSize();
-
-    WI_DisableAltInterpic();
-  }
+  if (WI_AltInterpicOn()) { WI_DisableAltInterpic(); }
 
   // Freecam -----------------------------------------------------------------
 
@@ -3439,11 +3433,8 @@ static boolean DoLoadGame(boolean do_load_autosave)
   // This is called before the countdown decrement in `G_Ticker()`, so add 1 to keep it aligned
   G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE)));
 
-  if (setsizeneeded)
-    R_ExecuteSetViewSize();
-
-  // draw the pattern into the back screen
-  R_FillBackScreen();
+  // [Nugget] True color: remove `R_ExecuteSetViewSize()`
+  // and `R_FilLBackScreen()` calls from here
 
   // killough 12/98: support -recordfrom and -loadgame -playdemo
   if (!command_loadgame)
@@ -3870,10 +3861,6 @@ static void G_DoRewind(void)
   }
 
   keyframe_rw = false;
-
-  if (setsizeneeded) { R_ExecuteSetViewSize(); }
-
-  R_FillBackScreen(); // draw the pattern into the back screen
 
   displaymsg("Restored key frame %i", keyframe_index);
 
