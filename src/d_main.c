@@ -307,9 +307,6 @@ void D_Display (void)
       wipe_StartScreen(0, 0, video.width, video.height);
     }
 
-  if (R_InitColorPending())
-  { R_InitColormaps(); }
-
   if (!wipe)
     {
       if (resetneeded)
@@ -317,6 +314,9 @@ void D_Display (void)
       else if (gamestate == GS_LEVEL)
         I_DynamicResolution();
     }
+
+  if (R_InitColorPending())
+  { R_InitColormaps(); }
 
   if (setsmoothlight)
     R_SmoothLight();
@@ -2440,6 +2440,8 @@ void D_DoomMain(void)
 
   D_SetSavegameDirectory();
 
+  V_InitColorTranslation(); //jff 4/24/98 load color translation lumps
+
   // killough 2/22/98: copyright / "modified game" / SPA banners removed
 
   // Ty 04/08/98 - Add 5 lines of misc. data, only if nonblank
@@ -2475,10 +2477,6 @@ void D_DoomMain(void)
 
   I_Printf(VB_INFO, "M_Init: Init miscellaneous info.");
   M_Init();
-
-  V_InitPalsColors();
-
-  V_InitColorTranslation(); //jff 4/24/98 load color translation lumps
 
   I_Printf(VB_INFO, "R_Init: Init DOOM refresh daemon - ");
   R_Init();

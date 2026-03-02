@@ -1045,9 +1045,13 @@ void R_InitColormaps(void)
 
     for (i = 1;  i < numcolormaps;  i++)
     { colormaps[i] = W_CacheLumpNum(firstcolormaplump + i, PU_STATIC); }
-  }
 
-  truecolor_rendering = cvar_truecolor_rendering;
+    // [FG] dark/shaded color translation table
+    cr_dark = (byte *) &colormaps[0][256*15];
+    cr_shaded = (byte *) &colormaps[0][256*6];
+
+    memcpy(invul_orig, &colormaps[0][256*32], 256);
+  }
 
   if (truecolor_rendering && !pal_colormaps)
   {
@@ -1081,12 +1085,7 @@ void R_InitColormaps(void)
   }
   else { InitColormaps8(); }
 
-  memcpy(invul_orig, &colormaps[0][256*32], 256);
   R_InvulMode();
-
-  // [FG] dark/shaded color translation table
-  cr_dark = (byte *) &colormaps[0][256*15];
-  cr_shaded = (byte *) &colormaps[0][256*6];
 
   init_color = false;
 }

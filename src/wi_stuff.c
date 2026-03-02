@@ -435,6 +435,8 @@ boolean WI_AltInterpicOn(void)
 void WI_DisableAltInterpic(void)
 {
   old_alt_interpic_on = alt_interpic_on = false;
+
+  R_SetViewSize(screenblocks);
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -2503,12 +2505,8 @@ void WI_Ticker(void)
   {
     old_alt_interpic_on = alt_interpic_on;
 
-    if (!alt_interpic_on)
-    { R_SetViewSize(screenblocks); }
-
-    R_ExecuteSetViewSize();
+    R_SetViewSize(alt_interpic_on ? 11 : screenblocks);
   }
-
 }
 
 // ====================================================================

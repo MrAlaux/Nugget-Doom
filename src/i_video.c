@@ -59,6 +59,7 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "r_data.h"
 #include "r_segs.h"
 #include "r_things.h"
 
@@ -104,9 +105,24 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
-truecolor_t truecolor_rendering, cvar_truecolor_rendering;
+truecolor_t truecolor_rendering = TRUECOLOR_OFF,
+            cvar_truecolor_rendering;
 
 static void InitColorFunctions(void);
+
+static void InitColor(void)
+{
+    if (truecolor_rendering != cvar_truecolor_rendering)
+    {
+        truecolor_rendering = cvar_truecolor_rendering;
+
+        R_DeferredInitColor();
+        setsmoothlight = true;
+        setsizeneeded = true;
+    }
+
+    InitColorFunctions();
+}
 
 static const char *sdl_renderdriver = "";
 
@@ -1166,16 +1182,13 @@ void I_SetPalette(byte *palette)
 {
     if (truecolor_rendering)
     {
-        static int old_gamma, old_red = -1, old_green, old_blue, old_saturation, old_contrast;
+        static int old_gamma, old_red, old_green, old_blue, old_saturation, old_contrast;
 
         if (old_gamma != gamma2
             || old_red != red_intensity || old_green != green_intensity || old_blue != blue_intensity
             || old_saturation != color_saturation || old_contrast != color_contrast)
         {
-            // If this is the first time the function is called, we've already initialized
-            // and don't have to do it again just yet
-            if (old_red != -1)
-            { V_InitPalsColors(); }
+            V_InitPalsColors();
 
             old_gamma = gamma2;
             old_red = red_intensity;
@@ -2091,9 +2104,9 @@ void I_ResetScreen(void)
 {
     resetneeded = false;
 
-    widescreen = default_widescreen;
+    InitColor();
 
-    InitColorFunctions();
+    widescreen = default_widescreen;
 
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
@@ -2129,7 +2142,7 @@ void I_InitGraphics(void)
     I_InitVideoParms();
     I_InitGraphicsMode(); // killough 10/98
 
-    InitColorFunctions();
+    InitColor();
 
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);

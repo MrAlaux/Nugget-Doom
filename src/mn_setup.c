@@ -2788,9 +2788,6 @@ static void UpdateSmoothLightItem(void);
 static void InitColor(void)
 {
     resetneeded = true;
-    R_DeferredInitColor();
-    setsmoothlight = true;
-    setsizeneeded = true;
 
     UpdateSmoothLightItem();
 }

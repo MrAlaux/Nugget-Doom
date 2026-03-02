@@ -1356,10 +1356,6 @@ void R_ExecuteSetViewSize (void)
 
   setsizeneeded = false;
 
-  // [Nugget] Alt. intermission background
-  if (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)
-  { setblocks = 11; }
-
   if (setblocks == 11)
     {
       scaledviewwidth_nonwide = NONWIDEWIDTH;
@@ -1752,7 +1748,8 @@ void R_SetupFrame (player_t *player)
   {
     static int oldtic = -1;
 
-    if (oldtic != gametic) {
+    if (oldtic != gametic)
+    {
       old_interangle = viewangle = target_interangle;
       target_interangle += ANG1;
     }

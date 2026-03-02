@@ -304,7 +304,7 @@ void V_ClearPatchCrop(void)
 
 // True color ----------------------------------------------------------------
 
-int *palcolors, palscolors[14][256];
+int *palcolors = NULL, palscolors[14][256];
 
 void V_InitPalsColors(void)
 {
@@ -332,7 +332,7 @@ void V_SetPalColors(const int palette_index)
 {
   palcolors = palscolors[palette_index];
 
-  if (!truecolor_rendering) { return; }
+  if (!truecolor_rendering || !pal_colormaps) { return; }
 
   colormaps32 = pal_colormaps[palette_index];
 
