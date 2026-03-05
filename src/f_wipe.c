@@ -138,6 +138,7 @@ static int wipe_exit(int width, int height, int ticks)
 {
     if (truecolor_rendering)
     {
+        // [Nugget] Copy end screen to framebuffer
         V_PutBlock32(0, 0, width, height, wipe_scr32_end);
 
         Z_Free(wipe_scr32_start);
@@ -145,6 +146,7 @@ static int wipe_exit(int width, int height, int ticks)
     }
     else
     {
+        // [Nugget] Copy end screen to framebuffer
         V_PutBlock(0, 0, width, height, wipe_scr_end);
 
         Z_Free(wipe_scr_start);

@@ -977,7 +977,7 @@ void R_InitSpriteLumps(void)
 //
 
 invul_mode_t invul_mode;
-static lighttable_t invul_orig[256];
+static byte invul_orig[256];
 
 void R_InvulMode(void)
 {

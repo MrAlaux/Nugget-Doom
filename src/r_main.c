@@ -1976,6 +1976,7 @@ void R_SetupFrame (player_t *player)
         for (i=0 ; i<MAXLIGHTSCALE ; i++)
           scalelightfixed[i] = fixedcolormapoffset;
 
+        // [Nugget] Set `dc_colormap` here
         dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
       }
     else
@@ -1995,6 +1996,7 @@ void R_SetupFrame (player_t *player)
         for (i=0 ; i<MAXLIGHTSCALE ; i++)
           scalelightfixed[i] = fixedcolormapoffset;
 
+        // [Nugget] Set `dc_colormap` here
         dc_colormap[0] = dc_colormap[1] = fixedcolormap;
       }
     else
