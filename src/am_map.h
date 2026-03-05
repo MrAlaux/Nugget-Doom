@@ -31,6 +31,8 @@ enum automapmode_e; // [Nugget]
 // CVARs
 extern boolean fancy_teleport;
 
+void AM_InitColorFunctions(void);
+
 void AM_ChangeMode(enum automapmode_e mode);
 
 void AM_UpdateMinimap(

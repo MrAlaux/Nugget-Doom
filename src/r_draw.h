@@ -24,6 +24,8 @@
 #include "m_fixed.h"
 
 extern lighttable_t *dc_colormap[2];
+extern lighttable32_t *dc_colormap32[2];
+
 extern int      dc_x;
 extern int      dc_yl;
 extern int      dc_yh;
@@ -45,7 +47,7 @@ extern void (*R_DrawFuzzColumn)(void);    // The Spectre/Invisibility effect.
 
 // [Nugget] Sprite shadows
 void R_InitShadowTranMap(void);
-void R_DrawColumnShadow(void);
+extern void (*R_DrawColumnShadow)(void);
 
 // [crispy] draw fuzz effect independent of rendering frame rate
 void R_SetFuzzPosTic(void);
@@ -66,7 +68,7 @@ void R_SetFuzzColumnMode(void);
 // [Nugget - ceski] Selective fuzz darkening
 extern boolean fuzzdark_mode;
 
-void R_DrawSkyColumn(void);
+extern void (*R_DrawSkyColumn)(void);
 void R_DrawSkyColumnMasked(void);
 
 // Draw with color translation tables, for player sprite rendering,
@@ -75,6 +77,7 @@ void R_DrawSkyColumnMasked(void);
 extern void (*R_DrawTranslatedColumn)(void);
 
 extern lighttable_t *ds_colormap[2];
+extern lighttable32_t *ds_colormap32[2];
 
 extern int     ds_y;
 extern int     ds_x1;
@@ -111,6 +114,8 @@ void R_DrawViewBorder(void);
 void R_InitBufferRes(void);
 
 void R_InitDrawFunctions(void);
+
+void R_InitDrawColorFunctions(void);
 
 #endif
 

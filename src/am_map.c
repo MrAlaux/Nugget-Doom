@@ -1645,16 +1645,36 @@ void AM_Ticker (void)
 //
 // Clear automap frame buffer.
 //
-static void AM_clearFB(int color)
+
+static void (*AM_clearFB)(int color) = NULL;
+
+static void AM_clearFB8(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
 
   int h = f_h;
-  byte *src = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+  pixel_t *dest = I_VideoBuffer + ((f_y * video.pitch) + f_x);
+
   while (h--)
   {
-    memset(src, color, f_w);
-    src += video.pitch;
+    memset(dest, color, f_w);
+    dest += video.pitch;
+  }
+}
+
+static void AM_clearFB32(int color)
+{
+  // [Nugget] Minimap: take `f_x` and `f_y` into account
+
+  int h = f_h;
+  pixel32_t *dest = I_VideoBuffer32 + ((f_y * video.pitch) + f_x);
+
+  const pixel32_t color32 = V_IndexToRGB(color);
+
+  while (h--)
+  {
+    V_RGBSet(dest, color32, f_w);
+    dest += video.pitch;
   }
 }
 
@@ -1803,11 +1823,39 @@ static boolean AM_clipMline
 }
 #undef DOOUTCODE
 
-// [Nugget] Factored out
-static inline void PUTDOT(int xx, const int yy, const int cc)
+// [Nugget] /=================================================================
+
+// Factored out --------------------------------------------------------------
+
+static void (*PUTDOT)(int xx, int yy, int cc) = NULL;
+
+static void PUTDOT8(const int xx, const int yy, const int cc)
 {
-  I_VideoBuffer[(yy) * video.pitch + (xx)] = (cc);
+  I_VideoBuffer[(yy) * video.pitch + (xx)] = cc;
 }
+
+static void PUTDOT32(const int xx, const int yy, const int cc)
+{
+  I_VideoBuffer32[(yy) * video.pitch + (xx)] = V_IndexToRGB(cc);
+}
+
+// ---------------------------------------------------------------------------
+
+static void (*PutLine)(int x, int y, int dx, int color) = NULL;
+
+static void PutLine8(const int x, const int y, const int dx, const int color)
+{
+  pixel_t *const dest = I_VideoBuffer + (y * video.pitch) + x;
+  memset(dest, color, dx);
+}
+
+static void PutLine32(const int x, const int y, const int dx, const int color)
+{
+  pixel32_t *const dest = I_VideoBuffer32 + (y * video.pitch) + x;
+  V_IndexSet(dest, color, dx);
+}
+
+// [Nugget] =================================================================/
 
 
 //
@@ -1868,8 +1916,7 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
       dx = -dx;
     }
 
-    pixel_t *const dest = I_VideoBuffer + (y * video.pitch) + x;
-    memset(dest, color, dx);
+    PutLine(x, y, dx, color);
 
     return;
   }
@@ -1913,9 +1960,12 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 //
 // haleyjd 06/13/09: Pixel plotter for Wu line drawing.
 //
-static void AM_putWuDot(int x, int y, int color, int weight)
+
+static void (*AM_putWuDot)(int x, int y, int color, int weight) = NULL;
+
+static void AM_putWuDot8(int x, int y, int color, int weight)
 {
-   byte *dest = &I_VideoBuffer[y * video.pitch + x];
+   pixel_t *dest = &I_VideoBuffer[y * video.pitch + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
    unsigned int fg, bg;
@@ -1924,6 +1974,19 @@ static void AM_putWuDot(int x, int y, int color, int weight)
    bg = bg2rgb[*dest];
    fg = (fg + bg) | 0x1f07c1f;
    *dest = RGB32k[0][0][fg & (fg >> 15)];
+}
+
+static void AM_putWuDot32(int x, int y, int color, int weight)
+{
+   pixel32_t *dest = &I_VideoBuffer32[y * video.pitch + x];
+   unsigned int *fg2rgb = Col2RGB8[weight];
+   unsigned int *bg2rgb = Col2RGB8[64 - weight];
+   unsigned int fg, bg;
+
+   fg = fg2rgb[color];
+   bg = bg2rgb[V_IndexFromRGB(*dest)];
+   fg = (fg + bg) | 0x1f07c1f;
+   *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
 }
 
 
@@ -3046,28 +3109,54 @@ static void AM_drawCrosshair(int color)
 
 // [Nugget] /-----------------------------------------------------------------
 
+static void (*AM_shadeMinimap)(void) = NULL;
+
+static void AM_shadeMinimap8(void)
+{
+  const lighttable_t *const colormap = colormaps[0] + (automap_overlay_darkening * 256);
+
+  const int pitch = video.pitch,
+            width = f_x2 - f_x;
+
+  pixel_t       *           row = I_VideoBuffer + (f_y * pitch + f_x);
+  pixel_t const *const last_row = row + ((f_y2 - f_y) * pitch);
+
+  for (; row < last_row;  row += pitch)
+  {
+    pixel_t *           pixel = row;
+    pixel_t *const last_pixel = pixel + width;
+
+    for (; pixel < last_pixel;  pixel++)
+    { *pixel = colormap[*pixel]; }
+  }
+}
+
+static void AM_shadeMinimap32(void)
+{
+  const lighttable32_t *const colormap = colormaps32[0] + ((automap_overlay_darkening<<CRSB) * 256);
+
+  const int pitch = video.pitch,
+            width = f_x2 - f_x;
+
+  pixel32_t       *           row = I_VideoBuffer32 + (f_y * pitch + f_x);
+  pixel32_t const *const last_row = row + ((f_y2 - f_y) * pitch);
+
+  for (; row < last_row;  row += pitch)
+  {
+    pixel32_t *           pixel = row;
+    pixel32_t *const last_pixel = pixel + width;
+
+    for (; pixel < last_pixel;  pixel++)
+    { *pixel = colormap[V_IndexFromRGB(*pixel)]; }
+  }
+}
+
 void AM_shadeScreen(void)
 {
   // Minimap
   if (automapactive == AM_MINI)
   {
-    const lighttable_t *const colormap = colormaps[0] + (automap_overlay_darkening * 256);
-
-    const int pitch = video.pitch,
-              width = f_x2 - f_x;
-
-    pixel_t       *           row = I_VideoBuffer + (f_y * pitch + f_x);
-    pixel_t const *const last_row = row + ((f_y2 - f_y) * pitch);
-
-    for (; row < last_row;  row += pitch)
-    {
-      pixel_t *           pixel = row;
-      pixel_t *const last_pixel = pixel + width;
-
-      for (; pixel < last_pixel;  pixel++)
-      { *pixel = colormap[*pixel]; }
-    }
-
+    AM_shadeMinimap();
     return;
   }
 
@@ -3211,6 +3300,26 @@ void AM_ColorPreset(void)
   }
 
   ST_ResetTitle();
+}
+
+// [Nugget] True color
+void AM_InitColorFunctions(void)
+{
+  if (truecolor_rendering)
+  {
+    AM_clearFB = AM_clearFB32;
+    AM_putWuDot = AM_putWuDot32;
+    AM_shadeMinimap = AM_shadeMinimap32;
+    PUTDOT = PUTDOT32;
+    PutLine = PutLine32;
+  }
+  else {
+    AM_clearFB = AM_clearFB8;
+    AM_putWuDot = AM_putWuDot8;
+    AM_shadeMinimap = AM_shadeMinimap8;
+    PUTDOT = PUTDOT8;
+    PutLine = PutLine8;
+  }
 }
 
 void AM_BindAutomapVariables(void)

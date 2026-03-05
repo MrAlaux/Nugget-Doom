@@ -58,6 +58,11 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "r_data.h"
+#include "r_segs.h"
+#include "r_things.h"
+
 #include "spng.h"
 
 // [FG] set the application icon
@@ -99,6 +104,22 @@ static int video_display = 0; // display index
 static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
+
+static void InitColorFunctions(void);
+
+static void InitColor(void)
+{
+    if (truecolor_rendering != cvar_truecolor_rendering)
+    {
+        truecolor_rendering = cvar_truecolor_rendering;
+
+        R_DeferredInitColor();
+        setsmoothlight = true;
+        setsizeneeded = true;
+    }
+
+    InitColorFunctions();
+}
 
 static const char *sdl_renderdriver = "";
 
@@ -925,19 +946,26 @@ void I_FinishUpdate(void)
 // I_ReadScreen
 //
 
-void I_ReadScreen(byte *dst)
+void I_ReadScreen(pixel_t *dst)
 {
     V_GetBlock(0, 0, video.width, video.height, dst);
+}
+
+void I_ReadScreen32(pixel32_t *dst)
+{
+    V_GetBlock32(0, 0, video.width, video.height, dst);
 }
 
 //
 // killough 10/98: init disk icon
 //
 
+static void (*I_InitDiskFlash)(void) = NULL;
+
 static pixel_t *diskflash, *old_data;
 static vrect_t disk;
 
-static void I_InitDiskFlash(void)
+static void I_InitDiskFlash8(void)
 {
     pixel_t *temp;
 
@@ -967,6 +995,38 @@ static void I_InitDiskFlash(void)
     Z_Free(temp);
 }
 
+static pixel32_t *diskflash32, *old_data32;
+
+static void I_InitDiskFlash32(void)
+{
+    pixel32_t *temp;
+
+    disk.x = 0;
+    disk.y = 0;
+    disk.w = 16;
+    disk.h = 16;
+
+    V_ScaleRect(&disk);
+
+    temp = Z_Malloc(disk.sw * disk.sh * sizeof(*temp), PU_STATIC, 0);
+
+    if (diskflash32)
+    {
+        Z_Free(diskflash32);
+        Z_Free(old_data32);
+    }
+
+    diskflash32 = Z_Malloc(disk.sw * disk.sh * sizeof(*diskflash32), PU_STATIC, 0);
+    old_data32 = Z_Malloc(disk.sw * disk.sh * sizeof(*old_data32), PU_STATIC, 0);
+
+    V_GetBlock32(0, 0, disk.sw, disk.sh, temp);
+    V_DrawPatch(-video.deltaw, 0, V_CachePatchName("STDISK", PU_CACHE));
+    V_GetBlock32(0, 0, disk.sw, disk.sh, diskflash32);
+    V_PutBlock32(0, 0, disk.sw, disk.sh, temp);
+
+    Z_Free(temp);
+}
+
 //
 // killough 10/98: draw disk icon
 //
@@ -985,10 +1045,20 @@ static void I_DrawDiskIcon(void)
 
     if (disk_to_draw >= DISK_ICON_THRESHOLD)
     {
-        V_GetBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
-                   disk.sh, old_data);
-        V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
-                   disk.sh, diskflash);
+        if (truecolor_rendering)
+        {
+            V_GetBlock32(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                         disk.sh, old_data32);
+            V_PutBlock32(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                         disk.sh, diskflash32);
+        }
+        else
+        {
+            V_GetBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                       disk.sh, old_data);
+            V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                       disk.sh, diskflash);
+        }
 
         disk_to_restore = 1;
     }
@@ -1012,8 +1082,16 @@ static void I_RestoreDiskBackground(void)
 
     if (disk_to_restore)
     {
-        V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
-                   disk.sh, old_data);
+        if (truecolor_rendering)
+        {
+            V_PutBlock32(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                         disk.sh, old_data32);
+        }
+        else
+        {
+            V_PutBlock(video.width - disk.sw, video.height - disk.sh, disk.sw,
+                       disk.sh, old_data);
+        }
 
         disk_to_restore = 0;
     }
@@ -1053,19 +1131,12 @@ const float I_SaturationPercent[101] =
     0
 };
 
-void I_SetPalette(byte *palette)
+// [Nugget] Factored out from `I_SetPalette()`
+void I_GetPalette(byte *const colors, const byte *palette)
 {
-    // haleyjd
-    int i;
     const byte *const gamma = gammatable[gamma2];
-    SDL_Color colors[256];
 
-    if (noblit) // killough 8/11/98
-    {
-        return;
-    }
-
-    for (i = 0; i < 256; ++i)
+    for (int i = 0;  i < 256;  i++)
     {
         // [Nugget] Color settings
 
@@ -1099,9 +1170,69 @@ void I_SetPalette(byte *palette)
         a_lo = 0.0f + a_lo;
 
         // Calculate final color values
-        colors[i].r = (a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]);
-        colors[i].g = (a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]);
-        colors[i].b = (a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]);
+        colors[(i * 3) + 0] = (a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]);
+        colors[(i * 3) + 1] = (a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]);
+        colors[(i * 3) + 2] = (a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]);
+    }
+}
+
+void I_SetPalette(byte *palette)
+{
+    if (truecolor_rendering)
+    {
+        static int old_gamma, old_red, old_green, old_blue, old_saturation, old_contrast;
+
+        if (old_gamma != gamma2
+            || old_red != red_intensity || old_green != green_intensity || old_blue != blue_intensity
+            || old_saturation != color_saturation || old_contrast != color_contrast)
+        {
+            V_InitPalsColors();
+
+            old_gamma = gamma2;
+            old_red = red_intensity;
+            old_green = green_intensity;
+            old_blue = blue_intensity;
+            old_saturation = color_saturation;
+            old_contrast = color_contrast;
+        }
+
+        V_SetPalColors((palette - (byte *) W_CacheLumpName("PLAYPAL", PU_CACHE)) / 768);
+
+        if (vga_porch_flash)
+        {
+            // "flash" the pillars/letterboxes with palette changes,
+            // emulating VGA "porch" behaviour
+            SDL_SetRenderDrawColor(
+                renderer,
+                V_RedFromRGB(palcolors[0]),
+                V_GreenFromRGB(palcolors[0]),
+                V_BlueFromRGB(palcolors[0]),
+                SDL_ALPHA_OPAQUE
+            );
+        }
+
+        return;
+    }
+
+    // haleyjd
+    int i;
+    SDL_Color colors[256];
+
+    if (noblit) // killough 8/11/98
+    {
+        return;
+    }
+
+    // [Nugget] Factored out obtainment of colors
+
+    byte playpal_colors[768];
+    I_GetPalette(playpal_colors, palette);
+
+    for (i = 0; i < 256; ++i)
+    {
+        colors[i].r = playpal_colors[(i * 3) + 0];
+        colors[i].g = playpal_colors[(i * 3) + 1];
+        colors[i].b = playpal_colors[(i * 3) + 2];
 
         colors[i].a = 0xffu;
     }
@@ -1885,10 +2016,22 @@ static void CreateSurfaces(int w, int h)
         SDL_FreeSurface(screenbuffer);
     }
 
-    screenbuffer = SDL_CreateRGBSurface(0, w, h, 8, 0, 0, 0, 0);
-    SDL_FillRect(screenbuffer, NULL, 0);
+    if (truecolor_rendering)
+    {
+      screenbuffer = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
+      SDL_SetSurfaceBlendMode(screenbuffer, SDL_BLENDMODE_NONE);
+      SDL_FillRect(screenbuffer, NULL, 0);
 
-    I_VideoBuffer = screenbuffer->pixels;
+      I_VideoBuffer32 = screenbuffer->pixels;
+    }
+    else
+    {
+      screenbuffer = SDL_CreateRGBSurface(0, w, h, 8, 0, 0, 0, 0);
+      SDL_FillRect(screenbuffer, NULL, 0);
+
+      I_VideoBuffer = screenbuffer->pixels;
+    }
+
     V_RestoreBuffer();
 
     if (argbbuffer != NULL)
@@ -1961,6 +2104,8 @@ void I_ResetScreen(void)
 {
     resetneeded = false;
 
+    InitColor();
+
     widescreen = default_widescreen;
 
     ResetResolution(GetCurrentVideoHeight(), true);
@@ -1996,6 +2141,9 @@ void I_InitGraphics(void)
 
     I_InitVideoParms();
     I_InitGraphicsMode(); // killough 10/98
+
+    InitColor();
+
     ResetResolution(GetCurrentVideoHeight(), true);
     CreateSurfaces(video.pitch, video.height);
     ResetLogicalSize();
@@ -2007,8 +2155,35 @@ void I_InitGraphics(void)
     I_ResetRelativeMouseState();
 }
 
+static void InitColorFunctions(void)
+{
+    if (truecolor_rendering)
+    {
+        I_InitDiskFlash = I_InitDiskFlash32;
+    }
+    else
+    {
+        I_InitDiskFlash = I_InitDiskFlash8;
+    }
+
+    AM_InitColorFunctions();
+    R_InitColorFunctions();
+    R_InitDrawColorFunctions();
+    R_InitDrawFunctions();
+    R_InitPlanesColorFunctions();
+    R_InitSegsColorFunctions();
+    R_InitThingsColorFunctions();
+    R_SetFuzzColumnMode();
+    V_InitColorFunctions();
+    VX_SetVoxelRenderingMode();
+}
+
 void I_BindVideoVariables(void)
 {
+    M_BindNum("truecolor_rendering", &cvar_truecolor_rendering, NULL,
+              TRUECOLOR_OFF, TRUECOLOR_OFF, NUM_TRUECOLOR-1, ss_gen, wad_no,
+              "True-color rendering (0 = Off; 1 = Hybrid; 2 = Full)");
+
     M_BindNum("current_video_height", &default_current_video_height,
               &current_video_height, 600, 200, UL, ss_none, wad_no,
               "Vertical resolution");

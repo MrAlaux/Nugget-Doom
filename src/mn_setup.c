@@ -373,6 +373,7 @@ enum
 
     // [Nugget] --------------------------------------------------------------
 
+    str_truecolor,
     str_bobbing_style,
     str_force_carousel,
     str_crosshair_lockon,
@@ -2778,6 +2779,19 @@ static setup_tab_t gen_tabs[] = {
     {NULL}
 };
 
+static const char *truecolor_strings[] = {
+  "Off", "Hybrid", "Full"
+};
+
+static void UpdateSmoothLightItem(void);
+
+static void InitColor(void)
+{
+    resetneeded = true;
+
+    UpdateSmoothLightItem();
+}
+
 static int resolution_scale;
 
 static const char **GetResolutionScaleStrings(void)
@@ -2912,7 +2926,10 @@ void MN_ResetGamma(void)
 
 static setup_menu_t gen_settings1[] = {
 
-    // [Nugget] These first three items now report
+    {"True-color Rendering", S_CHOICE, CNTR_X, M_SPC, {"truecolor_rendering"},
+     .strings_id = str_truecolor, .action = InitColor},
+
+    // [Nugget] The following three items now report
     // the current resolution when sitting on them
 
     {"Resolution Scale", S_THERMO | S_THRM_SIZE11 | S_ACTION | S_RES, CNTR_X,
@@ -2947,7 +2964,8 @@ static setup_menu_t gen_settings1[] = {
     {"FOV", S_THERMO | S_THRM_SIZE11, CNTR_X, M_THRM_SPC, {"fov"},
      .action = UpdateFOV},
 
-    {"Gamma Correction", S_THERMO, CNTR_X, M_THRM_SPC, {"gamma2"},
+    // [Nugget] S_ACTION
+    {"Gamma Correction", S_THERMO|S_ACTION, CNTR_X, M_THRM_SPC, {"gamma2"},
      .strings_id = str_gamma, .action = MN_ResetGamma},
 
     {"Extra Lighting", S_THERMO | S_STRICT, CNTR_X,
@@ -3828,6 +3846,12 @@ static setup_menu_t gen_settings5[] = {
     MI_END
 };
 
+// [Nugget]
+static void UpdateSmoothLightItem(void)
+{
+  DisableItem(cvar_truecolor_rendering, gen_settings5, "smoothlight");
+}
+
 const char *default_skill_strings[] = {
     // dummy first option because defaultskill is 1-based
     "", "ITYTD", "HNTR", "HMP", "UV", "NM", "Custom" // [Nugget] Custom Skill
@@ -4073,11 +4097,11 @@ void SetPalette(void)
 
 static setup_menu_t display_settings2[] = {
 
-    {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
-    {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
-    {"Blue Intensity",  S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"blue_intensity"},   .action = SetPalette},
-    {"Saturation",      S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_saturation"}, .action = SetPalette},
-    {"Contrast",        S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_contrast"},   .action = SetPalette},
+    {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
+    {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
+    {"Blue Intensity",  S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"blue_intensity"},   .action = SetPalette},
+    {"Saturation",      S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"color_saturation"}, .action = SetPalette},
+    {"Contrast",        S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"color_contrast"},   .action = SetPalette},
 
     MI_END
 };
@@ -5877,6 +5901,7 @@ static const char **selectstrings[] = {
 
     // [Nugget] --------------------------------------------------------------
 
+    truecolor_strings,
     bobbing_style_strings,
     force_carousel_strings,
     crosshair_lockon_strings,
@@ -6006,6 +6031,7 @@ void MN_SetupResetMenu(void)
     DisableItem(!(extra_gibbing[EXGIB_FIST] || extra_gibbing[EXGIB_CSAW] || extra_gibbing[EXGIB_SSG]),
                 enem_settings1, "extra_gibbing");
 
+    UpdateSmoothLightItem();
     UpdateVerticalLockonItem();
     UpdatePaletteItems();
     MN_UpdateDoom1SSGItem();

@@ -92,6 +92,7 @@
 // [Nugget]
 #include <time.h>
 #include "m_nughud.h"
+#include "r_data.h"
 
 // DEHacked support - Ty 03/09/97
 // killough 10/98:
@@ -314,6 +315,9 @@ void D_Display (void)
         I_DynamicResolution();
     }
 
+  if (R_InitColorPending())
+  { R_InitColormaps(); }
+
   if (setsmoothlight)
     R_SmoothLight();
 
@@ -330,6 +334,11 @@ void D_Display (void)
 
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
+
+  // [Nugget] True color: brought from below
+  // clean up border stuff
+  if (gamestate != oldgamestate && gamestate != GS_LEVEL)
+    I_SetPalette (W_CacheLumpName ("PLAYPAL",PU_CACHE));
 
   switch (gamestate)                // do buffered drawing
     {
@@ -354,9 +363,7 @@ void D_Display (void)
   if (gamestate == GS_LEVEL && gametic)
       R_RenderPlayerView(&players[displayplayer]);
 
-  // clean up border stuff
-  if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-    I_SetPalette (W_CacheLumpName ("PLAYPAL",PU_CACHE));
+  // [Nugget] True color: moved "border stuff" code above
 
   // see if the border needs to be initially drawn
   if (gamestate == GS_LEVEL && oldgamestate != GS_LEVEL)
