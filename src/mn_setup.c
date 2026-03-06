@@ -4177,15 +4177,15 @@ static const char *page_ticking_strings[] = {
 
 static setup_menu_t misc_settings1[] = {
 
-    {"Sound Hearing Distance",  S_CHOICE|S_STRICT,            N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
-    {"One-Key Quick-Save/Load", S_ONOFF,                      N_X, M_SPC, {"one_key_saveload"}},
-    {"Auto Save Interval (S)",  S_NUM,                        N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
-    {"Rewind Interval (S)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
-    {"Rewind Depth",            S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
+    {"Sound Hearing Distance",      S_CHOICE|S_STRICT,            N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
+    {"One-Key Quick-Save/Load",     S_ONOFF,                      N_X, M_SPC, {"one_key_saveload"}},
+    {"Auto Save Interval (S)",      S_NUM,                        N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
+    {"Rewind Interval (S)",         S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
+    {"Rewind Depth",                S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
     {"Rewind Frame Timeout (MS)",   S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_frame_timeout"}, .action = G_EnableRewind},
     {"Rewind 4-Frame Timeout (MS)", S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_multiframe_timeout"}, .action = G_EnableRewind},
-    {"Play Internal Demos",     S_CHOICE,                     N_X, M_SPC, {"no_page_ticking"}, .strings_id = str_page_ticking},
-    {"Quick \"Quit Game\"",     S_ONOFF,                      N_X, M_SPC, {"quick_quitgame"}},
+    {"Play Internal Demos",         S_CHOICE,                     N_X, M_SPC, {"no_page_ticking"}, .strings_id = str_page_ticking},
+    {"Quick \"Quit Game\"",         S_ONOFF,                      N_X, M_SPC, {"quick_quitgame"}},
 
     MI_END
 };
