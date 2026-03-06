@@ -101,6 +101,12 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **_Auto Save Interval_** setting, for periodic auto saves
 - **Rewinding** [i.b. DSDA-Doom]
+  - _Rewind Interval_ : number of seconds between key frames
+  - _Rewind Depth_: number of maximum key frames to store; when exceeded, the oldest key frame is deleted to make room for the new one; set to 0 to disable rewinding
+  - _Rewind Frame Timeout_: number of maximum milliseconds that the game can spend storing a single key frame; if exceeded, storing of further key frames is stopped
+  - _Rewind 4-Frame Timeout_: number of maximum milliseconds that the game can have spent storing the last 4 key frames; if exceeded, storing of further key frames is stopped
+  - The _Frame Timeout_ can be set to a higher value to allow flukes in key-frame storage time, while the _4-Frame Timeout_ stops storing if it is consistently slow
+  - If stopped, storing can be restarted by attempting to rewind or by changing any of the settings above
 - **_Play Internal Demos_** setting, to control whether or not to play demos built into WADs
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]

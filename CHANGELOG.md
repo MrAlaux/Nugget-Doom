@@ -4,6 +4,11 @@
 - **_Radial Fog_** setting
 - **_[Crosshair] Health/Ammo Bars_** setting
 - **_Translucent [Weapon] When Invisible_** setting
+- **_Rewind 4-Frame Timeout_** setting
+  - Consequently, renamed _Rewind Timeout_ to _Rewind Frame Timeout_, changed its CVAR accordingly [^1],
+    and increased its maximum value to 50 milliseconds
+  - With this, the _Frame Timeout_ can be increased to prevent storing from being stopped due to flukes,
+    while the _4-Frame Timeout_ can stop storing if it is consistently slow
 - **NUGHUD Weapon icon**
 - **Pressing _Place [Automap] Mark_ while over a mark now changes that mark's color**
 - Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen**
@@ -33,3 +38,5 @@
 - **Wrong message when clearing specific automap marks**
 - **_[Crosshair] Horizontal-Autoaim Indicators_ not being cleared when activating freecam**
 - **_Air Absorption_ menu item not being disabled when the _Sound Module_ weren't set to _OpenAL 3D_**
+
+[^1]: This might affect existing config files.

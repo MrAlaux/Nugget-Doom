@@ -4182,7 +4182,8 @@ static setup_menu_t misc_settings1[] = {
     {"Auto Save Interval (S)",  S_NUM,                        N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
     {"Rewind Interval (S)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
     {"Rewind Depth",            S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
-    {"Rewind Timeout (MS)",     S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_timeout"}, .action = G_EnableRewind},
+    {"Rewind Frame Timeout (MS)",   S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_frame_timeout"}, .action = G_EnableRewind},
+    {"Rewind 4-Frame Timeout (MS)", S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_multiframe_timeout"}, .action = G_EnableRewind},
     {"Play Internal Demos",     S_CHOICE,                     N_X, M_SPC, {"no_page_ticking"}, .strings_id = str_page_ticking},
     {"Quick \"Quit Game\"",     S_ONOFF,                      N_X, M_SPC, {"quick_quitgame"}},
 

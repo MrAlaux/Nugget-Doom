@@ -162,7 +162,8 @@ void G_SetAutoSaveCountdown(int value)
 
 int rewind_interval;
 static int rewind_depth;
-static int rewind_timeout;
+static int rewind_frame_timeout;
+static int rewind_multiframe_timeout;
 
 static boolean keyframe_rw = false;
 
@@ -179,6 +180,12 @@ typedef struct keyframe_s
 static keyframe_t *keyframe_list_head = NULL, *keyframe_list_tail = NULL;
 
 static int keyframe_index = -1;
+
+// Change menu item and CVAR description accordingly if this is changed
+#define LAST_KEYFRAME_TIMES_COUNT_MAX 4
+
+static int last_keyframe_times[LAST_KEYFRAME_TIMES_COUNT_MAX] = {0},
+           last_keyframe_times_count = 0;
 
 // Slow Motion ---------------------------------------------------------------
 
@@ -3684,7 +3691,34 @@ static void G_SaveKeyFrame(void)
     keyframe_index--;
   }
 
-  if (rewind_timeout && (rewind_timeout < (I_GetTimeMS() - start_time)))
+  const int store_time = I_GetTimeMS() - start_time;
+
+  if (last_keyframe_times_count >= LAST_KEYFRAME_TIMES_COUNT_MAX)
+  {
+    memmove(
+      last_keyframe_times,
+      last_keyframe_times + 1,
+      sizeof(*last_keyframe_times) * (LAST_KEYFRAME_TIMES_COUNT_MAX-1)
+    );
+
+    last_keyframe_times_count--;
+  }
+
+  last_keyframe_times[last_keyframe_times_count++] = store_time;
+
+  boolean timed_out = rewind_frame_timeout && rewind_frame_timeout < store_time;
+
+  if (!timed_out && rewind_multiframe_timeout && last_keyframe_times_count > 1)
+  {
+    int total_store_time = 0;
+
+    for (int i = 0;  i < last_keyframe_times_count;  i++)
+    { total_store_time += last_keyframe_times[i]; }
+
+    timed_out = rewind_multiframe_timeout < total_store_time;
+  }
+
+  if (timed_out)
   {
     displaymsg("Slow key-framing: storing stopped");
     rewind_on = false;
@@ -3872,6 +3906,9 @@ static void G_DoRewind(void)
 void G_EnableRewind(void)
 {
   rewind_on = true;
+
+  memset(last_keyframe_times, 0, sizeof(*last_keyframe_times) * LAST_KEYFRAME_TIMES_COUNT_MAX);
+  last_keyframe_times_count = 0;
 }
 
 void G_Rewind(void)
@@ -3881,9 +3918,10 @@ void G_Rewind(void)
   G_EnableRewind();
 
   if (0 <= keyframe_index)
-  { gameaction = ga_rewind; }
-  else
-  { displaymsg("No key frame found"); }
+  {
+    gameaction = ga_rewind;
+  }
+  else { displaymsg("No key frame found"); }
 }
 
 void G_ClearExcessKeyFrames(void)
@@ -6165,9 +6203,13 @@ void G_BindGameVariables(void)
             60, 0, 3000, ss_misc, wad_no,
             "Number of rewind key-frames to be stored (0 = No rewinding)");
 
-  M_BindNum("rewind_timeout", &rewind_timeout, NULL,
-            10, 0, 25, ss_misc, wad_no,
-            "Max. time to store a key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
+  M_BindNum("rewind_frame_timeout", &rewind_frame_timeout, NULL,
+            10, 0, 50, ss_misc, wad_no,
+            "Max. time to store a single key frame, in milliseconds; if exceeded, storing will stop (0 = No limit)");
+
+  M_BindNum("rewind_multiframe_timeout", &rewind_multiframe_timeout, NULL,
+            100, 0, 250, ss_misc, wad_no,
+            "Max. time to store the last 4 key frames, in milliseconds (0 = No limit)");
 }
 
 void G_BindEnemVariables(void)
