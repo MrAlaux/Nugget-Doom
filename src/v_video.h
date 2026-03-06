@@ -209,7 +209,7 @@ typedef enum truecolor_e {
 
 extern truecolor_t truecolor_rendering, cvar_truecolor_rendering;
 
-extern int *palcolors, palscolors[14][256];
+extern int *palcolors, **palscolors;
 
 void V_InitPalsColors(void);
 void V_SetPalColors(const int palette_index);

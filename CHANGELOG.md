@@ -2,6 +2,7 @@
 
 - **_True-color Rendering_** setting
 - **_Radial Fog_** setting
+- **_Smooth Palette Tinting_** setting
 - **_[Crosshair] Health/Ammo Bars_** setting
 - **_Translucent [Weapon] When Invisible_** setting
 - **_Rewind 4-Frame Timeout_** setting

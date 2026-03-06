@@ -105,6 +105,101 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
+static boolean smooth_palette_tinting;
+
+boolean I_SmoothPaletteTinting(void)
+{
+  return smooth_palette_tinting;
+}
+
+static byte **palettes = NULL;
+static int num_palettes = 0;
+
+static boolean init_palettes_pending = false;
+
+int I_GetNumPalettes(void)
+{
+  return num_palettes;
+}
+
+void I_DeferredInitPalettes(void)
+{
+  init_palettes_pending = true;
+}
+
+static void InitPalettes(void)
+{
+  init_palettes_pending = false;
+
+  if (palettes)
+  {
+    Z_Free(palettes[0]);
+    Z_Free(palettes);
+
+    palettes = NULL;
+  }
+
+  // 98 == 64 red palettes + 32 bonus palettes + base palette + radsuit palette
+  num_palettes = smooth_palette_tinting ? 98 : 14;
+
+  palettes = Z_Malloc(sizeof(*palettes) * num_palettes, PU_STATIC, 0);
+
+  byte *const all_palettes = Z_Malloc(sizeof(**palettes) * 768 * num_palettes, PU_STATIC, 0);
+
+  const byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
+
+  for (int i = 0;  i < num_palettes;  i++)
+  { palettes[i] = all_palettes + 768*i; }
+
+  if (smooth_palette_tinting)
+  {
+    // Base palette
+    memcpy(palettes[0], playpal, sizeof(**palettes) * 768);
+
+    // Pain and bonus palettes
+    for (int i = 1;  i <= 12;  i++)
+    {
+      byte
+        *const  current_palette = palettes[i * 8],
+        *const previous_palette = (i != 9) // Index 9 is the first bonus palette
+                                ? palettes[(i - 1) * 8]
+                                : palettes[0];
+
+      // Copy original tinted palette
+      memcpy(current_palette, playpal + 768*i, sizeof(*current_palette) * 768);
+
+      // Generate interpolated palettes in between
+      for (int j = 1;  j <= 7;  j++)
+      {
+        byte *const palette = current_palette - 768 * (8 - j);
+
+        const double factor = (double) j / 8;
+
+        for (int k = 0;  k < 768;  k++)
+        {
+          #define LERP(a, b, factor) ( \
+            (a) + ((int) (b) - (a)) * (factor) \
+          )
+
+          const int component = LERP(previous_palette[k], current_palette[k], factor);
+
+          palette[k] = BETWEEN(0, 255, component);
+
+          #undef LERP
+        }
+      }
+    }
+
+    // Radsuit palette
+    memcpy(palettes[97], playpal + 768*13, sizeof(**palettes) * 768);
+  }
+  else {
+    memcpy(*palettes, playpal, sizeof(**palettes) * 768 * 14);
+  }
+
+  truecolor_rendering = -1; // Init color
+}
+
 static void InitColorFunctions(void);
 
 static void InitColor(void)
@@ -1132,8 +1227,9 @@ const float I_SaturationPercent[101] =
 };
 
 // [Nugget] Factored out from `I_SetPalette()`
-void I_GetPalette(byte *const colors, const byte *palette)
+void I_GetPalette(byte *const colors, const byte palette_index)
 {
+    const byte *palette = palettes[palette_index];
     const byte *const gamma = gammatable[gamma2];
 
     for (int i = 0;  i < 256;  i++)
@@ -1176,27 +1272,28 @@ void I_GetPalette(byte *const colors, const byte *palette)
     }
 }
 
-void I_SetPalette(byte *palette)
+void I_SetPalette(byte palette_index) // [Nugget] Pass index
 {
     if (truecolor_rendering)
     {
-        static int old_gamma, old_red, old_green, old_blue, old_saturation, old_contrast;
+        static int old_palettes, old_red, old_green, old_blue, old_gamma, old_saturation, old_contrast;
 
-        if (old_gamma != gamma2
+        if (old_palettes != num_palettes
             || old_red != red_intensity || old_green != green_intensity || old_blue != blue_intensity
-            || old_saturation != color_saturation || old_contrast != color_contrast)
+            || old_gamma != gamma2 || old_saturation != color_saturation || old_contrast != color_contrast)
         {
             V_InitPalsColors();
 
-            old_gamma = gamma2;
+            old_palettes = num_palettes;
             old_red = red_intensity;
             old_green = green_intensity;
             old_blue = blue_intensity;
+            old_gamma = gamma2;
             old_saturation = color_saturation;
             old_contrast = color_contrast;
         }
 
-        V_SetPalColors((palette - (byte *) W_CacheLumpName("PLAYPAL", PU_CACHE)) / 768);
+        V_SetPalColors(palette_index);
 
         if (vga_porch_flash)
         {
@@ -1226,7 +1323,7 @@ void I_SetPalette(byte *palette)
     // [Nugget] Factored out obtainment of colors
 
     byte playpal_colors[768];
-    I_GetPalette(playpal_colors, palette);
+    I_GetPalette(playpal_colors, palette_index);
 
     for (i = 0; i < 256; ++i)
     {
@@ -2044,7 +2141,7 @@ static void CreateSurfaces(int w, int h)
     argbbuffer = SDL_CreateRGBSurfaceWithFormatFrom(
         NULL, w, h, 0, 0, SDL_PIXELFORMAT_ARGB8888);
 
-    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
+    I_SetPalette(0); // [Nugget] Pass index
 
     // [FG] create texture
 
@@ -2104,6 +2201,8 @@ void I_ResetScreen(void)
 {
     resetneeded = false;
 
+    // [Nugget]
+    if (init_palettes_pending) { InitPalettes(); }
     InitColor();
 
     widescreen = default_widescreen;
@@ -2142,6 +2241,8 @@ void I_InitGraphics(void)
     I_InitVideoParms();
     I_InitGraphicsMode(); // killough 10/98
 
+    // [Nugget]
+    InitPalettes();
     InitColor();
 
     ResetResolution(GetCurrentVideoHeight(), true);
@@ -2241,6 +2342,10 @@ void I_BindVideoVariables(void)
                wad_no, "Grab mouse during play");
 
     // [Nugget] --------------------------------------------------------------
+
+    M_BindBool("smooth_palette_tinting", &smooth_palette_tinting, NULL,
+               false, ss_display, wad_no,
+               "Smooth palette tinting");
 
     M_BindNum("red_intensity", &red_intensity, NULL,
               100, 0, 100, ss_display, wad_no,

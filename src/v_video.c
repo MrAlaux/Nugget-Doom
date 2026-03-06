@@ -306,18 +306,32 @@ void V_ClearPatchCrop(void)
 truecolor_t truecolor_rendering = TRUECOLOR_OFF,
             cvar_truecolor_rendering;
 
-int *palcolors = NULL, palscolors[14][256];
+int *palcolors = NULL, **palscolors = NULL;
 
 void V_InitPalsColors(void)
 {
-  const byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
-
-  for (int i = 0;  i < 14;  i++)
+  if (palscolors)
   {
-    int *const pc = palscolors[i];
+    Z_Free(palscolors[0]);
+    Z_Free(palscolors);
+
+    palscolors = NULL;
+  }
+
+  const int num_palettes = I_GetNumPalettes();
+
+  palscolors = Z_Malloc(sizeof(*palscolors) * num_palettes, PU_STATIC, 0);
+
+  int *const all_palcolors = Z_Malloc(
+    sizeof(**palscolors) * 256 * num_palettes, PU_STATIC, 0
+  );
+
+  for (int i = 0;  i < num_palettes;  i++)
+  {
+    int *const pc = palscolors[i] = all_palcolors + 256*i;
 
     byte colors[768];
-    I_GetPalette(colors, playpal + (768 * i));
+    I_GetPalette(colors, i);
 
     for (int j = 0;  j < 256;  j++)
     {

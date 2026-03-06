@@ -338,7 +338,7 @@ void D_Display (void)
   // [Nugget] True color: brought from below
   // clean up border stuff
   if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-    I_SetPalette (W_CacheLumpName ("PLAYPAL",PU_CACHE));
+    I_SetPalette (0); // [Nugget] Pass index
 
   switch (gamestate)                // do buffered drawing
     {

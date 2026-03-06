@@ -52,6 +52,7 @@
 
 // [Nugget]
 #include "hu_crosshair.h"
+#include "i_video.h"
 #include "st_widgets.h"
 
 // [Nugget] /=================================================================
@@ -992,7 +993,7 @@ void R_InvulMode(void)
 
     const byte *const invul_colormap = (mode == INVUL_GRAY) ? invul_gray : invul_orig;
 
-    for (int i = 0;  i < 14;  i++)
+    for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
       pixel32_t *dest = &pal_colormaps[i][0][256 * (32<<CRSB)];
       const pixel_t *src = invul_colormap;
@@ -1054,21 +1055,11 @@ void R_InitColormaps(void)
     memcpy(invul_orig, &colormaps[0][256*32], 256);
   }
 
-  if (truecolor_rendering && !pal_colormaps)
-  {
-    pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * 14, PU_STATIC, 0);
+  static int num_palettes = 0;
 
-    for (i = 0;  i < 14;  i++)
-    {
-      pal_colormaps[i] = Z_Malloc(sizeof(**pal_colormaps) * numcolormaps, PU_STATIC, 0);
-
-      for (int j = 0;  j < numcolormaps;  j++)
-      { pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0); }
-    }
-  }
-  else if (!truecolor_rendering && pal_colormaps)
+  if (pal_colormaps)
   {
-    for (i = 0;  i < 14;  i++)
+    for (i = 0;  i < num_palettes;  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       { Z_Free(pal_colormaps[i][j]); }
@@ -1078,6 +1069,21 @@ void R_InitColormaps(void)
 
     Z_Free(pal_colormaps);
     pal_colormaps = NULL;
+  }
+
+  num_palettes = I_GetNumPalettes();
+
+  if (truecolor_rendering && !pal_colormaps)
+  {
+    pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * num_palettes, PU_STATIC, 0);
+
+    for (i = 0;  i < num_palettes;  i++)
+    {
+      pal_colormaps[i] = Z_Malloc(sizeof(**pal_colormaps) * numcolormaps, PU_STATIC, 0);
+
+      for (int j = 0;  j < numcolormaps;  j++)
+      { pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0); }
+    }
   }
 
   if (truecolor_rendering)
@@ -1109,7 +1115,7 @@ static void InitColormaps8(void)
 static void InitColormaps32(void)
 {
   // Load original colormap rows
-  for (int i = 0;  i < 14;  i++)
+  for (int i = 0;  i < I_GetNumPalettes();  i++)
   {
     for (int j = 0;  j < numcolormaps;  j++)
     {
@@ -1135,7 +1141,7 @@ static void InitColormaps32(void)
   {
     // Shade rows after first one
 
-    for (int i = 0;  i < 14;  i++)
+    for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
@@ -1178,7 +1184,7 @@ static void InitColormaps32(void)
   {
     // Calculate intermediate colormap rows
 
-    for (int i = 0;  i < 14;  i++)
+    for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
@@ -1215,7 +1221,7 @@ static void InitColormaps32(void)
   {
     const int row_index = 256 * ((32<<CRSB) + 1);
 
-    for (int i = 0;  i < 14;  i++)
+    for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
       V_SetPalColors(i);
 

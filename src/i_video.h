@@ -56,7 +56,7 @@ void I_InitGraphics(void);
 void I_ShutdownGraphics(void);
 
 // Takes full 8 bit values.
-void I_SetPalette(byte *palette);
+void I_SetPalette(byte palette_index); // [Nugget] Pass index
 
 void I_FinishUpdate(void);
 
@@ -87,7 +87,10 @@ extern boolean screenvisible;
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
 
-void I_GetPalette(byte *colors, const byte *palette);
+boolean I_SmoothPaletteTinting(void);
+int I_GetNumPalettes(void);
+void I_DeferredInitPalettes(void);
+void I_GetPalette(byte *colors, const byte palette_index);
 
 // [Nugget] -----------------------------------------------------------------/
 

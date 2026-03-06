@@ -2157,7 +2157,8 @@ static void DoPaletteStuff(player_t *player)
         // being covered in goo by an attacking flemoid.
         if (gameversion == exe_chex)
         {
-            palette = RADIATIONPAL;
+            // [Nugget] Smooth palette tinting
+            palette = I_SmoothPaletteTinting() ? 97 : RADIATIONPAL;
         }
         else
         {
@@ -2172,6 +2173,10 @@ static void DoPaletteStuff(player_t *player)
                 palette >>= 1;
             }
             palette += STARTREDPALS - STRICTMODE(comp_unusedpals); // [Nugget]
+
+            // [Nugget] Smooth palette tinting
+            if (I_SmoothPaletteTinting())
+            { palette = 0 + MIN(64, damagecount); }
         }
     }
     else if (player->bonuscount)
@@ -2182,6 +2187,10 @@ static void DoPaletteStuff(player_t *player)
             palette = NUMBONUSPALS - 1 + STRICTMODE(comp_unusedpals); // [Nugget]
         }
         palette += STARTBONUSPALS - STRICTMODE(comp_unusedpals); // [Nugget]
+
+        // [Nugget] Smooth palette tinting
+        if (I_SmoothPaletteTinting())
+        { palette = 64 + MIN(32, player->bonuscount); }
     }
     // killough 7/14/98: beta version did not cause green palette
     else if (beta_emulation)
@@ -2191,7 +2200,8 @@ static void DoPaletteStuff(player_t *player)
     else if (POWER_RUNOUT(player->powers[pw_ironfeet])
              && !STRICTMODE(no_radsuit_tint)) // [Nugget]
     {
-        palette = RADIATIONPAL;
+        // [Nugget] Smooth palette tinting
+        palette = I_SmoothPaletteTinting() ? 97 : RADIATIONPAL;
     }
     else
     {
@@ -2201,10 +2211,7 @@ static void DoPaletteStuff(player_t *player)
     if (palette != oldpalette)
     {
         oldpalette = palette;
-        // haleyjd: must cast to byte *, arith. on void pointer is
-        // a GNU C extension
-        I_SetPalette((byte *)W_CacheLumpName("PLAYPAL", PU_CACHE)
-                     + palette * 768);
+        I_SetPalette(palette); // [Nugget] Pass index
     }
 }
 
@@ -2508,7 +2515,7 @@ const char **ST_StatusbarList(void)
 
 void ST_ResetPalette(void)
 {
-    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
+    I_SetPalette(0); // [Nugget] Pass index
 }
 
 // [FG] draw Time widget on intermission screen
