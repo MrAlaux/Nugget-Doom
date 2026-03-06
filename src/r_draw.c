@@ -281,8 +281,10 @@ static void DrawColumnShadow8(void)
 
     if (count <= 0) { return; }
 
+#ifdef RANGECHECK
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
+#endif
 
     pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
@@ -298,8 +300,10 @@ static void DrawColumnShadow32(void)
 
     if (count <= 0) { return; }
 
+#ifdef RANGECHECK
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
+#endif
 
     pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
 
