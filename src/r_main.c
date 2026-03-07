@@ -1931,7 +1931,7 @@ void R_SetupFrame (player_t *player)
   if (!(strictmode || a11y_weapon_flash))
     extralight = 0;
   else
-    extralight = player->extralight;
+    extralight = player->extralight * LIGHTBRIGHT;
 
   extralight += STRICTMODE(LIGHTBRIGHT * extra_level_brightness);
 
