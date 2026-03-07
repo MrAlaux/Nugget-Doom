@@ -341,7 +341,7 @@ void V_InitPalsColors(void)
     }
   }
 
-  R_DeferredInitColor();
+  R_DeferredInitColormaps();
 }
 
 void V_SetPalColors(const int palette_index)

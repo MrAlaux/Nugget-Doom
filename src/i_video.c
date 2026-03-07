@@ -125,6 +125,7 @@ int I_GetNumPalettes(void)
 void I_DeferredInitPalettes(void)
 {
   init_palettes_pending = true;
+  resetneeded = true;
 }
 
 static void InitPalettes(void)
@@ -197,21 +198,28 @@ static void InitPalettes(void)
     memcpy(*palettes, playpal, sizeof(**palettes) * 768 * 14);
   }
 
-  truecolor_rendering = -1; // Init color
+  R_DeferredInitColormaps();
+}
+
+static boolean init_color_pending = false;
+
+void I_DeferredInitColor(void)
+{
+  init_color_pending = true;
+  resetneeded = true;
 }
 
 static void InitColorFunctions(void);
 
 static void InitColor(void)
 {
-    if (truecolor_rendering != cvar_truecolor_rendering)
-    {
-        truecolor_rendering = cvar_truecolor_rendering;
+    init_color_pending = false;
 
-        R_DeferredInitColor();
-        setsmoothlight = true;
-        setsizeneeded = true;
-    }
+    truecolor_rendering = cvar_truecolor_rendering;
+
+    R_DeferredInitColormaps();
+    setsmoothlight = true;
+    setsizeneeded = true;
 
     InitColorFunctions();
 }
@@ -2203,7 +2211,7 @@ void I_ResetScreen(void)
 
     // [Nugget]
     if (init_palettes_pending) { InitPalettes(); }
-    InitColor();
+    if (init_color_pending)    { InitColor(); }
 
     widescreen = default_widescreen;
 

@@ -92,6 +92,8 @@ int I_GetNumPalettes(void);
 void I_DeferredInitPalettes(void);
 void I_GetPalette(byte *colors, const byte palette_index);
 
+void I_DeferredInitColor(void);
+
 // [Nugget] -----------------------------------------------------------------/
 
 extern int gamma2;

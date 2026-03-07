@@ -315,7 +315,7 @@ void D_Display (void)
         I_DynamicResolution();
     }
 
-  if (R_InitColorPending())
+  if (R_InitColormapsPending())
   { R_InitColormaps(); }
 
   if (setsmoothlight)

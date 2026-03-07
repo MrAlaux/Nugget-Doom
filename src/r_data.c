@@ -59,16 +59,16 @@
 
 // True color ----------------------------------------------------------------
 
-static boolean init_color = false;
+static boolean init_colormaps = false;
 
-boolean R_InitColorPending(void)
+boolean R_InitColormapsPending(void)
 {
-  return init_color;
+  return init_colormaps;
 }
 
-void R_DeferredInitColor(void)
+void R_DeferredInitColormaps(void)
 {
-  init_color = true;
+  init_colormaps = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1094,7 +1094,7 @@ void R_InitColormaps(void)
 
   R_InvulMode();
 
-  init_color = false;
+  init_colormaps = false;
 }
 
 static void InitColormaps8(void)

@@ -2787,8 +2787,7 @@ static void UpdateSmoothLightItem(void);
 
 static void InitColor(void)
 {
-    resetneeded = true;
-
+    I_DeferredInitColor();
     UpdateSmoothLightItem();
 }
 
@@ -4042,12 +4041,6 @@ void MN_DrawView(void)
 
 // Page 7: Display (1) -------------------------------------------------------
 
-static void InitPalettes(void)
-{
-    resetneeded = true;
-    I_DeferredInitPalettes();
-}
-
 static void RecalculateFakeContrast(void)
 {
   P_SegLengths(true);
@@ -4083,7 +4076,7 @@ setup_menu_t display_settings1[] = {
     {"No Berserk Tint",              S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_berserk_tint"}},
     {"No Radiation Suit Tint",       S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_radsuit_tint"}},
     {"Night-Vision Visor Effect",    S_ONOFF |S_STRICT,       N_X, M_SPC, {"nightvision_visor"}},
-    {"Smooth Palette Tinting",       S_ONOFF,                 N_X, M_SPC, {"smooth_palette_tinting"}, .action = InitPalettes},
+    {"Smooth Palette Tinting",       S_ONOFF,                 N_X, M_SPC, {"smooth_palette_tinting"}, .action = I_DeferredInitPalettes},
     {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
     {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
     {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
