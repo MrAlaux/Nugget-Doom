@@ -32,6 +32,7 @@
 - **Crash when loading a save with the minimap enabled right after launch**
 - **Potential crashes related to a state's sprite and frame indices exceeding their respective limits**
 - **Desync related to bullet puffs**
+- **Weapon disappearing if _Weapon Flash Sprite_ were disabled and the base sprite were blank**
 - **Weapon becoming completely translucent if translucent flashes were enabled and the base sprite were blank**
 - **Weapon flash lighting being weaker with _Smooth Diminishing Lighting_ enabled**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**

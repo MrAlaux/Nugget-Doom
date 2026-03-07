@@ -1597,20 +1597,23 @@ void R_DrawPlayerSprites(void)
   // if the base weapon sprite is blank
   // /------------------------------------------------------------------------
 
-  boolean weapon_not_blank = true;
+  boolean weapon_blank = false;
 
   {
     const state_t
       *const weapon_state = viewplayer->psprites[ps_weapon].state,
       *const  flash_state = viewplayer->psprites[ps_flash].state;
 
-    if (flash_state
-        && weapon_state
+    if (flash_state && weapon_state
         && R_GetActualSpriteHeight(weapon_state->sprite, weapon_state->frame)->height <= 0)
     {
-      weapon_not_blank = false;
+      weapon_blank = true;
     }
   }
+
+  // [crispy] A11Y number of player (first person) sprites to draw
+  const int num_psprites = (strictmode || a11y_weapon_pspr || weapon_blank)
+                           ? NUMPSPRITES : ps_flash;
 
   // [Nugget] ---------------------------------------------------------------/
 
@@ -1618,11 +1621,10 @@ void R_DrawPlayerSprites(void)
 
   // add all active psprites
   for (i=0, psp=viewplayer->psprites;
-       // [Nugget]: [crispy] A11Y number of player (first person) sprites to draw
-       i < ((strictmode || a11y_weapon_pspr) ? NUMPSPRITES : ps_flash);
+       i < num_psprites;
        i++,psp++)
     if (psp->state)
-      R_DrawPSprite (psp, i == ps_flash && weapon_not_blank); // [Nugget] Translucent flashes
+      R_DrawPSprite (psp, i == ps_flash && !weapon_blank); // [Nugget] Translucent flashes
 
   // [Nugget] Weapon voxels
   if (queued_weapon_voxels)
