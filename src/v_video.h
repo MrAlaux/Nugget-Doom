@@ -263,7 +263,7 @@ inline static pixel32_t V_LerpRGB(const pixel32_t a, const pixel32_t b, const do
     bb = V_BlueFromRGB(b);
 
   #define CALC(a, b, shift) ( \
-    (pixel32_t) ((a) + ((b) - (a)) * factor) << shift \
+    (pixel32_t) ((a) + ((int) (b) - (a)) * factor) << (shift) \
   )
 
   return ((factor >= 0.5 ? b : a) & PIXEL_INDEX_MASK)

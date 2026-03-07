@@ -1162,7 +1162,7 @@ static void InitColormaps32(void)
           const byte *const orig_colormap = colormaps[j];
           const int orig_colormap_row = (k / (1<<CRSB)) * 256;
 
-          const double factor = k / 247.0;
+          const double factor = k / 248.0;
 
           for (int m = 0;  m < 256;  m++)
           {
