@@ -1059,13 +1059,10 @@ void R_InitColormaps(void)
 
   if (pal_colormaps)
   {
-    for (i = 0;  i < num_palettes;  i++)
-    {
-      for (int j = 0;  j < numcolormaps;  j++)
-      { Z_Free(pal_colormaps[i][j]); }
+    Z_Free(pal_colormaps[0][0]);
 
-      Z_Free(pal_colormaps[i]);
-    }
+    for (i = 0;  i < num_palettes;  i++)
+    { Z_Free(pal_colormaps[i]); }
 
     Z_Free(pal_colormaps);
     pal_colormaps = NULL;
@@ -1075,6 +1072,10 @@ void R_InitColormaps(void)
 
   if (truecolor_rendering && !pal_colormaps)
   {
+    lighttable32_t *const all_pal_colormaps = Z_Malloc(
+      sizeof(***pal_colormaps) * num_palettes * numcolormaps * (256 * 258), PU_STATIC, 0
+    );
+
     pal_colormaps = Z_Malloc(sizeof(*pal_colormaps) * num_palettes, PU_STATIC, 0);
 
     for (i = 0;  i < num_palettes;  i++)
@@ -1082,7 +1083,7 @@ void R_InitColormaps(void)
       pal_colormaps[i] = Z_Malloc(sizeof(**pal_colormaps) * numcolormaps, PU_STATIC, 0);
 
       for (int j = 0;  j < numcolormaps;  j++)
-      { pal_colormaps[i][j] = Z_Malloc(sizeof(***pal_colormaps) * 256 * 258, PU_STATIC, 0); }
+      { pal_colormaps[i][j] = all_pal_colormaps + (i * numcolormaps + j) * (256 * 258); }
     }
   }
 
