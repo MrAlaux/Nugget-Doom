@@ -20,6 +20,11 @@
 - **Made hitscan attacks with a range greater than 192 units spawn hitscan trails** (was >= 128 units)
 - **Made the minimap be opened by quickly pressing the automap button twice**, replacing the dedicated button
 - **Made the minimap be closed upon dying**
+- **Rewind improvements:**
+  - Made storing of key frames resume upon changing levels
+  - Made storing stop if no rewind button is set
+  - Made "Slow key-framing" warning be colored red
+  - Fixed key-framing time misalignment when reenabling storing by changing _Rewind Depth_ or _Rewind Timeout_
 - **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees** (fixes blood coloring in SD21)
 - **Made the following cheats repeatable**:
   - `NEXTMAP`, `NEXTSECRET`, `SUMMONR`, `IDDF##`, `IDDET`, `MDK`

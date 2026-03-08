@@ -1605,7 +1605,7 @@ static setup_menu_t keys_settings7[] =
     MI_GAP,
     {"Toggle Crosshair",   S_INPUT,                     N_X, M_SPC, {0}, m_scrn, input_crosshair},
     MI_GAP,
-    {"Rewind",             S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_rewind},
+    {"Rewind",             S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_rewind, .action = G_EnableRewind},
 
     MI_GAP,
     {"Automap Keys", S_FUNC, N_X, M_SPC, .action = MN_MapKeys},
@@ -4153,12 +4153,6 @@ static void UpdateAutoSaveInterval(void)
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
 }
 
-static void UpdateRewindInterval(void)
-{
-  G_EnableRewind();
-  G_SetRewindCountdown((rewind_interval * TICRATE) - ((leveltime - 1) % (rewind_interval * TICRATE)));
-}
-
 static void UpdateRewindDepth(void)
 {
   G_EnableRewind();
@@ -4180,7 +4174,7 @@ static setup_menu_t misc_settings1[] = {
     {"Sound Hearing Distance",      S_CHOICE|S_STRICT,            N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
     {"One-Key Quick-Save/Load",     S_ONOFF,                      N_X, M_SPC, {"one_key_saveload"}},
     {"Auto Save Interval (S)",      S_NUM,                        N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval},
-    {"Rewind Interval (S)",         S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = UpdateRewindInterval},
+    {"Rewind Interval (S)",         S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_interval"}, .action = G_EnableRewind},
     {"Rewind Depth",                S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_depth"}, .action = UpdateRewindDepth},
     {"Rewind Frame Timeout (MS)",   S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_frame_timeout"}, .action = G_EnableRewind},
     {"Rewind 4-Frame Timeout (MS)", S_NUM   |S_STRICT|S_CRITICAL, N_X, M_SPC, {"rewind_multiframe_timeout"}, .action = G_EnableRewind},
@@ -5201,6 +5195,11 @@ static boolean BindInput(void)
     {
         M_InputRemoveActivated(input_id);
         SelectDone(current_item);
+
+        // [Nugget]
+        if (current_item->action)
+        { current_item->action(); }
+
         return true;
     }
 
@@ -5229,6 +5228,10 @@ static boolean BindInput(void)
     {
         return true;
     }
+
+    // [Nugget]
+    if (current_item->action)
+    { current_item->action(); }
 
     SelectDone(current_item); // phares 4/17/98
     return true;

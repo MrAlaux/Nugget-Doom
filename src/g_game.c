@@ -167,7 +167,7 @@ static int rewind_multiframe_timeout;
 
 static boolean keyframe_rw = false;
 
-static boolean rewind_on = true;
+static boolean rewind_on = false;
 static int rewind_countdown = 0;
 
 typedef struct keyframe_s
@@ -1469,8 +1469,14 @@ static void G_DoLoadLevel(void)
   // Periodic auto save
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
 
-  // Rewind
+  // Rewind ------------------------------------------------------------------
+
+  if (lastepisode != gameepisode || lastmap != gamemap)
+  { G_EnableRewind(); }
+
   G_SetRewindCountdown(0);
+
+  // -------------------------------------------------------------------------
 
   // Hide messages (but don't delete them outright)
   ST_HideMessages();
@@ -3708,9 +3714,11 @@ static void G_SaveKeyFrame(void)
 
   boolean timed_out = rewind_frame_timeout && rewind_frame_timeout < store_time;
 
-  if (!timed_out && rewind_multiframe_timeout && last_keyframe_times_count > 1)
+  int total_store_time = -1;
+
+  if (!timed_out && rewind_multiframe_timeout)
   {
-    int total_store_time = 0;
+    total_store_time = 0;
 
     for (int i = 0;  i < last_keyframe_times_count;  i++)
     { total_store_time += last_keyframe_times[i]; }
@@ -3720,7 +3728,21 @@ static void G_SaveKeyFrame(void)
 
   if (timed_out)
   {
-    displaymsg("Slow key-framing: storing stopped");
+    displaymsg("\x1b%cSlow key-framing: storing stopped\x1b%c", '0' + CR_RED, '0' + CR_NONE);
+
+    if (total_store_time >= 0)
+    {
+      I_Printf(
+        VB_DEBUG,
+        "Slow key-framing: storing stopped. "
+        "(last frame: %ims; last %i frames: %ims)",
+        store_time, LAST_KEYFRAME_TIMES_COUNT_MAX, total_store_time
+      );
+    }
+    else {
+      I_Printf(VB_DEBUG, "Slow key-framing: storing stopped. (last frame: %ims)", store_time);
+    }
+
     rewind_on = false;
   }
 
@@ -3905,7 +3927,12 @@ static void G_DoRewind(void)
 
 void G_EnableRewind(void)
 {
-  rewind_on = true;
+  const boolean rewind_input_set = array_size(M_Input(input_rewind)) > 0;
+
+  rewind_on = CASUALPLAY(rewind_depth && rewind_input_set);
+
+  const int countdown = rewind_interval * TICRATE;
+  G_SetRewindCountdown(countdown - (leveltime % countdown) + 1);
 
   memset(last_keyframe_times, 0, sizeof(*last_keyframe_times) * LAST_KEYFRAME_TIMES_COUNT_MAX);
   last_keyframe_times_count = 0;
@@ -4075,7 +4102,7 @@ void G_Ticker(void)
   CheckSaveAutoSave();
 
   // [Nugget] Rewind
-  if (CASUALPLAY(rewind_depth && rewind_on)
+  if (rewind_on
       && gamestate == GS_LEVEL && oldleveltime < leveltime
       && players[consoleplayer].playerstate != PST_DEAD)
   {
