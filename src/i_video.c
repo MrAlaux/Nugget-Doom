@@ -140,8 +140,9 @@ static void InitPalettes(void)
     palettes = NULL;
   }
 
-  // 98 == 64 red palettes + 32 bonus palettes + base palette + radsuit palette
-  num_palettes = smooth_palette_tinting ? 98 : 14;
+  // 128 == 64 red palettes + 32 bonus palettes + base palette + radsuit palette
+  //        + 15 pain-to-radsuit palettes + 15 bonus-to-radsuit palettes
+  num_palettes = smooth_palette_tinting ? 128 : 14;
 
   palettes = Z_Malloc(sizeof(*palettes) * num_palettes, PU_STATIC, 0);
 
@@ -154,6 +155,10 @@ static void InitPalettes(void)
 
   if (smooth_palette_tinting)
   {
+    #define LERP(a, b, factor) ( \
+      (a) + ((int) (b) - (a)) * (factor) \
+    )
+
     // Base palette
     memcpy(palettes[0], playpal, sizeof(**palettes) * 768);
 
@@ -178,21 +183,34 @@ static void InitPalettes(void)
 
         for (int k = 0;  k < 768;  k++)
         {
-          #define LERP(a, b, factor) ( \
-            (a) + ((int) (b) - (a)) * (factor) \
-          )
-
           const int component = LERP(previous_palette[k], current_palette[k], factor);
 
           palette[k] = BETWEEN(0, 255, component);
-
-          #undef LERP
         }
       }
     }
 
     // Radsuit palette
-    memcpy(palettes[97], playpal + 768*13, sizeof(**palettes) * 768);
+    byte *const radsuit_palette = palettes[97];
+    memcpy(radsuit_palette, playpal + 768*13, sizeof(**palettes) * 768);
+
+    // Pain/bonus-to-radsuit palettes
+    for (int i = 0;  i < 30;  i++)
+    {
+      byte *const    from_palette = palettes[((i >= 15) ? 65 : 1) + i % 15],
+           *const current_palette = palettes[98 + i];
+
+      const double factor = (double) (15 - i % 15) / 16;
+
+      for (int k = 0;  k < 768;  k++)
+      {
+        const int component = LERP(from_palette[k], radsuit_palette[k], factor);
+
+        current_palette[k] = BETWEEN(0, 255, component);
+      }
+    }
+
+    #undef LERP
   }
   else {
     memcpy(*palettes, playpal, sizeof(**palettes) * 768 * 14);

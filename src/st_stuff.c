@@ -2176,7 +2176,15 @@ static void DoPaletteStuff(player_t *player)
 
             // [Nugget] Smooth palette tinting
             if (I_SmoothPaletteTinting())
-            { palette = 0 + MIN(64, damagecount); }
+            {
+              if (damagecount < 16
+                  && POWER_RUNOUT(player->powers[pw_ironfeet])
+                  && !STRICTMODE(no_radsuit_tint))
+              {
+                palette = 97 + damagecount;
+              }
+              else { palette = 0 + MIN(64, damagecount); }
+            }
         }
     }
     else if (player->bonuscount)
@@ -2190,7 +2198,15 @@ static void DoPaletteStuff(player_t *player)
 
         // [Nugget] Smooth palette tinting
         if (I_SmoothPaletteTinting())
-        { palette = 64 + MIN(32, player->bonuscount); }
+        {
+          if (player->bonuscount < 16
+              && POWER_RUNOUT(player->powers[pw_ironfeet])
+              && !STRICTMODE(no_radsuit_tint))
+          {
+            palette = 112 + player->bonuscount;
+          }
+          else { palette = 64 + MIN(32, player->bonuscount); }
+        }
     }
     // killough 7/14/98: beta version did not cause green palette
     else if (beta_emulation)

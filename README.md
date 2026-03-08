@@ -39,6 +39,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - _Hybrid_ achieves smooth lighting while theoretically remaining compatible with all colormap effects
   - _Full_ achieves better color quality and smoother lighting at the cost of some colormap effects (colormap brightmaps and fog are still supported)
   - Does not support true-color (32-bit PNG) graphics; those are still palettized at startup
+  - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
+    especially with _Smooth Palette Tinting_ enabled
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
