@@ -62,7 +62,7 @@ typedef struct
 
     // Health/ammo bars
     patch_t *hlpatch, *ampatch;
-    int hlw, hlh, hlc, amw, amh, amc; // Width, height and crop for each
+    int hlw, hlh, hlc, amw, amh, amc; // Width, height and top crop for each
 
     // Horizontal-autoaim indicators
     patch_t *lpatch, *rpatch;

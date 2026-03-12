@@ -2464,12 +2464,37 @@ void MN_DrawStatusHUD(void)
         patch_t *patch =
             V_CachePatchName(crosshair_lumps[hud_crosshair], PU_CACHE);
 
-        int x = XH_X + 85 - SHORT(patch->width) / 2;
-        int y = M_Y + M_SPC + M_SPC / 2 - SHORT(patch->height) / 2 - 1; // [Nugget] Adjusted
+        // [Nugget] Crosshair dimensions added later
+        int x = XH_X + 85;
+        int y = M_Y + M_SPC + M_SPC / 2 - 1; // [Nugget] Adjusted
 
-        // [Nugget] Translucent crosshair
-        V_DrawPatchTRTL2(x, y, patch, colrngs[hud_crosshair_color],
-                         R_GetGenericTranMap(hud_crosshair_tran_pct));
+        // [Nugget] /---------------------------------------------------------
+
+        const int halfwidth = SHORT(patch->width) / 2;
+
+        byte *const cr = colrngs[hud_crosshair_color],
+             *const xhair_tranmap = R_GetGenericTranMap(hud_crosshair_tran_pct); // Translucent crosshair
+
+        // [Nugget] ---------------------------------------------------------/
+
+        V_DrawPatchTRTL2(x - halfwidth, y - SHORT(patch->height) / 2, patch, cr, xhair_tranmap);
+
+        // [Nugget] Health/ammo bars
+        if (STRICTMODE(hud_crosshair_bars))
+        {
+            patch_t *const hlpatch = V_CachePatchName("CROSSHLB", PU_STATIC),
+                    *const ampatch = V_CachePatchName("CROSSAMB", PU_STATIC);
+
+            const int
+                bar_offset = MAX(6, halfwidth),
+                hlx = bar_offset - (SHORT(patch->width) % 2) + SHORT(hlpatch->width),
+                hlh = SHORT(hlpatch->height) / 2,
+                amx = bar_offset,
+                amh = SHORT(ampatch->height) / 2;
+
+            V_DrawPatchTRTL2(x - hlx, y - hlh, hlpatch, cr, xhair_tranmap);
+            V_DrawPatchTRTL2(x + amx, y - amh, ampatch, cr, xhair_tranmap);
+        }
     }
 
     // If the Reset Button has been selected, an "Are you sure?" message
