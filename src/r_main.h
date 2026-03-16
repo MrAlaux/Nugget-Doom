@@ -30,6 +30,7 @@ struct seg_s;
 
 // [Nugget]
 struct mobj_s;
+struct sector_s;
 
 //
 // POV related.
@@ -172,6 +173,7 @@ extern boolean have_crouch_sprites;
 fixed_t R_GetNughudViewPitch(void);
 boolean R_SpriteShadowsOn(void);
 int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
+int R_GetLightLevelInSector(struct sector_s *sector, const boolean force_mbf);
 
 #define PSPR_INVIS_TRANSLUCENCY 50
 

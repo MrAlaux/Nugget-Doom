@@ -646,9 +646,12 @@ static void cheat_turbox(char *buf)
 static void cheat_summon(void)
 {
   if (spawneetype == -1)
-  { displaymsg("Summon: Enemy or Friend?"); }
-  else
-  { displaymsg("Summon: Enemy, Friend or Repeat last (%i)?", spawneetype); }
+  {
+    displaymsg("Summon: Enemy or Friend?");
+  }
+  else {
+    displaymsg("Summon: Enemy, Friend or Repeat last (%i)?", spawneetype);
+  }
 }
 
 static boolean GetMobjType(char *buf)

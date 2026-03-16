@@ -41,6 +41,7 @@
 - **Weapon disappearing if _Weapon Flash Sprite_ were disabled and the base sprite were blank**
 - **Weapon becoming completely translucent if translucent flashes were enabled and the base sprite were blank**
 - **Weapon flash lighting being weaker with _Smooth Diminishing Lighting_ enabled**
+- **Sprite shadows "hanging" off ledges**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**
 - **Level-title announcement not fading out when _Message Fadeout_ were enabled and the author were displayed on a separate line**

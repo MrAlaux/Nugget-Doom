@@ -165,10 +165,13 @@ int R_GetLightLevelInPoint(
   const fixed_t y,
   const boolean force_mbf
 ) {
-  int lightlevel;
+  return R_GetLightLevelInSector(R_PointInSubsector(x, y)->sector, force_mbf);
+}
 
-  sector_t *const sector = R_PointInSubsector(x, y)->sector;
-
+int R_GetLightLevelInSector(
+  sector_t *const sector,
+  const boolean force_mbf
+) {
   if (demo_version > DV_BOOM || force_mbf)
   {
     sector_t tempsector;
@@ -176,11 +179,10 @@ int R_GetLightLevelInPoint(
 
     R_FakeFlat(sector, &tempsector, &floorlightlevel, &ceilinglightlevel, false);
 
-    lightlevel = (floorlightlevel + ceilinglightlevel) >> 1;
+    return (floorlightlevel + ceilinglightlevel) >> 1;
   }
-  else { lightlevel = sector->lightlevel; }
 
-  return lightlevel;
+  return sector->lightlevel;
 }
 
 // True color

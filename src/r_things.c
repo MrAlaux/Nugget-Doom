@@ -1249,17 +1249,49 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   shadow_vis->yscale = shadow_yscale;
 
   const fixed_t midx = centerxfrac + FixedMul64(txc, xscale);
-  fixed_t shadow_tx;
+  fixed_t shadow_tx, shadow_tx_clipped;
+
+  static const fixed_t CLIP_STEP = FRACUNIT;
+
+  #define GET_TX_CLIPPED(angle) \
+  { \
+    fixed_t max_tx = 0; \
+    const int fineangle = (angle) >> ANGLETOFINESHIFT; \
+    \
+    for (fixed_t dist = CLIP_STEP;  dist <= shadow_tx;  dist += CLIP_STEP) \
+    { \
+      max_tx = dist; \
+    \
+      const fixed_t x = interpx + FixedMul(dist, finecosine[fineangle]), \
+                    y = interpy + FixedMul(dist,   finesine[fineangle]); \
+    \
+      if (abs(R_PointInSubsector(x,y)->sector->interpfloorheight - floorheight) \
+          > 12*FRACUNIT) \
+      { \
+        break; \
+      } \
+    } \
+    \
+    shadow_tx_clipped = MIN(shadow_tx, max_tx); \
+  }
 
   shadow_tx = flip ? spritewidth[lump] - spriteoffset[lump] : spriteoffset[lump];
   const fixed_t shadow_x1 = (midx - FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS;
 
   shadow_vis->x1 = MAX(0, shadow_x1);
 
+  GET_TX_CLIPPED(viewangle + ANG90);
+  const fixed_t shadow_x1_clipped = (midx - FixedMul64(shadow_tx_clipped, xscale)) >> FRACBITS;
+  shadow_vis->x1 = MAX(shadow_vis->x1, shadow_x1_clipped);
+
   shadow_tx = spritewidth[lump];
   const fixed_t shadow_x2 = ((midx + FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS) - 1;
 
   shadow_vis->x2 = MIN(viewwidth - 1, shadow_x2);
+
+  GET_TX_CLIPPED(viewangle - ANG90);
+  const fixed_t shadow_x2_clipped = ((midx + FixedMul64(shadow_tx_clipped, xscale)) >> FRACBITS) - 1;
+  shadow_vis->x2 = MIN(shadow_vis->x2, shadow_x2_clipped);
 
   const fixed_t shadow_iscale = FixedDiv(FRACUNIT, shadow_xscale);
 
