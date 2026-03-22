@@ -1146,21 +1146,24 @@ static void InitColormaps32(void)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
-        if (pal_colormaps[i][j] == NULL) { continue; }
-
         const lighttable32_t *const first_colormap = pal_colormaps[i][j];
+
+        if (first_colormap == NULL) { continue; }
 
         // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
         // this lets us maintain some colormap effects (e.g. vanilla brightmaps, fog) and also palette tinting
         // (the colormap row we're interpolating towards is already colored as per the current palette)
         lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
 
+        // We take the index from the original colormap; it might be inaccurate,
+        // but it's much faster than finding the nearest color in the palette
+        const byte *const orig_colormap = colormaps[j];
+
         for (int k = 1;  k < 248;  k++)
         {
           lighttable32_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
 
-          const byte *const orig_colormap = colormaps[j];
-          const int orig_colormap_row = (k / (1<<CRSB)) * 256;
+          const byte *const orig_colormap_row = orig_colormap + (k / (1<<CRSB)) * 256;
 
           const double factor = k / 248.0;
 
@@ -1168,7 +1171,7 @@ static void InitColormaps32(void)
           {
             const pixel32_t rgb = V_LerpRGB(first_colormap[m], last_colormap[m], factor);
 
-            const byte index = orig_colormap[orig_colormap_row + m];
+            const byte index = orig_colormap_row[m];
 
             current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
                                 | (rgb & PIXEL_COLOR_MASK);
