@@ -315,9 +315,11 @@ static void ApplyBlockPostProcess32(void)
 
 static int R_GetLightIndexVanilla(fixed_t scale, int x);
 
+#define RADFOG_MULT 1.414213562 // Square root of 2
+
 static int R_GetLightIndexRadFog(fixed_t scale, const int x)
 {
-  scale = FixedMul(scale, finecosine[xtoviewangle[x] >> ANGLETOFINESHIFT]);
+  scale = FixedMul(scale, finecosine[xtoviewangle[x] >> ANGLETOFINESHIFT]) * RADFOG_MULT;
 
   const int index = ((int64_t) scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
 
@@ -399,7 +401,7 @@ void R_InitDistLightTables(void)
 
     const angle_t *xtva = xtoviewangle;
 
-    const fixed_t base_distance = i << shift_bits;
+    const fixed_t base_distance = (i << shift_bits) * (1.0 / RADFOG_MULT);
 
     for (; sdll <= sdlr;  sdll++, sdlr--, xtva++)
     {
