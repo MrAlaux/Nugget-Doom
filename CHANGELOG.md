@@ -1,6 +1,7 @@
 ## New Features
 
-- **_True-color Rendering_** setting
+- **_Lighting Mode_** setting, featuring **True-color lighting**
+  - The _Smooth_ option replaces the _Smooth Diminishing Lighting_ setting [^1]
 - **_Radial Fog_** setting
 - **_Smooth Palette Tinting_** setting
 - **_[Crosshair] Health/Ammo Bars_** setting
@@ -40,7 +41,7 @@
 - **Entities continuously spawning particles if crushed by an extremely high crusher with _Bloodier Gibbing_ enabled** (fixes slowdown in `cchest3.wad` MAP31)
 - **Weapon disappearing if _Weapon Flash Sprite_ were disabled and the base sprite were blank**
 - **Weapon becoming completely translucent if translucent flashes were enabled and the base sprite were blank**
-- **Weapon flash lighting being weaker with _Smooth Diminishing Lighting_ enabled**
+- **Weapon flash lighting being weaker with _Smooth Lighting_ enabled**
 - **Sprite shadows "hanging" off ledges**
 - **_Last Weapon_ button not triggering _[Weapon] Switch Interruption_ correctly**
 - **_Animated Health/Armor Counts_ not working on NUGHUDs with bars and no numbers**

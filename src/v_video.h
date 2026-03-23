@@ -199,15 +199,7 @@ void V_ClearPatchCrop(void);
 
 // True color ----------------------------------------------------------------
 
-typedef enum truecolor_e {
-  TRUECOLOR_OFF,
-  TRUECOLOR_HYBRID,
-  TRUECOLOR_FULL,
-
-  NUM_TRUECOLOR
-} truecolor_t;
-
-extern truecolor_t truecolor_rendering, cvar_truecolor_rendering;
+extern boolean truecolor_rendering;
 
 extern int *palcolors, **palscolors;
 

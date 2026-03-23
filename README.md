@@ -34,13 +34,28 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### General
 
-- **_True-color Rendering_** setting
-  - Compatible with custom tinted palettes
-  - _Hybrid_ achieves smooth lighting while theoretically remaining compatible with all colormap effects
-  - _Full_ achieves better color quality and smoother lighting at the cost of some colormap effects (colormap brightmaps and fog are still supported)
-  - Does not support true-color (32-bit PNG) graphics; those are still palettized at startup
-  - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
-    especially with _Smooth Palette Tinting_ enabled
+- **_Lighting Mode_** settings:
+  - _Vanilla_:
+    - Supports 16 distinct light levels for sectors
+  - _Smooth_ (a.k.a. _Smooth Diminishing Lighting_):
+    - Smoother lighting for floors and ceilings
+    - Supports 32 distinct light levels for sectors
+  - _Interpolated_:
+    - Partial true-color lighting
+    - Smoother lighting in general
+    - Theoretically compatible with all colormap effects
+    - Supports 256 distinct light levels for sectors
+  - _True-color_:
+    - Full true-color lighting
+    - Better color quality
+    - Smoothest lighting in general
+    - Does not support some colormap effects (colormap brightmaps and fog are still supported)
+    - Supports 256 distinct light levels for sectors
+  - Notes on the true-color modes:
+    - Compatible with custom tinted palettes
+    - No support for true-color (32-bit PNG) graphics; those are still palettized at startup
+    - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
+      especially with _Smooth Palette Tinting_ enabled
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
@@ -87,7 +102,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - The fidelity of the effect on floors and ceilings can be tuned through the CFG-only `radial_plane_fog_fidelity` CVAR;
     greater values increase fidelity but cause more stutter
 - **_Flip Levels_** setting
-- **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
+- **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution
+  (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
 - **_No Berserk Tint_** setting
 - **_No Radiation Suit Tint_** setting
 - **_Night-Vision Visor Effect_** setting [i.b. International Doom]
@@ -105,10 +121,14 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Auto Save Interval_** setting, for periodic auto saves
 - **Rewinding** [i.b. DSDA-Doom]
   - _Rewind Interval_ : number of seconds between key frames
-  - _Rewind Depth_: number of maximum key frames to store; when exceeded, the oldest key frame is deleted to make room for the new one; set to 0 to disable rewinding
-  - _Rewind Frame Timeout_: number of maximum milliseconds that the game can spend storing a single key frame; if exceeded, storing of further key frames is stopped
-  - _Rewind 4-Frame Timeout_: number of maximum milliseconds that the game can have spent storing the last 4 key frames; if exceeded, storing of further key frames is stopped
-  - The _Frame Timeout_ can be set to a higher value to allow flukes in key-frame storage time, while the _4-Frame Timeout_ stops storing if it is consistently slow
+  - _Rewind Depth_: number of maximum key frames to store; when exceeded, the oldest key frame is deleted to make room for the new one;
+    set to 0 to disable rewinding
+  - _Rewind Frame Timeout_: number of maximum milliseconds that the game can spend storing a single key frame;
+    if exceeded, storing of further key frames is stopped
+  - _Rewind 4-Frame Timeout_: number of maximum milliseconds that the game can have spent storing the last 4 key frames;
+    if exceeded, storing of further key frames is stopped
+  - The _Frame Timeout_ can be set to a higher value to allow flukes in key-frame storage time,
+    while the _4-Frame Timeout_ stops storing if it is consistently slow
   - If stopped, storing can be restarted by attempting to rewind or by changing any of the settings above
 - **_Play Internal Demos_** setting, to control whether or not to play demos built into WADs
 - **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
@@ -292,7 +312,8 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS` (last three unused)
   - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
-- **Customizable darkening level for dark menu background and Automap overlay** (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+- **Customizable darkening level for dark menu background and Automap overlay**
+  (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
 - The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
   - This does not apply to HacX, as it provides a dummy, incongruous lump for the sound
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
@@ -305,7 +326,8 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 
 # Releases
 
-Source code and Windows binaries (MSVC builds for Windows 7 and newer) for the latest release can be found on the [Release](https://github.com/MrAlaux/Nugget-Doom/releases/latest) page.
+Source code and Windows binaries (MSVC builds for Windows 7 and newer)
+for the latest release can be found on the [Release](https://github.com/MrAlaux/Nugget-Doom/releases/latest) page.
 
 The most recent list of changes can be found in the [Changelog](https://github.com/MrAlaux/Nugget-Doom/blob/master/CHANGELOG.md).
 
@@ -321,7 +343,8 @@ Nugget Doom follows a fairly simple (albeit arbitrary) **X.Y.Z** versioning syst
 
 Incrementing any of the first values will reset the latter (i.e. a major change to 1.1.2 would shift it to 2.0.0).
 
-The merging of changes from Woof! releases may affect any of the version values, but not necessarily in the same way as Woof!'s own version (i.e. `Woof! 11.Y.Z -> 12.Y.Z` doesn't necessarily mean `Nugget 2.Y.Z -> 3.Y.Z`).
+The merging of changes from Woof! releases may affect any of the version values,
+but not necessarily in the same way as Woof!'s own version (i.e. `Woof! 11.Y.Z -> 12.Y.Z` doesn't necessarily mean `Nugget 2.Y.Z -> 3.Y.Z`).
 
 # Compiling
 
@@ -343,7 +366,8 @@ The following build system and libraries need to be installed:
  * [fluidsynth](https://github.com/FluidSynth/fluidsynth) (>= 2.2.0, optional)
  * [libxmp](https://github.com/libxmp/libxmp) (optional)
  
-Usually your distribution should have the corresponding packages in its repositories, and if your distribution has "dev" versions of those libraries, those are the ones you'll need.
+Usually your distribution should have the corresponding packages in its repositories,
+and if your distribution has "dev" versions of those libraries, those are the ones you'll need.
 
 Once installed, compilation should be as simple as:
 

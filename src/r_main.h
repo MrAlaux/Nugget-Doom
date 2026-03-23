@@ -83,9 +83,6 @@ extern cmapoffset_t *(*zlight);
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
-extern boolean setsmoothlight;
-void R_SmoothLight(void);
-
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
 extern lighttable32_t *fixedcolormap32;
@@ -182,6 +179,22 @@ int R_GetLightLevelInSector(struct sector_s *sector, const boolean force_mbf);
 
 // True color
 void R_InitColorFunctions(void);
+
+// Lighting modes ------------------------------------------------------------
+
+typedef enum lightingmode_e {
+  LIGHTINGMODE_VANILLA,
+  LIGHTINGMODE_SMOOTH,
+  LIGHTINGMODE_INTERPOLATED,
+  LIGHTINGMODE_TRUECOLOR,
+
+  NUM_LIGHTINGMODES
+} lightingmode_t;
+
+extern lightingmode_t lighting_mode;
+
+boolean R_InitLightTablesPending(void);
+void R_DeferredInitLightTables(void);
 
 // Radial fog ----------------------------------------------------------------
 

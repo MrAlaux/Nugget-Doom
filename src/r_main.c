@@ -311,6 +311,22 @@ static void ApplyBlockPostProcess32(void)
   }
 }
 
+// Lighting modes ------------------------------------------------------------
+
+lightingmode_t lighting_mode;
+
+static boolean init_light_tables = false;
+
+boolean R_InitLightTablesPending(void)
+{
+  return init_light_tables;
+}
+
+void R_DeferredInitLightTables(void)
+{
+  init_light_tables = true;
+}
+
 // Radial fog ----------------------------------------------------------------
 
 static int R_GetLightIndexVanilla(fixed_t scale, int x);
@@ -1150,10 +1166,10 @@ static void R_InitTextureMapping(void)
 
 #define DISTMAP 2
 
-boolean smoothlight;
-
 void R_InitLightTables (void)
 {
+  init_light_tables = false; // [Nugget] Lighting modes
+
   int i, cm;
 
   if (c_scalelight)
@@ -1185,49 +1201,39 @@ void R_InitLightTables (void)
     Z_Free(c_zlight);
   }
 
-  num_colormap_rows = NUMCOLORMAPS;
-
-  if (truecolor_rendering)
+  // [Nugget] Lighting modes
+  if (lighting_mode >= LIGHTINGMODE_INTERPOLATED) // True color
   {
-      LIGHTLEVELS = 256;
-      LIGHTSEGSHIFT = 0;
-      LIGHTBRIGHT = 16;
-      MAXLIGHTSCALE = 384;
-      LIGHTSCALESHIFT = 9;
-      MAXLIGHTZ = 2048;
-      LIGHTZSHIFT = 16;
+    num_colormap_rows = 256;
 
-      num_colormap_rows = 256;
+    LIGHTSEGSHIFT = 0;
+    LIGHTSCALESHIFT = 9;
+    LIGHTZSHIFT = 16;
   }
-  else
+  else {
+    num_colormap_rows = NUMCOLORMAPS;
 
-  if (smoothlight)
-  {
-      LIGHTLEVELS = 32;
+    LIGHTSCALESHIFT = 12;
+
+    if (lighting_mode >= LIGHTINGMODE_SMOOTH)
+    {
       LIGHTSEGSHIFT = 3;
-      LIGHTBRIGHT = 2;
-      MAXLIGHTSCALE = 48;
-      LIGHTSCALESHIFT = 12;
-      MAXLIGHTZ = 1024;
       LIGHTZSHIFT = 17;
-  }
-  else
-  {
-      LIGHTLEVELS = 16;
+    }
+    else {
       LIGHTSEGSHIFT = 4;
-      LIGHTBRIGHT = 1;
-      MAXLIGHTSCALE = 48;
-      LIGHTSCALESHIFT = 12;
-      MAXLIGHTZ = 128;
       LIGHTZSHIFT = 20;
+    }
   }
 
   // [Nugget] Radial fog
   if (STRICTMODE(radial_fog))
-  {
-    LIGHTZSHIFT = MIN(LIGHTZSHIFT, 18 - radial_plane_fog_fidelity);
-    MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
-  }
+  { LIGHTZSHIFT = MIN(LIGHTZSHIFT, 18 - radial_plane_fog_fidelity); }
+
+  LIGHTLEVELS = 1 << (8 - LIGHTSEGSHIFT);
+  LIGHTBRIGHT = LIGHTLEVELS / 16;
+  MAXLIGHTSCALE = 3 << (16 - LIGHTSCALESHIFT);
+  MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
 
   scalelightfixed = Z_Malloc(MAXLIGHTSCALE * sizeof(*scalelightfixed), PU_STATIC, 0);
 
@@ -1271,20 +1277,11 @@ void R_InitLightTables (void)
         }
     }
 
-  R_DeferredInitDistLightTables(); // [Nugget] Radial fog
-}
-
-boolean setsmoothlight;
-
-void R_SmoothLight(void)
-{
-  setsmoothlight = false;
-  // [crispy] re-calculate the zlight[][] array
-  R_InitLightTables();
-  // [crispy] re-calculate the scalelight[][] array
-  // R_ExecuteSetViewSize();
-  // [crispy] re-calculate fake contrast
+  // [Nugget]: [crispy] re-calculate fake contrast
   P_SegLengths(true);
+
+  setsizeneeded = true;
+  R_DeferredInitDistLightTables(); // [Nugget] Radial fog
 }
 
 // [Nugget] Static, added X parameter
@@ -2234,7 +2231,6 @@ void R_BindRenderVariables(void)
 
   BIND_BOOL_GENERAL(linearsky, false, "Linear horizontal scrolling for skies");
   BIND_BOOL_GENERAL(r_swirl, false, "Swirling animated flats");
-  BIND_BOOL_GENERAL(smoothlight, false, "Smooth diminishing lighting");
 
   // [Nugget] /---------------------------------------------------------------
 

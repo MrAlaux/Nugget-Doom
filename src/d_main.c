@@ -315,11 +315,13 @@ void D_Display (void)
         I_DynamicResolution();
     }
 
+  // [Nugget] True color
   if (R_InitColormapsPending())
   { R_InitColormaps(); }
 
-  if (setsmoothlight)
-    R_SmoothLight();
+  // [Nugget] Lighting modes
+  if (R_InitLightTablesPending())
+  { R_InitLightTables(); }
 
   if (setsizeneeded)                // change the view size if needed
     {

@@ -233,11 +233,10 @@ static void InitColor(void)
 {
     init_color_pending = false;
 
-    truecolor_rendering = cvar_truecolor_rendering;
+    truecolor_rendering = lighting_mode >= LIGHTINGMODE_INTERPOLATED;
 
     R_DeferredInitColormaps();
-    setsmoothlight = true;
-    setsizeneeded = true;
+    R_DeferredInitLightTables();
 
     InitColorFunctions();
 }
@@ -2307,10 +2306,6 @@ static void InitColorFunctions(void)
 
 void I_BindVideoVariables(void)
 {
-    M_BindNum("truecolor_rendering", &cvar_truecolor_rendering, NULL,
-              TRUECOLOR_OFF, TRUECOLOR_OFF, NUM_TRUECOLOR-1, ss_gen, wad_no,
-              "True-color rendering (0 = Off; 1 = Hybrid; 2 = Full)");
-
     M_BindNum("current_video_height", &default_current_video_height,
               &current_video_height, 600, 200, UL, ss_none, wad_no,
               "Vertical resolution");
@@ -2343,6 +2338,12 @@ void I_BindVideoVariables(void)
     M_BindNum("widescreen", &default_widescreen, &widescreen, RATIO_AUTO, 0,
               NUM_RATIOS - 1, ss_gen, wad_no,
               "Widescreen (0 = Off; 1 = Auto; 2 = 16:10; 3 = 16:9; 4 = 21:9; 5 = 32:9)");
+
+    // [Nugget] Lighting modes
+    M_BindNum("lighting_mode", &lighting_mode, NULL,
+              LIGHTINGMODE_VANILLA, LIGHTINGMODE_VANILLA, NUM_LIGHTINGMODES-1, ss_gen, wad_no,
+              "Lighting mode (0 = Vanilla; 1 = Smooth; 2 = Interpolated; 3 = True-color)");
+
     M_BindNum("fov", &custom_fov, NULL, FOV_DEFAULT, FOV_MIN, FOV_MAX, ss_gen,
               wad_no, "Field of view in degrees");
     BIND_NUM_GENERAL(gamma2, 9, 0, 17, "Custom gamma level (0 = -4; 9 = 0; 17 = 4)");

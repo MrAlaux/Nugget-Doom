@@ -1138,7 +1138,7 @@ static void InitColormaps32(void)
     }
   }
 
-  if (truecolor_rendering == TRUECOLOR_FULL)
+  if (lighting_mode == LIGHTINGMODE_TRUECOLOR)
   {
     // Shade rows after first one
 
@@ -1184,7 +1184,7 @@ static void InitColormaps32(void)
       }
     }
   }
-  else if (truecolor_rendering == TRUECOLOR_HYBRID)
+  else if (lighting_mode == LIGHTINGMODE_INTERPOLATED)
   {
     // Calculate intermediate colormap rows
 

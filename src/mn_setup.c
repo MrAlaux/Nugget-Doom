@@ -373,7 +373,7 @@ enum
 
     // [Nugget] --------------------------------------------------------------
 
-    str_truecolor,
+    str_lighting_mode,
     str_bobbing_style,
     str_force_carousel,
     str_crosshair_lockon,
@@ -2804,17 +2804,9 @@ static setup_tab_t gen_tabs[] = {
     {NULL}
 };
 
-static const char *truecolor_strings[] = {
-  "Off", "Hybrid", "Full"
+static const char *lighting_mode_strings[] = {
+  "Vanilla", "Smooth", "Interpolated", "True-Color"
 };
-
-static void UpdateSmoothLightItem(void);
-
-static void InitColor(void)
-{
-    I_DeferredInitColor();
-    UpdateSmoothLightItem();
-}
 
 static int resolution_scale;
 
@@ -2950,9 +2942,6 @@ void MN_ResetGamma(void)
 
 static setup_menu_t gen_settings1[] = {
 
-    {"True-color Rendering", S_CHOICE, CNTR_X, M_SPC, {"truecolor_rendering"},
-     .strings_id = str_truecolor, .action = InitColor},
-
     // [Nugget] The following three items now report
     // the current resolution when sitting on them
 
@@ -2984,6 +2973,9 @@ static setup_menu_t gen_settings1[] = {
      .action = I_ToggleVsync},
 
     MI_GAP_Y(5),
+
+    {"Lighting Mode", S_CHOICE, CNTR_X, M_SPC, {"lighting_mode"},
+     .strings_id = str_lighting_mode, .action = I_DeferredInitColor},
 
     {"FOV", S_THERMO | S_THRM_SIZE11, CNTR_X, M_THRM_SPC, {"fov"},
      .action = UpdateFOV},
@@ -3807,12 +3799,6 @@ void MN_DrawGyro(void)
 // [Nugget] Voxel rendering mode
 static void UpdateVoxelRenderingModeItem(void);
 
-static void SmoothLight(void)
-{
-    setsmoothlight = true;
-    setsizeneeded = true; // run R_ExecuteSetViewSize
-}
-
 // [Nugget] Restored backdrop item
 static const char *menu_backdrop_strings[] = {"Off", "Dark", "Texture"};
 
@@ -3855,9 +3841,6 @@ static setup_menu_t gen_settings5[] = {
 
     {"Swirling Flats", S_ONOFF, OFF_CNTR_X, M_SPC, {"r_swirl"}},
 
-    {"Smooth Diminishing Lighting", S_ONOFF, OFF_CNTR_X, M_SPC, {"smoothlight"},
-     .action = SmoothLight},
-
     // [Nugget] Restored backdrop item /--------------------------------------
 
     MI_GAP,
@@ -3869,12 +3852,6 @@ static setup_menu_t gen_settings5[] = {
 
     MI_END
 };
-
-// [Nugget]
-static void UpdateSmoothLightItem(void)
-{
-  DisableItem(cvar_truecolor_rendering, gen_settings5, "smoothlight");
-}
 
 const char *default_skill_strings[] = {
     // dummy first option because defaultskill is 1-based
@@ -4096,7 +4073,7 @@ setup_menu_t display_settings1[] = {
     {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = V_InitShadowTranMap},
     {"Sprite Shadows",               S_CHOICE|S_STRICT,       N_X, M_SPC, {"sprite_shadows"}, .strings_id = str_sprite_shadows, .action = R_InitShadowTranMap},
     {"Thing Lighting Mode",          S_CHOICE|S_STRICT,       N_X, M_SPC, {"thing_lighting_mode"}, .strings_id = str_thing_lighting},
-    {"Radial Fog",                   S_ONOFF,                 N_X, M_SPC, {"radial_fog"}, .action = SmoothLight},
+    {"Radial Fog",                   S_ONOFF,                 N_X, M_SPC, {"radial_fog"}, .action = R_DeferredInitLightTables},
     {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
     {"No Berserk Tint",              S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_berserk_tint"}},
     {"No Radiation Suit Tint",       S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_radsuit_tint"}},
@@ -5930,7 +5907,7 @@ static const char **selectstrings[] = {
 
     // [Nugget] --------------------------------------------------------------
 
-    truecolor_strings,
+    lighting_mode_strings,
     bobbing_style_strings,
     force_carousel_strings,
     crosshair_lockon_strings,
@@ -6060,7 +6037,6 @@ void MN_SetupResetMenu(void)
     DisableItem(!(extra_gibbing[EXGIB_FIST] || extra_gibbing[EXGIB_CSAW] || extra_gibbing[EXGIB_SSG]),
                 enem_settings1, "extra_gibbing");
 
-    UpdateSmoothLightItem();
     UpdateVerticalLockonItem();
     UpdatePaletteItems();
     MN_UpdateDoom1SSGItem();

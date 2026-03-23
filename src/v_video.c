@@ -303,8 +303,7 @@ void V_ClearPatchCrop(void)
 
 // True color ----------------------------------------------------------------
 
-truecolor_t truecolor_rendering = TRUECOLOR_OFF,
-            cvar_truecolor_rendering;
+boolean truecolor_rendering = false;
 
 int *palcolors = NULL, **palscolors = NULL;
 
