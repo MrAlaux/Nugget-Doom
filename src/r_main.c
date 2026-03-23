@@ -2262,7 +2262,7 @@ void R_BindRenderVariables(void)
 
   // (CFG-only)
   M_BindNum("radial_plane_fog_fidelity", &radial_plane_fog_fidelity, NULL,
-            1, 0, 4, ss_none, wad_yes,
+            2, 0, 4, ss_none, wad_yes,
             "Fidelity of radial fog for planes (higher values cause more stutter)");
 
   // [Nugget] ---------------------------------------------------------------/
