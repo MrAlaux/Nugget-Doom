@@ -255,10 +255,10 @@ inline static pixel32_t V_LerpRGB(const pixel32_t a, const pixel32_t b, const do
     bb = V_BlueFromRGB(b);
 
   #define CALC(a, b, shift) ( \
-    (pixel32_t) ((a) + ((int) (b) - (a)) * factor) << (shift) \
+    (pixel32_t) ((a) + ((int) (b) - (a)) * factor + 0.5) << (shift) \
   )
 
-  return ((factor >= 0.5 ? b : a) & PIXEL_INDEX_MASK)
+  return (((factor >= 0.5) ? b : a) & PIXEL_INDEX_MASK)
        | CALC(ar, br, PIXEL_RED_SHIFT)
        | CALC(ag, bg, PIXEL_GREEN_SHIFT)
        | CALC(ab, bb, PIXEL_BLUE_SHIFT);
@@ -269,9 +269,9 @@ inline static pixel32_t V_LerpRGB(const pixel32_t a, const pixel32_t b, const do
 inline static pixel_t V_ShadeRGB(const pixel32_t rgb, const double factor)
 {
   return (rgb & PIXEL_INDEX_MASK)
-       | ((pixel32_t) (V_RedFromRGB(rgb)   * factor) << PIXEL_RED_SHIFT)
-       | ((pixel32_t) (V_GreenFromRGB(rgb) * factor) << PIXEL_GREEN_SHIFT)
-       | ((pixel32_t) (V_BlueFromRGB(rgb)  * factor) << PIXEL_BLUE_SHIFT);
+       | ((pixel32_t) (V_RedFromRGB(rgb)   * factor + 0.5) << PIXEL_RED_SHIFT)
+       | ((pixel32_t) (V_GreenFromRGB(rgb) * factor + 0.5) << PIXEL_GREEN_SHIFT)
+       | ((pixel32_t) (V_BlueFromRGB(rgb)  * factor + 0.5) << PIXEL_BLUE_SHIFT);
 }
 
 void V_InitColorFunctions(void);

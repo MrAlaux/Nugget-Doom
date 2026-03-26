@@ -1115,32 +1115,39 @@ static void InitColormaps8(void)
 
 static void InitColormaps32(void)
 {
-  // Load original colormap rows
-  for (int i = 0;  i < I_GetNumPalettes();  i++)
+  if (lighting_mode == LIGHTINGMODE_TRUECOLOR)
   {
-    for (int j = 0;  j < numcolormaps;  j++)
+    // Interpolate between first and last colormap rows
+
+    // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
+    // this lets us maintain some colormap effects (e.g. vanilla brightmaps, fog) and also palette tinting
+    // (the colormap row we're interpolating towards is already colored as per the current palette)
+
+    // Load first, last, and invuln original colormap rows
+    for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
-      if (colormaps[j] == NULL)
+      for (int j = 0;  j < numcolormaps;  j++)
       {
-        pal_colormaps[i][j] = NULL;
-        continue;
-      }
-
-      for (int k = 0;  k < 33;  k++)
-      {
-        for (int m = 0;  m < 256;  m++)
+        if (colormaps[j] == NULL)
         {
-          const byte color_index = colormaps[j][(k * 256) + m];
+          pal_colormaps[i][j] = NULL;
+          continue;
+        }
 
-          pal_colormaps[i][j][((k<<CRSB) * 256) + m] = palscolors[i][color_index];
+        for (int k = 0;  k < 3;  k++)
+        {
+          const static int rows[] = { 0, 31, 32 };
+          const        int row = rows[k];
+
+          for (int m = 0;  m < 256;  m++)
+          {
+            const byte color_index = colormaps[j][(row * 256) + m];
+
+            pal_colormaps[i][j][((row << CRSB) * 256) + m] = palscolors[i][color_index];
+          }
         }
       }
     }
-  }
-
-  if (lighting_mode == LIGHTINGMODE_TRUECOLOR)
-  {
-    // Shade rows after first one
 
     for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
@@ -1150,22 +1157,19 @@ static void InitColormaps32(void)
 
         if (first_colormap == NULL) { continue; }
 
-        // Instead of fading to an arbitrary black, we fade to the last color of the colormap column;
-        // this lets us maintain some colormap effects (e.g. vanilla brightmaps, fog) and also palette tinting
-        // (the colormap row we're interpolating towards is already colored as per the current palette)
         lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
 
         // We take the index from the original colormap; it might be inaccurate,
         // but it's much faster than finding the nearest color in the palette
         const byte *const orig_colormap = colormaps[j];
 
-        for (int k = 1;  k < 248;  k++)
+        for (int k = 1;  k < (31<<CRSB);  k++)
         {
           lighttable32_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
 
           const byte *const orig_colormap_row = orig_colormap + (k / (1<<CRSB)) * 256;
 
-          const double factor = k / 248.0;
+          const double factor = k / (double) (31<<CRSB);
 
           for (int m = 0;  m < 256;  m++)
           {
@@ -1186,7 +1190,30 @@ static void InitColormaps32(void)
   }
   else if (lighting_mode == LIGHTINGMODE_INTERPOLATED)
   {
-    // Calculate intermediate colormap rows
+    // Interpolate between all colormap rows
+
+    // Load original colormap rows
+    for (int i = 0;  i < I_GetNumPalettes();  i++)
+    {
+      for (int j = 0;  j < numcolormaps;  j++)
+      {
+        if (colormaps[j] == NULL)
+        {
+          pal_colormaps[i][j] = NULL;
+          continue;
+        }
+
+        for (int k = 0;  k < 33;  k++)
+        {
+          for (int m = 0;  m < 256;  m++)
+          {
+            const byte color_index = colormaps[j][(k * 256) + m];
+
+            pal_colormaps[i][j][((k<<CRSB) * 256) + m] = palscolors[i][color_index];
+          }
+        }
+      }
+    }
 
     for (int i = 0;  i < I_GetNumPalettes();  i++)
     {
