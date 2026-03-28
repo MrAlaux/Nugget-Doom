@@ -55,6 +55,7 @@
 
 // [Nugget]
 #include "g_game.h"
+#include "i_thread.h"
 #include "m_nughud.h"
 #include "m_random.h"
 #include "p_map.h"
@@ -363,6 +364,46 @@ void R_DeferredInitDistLightTables(void)
   init_radfog = true;
 }
 
+static int idlt_iteration, idlt_units_quot, idlt_units_rem, idlt_units_cur;
+
+static void ThreadInitDistLightTables(void)
+{
+  I_WorkerMutexLock();
+
+  const int light_distance_start = idlt_units_cur;
+
+  idlt_units_cur += idlt_units_quot + (idlt_iteration < idlt_units_rem);
+
+  const int light_distance_end = idlt_units_cur;
+
+  idlt_iteration++;
+
+  I_WorkerMutexUnlock();
+
+  const int width = viewwidth - 1;
+
+  const int shift_bits = light_distance_shift_bits - LIGHTZSHIFT,
+            maxlightz = MAXLIGHTZ-1;
+
+  for (int i = light_distance_start;  i < light_distance_end;  i++)
+  {
+    // spandistlight
+    uint16_t *sdll = planedistlight[i],
+             *sdlr = sdll + width;
+
+    const angle_t *xtva = xtoviewangle;
+
+    const fixed_t base_distance = (i << shift_bits) * (1.0 / RADFOG_MULT);
+
+    for (; sdll <= sdlr;  sdll++, sdlr--, xtva++)
+    {
+      const fixed_t distance = base_distance * floatsecant[*xtva >> ANGLETOFINESHIFT];
+
+      *sdll = *sdlr = MIN(maxlightz, distance);
+    }
+  }
+}
+
 void R_InitDistLightTables(void)
 {
   static int max_width = 0, max_light_distance = 0;
@@ -404,28 +445,22 @@ void R_InitDistLightTables(void)
     { planedistlight[i] = all_spandistlight + (max_width * i); }
   }
 
-  const int width = viewwidth - 1;
+  const int idlt_iterations = MIN(max_light_distance, I_ThreadsNum());
 
-  const int shift_bits = light_distance_shift_bits - LIGHTZSHIFT,
-            maxlightz = MAXLIGHTZ-1;
+  idlt_iteration = 0;
+  idlt_units_quot = max_light_distance / idlt_iterations;
+  idlt_units_rem  = max_light_distance % idlt_iterations;
+  idlt_units_cur  = 0;
 
-  for (int i = 0;  i < max_light_distance;  i++)
-  {
-    // spandistlight
-    uint16_t *sdll = planedistlight[i],
-             *sdlr = sdll + width;
+  I_ThreadSetWorkerFunction(ThreadInitDistLightTables);
 
-    const angle_t *xtva = xtoviewangle;
+  for (int i = 1;  i < idlt_iterations;  i++)
+  { I_SemaphorePost(I_WorkerSemaphoreIndex()); }
 
-    const fixed_t base_distance = (i << shift_bits) * (1.0 / RADFOG_MULT);
+  ThreadInitDistLightTables();
 
-    for (; sdll <= sdlr;  sdll++, sdlr--, xtva++)
-    {
-      const fixed_t distance = base_distance * floatsecant[*xtva >> ANGLETOFINESHIFT];
-
-      *sdll = *sdlr = MIN(maxlightz, distance);
-    }
-  }
+  for (int i = 1;  i < idlt_iterations;  i++)
+  { I_SemaphoreWait(I_MainSemaphoreIndex()); }
 
   init_radfog = false;
 }

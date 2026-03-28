@@ -26,6 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// [Nugget]
+#include <time.h>
+
 #include "am_map.h"
 #include "config.h"
 #include "d_deh.h"  // Ty 04/08/98 - Externalizations
@@ -90,7 +93,7 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include <time.h>
+#include "i_thread.h"
 #include "m_nughud.h"
 #include "r_data.h"
 
@@ -2347,6 +2350,9 @@ void D_DoomMain(void)
 
   M_LoadDefaults();  // load before initing other systems
   M_NughudLoadDefaults(); // [Nugget]
+
+  // [Nugget] Multithreading
+  I_InitThreading();
 
   bodyquesize = default_bodyquesize; // killough 10/98
 

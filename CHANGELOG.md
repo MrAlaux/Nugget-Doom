@@ -4,7 +4,7 @@ None.
 
 ## Changes
 
-None.
+- **Optimized initialization of _Radial Fog_ through multithreading**
 
 ## Bug Fixes
 
