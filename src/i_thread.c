@@ -33,6 +33,7 @@ typedef struct thread_data_s
 // threads[0] is a placeholder for the main thread, contains garbage
 static SDL_Thread **threads = NULL;
 static size_t num_threads = 1, num_threads_alloc = 0;
+static boolean destroy_threads = false;
 
 static SDL_sem **semaphores = NULL;
 static size_t num_semaphores = 0, num_semaphores_alloc = 0;
@@ -41,6 +42,7 @@ static int main_semaphore_index = -1, worker_semaphore_index = -1;
 
 static SDL_mutex *worker_mutex = NULL;
 
+static void I_ShutdownThreading(void);
 static int  I_SemaphoreCreate(void);
 static int  I_ThreadCreate(void (*function)(void *), unsigned id);
 static void WorkerFunctionWrapper(void *data);
@@ -52,6 +54,8 @@ void I_InitThreading(void)
                  : cvar_worker_threads;
 
   if (worker_threads < 1) { return; }
+
+  I_AtExit(I_ShutdownThreading, true);
 
   main_semaphore_index = I_SemaphoreCreate();
 
@@ -80,6 +84,28 @@ void I_InitThreading(void)
     VB_INFO, "%s: Using %i thread%s.",
     __func__, total_threads, (total_threads != 1) ? "s" : ""
   );
+}
+
+static void I_ShutdownThreading(void)
+{
+  destroy_threads = true;
+
+  for (int i = 1;  i < num_threads;  i++)
+  { I_SemaphorePost(I_WorkerSemaphoreIndex()); }
+
+  while (num_threads > 1)
+  {
+    num_threads--;
+    SDL_WaitThread(threads[num_threads], NULL);
+  }
+
+  if (worker_mutex) { SDL_DestroyMutex(worker_mutex); }
+
+  while (num_semaphores)
+  {
+    num_semaphores--;
+    SDL_DestroySemaphore(semaphores[num_semaphores]);
+  }
 }
 
 int I_MainSemaphoreIndex(void)
@@ -210,6 +236,8 @@ static void WorkerFunctionWrapper(void *data)
   while (true)
   {
     I_SemaphoreWait(worker_semaphore_index);
+
+    if (destroy_threads) { break; }
 
     WorkerFunction();
 
