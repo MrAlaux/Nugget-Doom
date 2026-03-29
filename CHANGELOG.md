@@ -4,7 +4,7 @@ None.
 
 ## Changes
 
-- **Optimized initialization of _Radial Fog_ through multithreading**
+- **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
 
 ## Bug Fixes
 

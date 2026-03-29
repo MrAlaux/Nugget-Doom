@@ -52,6 +52,7 @@
 
 // [Nugget]
 #include "hu_crosshair.h"
+#include "i_thread.h"
 #include "i_video.h"
 #include "st_widgets.h"
 
@@ -1113,8 +1114,117 @@ static void InitColormaps8(void)
   }
 }
 
+static int ic32_iteration, ic32_units_quot, ic32_units_rem, ic32_units_cur;
+
+static void ThreadInitInterpolatedColormaps(void)
+{
+  I_WorkerMutexLock();
+
+  const int ij_start = ic32_units_cur;
+
+  ic32_units_cur += ic32_units_quot + (ic32_iteration < ic32_units_rem);
+
+  const int ij_end = ic32_units_cur;
+
+  ic32_iteration++;
+
+  I_WorkerMutexUnlock();
+
+  for (int ij = ij_start;  ij < ij_end;  ij++)
+  {
+    {
+      const int i = ij / numcolormaps,
+                j = ij % numcolormaps;
+
+      if (pal_colormaps[i][j] == NULL) { continue; }
+
+      for (int k = 0;  k < 31;  k++)
+      {
+        const lighttable32_t
+          *const prev_colormap = pal_colormaps[i][j] + ((k<<CRSB) * 256),
+          *const next_colormap = pal_colormaps[i][j] + (((k + 1) << CRSB) * 256);
+
+        for (int l = 1;  l < 1<<CRSB;  l++)
+        {
+          lighttable32_t *const current_colormap = pal_colormaps[i][j] + (((k<<CRSB) + l) * 256);
+          const double factor = l / (double) (1<<CRSB);
+
+          for (int m = 0;  m < 256;  m++)
+          { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
+        }
+      }
+
+      // Fill the remainder with the last colormap row
+
+      lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+
+      for (int l = 1;  l < 1<<CRSB;  l++)
+      { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+    }
+  }
+}
+
+static void ThreadInitTruecolorColormaps(void)
+{
+  I_WorkerMutexLock();
+
+  const int ij_start = ic32_units_cur;
+
+  ic32_units_cur += ic32_units_quot + (ic32_iteration < ic32_units_rem);
+
+  const int ij_end = ic32_units_cur;
+
+  ic32_iteration++;
+
+  I_WorkerMutexUnlock();
+
+  for (int ij = ij_start;  ij < ij_end;  ij++)
+  {
+    {
+      const int i = ij / numcolormaps,
+                j = ij % numcolormaps;
+
+      const lighttable32_t *const first_colormap = pal_colormaps[i][j];
+
+      if (first_colormap == NULL) { continue; }
+
+      lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+
+      // We take the index from the original colormap; it might be inaccurate,
+      // but it's much faster than finding the nearest color in the palette
+      const byte *const orig_colormap = colormaps[j];
+
+      for (int k = 1;  k < (31<<CRSB);  k++)
+      {
+        lighttable32_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
+
+        const byte *const orig_colormap_row = orig_colormap + (k / (1<<CRSB)) * 256;
+
+        const double factor = k / (double) (31<<CRSB);
+
+        for (int m = 0;  m < 256;  m++)
+        {
+          const pixel32_t rgb = V_LerpRGB(first_colormap[m], last_colormap[m], factor);
+
+          const byte index = orig_colormap_row[m];
+
+          current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
+                              | (rgb & PIXEL_COLOR_MASK);
+        }
+      }
+
+      // Fill the remainder with the last colormap row
+      for (int l = 1;  l < 1<<CRSB;  l++)
+      { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+    }
+  }
+}
+
 static void InitColormaps32(void)
 {
+  const int num_palettes = I_GetNumPalettes(),
+            num_pals_and_colormaps = num_palettes * numcolormaps;
+
   if (lighting_mode == LIGHTINGMODE_TRUECOLOR)
   {
     // Interpolate between first and last colormap rows
@@ -1124,7 +1234,7 @@ static void InitColormaps32(void)
     // (the colormap row we're interpolating towards is already colored as per the current palette)
 
     // Load first, last, and invuln original colormap rows
-    for (int i = 0;  i < I_GetNumPalettes();  i++)
+    for (int i = 0;  i < num_palettes;  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
@@ -1149,51 +1259,29 @@ static void InitColormaps32(void)
       }
     }
 
-    for (int i = 0;  i < I_GetNumPalettes();  i++)
-    {
-      for (int j = 0;  j < numcolormaps;  j++)
-      {
-        const lighttable32_t *const first_colormap = pal_colormaps[i][j];
+    const int ic32_iterations = MIN(num_pals_and_colormaps, I_ThreadsNum());
 
-        if (first_colormap == NULL) { continue; }
+    ic32_iteration = 0;
+    ic32_units_quot = num_pals_and_colormaps / ic32_iterations;
+    ic32_units_rem  = num_pals_and_colormaps % ic32_iterations;
+    ic32_units_cur  = 0;
 
-        lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
+    I_ThreadSetWorkerFunction(ThreadInitTruecolorColormaps);
 
-        // We take the index from the original colormap; it might be inaccurate,
-        // but it's much faster than finding the nearest color in the palette
-        const byte *const orig_colormap = colormaps[j];
+    for (int i = 1;  i < ic32_iterations;  i++)
+    { I_SemaphorePost(I_WorkerSemaphoreIndex()); }
 
-        for (int k = 1;  k < (31<<CRSB);  k++)
-        {
-          lighttable32_t *const current_colormap = pal_colormaps[i][j] + (k * 256);
+    ThreadInitTruecolorColormaps();
 
-          const byte *const orig_colormap_row = orig_colormap + (k / (1<<CRSB)) * 256;
-
-          const double factor = k / (double) (31<<CRSB);
-
-          for (int m = 0;  m < 256;  m++)
-          {
-            const pixel32_t rgb = V_LerpRGB(first_colormap[m], last_colormap[m], factor);
-
-            const byte index = orig_colormap_row[m];
-
-            current_colormap[m] = (index << PIXEL_INDEX_SHIFT)
-                                | (rgb & PIXEL_COLOR_MASK);
-          }
-        }
-
-        // Fill the remainder with the last colormap row
-        for (int l = 1;  l < 1<<CRSB;  l++)
-        { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
-      }
-    }
+    for (int i = 1;  i < ic32_iterations;  i++)
+    { I_SemaphoreWait(I_MainSemaphoreIndex()); }
   }
   else if (lighting_mode == LIGHTINGMODE_INTERPOLATED)
   {
     // Interpolate between all colormap rows
 
     // Load original colormap rows
-    for (int i = 0;  i < I_GetNumPalettes();  i++)
+    for (int i = 0;  i < num_palettes;  i++)
     {
       for (int j = 0;  j < numcolormaps;  j++)
       {
@@ -1215,36 +1303,22 @@ static void InitColormaps32(void)
       }
     }
 
-    for (int i = 0;  i < I_GetNumPalettes();  i++)
-    {
-      for (int j = 0;  j < numcolormaps;  j++)
-      {
-        if (pal_colormaps[i][j] == NULL) { continue; }
+    const int ic32_iterations = MIN(num_pals_and_colormaps, I_ThreadsNum());
 
-        for (int k = 0;  k < 31;  k++)
-        {
-          const lighttable32_t
-            *const prev_colormap = pal_colormaps[i][j] + ((k<<CRSB) * 256),
-            *const next_colormap = pal_colormaps[i][j] + (((k + 1) << CRSB) * 256);
+    ic32_iteration = 0;
+    ic32_units_quot = num_pals_and_colormaps / ic32_iterations;
+    ic32_units_rem  = num_pals_and_colormaps % ic32_iterations;
+    ic32_units_cur  = 0;
 
-          for (int l = 1;  l < 1<<CRSB;  l++)
-          {
-            lighttable32_t *const current_colormap = pal_colormaps[i][j] + (((k<<CRSB) + l) * 256);
-            const double factor = l / (double) (1<<CRSB);
+    I_ThreadSetWorkerFunction(ThreadInitInterpolatedColormaps);
 
-            for (int m = 0;  m < 256;  m++)
-            { current_colormap[m] = V_LerpRGB(prev_colormap[m], next_colormap[m], factor); }
-          }
-        }
+    for (int i = 1;  i < ic32_iterations;  i++)
+    { I_SemaphorePost(I_WorkerSemaphoreIndex()); }
 
-        // Fill the remainder with the last colormap row
+    ThreadInitInterpolatedColormaps();
 
-        lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
-
-        for (int l = 1;  l < 1<<CRSB;  l++)
-        { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
-      }
-    }
+    for (int i = 1;  i < ic32_iterations;  i++)
+    { I_SemaphoreWait(I_MainSemaphoreIndex()); }
   }
 
   // [Nugget] Night-vision visor
@@ -1252,7 +1326,7 @@ static void InitColormaps32(void)
   {
     const int row_index = 256 * ((32<<CRSB) + 1);
 
-    for (int i = 0;  i < I_GetNumPalettes();  i++)
+    for (int i = 0;  i < num_palettes;  i++)
     {
       V_SetPalColors(i);
 
