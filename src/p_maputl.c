@@ -25,7 +25,6 @@
 
 // [Nugget]
 #include <math.h>
-#include <string.h>
 
 #include "doomdata.h"
 #include "doomstat.h"

@@ -3891,20 +3891,24 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
     V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERML", PU_CACHE), cr); // [Nugget] HUD/menu shadows
     xx += 8;
 
-    { // [Nugget] HUD/menu shadows
-      const patch_t *const patch = V_CachePatchName("M_THERMM", PU_CACHE);
-      V_SetShadowCrop(SHORT(patch->width) - M_THRM_STEP);
-    }
+    // [Nugget]
+    patch_t *const patch = V_CachePatchName("M_THERMM", PU_CACHE);
 
     for (i = 0; i < thermWidth; i++)
     {
-        V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMM", PU_CACHE), cr); // [Nugget] HUD/menu shadows
+        // [Nugget] HUD/menu shadows
+        const int w = SHORT(patch->width);
+        V_DrawPatchShadow(
+            xx, y,
+            (crop_t) { .width = w - MAX(0, w - M_THRM_STEP) },
+            patch, false
+        );
+
+        V_DrawPatchTranslated(xx, y, patch, cr);
         xx += 8;
     }
 
-    V_SetShadowCrop(0); // [Nugget] HUD/menu shadows
-
-    V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
+    V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr);
 
     // [FG] write numerical values next to thermometer
     M_snprintf(num, 4, "%3d", thermDot);

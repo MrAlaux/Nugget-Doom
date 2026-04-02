@@ -52,7 +52,6 @@ extern lighttable_t *fullcolormap;        // killough 3/20/98
 extern lighttable32_t ***pal_colormaps;
 extern lighttable32_t **colormaps32;
 extern lighttable32_t *fullcolormap32;
-extern cmapoffset_t fixedcolormapoffset;
 
 extern int viewwidth;
 extern int scaledviewwidth;
