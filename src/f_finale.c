@@ -915,7 +915,7 @@ static void F_FancyCastTicker(void)
 
       casttics = caststate->tics;
       castflip = flipcorpses && state == info->deathstate
-                 && (info->flags2 & MF2_FLIPPABLE)
+                 && (info->flags_extra & MFX_MIRROREDCORPSE)
                  && (Woof_Random() & 1);
 
       sfxenum_t actionsound = F_SoundForAction(info, caststate);
@@ -947,7 +947,7 @@ static void F_FancyCastTicker(void)
   {
     oldstate = caststate;
 
-    if (caststate->action.p1 == (actionf_p1) A_RandomJump)
+    if (caststate->action.p1 == A_RandomJump)
     {
       if (Woof_Random() < caststate->misc2)
       {
@@ -1243,7 +1243,7 @@ static boolean F_CastResponder(event_t* ev)
 
   // [Nugget]: [crispy] flippable death sequence
   castflip = flipcorpses && castdeath
-             && (mobjinfo[castorder[castnum].type].flags2 & MF2_FLIPPABLE)
+             && (mobjinfo[castorder[castnum].type].flags_extra & MFX_MIRROREDCORPSE)
              && (Woof_Random() & 1);
         
   return true;
@@ -1491,7 +1491,7 @@ void F_Drawer (void)
     switch (gameepisode)
     {
       case 1:
-           if ( gamemode == retail || gamemode == commercial )
+           if ( (gamemode == retail && !pwad_help2) || gamemode == commercial )
              V_DrawPatchFullScreen(
               V_CachePatchName(W_CheckWidescreenPatch("CREDIT"), PU_CACHE));
            else

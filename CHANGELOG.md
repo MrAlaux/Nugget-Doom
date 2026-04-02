@@ -4,8 +4,17 @@ None.
 
 ## Changes
 
+- **Merged changes from Woof! post-15.2.0**, note:
+  - Maintained Nugget's implementation of _Custom Skill_
+    - Due to UDMF support, changed values of `custom_skill_things` [^1]
+  - Maintained _Pistol Start_ menu item
+  - Removed `no_page_ticking` in favor of Woof's `menu_pause_demos`
+  - Removed `quick_quitgame` in favor of Woof's `quit_prompt`
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
+- **Improved sky stretching**
 
 ## Bug Fixes
 
 None.
+
+[^1]: This will affect existing config files.

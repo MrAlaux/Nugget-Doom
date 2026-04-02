@@ -78,14 +78,24 @@ extern int MAXLIGHTZ;
 extern int LIGHTZSHIFT;
 
 // killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
-extern cmapoffset_t *(*scalelight);
-extern cmapoffset_t *(*zlight);
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
+
+// updated thanks to Rum-and-Raisin Doom, Ethan Watson
+extern int* scalelightoffset;
+extern int* scalelightindex;
+extern int* zlightoffset;
+extern int* zlightindex;
+extern int* planezlightoffset;
+extern int  planezlightindex;
+extern int* walllightoffset;
+extern int  walllightindex;
+
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
 extern lighttable32_t *fixedcolormap32;
+extern int           fixedcolormapindex;
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
@@ -102,8 +112,12 @@ extern void (*colfunc)(void);
 // Utility functions.
 //
 
-int R_PointOnSide(fixed_t x, fixed_t y, struct node_s *node);
-int R_PointOnSegSide(fixed_t x, fixed_t y, struct seg_s *line);
+extern int (*R_PointOnSide)(fixed_t x, fixed_t y, struct node_s *node);
+int R_PointOnSideClassic(fixed_t x, fixed_t y, struct node_s *node);
+int R_PointOnSidePrecise(fixed_t x, fixed_t y, struct node_s *node);
+extern int (*R_PointOnSegSide)(fixed_t x, fixed_t y, struct seg_s *line);
+int R_PointOnSegSideClassic(fixed_t x, fixed_t y, struct seg_s *line);
+int R_PointOnSegSidePrecise(fixed_t x, fixed_t y, struct seg_s *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 angle_t R_PointToAngleCrispy(fixed_t x, fixed_t y);
@@ -169,8 +183,21 @@ extern boolean have_crouch_sprites;
 
 fixed_t R_GetNughudViewPitch(void);
 boolean R_SpriteShadowsOn(void);
-int R_GetLightLevelInPoint(fixed_t x, fixed_t y, boolean force_mbf);
-int R_GetLightLevelInSector(struct sector_s *sector, const boolean force_mbf);
+
+void R_GetLightLevelAndTintInPoint(
+  fixed_t x,
+  fixed_t y,
+  boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
+);
+
+void R_GetLightLevelAndTintInSector(
+  struct sector_s *sector,
+  boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
+);
 
 #define PSPR_INVIS_TRANSLUCENCY 50
 
@@ -193,6 +220,8 @@ typedef enum lightingmode_e {
 
 extern lightingmode_t lighting_mode;
 
+extern int num_colormap_rows;
+
 boolean R_InitLightTablesPending(void);
 void R_DeferredInitLightTables(void);
 
@@ -200,7 +229,6 @@ void R_DeferredInitLightTables(void);
 
 extern int light_distance_shift_bits;
 
-extern cmapoffset_t *planezlight;
 extern uint16_t **planedistlight, *spandistlight;
 
 extern boolean do_radial_fog;
@@ -282,8 +310,9 @@ extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 
 void R_InitLightTables(void);                // killough 8/9/98
 
-// [Nugget] Made function pointer, added X parameter
-extern int (*R_GetLightIndex)(fixed_t scale, int x);
+// [Nugget]
+extern int (*R_GetLightIndex)(fixed_t scale, int x); // Made function pointer, added X parameter
+int R_GetLightIndexVanilla(fixed_t scale, int x);
 
 extern boolean setsizeneeded;
 void R_ExecuteSetViewSize(void);
@@ -307,16 +336,16 @@ inline static angle_t LerpAngle(angle_t oangle, angle_t nangle)
     else if (nangle > oangle)
     {
         if (nangle - oangle < ANG270)
-            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle + (angle_t)((nangle - oangle) * FixedToDouble(fractionaltic));
         else // Wrapped around
-            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle - (angle_t)((oangle - nangle) * FixedToDouble(fractionaltic));
     }
     else // nangle < oangle
     {
         if (oangle - nangle < ANG270)
-            return oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle - (angle_t)((oangle - nangle) * FixedToDouble(fractionaltic));
         else // Wrapped around
-            return oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(fractionaltic));
+            return oangle + (angle_t)((nangle - oangle) * FixedToDouble(fractionaltic));
     }
 }
 

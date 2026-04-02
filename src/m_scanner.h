@@ -42,7 +42,7 @@ enum
     TK_BoolConst,       // Ex: true
     TK_FloatConst,      // Ex: 1.5
 
-    TK_LumpName,
+    TK_RawString,
 
     TK_AnnotateStart,   // Block comment start
     TK_AnnotateEnd,     // Block comment end
@@ -68,9 +68,18 @@ boolean SC_GetNextToken(scanner_t *s, boolean expandstate);
 void SC_GetNextLineToken(scanner_t *s);
 void SC_MustGetToken(scanner_t *s, char token);
 void SC_Rewind(scanner_t *s); // Only can rewind one step.
+boolean SC_SameLine(scanner_t *s);
+boolean SC_CheckStringOrIdent(scanner_t *s);
+void SC_MustGetStringOrIdent(scanner_t *s);
 
-void SC_GetNextTokenLumpName(scanner_t *s);
+typedef enum
+{
+    SC_ERROR,
+    SC_WARNING
+} scmsg_t;
 
-void SC_Error(scanner_t *s, const char *msg, ...) PRINTF_ATTR(2, 3);
+void SC_PrintMsg(scmsg_t type, scanner_t *s, const char *msg, ...) PRINTF_ATTR(3, 4);
+#define SC_Error(s, ...) SC_PrintMsg(SC_ERROR, s, __VA_ARGS__)
+#define SC_Warning(s, ...) SC_PrintMsg(SC_WARNING, s, __VA_ARGS__)
 
 #endif

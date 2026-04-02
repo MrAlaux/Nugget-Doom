@@ -151,7 +151,7 @@ void ST_UpdateCarousel(player_t *player)
     }
 
     if (automap_on || menuactive || paused || player->playerstate == PST_DEAD
-        || consoleplayer != displayplayer)
+        || player->health <= 0 || consoleplayer != displayplayer)
     {
         ST_ResetCarousel();
         return;
@@ -168,7 +168,7 @@ void ST_UpdateCarousel(player_t *player)
     if (last_index != selected_index)
     {
         distance = selected_index - last_index;
-        distance = 64 * BETWEEN(-2, 2, distance);
+        distance = 64 * CLAMP(distance, -2, 2);
         last_index = selected_index;
         last_time = I_GetTimeMS();
     }
@@ -197,15 +197,15 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     if (cr && elem->tranmap)
     {
-        V_DrawPatchTRTLSH(x, y, patch, cr, elem->tranmap);
+        V_DrawPatchTRTLSH(x, y, (crop_t){0}, patch, cr, elem->tranmap);
     }
     else if (elem->tranmap)
     {
-        V_DrawPatchTLSH(x, y, patch, elem->tranmap);
+        V_DrawPatchTLSH(x, y, (crop_t){0}, patch, elem->tranmap);
     }
     else
     {
-        V_DrawPatchTranslatedSH(x, y, patch, cr);
+        V_DrawPatchTRSH(x, y, (crop_t){0}, patch, cr);
     }
 }
 

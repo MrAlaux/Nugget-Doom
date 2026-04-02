@@ -68,6 +68,7 @@ enum
     input_menu_clear,
     input_menu_reloadlevel,
     input_menu_nextlevel,
+    input_menu_prevlevel,
 
     input_hud_timestats,
 
@@ -96,6 +97,7 @@ enum
     input_speed_up,
     input_speed_down,
     input_speed_default,
+    input_rewind,
 
     input_map,
     input_map_up,
@@ -119,6 +121,8 @@ enum
     input_chat_dest3,
     input_chat_backspace,
     input_chat_enter,
+    input_netgame_stats,
+    input_msgreview,
 
     input_iddqd,
     input_idkfa,
@@ -146,8 +150,6 @@ enum
     input_slowmo,
     input_chasecam,
     input_freecam,
-
-    input_rewind,
 
     input_map_blink, // Highlight points of interest
     input_map_tagfinder, // Tag Finder from PrBoomX

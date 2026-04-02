@@ -1603,7 +1603,7 @@ static void P_NuggetWeaponInertia(
 
     WeaponInertiaHorizontal(player, psp, scale);
 
-    if (mouselook || padlook || player->pitch || psp->wiy)
+    if (freelook || player->pitch || psp->wiy)
       WeaponInertiaVertical(player, psp, scale);
   }
 }

@@ -550,8 +550,8 @@ static void DoResurrect(void)
   mapthing_t mt = {0};
 
   P_MapStart();
-  mt.x = plyr->mo->x >> FRACBITS;
-  mt.y = plyr->mo->y >> FRACBITS;
+  mt.x = plyr->mo->x;
+  mt.y = plyr->mo->y;
   mt.angle = (plyr->mo->angle + ANG45/2)*(uint64_t)45/ANG45;
   mt.type = consoleplayer + 1;
   P_SpawnPlayer(&mt);
@@ -566,12 +566,6 @@ static void DoResurrect(void)
   if (plyr->mo)
     plyr->mo->health = god_health;  // Ty 03/09/98 - deh
   plyr->health = god_health;
-
-  // [Nugget] Rewind;
-  // This is called before the countdown decrement in `G_Ticker()`,
-  // so add 1 to keep it aligned
-  if (leveltime)
-  { G_SetRewindCountdown(((rewind_interval * TICRATE) + 1) - ((leveltime - 1) % (rewind_interval * TICRATE))); }
 }
 
 // Resurrection cheat adapted from Crispy's IDDQD
@@ -631,7 +625,7 @@ static void cheat_turbox(char *buf)
 
   // Limit the scale; it gets kinda wonky at 255 already,
   // but going any further outright inverts movement
-  scale = BETWEEN(10, 255, scale);
+  scale = CLAMP(scale, 10, 255);
 
   forwardmove[0] = 0x19 * scale / 100;
   forwardmove[1] = 0x32 * scale / 100;
@@ -812,7 +806,7 @@ static void cheat_reveal_keyxx(int key)
   do {
     th = th->next;
 
-    if (th->function.p1 == (actionf_p1) P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
     {
       mobj_t *mobj = (mobj_t *) th;
 
@@ -1188,7 +1182,7 @@ static void cheat_notarget(void)
     // [crispy] let mobjs forget their target and tracer
     for (thinker_t *th = thinkercap.next;  th != &thinkercap;  th = th->next)
     {
-      if (th->function.p1 == (actionf_p1) P_MobjThinker)
+      if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *const mo = (mobj_t *) th;
 
@@ -1471,7 +1465,7 @@ static void cheat_friction(void)
 
 static void cheat_skill0(void)
 {
-  displaymsg("Skill: %s", default_skill_strings[gameskill + 1]);
+  displaymsg("Skill: %s", skill_strings[gameskill]);
 }
 
 static void cheat_skill(char *buf)
@@ -1481,7 +1475,7 @@ static void cheat_skill(char *buf)
   if (skill >= 1 && skill <= 5 + casual_play) // [Nugget] Custom Skill
   {
     gameskill = skill - 1;
-    displaymsg("Next Level Skill: %s", default_skill_strings[gameskill + 1]);
+    displaymsg("Next Level Skill: %s", skill_strings[gameskill]);
 
     G_SetSkillParms(gameskill); // [Nugget]
   }
@@ -1529,7 +1523,7 @@ static void cheat_massacre(void)    // jff 2/01/98 kill all monsters
   P_MapStart();
   do
     while ((currentthinker=currentthinker->next)!=&thinkercap)
-      if (currentthinker->function.p1 == (actionf_p1)P_MobjThinker &&
+      if (currentthinker->function.p1 == P_MobjThinker &&
 	  !(((mobj_t *) currentthinker)->flags & mask) && // killough 7/20/98
 	  (((mobj_t *) currentthinker)->flags & MF_COUNTKILL ||
 	   ((mobj_t *) currentthinker)->type == MT_SKULL))
@@ -1594,15 +1588,29 @@ static void cheat_spechits(void)
         case 208:
         case 209:
         case 210:
+        case 243:
+        case 244:
+        case 262:
+        case 263:
+        case 264:
+        case 265:
+        case 266:
+        case 267:
         case 268:
         case 269:
         {
           continue;
         }
 
+      // do not trigger any ID24 actions
+      if (lines[i].special >= 2048 && lines[i].special <= 2098)
+      {
+        continue;
+      }
+
       // [crispy] special without tag --> DR linedef type
       // do not change door direction if it is already moving
-      if (lines[i].tag == 0 &&
+      if (lines[i].args[0] == 0 &&
           lines[i].sidenum[1] != NO_INDEX &&
          (sides[lines[i].sidenum[1]].sector->floordata ||
           sides[lines[i].sidenum[1]].sector->ceilingdata))
@@ -1611,7 +1619,7 @@ static void cheat_spechits(void)
       }
 
       P_CrossSpecialLine(&lines[i], 0, plyr->mo, false);
-      P_ShootSpecialLine(plyr->mo, &lines[i]);
+      P_ShootSpecialLine(plyr->mo, &lines[i], 0);
       P_UseSpecialLine(plyr->mo, &lines[i], 0, false);
 
       speciallines++;
@@ -1629,7 +1637,7 @@ static void cheat_spechits(void)
 
     for (th = thinkercap.next ; th != &thinkercap ; th = th->next)
     {
-      if (th->function.p1 == (actionf_p1)P_MobjThinker)
+      if (th->function.p1 == P_MobjThinker)
       {
         mobj_t *mo = (mobj_t *) th;
 
@@ -1640,14 +1648,14 @@ static void cheat_spechits(void)
           {
             dummy = *lines;
             dummy.special = (short)bossaction->special;
-            dummy.tag = (short)bossaction->tag;
+            dummy.args[0] = (short)bossaction->tag;
             // use special semantics for line activation to block problem types.
             if (!P_UseSpecialLine(mo, &dummy, 0, true))
               P_CrossSpecialLine(&dummy, 0, mo, true);
 
             speciallines++;
 
-            if (dummy.tag == 666)
+            if (dummy.args[0] == 666)
               trigger_keen = false;
           }
         }
@@ -1662,12 +1670,12 @@ static void cheat_spechits(void)
       if (gamemap == 7)
       {
         // Mancubi
-        dummy.tag = 666;
+        dummy.args[0] = 666;
         speciallines += EV_DoFloor(&dummy, lowerFloorToLowest);
         trigger_keen = false;
 
         // Arachnotrons
-        dummy.tag = 667;
+        dummy.args[0] = 667;
         speciallines += EV_DoFloor(&dummy, raiseToTexture);
       }
     }
@@ -1676,7 +1684,7 @@ static void cheat_spechits(void)
       if (gameepisode == 1)
       {
         // Barons of Hell
-        dummy.tag = 666;
+        dummy.args[0] = 666;
         speciallines += EV_DoFloor(&dummy, lowerFloorToLowest);
         trigger_keen = false;
       }
@@ -1685,14 +1693,14 @@ static void cheat_spechits(void)
         if (gamemap == 6)
         {
           // Cyberdemons
-          dummy.tag = 666;
+          dummy.args[0] = 666;
           speciallines += EV_DoDoor(&dummy, blazeOpen);
           trigger_keen = false;
         }
         else if (gamemap == 8)
         {
           // Spider Masterminds
-          dummy.tag = 666;
+          dummy.args[0] = 666;
           speciallines += EV_DoFloor(&dummy, lowerFloorToLowest);
           trigger_keen = false;
         }
@@ -1703,7 +1711,7 @@ static void cheat_spechits(void)
   // Keens (no matter which level they are on)
   if (trigger_keen)
   {
-    dummy.tag = 666;
+    dummy.args[0] = 666;
     speciallines += EV_DoDoor(&dummy, doorOpen);
   }
 
@@ -1779,7 +1787,7 @@ static void cheat_cycle_mobj(mobj_t **last_mobj, int *last_count,
   do
   {
     th = th->next;
-    if (th->function.p1 == (actionf_p1)P_MobjThinker)
+    if (th->function.p1 == P_MobjThinker)
     {
       mobj_t *mobj;
 

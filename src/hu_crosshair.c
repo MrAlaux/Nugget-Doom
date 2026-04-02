@@ -17,6 +17,9 @@
 //
 //-----------------------------------------------------------------------------
 
+// [Nugget]
+#include <math.h>
+
 #include "hu_crosshair.h"
 #include "d_items.h"
 #include "doomstat.h"
@@ -302,8 +305,8 @@ void HU_UpdateCrosshairLock(int x, int y)
     int w = (crosshair.w * video.xscale) >> FRACBITS;
     int h = (crosshair.h * video.yscale) >> FRACBITS;
 
-    x = viewwindowx + BETWEEN(w, viewwidth - w - 1, x);
-    y = viewwindowy + BETWEEN(h, viewheight - h - 1, y);
+    x = viewwindowx + clampi(x, w, viewwidth - w - 1);
+    y = viewwindowy + clampi(y, h, viewheight - h - 1);
 
     // [Nugget] Vertical-only lock-on
     if (hud_crosshair_lockon == crosslockon_full)
@@ -355,27 +358,27 @@ void HU_DrawCrosshair(void)
         hlx = bar_offset - (SHORT(crosshair.patch->width) % 2) + crosshair.hlw,
         amx = bar_offset;
 
-        V_SetPatchCrop(0, 0, crosshair.hlc, 0, false);
-
-        V_DrawPatchTRTL2(
+        V_DrawPatchTranslucent2(
             crosshair.x - hlx,
             y - crosshair.hlh,
+            (crop_t) { .topoffset = crosshair.hlc },
             crosshair.hlpatch,
+            false,
             crosshair.cr,
+            NULL,
             xhair_tranmap
         );
 
-        V_SetPatchCrop(0, 0, crosshair.amc, 0, false);
-
-        V_DrawPatchTRTL2(
+        V_DrawPatchTranslucent2(
             crosshair.x + amx,
             y - crosshair.amh,
+            (crop_t) { .topoffset = crosshair.amc },
             crosshair.ampatch,
+            false,
             crosshair.cr,
+            NULL,
             xhair_tranmap
         );
-
-        V_ClearPatchCrop();
     }
 
     // Horizontal-autoaim indicators

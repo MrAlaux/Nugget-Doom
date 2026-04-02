@@ -1,5 +1,6 @@
 set(BASE_SOURCES
     all-all/animated.lmp
+    all-all/brghtmps.lmp
     all-all/chexdeh.lmp
     all-all/compdb.lmp
     all-all/crblack.lmp
@@ -126,6 +127,8 @@ set(BASE_SOURCES
 
     all-all/colormaps/watermap.cmp
 
+    all-all/flats/-NO_TEX-.png
+
     all-all/sprites/dogsa1.png
     all-all/sprites/dogsa2.png
     all-all/sprites/dogsa3.png
@@ -241,11 +244,10 @@ set(BASE_SOURCES
     hacx.wad/brghtmps.lmp
     hacx.wad/dehacked.deh
 
+    id1.wad/dehacked.lmp
     id1.wad/sbardef.lmp
 
-    rekkr.wad/dehacked.lmp
-    rekkrsa.wad/dehacked.lmp
-    rekkrsl.wad/dehacked.lmp
+    rekkr-all/dehacked.lmp
 
     tnt.wad/brghtmps.lmp)
 

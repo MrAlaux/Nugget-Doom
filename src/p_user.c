@@ -65,14 +65,11 @@ boolean breathing;
 // Flinching
 void P_SetFlinch(player_t *const player, int pitch)
 {
-  player->flinch = BETWEEN(-12*ANG1, 12*ANG1, player->flinch + pitch*ANG1/2);
+  player->flinch += pitch * ANG1/2;
+  player->flinch  = CLAMP(player->flinch, -12*ANG1, 12*ANG1);
 }
 
 // [Nugget] =================================================================/
-
-// Index of the special effects (INVUL inverse) map.
-
-#define INVERSECOLORMAP 32
 
 //
 // Movement.
@@ -506,7 +503,7 @@ void P_MovePlayer (player_t* player)
   if (!menuactive && !demoplayback && !player->centering)
   {
     player->pitch += cmd->pitch << FRACBITS;
-    player->pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, player->pitch);
+    player->pitch = CLAMP(player->pitch, -max_pitch_angle, max_pitch_angle);
     player->slope = PlayerSlope(player);
   }
 }
@@ -578,7 +575,7 @@ void P_DeathThink (player_t* player)
           player->mo->angle -= ANG5;
 
       // [Nugget] Look at killer vertically
-      if ((mouselook || padlook))
+      if (freelook)
       {
         player->centering = false;
 
@@ -597,7 +594,7 @@ void P_DeathThink (player_t* player)
 
           pitch = P_SlopeToPitch(slope);
 
-          pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, pitch);
+          pitch = CLAMP(pitch, -max_pitch_angle, max_pitch_angle);
         }
         else { pitch = 0; }
 
@@ -705,7 +702,7 @@ void P_PlayerThink (player_t* player)
       player->mo->flags &= ~MF_JUSTATTACKED;
     }
 
-  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  if (STRICTMODE(vertical_lockon) && !freelook)
   { player->centering = false; }
 
   // [crispy] center view
@@ -769,7 +766,7 @@ void P_PlayerThink (player_t* player)
       return;
     }
 
-  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  if (STRICTMODE(vertical_lockon) && !freelook)
   {
     if (player != &players[displayplayer])
     {
@@ -821,12 +818,12 @@ void P_PlayerThink (player_t* player)
                                  P_AproxDistance(player->mo->x - linetarget->x,
                                                  player->mo->y - linetarget->y));
 
-        slope = BETWEEN(P_GetLinetargetBottomSlope(),
-                        P_GetLinetargetTopSlope(),
-                        slope);
+        slope = CLAMP(
+          slope, P_GetLinetargetBottomSlope(), P_GetLinetargetTopSlope()
+        );
 
         target_pitch = P_SlopeToPitch(slope);
-        target_pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, target_pitch);
+        target_pitch = CLAMP(target_pitch, -max_pitch_angle, max_pitch_angle);
       }
       else if (lock_time) { target_pitch = player->pitch; }
 
@@ -1091,7 +1088,8 @@ boolean P_EvaluateItemOwned(itemtype_t item, player_t *player)
             return player->powers[pw_ironfeet] != 0;
 
         case item_invulnerability:
-            return player->powers[pw_invulnerability] != 0;
+            return player->powers[pw_invulnerability]
+                   || (player->cheats & CF_GODMODE);
 
         case item_healthbonus:
         case item_stimpack:
