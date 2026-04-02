@@ -401,6 +401,7 @@ enum
 
     // [Nugget] --------------------------------------------------------------
 
+    str_lighting_mode,
     str_bobbing_style,
     str_force_carousel,
     str_crosshair_lockon,
@@ -744,15 +745,19 @@ static void DrawSetupThermo(const setup_menu_t *s, int x, int y, int width,
 
     patch_t *patch = V_CachePatchName("M_THERMM", PU_CACHE);
 
-    V_SetShadowCrop(SHORT(patch->width) - M_THRM_STEP); // [Nugget] HUD/menu shadows
-
     for (i = 0; i < width + 1; i++)
     {
-        V_DrawPatchTranslatedSH(xx, y, patch, cr); // [Nugget] HUD/menu shadows
+        // [Nugget] HUD/menu shadows
+        const int w = SHORT(patch->width);
+        V_DrawPatchShadow(
+            xx, y,
+            (crop_t) { .width = w - MAX(0, w - M_THRM_STEP) },
+            patch, false
+        );
+
+        V_DrawPatchTranslated(xx, y, patch, cr);
         xx += M_THRM_STEP;
     }
-
-    V_SetShadowCrop(0); // [Nugget] HUD/menu shadows
 
     V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
 
@@ -1599,7 +1604,7 @@ static setup_menu_t keys_settings5[] = {
     {"Shift Left",      S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_left},
     {"Shift Right",     S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_right},
     {"Mark Place",      S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_mark},
-    {"Clear Last Mark", S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_clear},
+    {"Clear Mark",      S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_clear}, // [Nugget] Changed description
     {"Full/Zoom",       S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_gobig},
     {"Grid",            S_INPUT, KB_X, M_SPC, {0}, m_map, input_map_grid},
     MI_END
@@ -1663,8 +1668,6 @@ static setup_menu_t keys_settings7[] =
 
 static setup_menu_t mapkeys_settings1[] =
 {
-    {"Minimap",            S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_mini},
-    MI_GAP,
     {"Tag Finder",         S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_tagfinder},
     MI_GAP,
     {"Highlight P.O.I.'s", S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_map,  input_map_blink},
@@ -2053,15 +2056,18 @@ static setup_menu_t weap_settings5[] =
 {
   {"Nugget - Cosmetic", S_SKIP|S_TITLE, W_X, M_SPC},
 
-    {"Bobbing Style",             S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"bobbing_style"}, .strings_id = str_bobbing_style},
-    {"Bob While Switching",       S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"switch_bob"}},
-    {"Weapon Squat Upon Landing", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"weaponsquat"}},
-    {"Force Weapon Carousel",     S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"force_carousel"}, .strings_id = str_force_carousel},
+    {"Bobbing Style",              S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"bobbing_style"}, .strings_id = str_bobbing_style},
+    {"Bob While Switching",        S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"switch_bob"}},
+    {"Weapon Squat Upon Landing",  S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"weaponsquat"}},
+    {"Translucent When Invisible", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"pspr_invis_translucent"}},
+    {"Force Weapon Carousel",      S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"force_carousel"}, .strings_id = str_force_carousel},
     MI_GAP,
-    {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
-    {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
-    {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
-    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X_THRM8, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    #define W_X2 (W_X_THRM8 + 16)
+    {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
+    {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
+    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    #undef W_X2
 
   MI_END
 };
@@ -2298,8 +2304,10 @@ static setup_menu_t stat_settings3[] = {
 
     // [Nugget] /-------------------------------------------------------------
 
+    {"Health/Ammo Bars", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_bars"}},
+
     {"Horizontal-Autoaim Indicators", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_indicators"}},
-    
+
     {"Detection of Fuzzy Targets", S_ONOFF | S_STRICT, XH_X, M_SPC, {"hud_crosshair_fuzzy"}},
 
     // [Nugget] -------------------------------------------------------------/
@@ -2377,7 +2385,7 @@ static setup_menu_t stat_settings5[] =
 
     {"Show Powerup Timers",              S_CHOICE|S_COSMETIC, M_X, M_SPC, {"hud_power_timers"}, .strings_id = str_show_widgets},
     {"Blink Missing Keys",               S_ONOFF,             M_X, M_SPC, {"hud_blink_keys"}},
-    {"Animated Health/Armor Count",      S_ONOFF | S_STRICT,  M_X, M_SPC, {"hud_animated_counts"}},
+    {"Animated Health/Armor Counts",     S_ONOFF |S_STRICT,   M_X, M_SPC, {"hud_animated_counts"}},
     {"Berserk display when using Fist",  S_ONOFF,             M_X, M_SPC, {"sts_show_berserk"}},
     {"Allow HUD Icons",                  S_ONOFF,             M_X, M_SPC, {"hud_allow_icons"}},
     {"HUD Colors",                       S_FUNC,              M_X, M_SPC, .action = MN_HUDColors},
@@ -2462,6 +2470,7 @@ void UpdateCrosshairItems(void) // [Nugget] Global
 
     DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair");
     DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair_tran_pct");
+    DisableItem(!hud_crosshair_on, stat_settings3, "hud_crosshair_bars");
 
     DisableItem(
         !(hud_crosshair_on
@@ -2506,12 +2515,37 @@ void MN_DrawStatusHUD(void)
         patch_t *patch =
             V_CachePatchName(crosshair_lumps[hud_crosshair], PU_CACHE);
 
-        int x = XH_X + 85 - SHORT(patch->width) / 2;
-        int y = M_Y + M_SPC + M_SPC / 2 - SHORT(patch->height) / 2 - 1; // [Nugget] Adjusted
+        // [Nugget] Crosshair dimensions added later
+        int x = XH_X + 85;
+        int y = M_Y + M_SPC + M_SPC / 2 - 1; // [Nugget] Adjusted
 
-        // [Nugget] Translucent crosshair
-        V_DrawPatchTRTL2(x, y, patch, colrngs[hud_crosshair_color],
-                         R_GetGenericTranMap(hud_crosshair_tran_pct));
+        // [Nugget] /---------------------------------------------------------
+
+        const int halfwidth = SHORT(patch->width) / 2;
+
+        byte *const cr = colrngs[hud_crosshair_color],
+             *const xhair_tranmap = R_GetGenericTranMap(hud_crosshair_tran_pct); // Translucent crosshair
+
+        // [Nugget] ---------------------------------------------------------/
+
+        V_DrawPatchTRTL2(x - halfwidth, y - SHORT(patch->height) / 2, patch, cr, xhair_tranmap);
+
+        // [Nugget] Health/ammo bars
+        if (STRICTMODE(hud_crosshair_bars))
+        {
+            patch_t *const hlpatch = V_CachePatchName("CROSSHLB", PU_STATIC),
+                    *const ampatch = V_CachePatchName("CROSSAMB", PU_STATIC);
+
+            const int
+                bar_offset = MAX(6, halfwidth),
+                hlx = bar_offset - (SHORT(patch->width) % 2) + SHORT(hlpatch->width),
+                hlh = SHORT(hlpatch->height) / 2,
+                amx = bar_offset,
+                amh = SHORT(ampatch->height) / 2;
+
+            V_DrawPatchTRTL2(x - hlx, y - hlh, hlpatch, cr, xhair_tranmap);
+            V_DrawPatchTRTL2(x + amx, y - amh, ampatch, cr, xhair_tranmap);
+        }
     }
 
     // If the Reset Button has been selected, an "Are you sure?" message
@@ -2813,6 +2847,10 @@ static setup_tab_t gen_tabs[] = {
     {NULL}
 };
 
+static const char *lighting_mode_strings[] = {
+  "Vanilla", "Smooth", "Interpolated", "True-Color"
+};
+
 static int resolution_scale;
 
 static const char **GetResolutionScaleStrings(void)
@@ -2934,12 +2972,12 @@ const char *gamma_strings[] = {
 
 void MN_ResetGamma(void)
 {
-    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
+    I_SetPalette(0); // [Nugget] Pass index
 }
 
 static setup_menu_t gen_settings1[] = {
 
-    // [Nugget] These first three items now report
+    // [Nugget] The following three items now report
     // the current resolution when sitting on them
 
     {"Resolution Scale", S_THERMO | S_THRM_SIZE11 | S_ACTION | S_RES, CNTR_X,
@@ -2968,10 +3006,14 @@ static setup_menu_t gen_settings1[] = {
 
     MI_GAP_Y(5),
 
+    {"Lighting Mode", S_CHOICE, CNTR_X, M_SPC, {"lighting_mode"},
+     .strings_id = str_lighting_mode, .action = I_DeferredInitColor},
+
     {"FOV", S_THERMO | S_THRM_SIZE11, CNTR_X, M_THRM_SPC, {"fov"},
      .action = UpdateFOV},
 
-    {"Gamma Correction", S_THERMO, CNTR_X, M_THRM_SPC, {"gamma2"},
+    // [Nugget] S_ACTION
+    {"Gamma Correction", S_THERMO|S_ACTION, CNTR_X, M_THRM_SPC, {"gamma2"},
      .strings_id = str_gamma, .action = MN_ResetGamma},
 
     {"Extra Lighting", S_THERMO | S_STRICT, CNTR_X,
@@ -3838,12 +3880,6 @@ void MN_DrawGyro(void)
 // [Nugget] Voxel rendering mode
 static void UpdateVoxelRenderingModeItem(void);
 
-static void SmoothLight(void)
-{
-    setsmoothlight = true;
-    setsizeneeded = true; // run R_ExecuteSetViewSize
-}
-
 // [Nugget] Restored backdrop item
 static const char *menu_backdrop_strings[] = {"Off", "Dark", "Texture"};
 
@@ -3880,9 +3916,6 @@ static setup_menu_t gen_settings5[] = {
      .action = R_InitPlanes},
 
     {"Swirling Flats", S_ONOFF, OFF_CNTR_X, M_SPC, {"r_swirl"}},
-
-    {"Smooth Diminishing Lighting", S_ONOFF, OFF_CNTR_X, M_SPC, {"smoothlight"},
-     .action = SmoothLight},
 
     // [Nugget] Restored backdrop item /--------------------------------------
 
@@ -4133,10 +4166,12 @@ setup_menu_t display_settings1[] = {
     {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = V_InitShadowTranMap},
     {"Sprite Shadows",               S_CHOICE|S_STRICT,       N_X, M_SPC, {"sprite_shadows"}, .strings_id = str_sprite_shadows, .action = R_InitShadowTranMap},
     {"Thing Lighting Mode",          S_CHOICE|S_STRICT,       N_X, M_SPC, {"thing_lighting_mode"}, .strings_id = str_thing_lighting},
+    {"Radial Fog",                   S_ONOFF,                 N_X, M_SPC, {"radial_fog"}, .action = R_DeferredInitLightTables},
     {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
     {"No Berserk Tint",              S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_berserk_tint"}},
     {"No Radiation Suit Tint",       S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_radsuit_tint"}},
     {"Night-Vision Visor Effect",    S_ONOFF |S_STRICT,       N_X, M_SPC, {"nightvision_visor"}},
+    {"Smooth Palette Tinting",       S_ONOFF,                 N_X, M_SPC, {"smooth_palette_tinting"}, .action = I_DeferredInitPalettes},
     {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
     {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
     {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
@@ -4152,16 +4187,16 @@ setup_menu_t display_settings1[] = {
 
 void SetPalette(void)
 {
-    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
+    I_SetPalette(0); // [Nugget] Pass index
 }
 
 static setup_menu_t display_settings2[] = {
 
-    {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
-    {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
-    {"Blue Intensity",  S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"blue_intensity"},   .action = SetPalette},
-    {"Saturation",      S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_saturation"}, .action = SetPalette},
-    {"Contrast",        S_THERMO|S_THRM_SIZE11|S_PCT, M_X_THRM11, M_THRM_SPC, {"color_contrast"},   .action = SetPalette},
+    {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
+    {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
+    {"Blue Intensity",  S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"blue_intensity"},   .action = SetPalette},
+    {"Saturation",      S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"color_saturation"}, .action = SetPalette},
+    {"Contrast",        S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"color_contrast"},   .action = SetPalette},
 
     MI_END
 };
@@ -4224,6 +4259,7 @@ void MN_UpdateDynamicResolutionItem(void)
 void MN_UpdateAdvancedSoundItems(boolean toggle)
 {
     DisableItem(toggle, gen_settings2, "snd_hrtf");
+    DisableItem(toggle, sfx_settings1, "snd_absorption"); // [Nugget]
     DisableItem(toggle, sfx_settings1, "snd_doppler");
 }
 
@@ -5197,6 +5233,11 @@ static boolean BindInput(void)
     {
         M_InputRemoveActivated(input_id);
         SelectDone(current_item);
+
+        // [Nugget]
+        if (current_item->action)
+        { current_item->action(); }
+
         return true;
     }
 
@@ -5225,6 +5266,10 @@ static boolean BindInput(void)
     {
         return true;
     }
+
+    // [Nugget]
+    if (current_item->action)
+    { current_item->action(); }
 
     SelectDone(current_item); // phares 4/17/98
     return true;
@@ -5898,6 +5943,7 @@ static const char **selectstrings[] = {
 
     // [Nugget] --------------------------------------------------------------
 
+    [str_lighting_mode] = lighting_mode_strings,
     [str_bobbing_style] = bobbing_style_strings,
     [str_force_carousel] = force_carousel_strings,
     [str_crosshair_lockon] = crosshair_lockon_strings,

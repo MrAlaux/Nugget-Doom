@@ -129,6 +129,9 @@ extern unsigned long rngseed;          // The starting seed (not part of state)
 // Returns a number from 0 to 255,
 #define M_Random() P_Random(pr_misc)
 
+// [Nugget]
+extern int rng_override;
+
 // As M_Random, but used by the play simulation.
 int P_Random(pr_class_t);
 

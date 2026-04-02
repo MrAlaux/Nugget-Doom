@@ -22,7 +22,10 @@
 
 #include <limits.h>
 #include <stdlib.h>
-#include <string.h> // [Nugget]
+
+// [Nugget]
+#include <math.h>
+#include <string.h>
 
 #include "doomdata.h"
 #include "doomstat.h"
@@ -36,6 +39,12 @@
 #include "r_main.h"
 #include "r_state.h"
 #include "z_zone.h"
+
+// [Nugget] Exact distance calculation
+fixed_t P_CalcDistance(const fixed_t dx, const fixed_t dy)
+{
+  return sqrt((int64_t) dx * dx + (int64_t) dy * dy);
+}
 
 //
 // P_AproxDistance

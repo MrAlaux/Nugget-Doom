@@ -455,7 +455,8 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
         --widget->duration_left;
 
         // [Nugget] Message fadeout
-        FadeOutLine(&widget->lines[array_size(widget->lines) - 1], widget->duration_left);
+        for (int i = 0;  i < array_size(widget->lines);  i++)
+        { FadeOutLine(&widget->lines[i], widget->duration_left); }
     }
     else
     {
@@ -515,7 +516,7 @@ typedef struct
     int pos;
 } chatline_t;
 
-static chatline_t lines[MAXPLAYERS];
+static chatline_t chatlines[MAXPLAYERS]; // [Nugget] Renamed
 
 static void ClearChatLine(chatline_t *line)
 {
@@ -588,20 +589,20 @@ void ST_UpdateChatMessage(void)
                     ch = (char)shiftxform[(unsigned char)ch];
                 }
 
-                if (AddKeyToChatLine(&lines[p], ch) && ch == KEY_ENTER)
+                if (AddKeyToChatLine(&chatlines[p], ch) && ch == KEY_ENTER)
                 {
-                    if (lines[p].pos && (chat_dest[p] == consoleplayer + 1
-                                         || chat_dest[p] == HU_BROADCAST))
+                    if (chatlines[p].pos && (chat_dest[p] == consoleplayer + 1
+                                             || chat_dest[p] == HU_BROADCAST))
                     {
                         M_snprintf(message_string, sizeof(message_string),
-                            "%s%s", *player_names[p], lines[p].string);
+                            "%s%s", *player_names[p], chatlines[p].string);
 
                         S_StartSoundPitch(0,
                                           gamemode == commercial ? sfx_radio
                                                                  : sfx_tink,
                                           PITCH_NONE);
                     }
-                    ClearChatLine(&lines[p]);
+                    ClearChatLine(&chatlines[p]);
                 }
             }
             players[p].cmd.chatchar = 0;
@@ -1246,10 +1247,10 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
 
     int offset = 0;
 
+    // [Nugget] Colors
+
     if (WidgetEnabled(hud_level_time))
     {
-        // [Nugget] Colors
-
         if (time_scale != 100)
         {
             offset +=

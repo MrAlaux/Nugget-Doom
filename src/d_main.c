@@ -26,6 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// [Nugget]
+#include <time.h>
+
 #include "am_map.h"
 #include "config.h"
 #include "d_deh.h"  // Ty 04/08/98 - Externalizations
@@ -92,8 +95,9 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include <time.h>
+#include "i_thread.h"
 #include "m_nughud.h"
+#include "r_data.h"
 
 // DEHacked support - Ty 03/09/97
 // killough 10/98:
@@ -319,8 +323,13 @@ void D_Display (void)
         I_DynamicResolution();
     }
 
-  if (setsmoothlight)
-    R_SmoothLight();
+  // [Nugget] True color
+  if (R_InitColormapsPending())
+  { R_InitColormaps(); }
+
+  // [Nugget] Lighting modes
+  if (R_InitLightTablesPending())
+  { R_InitLightTables(); }
 
   if (setsizeneeded)                // change the view size if needed
     {
@@ -329,8 +338,17 @@ void D_Display (void)
       borderdrawcount = true;
     }
 
+  // [Nugget] Radial fog
+  if (R_InitDistLightTablesPending())
+  { R_InitDistLightTables(); }
+
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
+
+  // [Nugget] True color: brought from below
+  // clean up border stuff
+  if (gamestate != oldgamestate && gamestate != GS_LEVEL)
+    I_SetPalette (0); // [Nugget] Pass index
 
   switch (gamestate)                // do buffered drawing
     {
@@ -355,9 +373,7 @@ void D_Display (void)
   if (gamestate == GS_LEVEL && gametic)
       R_RenderPlayerView(&players[displayplayer]);
 
-  // clean up border stuff
-  if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-    I_SetPalette (W_CacheLumpName ("PLAYPAL",PU_CACHE));
+  // [Nugget] True color: moved "border stuff" code above
 
   // see if the border needs to be initially drawn
   if (gamestate == GS_LEVEL && oldgamestate != GS_LEVEL)
@@ -1479,6 +1495,12 @@ static void AutoloadIWadDir(void (*AutoLoadFunc)(const char *path))
                     free(dir);
                 }
             }
+            else if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
+            {
+                dir = GetAutoloadDir(autoload_paths[i], "chex-all", true);
+                AutoLoadFunc(dir);
+                free(dir);
+            }
 
             // auto-loaded files per IWAD
             dir = GetAutoloadDir(autoload_paths[j], M_BaseName(wadfiles[i]), true);
@@ -2418,6 +2440,9 @@ void D_DoomMain(void)
   M_LoadDefaults();  // load before initing other systems
   M_NughudLoadDefaults(); // [Nugget]
 
+  // [Nugget] Multithreading
+  I_InitThreading();
+
   bodyquesize = default_bodyquesize; // killough 10/98
 
   // 1/18/98 killough: Z_Init call moved to i_main.c
@@ -2425,6 +2450,12 @@ void D_DoomMain(void)
   // init subsystems
 
   W_InitMultipleFiles();
+
+  // Always process chex.deh first
+  if (gamemission == pack_chex)
+  {
+    ProcessDehLump(W_GetNumForName("chexdeh"));
+  }
 
   // Check for wolf levels
   haswolflevels = (W_CheckNumForName("map31") >= 0);
@@ -2820,11 +2851,12 @@ void D_DoomMain(void)
 
     if (curtm)
     {
-           if (curtm->tm_mon ==  3 && curtm->tm_mday ==  1) {  cheese = true; }
-      else if (curtm->tm_mon ==  6 && curtm->tm_mday == 15) {    tanz = true; }
+           if (curtm->tm_mon ==  3 && curtm->tm_mday ==  1) { cheese = true; }
+      else if (curtm->tm_mon ==  6 && curtm->tm_mday == 15) { tanz = true; }
       else if (curtm->tm_mon ==  9 && curtm->tm_mday ==  7) { src_ain = true; }
       else if (curtm->tm_mon ==  9 && curtm->tm_mday == 31) { frights = true; }
-      else if (curtm->tm_mon == 11 && curtm->tm_mday == 25) {  flakes = allow_flakes = true; }
+      else if (curtm->tm_mon == 11 && curtm->tm_mday == 24) { flakes = allow_flakes = faint_flakes = true; }
+      else if (curtm->tm_mon == 11 && curtm->tm_mday == 25) { flakes = allow_flakes = true; }
     }
   }
 
@@ -2869,6 +2901,11 @@ void D_BindMiscVariables(void)
   M_BindBool("inter_ratio_stats", &inter_ratio_stats, NULL,
              false, ss_none, wad_yes,
              "Use ratios for stats in intermission screen");
+
+  // (CFG-only)
+  M_BindBool("inter_entering_delay", &inter_entering_delay, NULL,
+             false, ss_none, wad_yes,
+             "Increase the duration of the \"Entering\" screen in Doom 2's intermission screen");
 
   // [Nugget] ---------------------------------------------------------------/
 

@@ -272,6 +272,10 @@ static int  f_y;
 static int  f_w;
 static int  f_h;
 
+// [Nugget] Ends of window on screen
+static int  f_x2;
+static int  f_y2;
+
 static mpoint_t m_paninc;    // how far the window pans each tic (map coords)
 static fixed_t mtof_zoommul; // how far the window zooms each tic (map coords)
 static fixed_t ftom_zoommul; // how far the window zooms each tic (fb coords)
@@ -317,7 +321,7 @@ static patch_t *marknums[10];   // numbers used for marking by the automap
 // killough 2/22/98: Remove limit on automap marks,
 // and make variables external for use in savegames.
 
-mpoint_t *markpoints = NULL;    // where the points are
+mapmark_t *markpoints = NULL;    // where the points are
 int markpointnum = 0; // next point to be assigned (also number of points now)
 int markpointnum_max = 0;       // killough 2/22/98
 boolean followplayer = true; // specifies whether to follow the player around
@@ -405,6 +409,54 @@ static int highlight_timer;
 static int highlight_color[4];
 
 // ---------------------------------------------------------------------------
+
+static inline int MaybeFlipX(const int x)
+{
+  return STRICTMODE(flip_levels)
+         ? (f_x * 2) + (f_w - 1) - x
+         : x;
+}
+
+static int pointed_mark_index = -1;
+
+static const int markcolors[] =
+{
+  CR_NONE,
+  CR_RED,
+  CR_ORANGE,
+  CR_YELLOW,
+  CR_GREEN,
+  CR_BLUE1,
+  CR_PURPLE
+};
+
+static const size_t NUM_MARKCOLORS = sizeof(markcolors) / sizeof(*markcolors);
+
+static void AM_colorPointedMark(void)
+{
+  if (!markpointnum || pointed_mark_index < 0) { return; }
+
+  mapmark_t *const mark = markpoints + pointed_mark_index;
+
+  mark->color = (mark->color + 1) % NUM_MARKCOLORS;
+}
+
+static void AM_clearPointedMark(void)
+{
+  if (!markpointnum || pointed_mark_index < 0) { return; }
+
+  if (pointed_mark_index < markpointnum-1)
+  {
+    memmove(
+      markpoints + (pointed_mark_index),
+      markpoints + (pointed_mark_index + 1),
+      sizeof(*markpoints) * (markpointnum - 1 - pointed_mark_index)
+    );
+  }
+
+  markpointnum--;
+  pointed_mark_index = -1;
+}
 
 boolean tanz = false;
 static boolean tanzen = false;
@@ -502,9 +554,12 @@ static void AM_addMark(void)
                             markpointnum_max*2 : 16) * sizeof(*markpoints),
                            PU_STATIC, 0);
 
-  markpoints[markpointnum].x = m_x + m_w/2;
-  markpoints[markpointnum].y = m_y + m_h/2;
+  markpoints[markpointnum].pt.x = m_x + m_w/2;
+  markpoints[markpointnum].pt.y = m_y + m_h/2;
   markpointnum++;
+
+  // [Nugget]
+  markpoints[markpointnum-1].color = 0;
 }
 
 //
@@ -754,6 +809,9 @@ static void AM_initScreenSize(void)
     f_w = V_ScaleX(MIN(SCREENWIDTH  - mm_x, mm_w));
     f_h = V_ScaleY(MIN(SCREENHEIGHT - mm_y, mm_h));
 
+    f_x2 = f_x + f_w;
+    f_y2 = f_y + f_h;
+
     return;
   }
 
@@ -762,6 +820,10 @@ static void AM_initScreenSize(void)
     f_h = video.height;
   else
     f_h = V_ScaleY(SCREENHEIGHT - ST_HEIGHT);
+
+  // [Nugget]
+  f_x2 = f_x + f_w;
+  f_y2 = f_y + f_h;
 }
 
 void AM_ResetScreenSize(void)
@@ -828,7 +890,8 @@ static void AM_LevelInit(void)
 //
 // Passed nothing, returns nothing
 //
-void AM_Stop (void)
+// [Nugget] Renamed, local
+static void AM_doStop (void)
 {
   static event_t st_notify = {.type = 0, .data1.i = ev_keyup, .data2.i = AM_MSGEXITED};
 
@@ -871,7 +934,7 @@ void AM_Start()
   // [Nugget] ---------------------------------------------------------------/
 
   if (!stopped)
-    AM_Stop();
+    AM_doStop();
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode
       || last_automap != automapactive || last_messages != messages_height
@@ -924,23 +987,45 @@ static void AM_maxOutWindowScale(void)
   AM_activateNewScale();
 }
 
-// [Nugget]
+// [Nugget] /=================================================================
+
+void AM_Stop(void)
+{
+  AM_ChangeMode(AM_FORCEOFF);
+}
+
 void AM_ChangeMode(automapmode_t mode)
 {
-  const boolean modechange = mode && automapactive && mode != automapactive;
-  fixed_t rx=0, ry=0, rw=0, rh=0; // Restored values
+  static int last_change_tic = SHRT_MIN;
+  static boolean minimap_on = false;
+
+  if (mode == AM_FORCEOFF)
+  {
+    mode = AM_OFF;
+  }
+  else if (automapactive != AM_MINI && gametic - last_change_tic < TICRATE/5) // 0.2 seconds
+  {
+    mode = AM_MINI;
+  }
+
+  const boolean minimap_toggled = mode && minimap_on != (mode == AM_MINI);
 
   automapactive = mode;
 
   if (automapactive == AM_MINI)
   { memset(buttons_state, 0, sizeof(buttons_state)); }
 
-  if (modechange)
+  fixed_t rx=0, ry=0, rw=0, rh=0; // Restored values
+
+  if (minimap_toggled)
   {
+    minimap_on = automapactive == AM_MINI;
+
     rx = older_m_x;
     ry = older_m_y;
     rw = older_m_w;
     rh = older_m_h;
+
     older_m_x = m_x;
     older_m_y = m_y;
     older_m_w = m_w;
@@ -948,11 +1033,11 @@ void AM_ChangeMode(automapmode_t mode)
   }
 
   if (!automapactive)
-    AM_Stop();
+    AM_doStop();
   else
     AM_Start();
 
-  if (modechange)
+  if (minimap_toggled)
   {
     if (reset_older)
     {
@@ -963,6 +1048,7 @@ void AM_ChangeMode(automapmode_t mode)
       old_m_y = ry;
       old_m_w = rw;
       old_m_h = rh;
+
       AM_restoreScaleAndLoc();
       AM_activateNewScale();
     }
@@ -972,9 +1058,7 @@ void AM_ChangeMode(automapmode_t mode)
   {
     if (automapactive == AM_FULL)
     {
-      static int modechangetic = 0;
-
-      if (gametic - modechangetic >= TICRATE)
+      if (gametic - last_change_tic >= TICRATE)
       {
         if ((tanzen = Woof_Random() == 156)) // Only because the table doesn't have 157
         {
@@ -983,12 +1067,14 @@ void AM_ChangeMode(automapmode_t mode)
           tanzd = TICRATE;
         }
       }
-
-      modechangetic = gametic;
     }
     else { tanzen = false; }
   }
+
+  last_change_tic = gametic;
 }
+
+// [Nugget] =================================================================/
 
 //
 // AM_Responder()
@@ -1026,7 +1112,7 @@ boolean AM_Responder
   {
     if (M_InputActivated(input_map) && !WS_Override())
     {
-      AM_ChangeMode(AM_FULL);
+      AM_ChangeMode(AM_FULL); // [Nugget]
       viewactive = false;
       rc = true;
     }
@@ -1116,7 +1202,7 @@ boolean AM_Responder
       {
         bigstate = 0;
         viewactive = true;
-        AM_ChangeMode(AM_OFF);
+        AM_ChangeMode(AM_OFF); // [Nugget]
       }
       else
       {
@@ -1149,9 +1235,17 @@ boolean AM_Responder
     }
     else if (M_InputActivated(input_map_mark))
     {
-      // Ty 03/27/98 - *not* externalized     
-      displaymsg("%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
-      AM_addMark();
+      // [Nugget]
+      if (pointed_mark_index >= 0)
+      {
+        AM_colorPointedMark();
+      }
+      else
+      {
+        // Ty 03/27/98 - *not* externalized     
+        displaymsg("%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
+        AM_addMark();
+      }
     }
     else if (M_InputActivated(input_map_clear))
     {
@@ -1159,8 +1253,19 @@ boolean AM_Responder
       if (!markpointnum)
         displaymsg("%s", s_AMSTR_MARKSCLEARED);
       else {
-        AM_clearLastMark();
-        displaymsg("Cleared spot %d", markpointnum);
+        // [Nugget]
+        const int pmi = pointed_mark_index;
+
+        if (pmi >= 0)
+        {
+          AM_clearPointedMark();
+        }
+        else
+        {
+          AM_clearLastMark();
+        }
+
+        displaymsg("Cleared spot %d", (pmi >= 0) ? pmi : markpointnum);
       }
     }
     else
@@ -1190,7 +1295,7 @@ boolean AM_Responder
     // Highlight points of interest
     else if (M_InputActivated(input_map_blink))
     {
-      highlight_timer = 4*TICRATE;
+      highlight_timer = TICRATE * 144/35; // A bit over 4 seconds
 
       if (markpointnum)
       {
@@ -1198,11 +1303,6 @@ boolean AM_Responder
                    markpointnum, (markpointnum == 1) ? "" : "s");
       }
       else { displaymsg("Highlighting points of interest..."); }
-    }
-    // Minimap
-    else if (M_InputActivated(input_map_mini))
-    {
-      AM_ChangeMode(AM_MINI);
     }
     // Tag Finder from PrBoomX
     else if (M_InputActivated(input_map_tagfinder))
@@ -1248,7 +1348,6 @@ boolean AM_Responder
 
         P_MapEnd();
       }
-      
     }
 
     // [Nugget] -------------------------------------------------------------/
@@ -1443,7 +1542,8 @@ void AM_Ticker (void)
               dist = fabs((y2 - y1) * tmapx - (x2 - x1) * tmapy + x2*y1 - y2*x1)
                    / sqrtf(powf(y2 - y1, 2) + powf(x2 - x1, 2));
 
-            if (dist < min_distance) {
+            if (dist < min_distance)
+            {
               min_distance = dist;
               min_tag = l->args[0];
             }
@@ -1452,7 +1552,8 @@ void AM_Ticker (void)
       }
 
       // only pick the line if the crosshair is "close" to it
-      if (min_tag > 0) {
+      if (min_tag > 0)
+      {
         magic_tag = min_tag;
         magic_sector = NULL;
       }
@@ -1463,12 +1564,63 @@ void AM_Ticker (void)
   {
     if (++magic_sector_color_pos >= MAGIC_SECTOR_COLOR_MAX)
     { magic_sector_color_pos = MAGIC_SECTOR_COLOR_MIN; }
-    
+
     if (++magic_line_color_pos >= MAGIC_LINE_COLOR_MAX)
     { magic_line_color_pos = MAGIC_LINE_COLOR_MIN; }
   }
 
   // -------------------------------------------------------------------------
+
+  {
+    static int64_t old_m_x = -1, old_m_y = -1, old_m_w = -1, old_m_h = -1;
+    static int old_markpointnum = -1;
+
+    if (automapactive != AM_FULL)
+    {
+      pointed_mark_index = -1;
+      old_m_x = -1; // Make the check be run when re-entering
+    }
+    else if (old_m_x != m_x || old_m_y != m_y || old_m_w != m_w || old_m_h != m_h
+             || old_markpointnum != markpointnum)
+    {
+      // The pointer has moved, or marks have changed; check if the pointer is near a mark
+
+      old_m_x = m_x;
+      old_m_y = m_y;
+      old_m_w = m_w;
+      old_m_h = m_h;
+      old_markpointnum = markpointnum;
+
+      pointed_mark_index = -1;
+
+      if (markpointnum)
+      {
+        // Pointer position
+        const int64_t px = m_x + m_w/2,
+                      py = m_y + m_h/2;
+
+        int64_t min_distance = 6 * FixedMul(scale_ftom, video.xscale);
+
+        if (followplayer)
+        { min_distance = MAX(40 << MAPBITS, min_distance); }
+
+        for (int i = 0;  i < markpointnum;  i++)
+        {
+          const mapmark_t *const mark = markpoints + i;
+
+          const int64_t dx = llabs(mark->pt.x - px),
+                        dy = llabs(mark->pt.y - py),
+                        distance = MAX(dx, dy);
+
+          if (min_distance >= distance)
+          {
+            min_distance = distance;
+            pointed_mark_index = i;
+          }
+        }
+      }
+    }
+  }
 
   if (tanzen)
   {
@@ -1498,17 +1650,36 @@ void AM_Ticker (void)
 //
 // Clear automap frame buffer.
 //
-static void AM_clearFB(int color)
+
+static void (*AM_clearFB)(int color) = NULL;
+
+static void AM_clearFB8(int color)
 {
   // [Nugget] Minimap: take `f_x` and `f_y` into account
 
   int h = f_h;
-  pixel_t *src = I_VideoBuffer + ((f_y * video.width) + f_x);
+  pixel_t *dest = I_VideoBuffer + ((f_y * video.width) + f_x);
 
   while (h--)
   {
-    memset(src, color, f_w);
-    src += video.width;
+    memset(dest, color, f_w);
+    dest += video.width;
+  }
+}
+
+static void AM_clearFB32(int color)
+{
+  // [Nugget] Minimap: take `f_x` and `f_y` into account
+
+  int h = f_h;
+  pixel32_t *dest = I_VideoBuffer32 + ((f_y * video.width) + f_x);
+
+  const pixel32_t color32 = V_IndexToRGB(color);
+
+  while (h--)
+  {
+    V_RGBSet(dest, color32, f_w);
+    dest += video.width;
   }
 }
 
@@ -1549,10 +1720,10 @@ static boolean AM_clipMline
 // [Nugget] Minimap: take `f_x` and `f_y` into account
 #define DOOUTCODE(oc, mx, my) \
   (oc) = 0; \
-  if ((my) < 0) (oc) |= TOP; \
-  else if ((my) >= f_y+f_h) (oc) |= BOTTOM; \
-  if ((mx) < 0) (oc) |= LEFT; \
-  else if ((mx) >= f_x+f_w) (oc) |= RIGHT;
+  if ((my) < f_y) (oc) |= TOP; \
+  else if ((my) >= f_y2) (oc) |= BOTTOM; \
+  if ((mx) < f_x) (oc) |= LEFT; \
+  else if ((mx) >= f_x2) (oc) |= RIGHT;
 
 
   // do trivial rejects and outcodes
@@ -1616,15 +1787,15 @@ static boolean AM_clipMline
     {
       dy = fl->a.y - fl->b.y;
       dx = fl->b.x - fl->a.x;
-      tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y+f_h)))/dy);
-      tmp.y = f_y+f_h-1; // [Nugget] Minimap: take `f_y` into account
+      tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y2)))/dy);
+      tmp.y = f_y2-1; // [Nugget] Minimap: take `f_y` into account
     }
     else if (outside & RIGHT)
     {
       dy = fl->b.y - fl->a.y;
       dx = fl->b.x - fl->a.x;
-      tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x+f_w-1 - fl->a.x))/dx);
-      tmp.x = f_x+f_w-1; // [Nugget] Minimap: take `f_x` into account
+      tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x2-1 - fl->a.x))/dx);
+      tmp.x = f_x2-1; // [Nugget] Minimap: take `f_x` into account
     }
     else if (outside & LEFT)
     {
@@ -1649,19 +1820,47 @@ static boolean AM_clipMline
       return false; // trivially outside
   }
 
+  // [Nugget] Flip levels
+  fl->a.x = MaybeFlipX(fl->a.x);
+  fl->b.x = MaybeFlipX(fl->b.x);
+
   return true;
 }
 #undef DOOUTCODE
 
-// [Nugget] Factored out
-static inline void PUTDOT(int xx, int yy, int cc)
-{
-  if (STRICTMODE(flip_levels)) { xx = f_x*2 + f_w - 1 - xx; } // [Nugget] Flip levels
+// [Nugget] /=================================================================
 
-  // [Nugget] Minimap: take `f_x` and `f_y` into account
-  if ((f_x <= xx && xx < f_x+f_w) && (f_y <= yy && yy < f_y+f_h))
-    I_VideoBuffer[(yy) * video.width + (xx)] = (cc);
+// Factored out --------------------------------------------------------------
+
+static void (*PUTDOT)(int xx, int yy, int cc) = NULL;
+
+static void PUTDOT8(const int xx, const int yy, const int cc)
+{
+  I_VideoBuffer[(yy) * video.width + (xx)] = cc;
 }
+
+static void PUTDOT32(const int xx, const int yy, const int cc)
+{
+  I_VideoBuffer32[(yy) * video.width + (xx)] = V_IndexToRGB(cc);
+}
+
+// ---------------------------------------------------------------------------
+
+static void (*PutLine)(int x, int y, int dx, int color) = NULL;
+
+static void PutLine8(const int x, const int y, const int dx, const int color)
+{
+  pixel_t *const dest = I_VideoBuffer + (y * video.width) + x;
+  memset(dest, color, dx);
+}
+
+static void PutLine32(const int x, const int y, const int dx, const int color)
+{
+  pixel32_t *const dest = I_VideoBuffer32 + (y * video.width) + x;
+  V_IndexSet(dest, color, dx);
+}
+
+// [Nugget] =================================================================/
 
 
 //
@@ -1690,10 +1889,10 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   if
   (
     // [Nugget] Minimap: take `f_x` and `f_y` into account
-       fl->a.x < 0 || fl->a.x >= f_x+f_w
-    || fl->a.y < 0 || fl->a.y >= f_y+f_h
-    || fl->b.x < 0 || fl->b.x >= f_x+f_w
-    || fl->b.y < 0 || fl->b.y >= f_y+f_h
+       fl->a.x < f_x || fl->a.x >= f_x2
+    || fl->a.y < f_y || fl->a.y >= f_y2
+    || fl->b.x < f_x || fl->b.x >= f_x2
+    || fl->b.y < f_y || fl->b.y >= f_y2
   )
   {
     return;
@@ -1712,6 +1911,20 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 
   x = fl->a.x;
   y = fl->a.y;
+
+  // [Nugget] Optimize straight horizontal lines
+  if (dx && !dy)
+  {
+    if (dx < 0)
+    {
+      x += dx;
+      dx = -dx;
+    }
+
+    PutLine(x, y, dx, color);
+
+    return;
+  }
 
   if (ax > ay)
   {
@@ -1752,19 +1965,11 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
 //
 // haleyjd 06/13/09: Pixel plotter for Wu line drawing.
 //
-static void AM_putWuDot(int x, int y, int color, int weight)
+
+static void (*AM_putWuDot)(int x, int y, int color, int weight) = NULL;
+
+static void AM_putWuDot8(int x, int y, int color, int weight)
 {
-  // [Nugget] /---------------------------------------------------------------
-
-  // Flip levels
-  if (STRICTMODE(flip_levels)) { x = f_x*2 + f_w - 1 - x; }
-
-  // Minimap: take `f_x` and `f_y` into account
-  if (!((f_x <= x && x < f_x+f_w) && (f_y <= y && y < f_y+f_h)))
-  { return; }
-
-  // [Nugget] ---------------------------------------------------------------/
-
    pixel_t *dest = &I_VideoBuffer[y * video.width + x];
    unsigned int *fg2rgb = Col2RGB8[weight];
    unsigned int *bg2rgb = Col2RGB8[64 - weight];
@@ -1774,6 +1979,19 @@ static void AM_putWuDot(int x, int y, int color, int weight)
    bg = bg2rgb[*dest];
    fg = (fg + bg) | 0x1f07c1f;
    *dest = RGB32k[0][0][fg & (fg >> 15)];
+}
+
+static void AM_putWuDot32(int x, int y, int color, int weight)
+{
+   pixel32_t *dest = &I_VideoBuffer32[y * video.width + x];
+   unsigned int *fg2rgb = Col2RGB8[weight];
+   unsigned int *bg2rgb = Col2RGB8[64 - weight];
+   unsigned int fg, bg;
+
+   fg = fg2rgb[color];
+   bg = bg2rgb[V_IndexFromRGB(*dest)];
+   fg = (fg + bg) | 0x1f07c1f;
+   *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
 }
 
 
@@ -2795,7 +3013,7 @@ static void AM_drawMarks(void)
   mpoint_t pt;
 
   for (i=0;i<markpointnum;i++) // killough 2/22/98: remove automap mark limit
-    if (markpoints[i].x != -1)
+    if (markpoints[i].pt.x != -1)
       {
 	int w = (5 * video.xscale) >> FRACBITS;
 	int h = (6 * video.yscale) >> FRACBITS;
@@ -2804,13 +3022,49 @@ static void AM_drawMarks(void)
 	int j = i;
 
 	// [crispy] center marks around player
-	pt.x = markpoints[i].x;
-	pt.y = markpoints[i].y;
+	pt.x = markpoints[i].pt.x;
+	pt.y = markpoints[i].pt.y;
 	AM_transformPoint(&pt);
 	fx = CXMTOF(pt.x);
 	fy = CYMTOF(pt.y);
 
-	if (STRICTMODE(flip_levels)) { fx = f_x*2 + f_w - 1 - fx; } // [Nugget] Flip levels
+	fx = MaybeFlipX(fx); // [Nugget] Flip levels
+
+	// [Nugget] /===============================================================
+
+	// Center number on mark spot ----------------------------------------------
+
+	w -= video.yscale >> FRACBITS; // killough 2/22/98: 1 space backwards
+
+	int num_digits = 1;
+
+	for (int num = j;  num /= 10;  num_digits++);
+
+	fx += (w * (num_digits-1)) - (w * num_digits / 2);
+	fy -= h / 2;
+
+	// Colorize number ---------------------------------------------------------
+
+	const mapmark_t *const mark = markpoints + i;
+
+	byte *cr1 = NULL, *cr2 = NULL;
+
+	if (mark->color)
+	{
+	  cr1 = colrngs[markcolors[mark->color]];
+	  cr2 = cr_bright;
+	}
+
+	if (i == pointed_mark_index)
+	{
+	  cr2 = cr_bright3;
+	}
+	else if (highlight_timer)
+	{
+	  cr2 = (highlight_timer & 8) ? cr_bright : cr_dark;
+	}
+
+	// [Nugget] ===============================================================/
 
 	do
 	  {
@@ -2820,13 +3074,20 @@ static void AM_drawMarks(void)
 	      fx += (video.xscale >> FRACBITS);
 
 	    // [Nugget] Minimap: take `f_x` and `f_y` into account
-	    if (fx >= f_x && fx < f_x+f_w - w && fy >= f_y && fy < f_y+f_h - h)
-	      // [Nugget] Highlight marks
-	      V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
-                              (fy << FRACBITS) / video.yscale,
-                              marknums[d], (highlight_timer & 8) ? cr_dark : NULL);
+	    if (fx >= f_x && fx < f_x2 - w && fy >= f_y && fy < f_y2 - h)
+	    {
+	      // [Nugget] Translation
+	      if (cr1 && cr2)
+	        V_DrawPatchTRTR(((fx << FRACBITS) / video.xscale) - video.deltaw,
+	                        (fy << FRACBITS) / video.yscale,
+	                        (crop_t){0}, marknums[d], cr1, cr2);
+	      else
+	        V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
+	                              (fy << FRACBITS) / video.yscale,
+	                              marknums[d], cr1 ? cr1 : cr2);
+	    }
 
-	    fx -= w - (video.yscale >> FRACBITS); // killough 2/22/98: 1 space backwards
+	    fx -= w;
 
 	    j /= 10;
 	  }
@@ -2853,21 +3114,58 @@ static void AM_drawCrosshair(int color)
 
 // [Nugget] /-----------------------------------------------------------------
 
+static void (*AM_shadeMinimap)(void) = NULL;
+
+static void AM_shadeMinimap8(void)
+{
+  const lighttable_t *const colormap = colormaps[0] + (automap_overlay_darkening * 256);
+
+  const int pitch = video.width,
+            width = f_x2 - f_x;
+
+  pixel_t       *           row = I_VideoBuffer + (f_y * pitch + f_x);
+  pixel_t const *const last_row = row + ((f_y2 - f_y) * pitch);
+
+  for (; row < last_row;  row += pitch)
+  {
+    pixel_t *           pixel = row;
+    pixel_t *const last_pixel = pixel + width;
+
+    for (; pixel < last_pixel;  pixel++)
+    { *pixel = colormap[*pixel]; }
+  }
+}
+
+static void AM_shadeMinimap32(void)
+{
+  const lighttable32_t *const colormap = colormaps32[0] + ((automap_overlay_darkening<<CRSB) * 256);
+
+  const int pitch = video.width,
+            width = f_x2 - f_x;
+
+  pixel32_t       *           row = I_VideoBuffer32 + (f_y * pitch + f_x);
+  pixel32_t const *const last_row = row + ((f_y2 - f_y) * pitch);
+
+  for (; row < last_row;  row += pitch)
+  {
+    pixel32_t *           pixel = row;
+    pixel32_t *const last_pixel = pixel + width;
+
+    for (; pixel < last_pixel;  pixel++)
+    { *pixel = colormap[V_IndexFromRGB(*pixel)]; }
+  }
+}
+
 void AM_shadeScreen(void)
 {
   // Minimap
   if (automapactive == AM_MINI)
   {
-    for (int x = f_x;  x < f_x+f_w;  x++)
-    {
-      for (int y = f_y;  y < f_y+f_h;  y++)
-      {
-        const int pixel = y * video.width + x;
-        I_VideoBuffer[pixel] = colormaps[0][automap_overlay_darkening * 256 + I_VideoBuffer[pixel]];
-      }
-    }
+    AM_shadeMinimap();
+    return;
   }
-  else if (!MN_MenuIsShaded())
+
+  if (!MN_MenuIsShaded())
     V_ShadeScreen(automap_overlay_darkening); // [Nugget] Parameterized
 }
 
@@ -3056,6 +3354,26 @@ void AM_ColorPreset(void)
     AM_ApplyColors(true);
 
     ST_ResetTitle();
+}
+
+// [Nugget] True color
+void AM_InitColorFunctions(void)
+{
+  if (truecolor_rendering)
+  {
+    AM_clearFB = AM_clearFB32;
+    AM_putWuDot = AM_putWuDot32;
+    AM_shadeMinimap = AM_shadeMinimap32;
+    PUTDOT = PUTDOT32;
+    PutLine = PutLine32;
+  }
+  else {
+    AM_clearFB = AM_clearFB8;
+    AM_putWuDot = AM_putWuDot8;
+    AM_shadeMinimap = AM_shadeMinimap8;
+    PUTDOT = PUTDOT8;
+    PutLine = PutLine8;
+  }
 }
 
 void AM_BindAutomapVariables(void)

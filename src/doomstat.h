@@ -79,7 +79,6 @@ extern boolean have_ssg;
 
 extern boolean pwad_help2;
 
-
 // compatibility with old engines (monster behavior, metrics, etc.)
 extern int compatibility, default_compatibility;          // killough 1/31/98
 
@@ -264,6 +263,7 @@ extern  boolean statusbaractive;
 
 // [Nugget]
 typedef enum automapmode_e {
+  AM_FORCEOFF = -1,
   AM_OFF,
   AM_FULL,
   AM_MINI, // Minimap

@@ -102,6 +102,10 @@ typedef struct pspdef_s
 
   // [Nugget] ----------------------------------------------------------------
 
+  // Fixed position, as set by the `misc#` values
+  fixed_t sxf;
+  fixed_t syf;
+
   // [crispy] squat down weapon sprite
   fixed_t dy;
 

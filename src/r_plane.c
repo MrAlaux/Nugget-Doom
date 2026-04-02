@@ -182,11 +182,121 @@ void R_InitVisplanesRes(void)
 // BASIC PRIMITIVE
 //
 
-static void R_MapPlane(int y, int x1, int x2, lighttable_t *thiscolormap)
+static void (*DrawPlane)(fixed_t distance, int tint) = NULL;
+
+static void DrawPlane8(fixed_t distance, int tint)
 {
-  fixed_t distance;
   unsigned lookup;
   int lightindex;
+
+  // [Nugget] Radial fog
+  void (*DrawSpan)(void) = R_DrawSpan;
+
+  lighttable_t *const thiscolormap = tint
+                                   ? colormaps[tint]
+                                   : fullcolormap;
+
+  // ID24 per-sector colormaps
+  if (fixedcolormapindex)
+  {
+    ds_colormap[0] = thiscolormap + fixedcolormapindex * 256;
+    ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                      ? thiscolormap
+                      : dc_colormap[0];
+  }
+  else
+  {
+    boolean do_plane_radial_fog = do_radial_fog; // [Nugget] Radial fog
+
+    lookup = distance >> LIGHTZSHIFT;
+
+    // [Nugget] /-------------------------------------------------------------
+
+    if (STRICTMODE(!diminishing_lighting)) { lookup = MAXLIGHTZ; }
+
+    if (lookup >= MAXLIGHTZ) { do_plane_radial_fog = false; }
+
+    // [Nugget] -------------------------------------------------------------/
+
+    // [Nugget] Radial fog
+    if (do_plane_radial_fog)
+    {
+      DrawSpan = R_DrawSpanWithRadialFog;
+      spandistlight = planedistlight[distance >> light_distance_shift_bits];
+      ds_colormap[0] = ds_colormap[1] = thiscolormap;
+    }
+    else
+    {
+      lookup = CLAMP(lookup, 0, MAXLIGHTZ - 1);
+      lightindex = zlightindex[planezlightindex * MAXLIGHTZ + lookup];
+      ds_colormap[0] = thiscolormap + lightindex * 256;
+      ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                        ? thiscolormap
+                        : dc_colormap[0];
+    }
+  }
+
+  DrawSpan();
+}
+
+static void DrawPlane32(fixed_t distance, int tint)
+{
+  unsigned lookup;
+  int lightindex;
+
+  // [Nugget] Radial fog
+  void (*DrawSpan)(void) = R_DrawSpan;
+
+  lighttable32_t *const thiscolormap = tint
+                                     ? colormaps32[tint]
+                                     : fullcolormap32;
+
+  // ID24 per-sector colormaps
+  if (fixedcolormapindex)
+  {
+    ds_colormap32[0] = thiscolormap + fixedcolormapindex * 256;
+    ds_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                        ? thiscolormap
+                        : dc_colormap32[0];
+  }
+  else
+  {
+    boolean do_plane_radial_fog = do_radial_fog; // [Nugget] Radial fog
+
+    lookup = distance >> LIGHTZSHIFT;
+
+    // [Nugget] /-------------------------------------------------------------
+
+    if (STRICTMODE(!diminishing_lighting)) { lookup = MAXLIGHTZ; }
+
+    if (lookup >= MAXLIGHTZ) { do_plane_radial_fog = false; }
+
+    // [Nugget] -------------------------------------------------------------/
+
+    // [Nugget] Radial fog
+    if (do_plane_radial_fog)
+    {
+      DrawSpan = R_DrawSpanWithRadialFog;
+      spandistlight = planedistlight[distance >> light_distance_shift_bits];
+      ds_colormap32[0] = ds_colormap32[1] = thiscolormap;
+    }
+    else
+    {
+      lookup = CLAMP(lookup, 0, MAXLIGHTZ - 1);
+      lightindex = zlightindex[planezlightindex * MAXLIGHTZ + lookup];
+      ds_colormap32[0] = thiscolormap + lightindex * 256;
+      ds_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                          ? thiscolormap
+                          : dc_colormap32[0];
+    }
+  }
+
+  DrawSpan();
+}
+
+static void R_MapPlane(int y, int x1, int x2, int thiscolormap)
+{
+  fixed_t distance;
   int dx;
   fixed_t dy;
 
@@ -230,33 +340,13 @@ static void R_MapPlane(int y, int x1, int x2, lighttable_t *thiscolormap)
   ds_xfrac = viewx_trans + FixedMul(angle_cos, distance) + dx * ds_xstep;
   ds_yfrac = viewy_trans - FixedMul(angle_sin, distance) + dx * ds_ystep;
 
-  // ID24 per-sector colormaps
-  if (fixedcolormapindex)
-  {
-    ds_colormap[0] = thiscolormap + fixedcolormapindex * 256;
-    ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                      ? thiscolormap
-                      : dc_colormap[0];
-  }
-  else
-  {
-    lookup = distance >> LIGHTZSHIFT;
-
-    if (STRICTMODE(!diminishing_lighting)) { lookup = MAXLIGHTZ-1; } // [Nugget]
-
-    lookup = CLAMP(lookup, 0, MAXLIGHTZ - 1);
-    lightindex = zlightindex[planezlightindex * MAXLIGHTZ + lookup];
-    ds_colormap[0] = thiscolormap + lightindex * 256;
-    ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                      ? thiscolormap
-                      : dc_colormap[0];
-  }
+  // [Nugget] Factored some code out into `DrawPlane()`
 
   ds_y = y;
   ds_x1 = x1;
   ds_x2 = x2;
 
-  R_DrawSpan();
+  DrawPlane(distance, thiscolormap);
 }
 
 //
@@ -414,7 +504,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
 
 // [FG] 32-bit integer math
 static void R_MakeSpans(int x, unsigned int t1, unsigned int b1,
-                        unsigned int t2, unsigned int b2, lighttable_t *colormap)
+                        unsigned int t2, unsigned int b2, int colormap)
 {
   for (; t1 < t2 && t1 <= b1; t1++)
     R_MapPlane(t1, spanstart[t1], x-1, colormap);
@@ -514,10 +604,21 @@ static void DrawSkyDef(visplane_t *pl, sky_t *sky)
     //
     // killough 7/19/98: fix hack to be more realistic:
 
-    if (STRICTMODE_COMP(comp_skymap)
-        || !(dc_colormap[0] = dc_colormap[1] = fixedcolormap))
+    if (truecolor_rendering)
     {
-        dc_colormap[0] = dc_colormap[1] = fullcolormap; // killough 3/20/98
+        if (STRICTMODE_COMP(comp_skymap)
+            || !(dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32))
+        {
+            dc_colormap32[0] = dc_colormap32[1] = fullcolormap32;
+        }
+    }
+    else
+    {
+        if (STRICTMODE_COMP(comp_skymap)
+            || !(dc_colormap[0] = dc_colormap[1] = fixedcolormap))
+        {
+            dc_colormap[0] = dc_colormap[1] = fullcolormap; // killough 3/20/98
+        }
     }
 
     DrawSkyTex(pl, sky, &sky->background);
@@ -617,7 +718,7 @@ static void do_draw_plane(visplane_t *pl)
 
     planezlightindex = light;
     planezlightoffset = &zlightoffset[light * MAXLIGHTZ];
-    lighttable_t *thiscolormap = pl->tint ? colormaps[pl->tint] : fullcolormap;
+    int thiscolormap = pl->tint;
 
     for (int x = pl->minx; x <= stop; x++)
     {
@@ -646,6 +747,18 @@ void R_DrawPlanes (void)
       do_draw_plane(pl);
       rendered_visplanes++;
     }
+}
+
+void R_InitPlanesColorFunctions(void)
+{
+  if (truecolor_rendering)
+  {
+    DrawPlane = DrawPlane32;
+  }
+  else
+  {
+    DrawPlane = DrawPlane8;
+  }
 }
 
 //----------------------------------------------------------------------------

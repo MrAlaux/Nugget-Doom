@@ -58,11 +58,12 @@
 // [Nugget]
 #include "am_map.h"
 #include "f_finale.h"
+#include "m_random.h"
 #include "r_main.h"
 
 #define plyr (players+consoleplayer)     /* the console player */
 
-// [Nugget] Testing cheat /------------
+// [Nugget] Testing cheats /--------------------------------------------------
 
 //#define NUGMAGIC
 
@@ -72,19 +73,21 @@ int nugmagic = 0;
 
 static void cheat_magic(void)
 {
-  
+  nugmagic = !nugmagic;
+  displaymsg("Magic %s", nugmagic ? "true" : "false");
 }
 
 int nugmagic2 = 0;
 
 static void cheat_magic2(void)
 {
-  
+  nugmagic2 = !nugmagic2;
+  displaymsg("Magic2 %s", nugmagic2 ? "true" : "false");
 }
 
 #endif
 
-// [Nugget] --------------------------/
+// [Nugget] -----------------------------------------------------------------/
 
 //-----------------------------------------------------------------------------
 //
@@ -184,6 +187,8 @@ static void cheat_saitama(void);     // MDK Fist
 static void cheat_boomcan(void);     // Explosive hitscan
 
 static void cheat_fauxdemo(void); // Emulates demo/net-play state, for debugging
+static void cheat_myrng(void);
+static void cheat_myrngx(char *buf);
 static void cheat_dimlight(void);
 static void cheat_fovsky(void);
 static void cheat_castcall(void);
@@ -245,7 +250,7 @@ struct cheat_s cheat[] = {
   {"idclip",     "No Clipping 2",     not_net | not_demo,
    {.v = cheat_noclip} },
 
-  {"idbeholdo",  NULL,                not_net | not_demo | not_deh,
+  {"idbehold0",  NULL,                not_net | not_demo | not_deh,
    {.i = cheat_pw}, NUMPOWERS }, // [FG] disable all powerups at once
 
   {"idbeholdh",  "Health",            not_net | not_demo,
@@ -312,16 +317,16 @@ struct cheat_s cheat[] = {
    {.v = cheat_freeze} },
 
   {"iddt",       "Map cheat",         not_dm,
-   {.v = cheat_ddt} },        // killough 2/07/98: moved from am_map.c
+   {.v = cheat_ddt}, .repeatable = true },        // killough 2/07/98: moved from am_map.c
 
   {"iddst",      NULL,                not_dm,
-   {.v = cheat_reveal_secret} },
+   {.v = cheat_reveal_secret}, .repeatable = true },
 
   {"iddkt",      NULL,                not_dm,
-   {.v = cheat_reveal_kill} },
+   {.v = cheat_reveal_kill}, .repeatable = true },
 
   {"iddit",      NULL,                not_dm,
-   {.v = cheat_reveal_item} },
+   {.v = cheat_reveal_item}, .repeatable = true },
 
   {"hom",     NULL,                   always,
    {.v = cheat_hom} },        // killough 2/07/98: HOM autodetector
@@ -421,58 +426,60 @@ struct cheat_s cheat[] = {
 
   // [Nugget] /---------------------------------------------------------------
 
-  {"nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum}     },
-  {"fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo}        }, // Infinite ammo cheat
-  {"valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps}      }, // Fast weapons cheat
-  {"bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers}        }, // Shortcut for the two above cheats
-  {"gibbers",    NULL, not_net | not_demo, {.v = cheat_gibbers}        }, // Everything gibs
-  {"riotmode",   NULL, not_net | not_demo, {.v = cheat_riotmode}       },
-  {"resurrect",  NULL, not_net | not_demo, {.v = cheat_resurrect}      },
-  {"idres",      NULL, not_net | not_demo, {.v = cheat_resurrect}      }, // 'RESURRECT' alternative
-  {"idfly",      NULL, not_net | not_demo, {.v = cheat_fly}            },
-  {"nextmap",    NULL, not_net | not_demo, {.v = cheat_normalexit}     },
-  {"nextsecret", NULL, not_net | not_demo, {.v = cheat_secretexit}     },
-  {"turbo",      NULL, not_net | not_demo, {.v = cheat_turbo},         },
-  {"turbo",      NULL, not_net | not_demo, {.s = cheat_turbox},     -3 },
+  { "nomomentum", NULL, not_net | not_demo, {.v = cheat_nomomentum} },
+  { "fullclip",   NULL, not_net | not_demo, {.v = cheat_infammo} }, // ------- Infinite ammo cheat
+  { "valiant",    NULL, not_net | not_demo, {.v = cheat_fastweaps} }, // ----- Fast weapons cheat
+  { "bobbers",    NULL, not_net | not_demo, {.v = cheat_bobbers} }, // ------- Shortcut for the two above cheats
+  { "gibbers",    NULL, not_net | not_demo, {.v = cheat_gibbers} }, // ------- Everything gibs
+  { "riotmode",   NULL, not_net | not_demo, {.v = cheat_riotmode} },
+  { "resurrect",  NULL, not_net | not_demo, {.v = cheat_resurrect} },
+  { "idres",      NULL, not_net | not_demo, {.v = cheat_resurrect} }, // ----- 'RESURRECT' alternative
+  { "idfly",      NULL, not_net | not_demo, {.v = cheat_fly} },
+  { "nextmap",    NULL, not_net | not_demo, {.v = cheat_normalexit}, .repeatable = true },
+  { "nextsecret", NULL, not_net | not_demo, {.v = cheat_secretexit}, .repeatable = true },
+  { "turbo",      NULL, not_net | not_demo, {.v = cheat_turbo}, },
+  { "turbo",      NULL, not_net | not_demo, {.s = cheat_turbox}, -3 },
 
-  {"summon",  NULL, not_net | not_demo, {.v = cheat_summon}      }, // Summon "Menu"
-  {"summone", NULL, not_net | not_demo, {.v = cheat_summone0}    }, // Summon Enemy "Menu"
-  {"summone", NULL, not_net | not_demo, {.s = cheat_summone}, -3 }, // Summon a hostile mobj
-  {"summonf", NULL, not_net | not_demo, {.v = cheat_summonf0}    }, // Summon Friend "Menu"
-  {"summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // Summon a friendly mobj
-  {"summonr", NULL, not_net | not_demo, {.v = cheat_summonr}     }, // Repeat last summon
+  { "summon",  NULL, not_net | not_demo, {.v = cheat_summon} }, // --------------------- Summon "Menu"
+  { "summone", NULL, not_net | not_demo, {.v = cheat_summone0} }, // ------------------- Summon Enemy "Menu"
+  { "summone", NULL, not_net | not_demo, {.s = cheat_summone}, -3 }, // ---------------- Summon a hostile mobj
+  { "summonf", NULL, not_net | not_demo, {.v = cheat_summonf0} }, // ------------------- Summon Friend "Menu"
+  { "summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // ---------------- Summon a friendly mobj
+  { "summonr", NULL, not_net | not_demo, {.v = cheat_summonr}, .repeatable = true }, //  Repeat last summon
 
-  {"iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key}      },
-  {"iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
-  {"iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
-  {"iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx}     },
-  {"iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0 },
-  {"iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2 },
-  {"iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1 },
-  {"iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5 },
-  {"iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3 },
-  {"iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4 },
+  { "iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key} },
+  { "iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
+  { "iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
+  { "iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
+  { "iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0, .repeatable = true },
+  { "iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2, .repeatable = true },
+  { "iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1, .repeatable = true },
+  { "iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5, .repeatable = true },
+  { "iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3, .repeatable = true },
+  { "iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4, .repeatable = true },
 
-  {"iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit} }, // Exit finder
-  {"linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget}  }, // Give info on the current linetarget
-  {"trails",     NULL, not_net | not_demo, {.v = cheat_trails}      }, // Show hitscan trails
-  {"mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}         },
-  {"saitama",    NULL, not_net | not_demo, {.v = cheat_saitama}     }, // MDK Fist
-  {"boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan}     }, // Explosive hitscan
+  { "iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit}, .repeatable = true }, // --- Exit finder
+  { "linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget} }, // ------------------------ Give info on the current linetarget
+  { "trails",     NULL, not_net | not_demo, {.v = cheat_trails} }, // ---------------------------- Show hitscan trails
+  { "mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}, .repeatable = true },
+  { "saitama",    NULL, not_net | not_demo, {.v = cheat_saitama} }, // --------------------------- MDK Fist
+  { "boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan} }, // --------------------------- Explosive hitscan
 
-  {"fauxdemo",   NULL, not_net | not_demo, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
-  {"dimlight",   NULL, not_net | not_demo, {.v = cheat_dimlight} },
-  {"fovsky",     NULL, not_net | not_demo, {.v = cheat_fovsky}   },
-  {"castcall",   NULL, not_net | not_demo, {.v = cheat_castcall} },
+  { "fauxdemo",   NULL, devmode_only, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
+  { "myrng",        NULL, devmode_only, {.v = cheat_myrng} },
+  { "myrng",        NULL, devmode_only, {.s = cheat_myrngx}, -3 },
+  { "dimlight",   NULL, devmode_only, {.v = cheat_dimlight} },
+  { "fovsky",     NULL, devmode_only, {.v = cheat_fovsky} },
+  { "castcall",   NULL, devmode_only, {.v = cheat_castcall} },
 
-  {"cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
-  {"flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
-  {"idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf}  },
+  { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
+  { "flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
+  { "idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf} },
 
   #ifdef NUGMAGIC
 
-  {"ggg", NULL, 0, {.v = cheat_magic}},
-  {"hhh", NULL, 0, {.v = cheat_magic2}},
+  { "ggg", NULL, 0, {.v = cheat_magic},  .repeatable = true },
+  { "hhh", NULL, 0, {.v = cheat_magic2}, .repeatable = true },
 
   #endif
 
@@ -633,9 +640,12 @@ static void cheat_turbox(char *buf)
 static void cheat_summon(void)
 {
   if (spawneetype == -1)
-  { displaymsg("Summon: Enemy or Friend?"); }
-  else
-  { displaymsg("Summon: Enemy, Friend or Repeat last (%i)?", spawneetype); }
+  {
+    displaymsg("Summon: Enemy or Friend?");
+  }
+  else {
+    displaymsg("Summon: Enemy, Friend or Repeat last (%i)?", spawneetype);
+  }
 }
 
 static boolean GetMobjType(char *buf)
@@ -803,9 +813,13 @@ static void cheat_reveal_keyxx(int key)
       if (mobj->type == MT_MISC4 + key)
       {
         found = true;
+
         followplayer = false;
         AM_SetMapCenter(mobj->x, mobj->y);
+
         P_SetTarget(&last_mobj, mobj);
+
+        displaymsg("Key Finder: key found");
         break;
       }
     }
@@ -942,8 +956,6 @@ static void cheat_boomcan(void)
 // Emulates demo/net-play state, for debugging
 static void cheat_fauxdemo(void)
 {
-  if (!nugget_devmode) { return; }
-
   extern void D_UpdateCasualPlay(void);
 
   fauxdemo = !fauxdemo;
@@ -953,18 +965,51 @@ static void cheat_fauxdemo(void)
   displaymsg("Fauxdemo %s", fauxdemo ? "ON" : "OFF");
 }
 
+static void cheat_myrng(void)
+{
+  if (rng_override >= 0)
+  {
+    rng_override = -1;
+    displaymsg("RNG Override: Value cleared. Enter new value");
+  }
+  else { displaymsg("RNG Override: Enter value"); }
+}
+
+static void cheat_myrngx(char *buf)
+{
+  int value;
+
+  if (!isdigit(buf[0]) || !isdigit(buf[1]) || !isdigit(buf[2]))
+  {
+    displaymsg("RNG Override: Digits only");
+    return;
+  }
+
+  value = (buf[0] - '0') * 100
+        + (buf[1] - '0') * 10
+        + (buf[2] - '0');
+
+  if (value < 0 || 255 < value)
+  {
+    displaymsg("RNG Override: 0-255 only");
+    return;
+  }
+
+  rng_override = value;
+
+  displaymsg("RNG Override: %i", rng_override);
+}
+
 static void cheat_dimlight(void)
 {
-  if (!nugget_devmode) { return; }
-
   diminishing_lighting = !diminishing_lighting;
   displaymsg("Diminishing Lighting %s", diminishing_lighting ? "ON" : "OFF");
+
+  R_DeferredInitDistLightTables();
 }
 
 static void cheat_fovsky(void)
 {
-  if (!nugget_devmode) { return; }
-
   extern boolean fov_stretchsky;
 
   fov_stretchsky = !fov_stretchsky;
@@ -973,8 +1018,6 @@ static void cheat_fovsky(void)
 
 static void cheat_castcall(void)
 {
-  if (!nugget_devmode) { return; }
-
   F_StartFinale();
   F_StartCast();
 }
@@ -1916,157 +1959,187 @@ static void cheat_rate(void)
   plyr->cheats ^= CF_RENDERSTATS;
 }
 
-//-----------------------------------------------------------------------------
-// 2/7/98: Cheat detection rewritten by Lee Killough, to avoid
-// scrambling and to use a more general table-driven approach.
-//-----------------------------------------------------------------------------
-
-static boolean M_CheatAllowed(cheat_when_t when)
+static boolean CheatAllowed(cheat_when_t when)
 {
-  return
-    !(when & not_dm   && deathmatch && !demoplayback) &&
-    !(when & not_coop && netgame && !deathmatch) &&
-    !(when & not_demo && (demorecording || demoplayback)) &&
-    !(when & not_menu && menuactive) &&
-    !(when & beta_only && !beta_emulation);
+    return !(when & not_dm && deathmatch && !demoplayback)
+           && !(when & not_coop && netgame && !deathmatch)
+           && !(when & not_demo && (demorecording || demoplayback))
+           && !(when & not_menu && menuactive)
+           && !(when & beta_only && !beta_emulation)
+           && !(when & devmode_only_bit && !nugget_devmode); // [Nugget]
 }
 
-#define CHEAT_ARGS_MAX 8  /* Maximum number of args at end of cheats */
+// The cheat detection function was replaced with a version from Chocolate Doom
+// that included improvements from DSDA-Doom.
 
-boolean M_FindCheats(int key)
+static void InitCheats(void)
 {
-  static uint64_t sr;
-  static char argbuf[CHEAT_ARGS_MAX+1], *arg;
-  static int init, argsleft, cht;
-  int i, ret, matchedbefore;
+    static boolean init = false;
 
-  // If we are expecting arguments to a cheat
-  // (e.g. idclev), put them in the arg buffer
-
-  if (argsleft)
+    if (!init)
     {
-      *arg++ = M_ToLower(key);             // store key in arg buffer
-      if (!--argsleft)                   // if last key in arg list,
-        cheat[cht].func.s(argbuf);       // process the arg buffer
-      return 1;                          // affirmative response
-    }
+        struct cheat_s *cht;
 
-  key = M_ToLower(key) - 'a';
-  if (key < 0 || key >= 32)              // ignore most non-alpha cheat letters
-    {
-      sr = 0;        // clear shift register
-      return 0;
-    }
+        init = true;
 
-  if (!init)                             // initialize aux entries of table
-    {
-      init = 1;
-      for (i=0;cheat[i].cheat;i++)
+        for (cht = cheat; cht->cheat; cht++)
         {
-          uint64_t c=0, m=0;
-          const char *p; // [FG] char!
-          for (p=cheat[i].cheat; *p; p++)
+            cht->sequence_len = strlen(cht->cheat);
+        }
+    }
+}
+
+static int M_FindCheats(char key)
+{
+    int rc = 0;
+    struct cheat_s *cht;
+
+    InitCheats();
+
+    for (cht = cheat; cht->cheat; cht++)
+    {
+        if (!CheatAllowed(cht->when)
+            || (cht->when & not_deh && cht->deh_modified))
+        {
+            continue;
+        }
+
+        if (cht->chars_read < cht->sequence_len)
+        {
+            // still reading characters from the cheat code
+            // and verifying.  reset back to the beginning
+            // if a key is wrong
+
+            if (key == cht->cheat[cht->chars_read])
             {
-              unsigned key = M_ToLower(*p)-'a';  // convert to 0-31
-              if (key >= 32)            // ignore most non-alpha cheat letters
-                continue;
-              c = (c<<5) + key;         // shift key into code
-              m = (m<<5) + 31;          // shift 1's into mask
+                ++cht->chars_read;
             }
-          cheat[i].code = c;            // code for this cheat key
-          cheat[i].mask = m;            // mask for this cheat key
+            else if (key == cht->cheat[0])
+            {
+                cht->chars_read = 1;
+            }
+            else
+            {
+                cht->chars_read = 0;
+            }
+
+            cht->param_chars_read = 0;
         }
-    }
-
-  sr = (sr<<5) + key;                   // shift this key into shift register
-
-#if 0
-  {signed/*long*/volatile/*double *x,*y;*/static/*const*/int/*double*/i;/**/char/*(*)*/*D_DoomExeName/*(int)*/(void)/*?*/;(void/*)^x*/)((/*sr|1024*/32767/*|8%key*/&sr)-19891||/*isupper(c*/strcasecmp/*)*/("b"/*"'%2d!"*/"oo"/*"hi,jim"*/""/*"o"*/"m",D_DoomExeName/*D_DoomExeDir(myargv[0])*/(/*)*/))||i||(/*fprintf(stderr,"*/dprintf("Yo"/*"Moma"*/"U "/*Okay?*/"mUSt"/*for(you;read;tHis){/_*/" be a "/*MAN! Re-*/"member"/*That.*/" TO uSe"/*x++*/" t"/*(x%y)+5*/"HiS "/*"Life"*/"cHe"/*"eze"**/"aT"),i/*+--*/++/*;&^*/));}
-#endif
-
-  for (matchedbefore = ret = i = 0; cheat[i].cheat; i++)
-    if ((sr & cheat[i].mask) == cheat[i].code &&  // if match found & allowed
-        M_CheatAllowed(cheat[i].when) &&
-        !(cheat[i].when & not_deh  && cheat[i].deh_modified))
-    {
-      if (cheat[i].arg < 0)               // if additional args are required
+        else if (cht->param_chars_read < -cht->arg)
         {
-          cht = i;                        // remember this cheat code
-          arg = argbuf;                   // point to start of arg buffer
-          argsleft = -cheat[i].arg;       // number of args expected
-          ret = 1;                        // responder has eaten key
+            // we have passed the end of the cheat sequence and are
+            // entering parameters now
+
+            cht->parameter_buf[cht->param_chars_read] = key;
+
+            ++cht->param_chars_read;
+
+            // affirmative response
+            rc = 1;
         }
-      else
-        if (!matchedbefore)               // allow only one cheat at a time
-          {
-            matchedbefore = ret = 1;      // responder has eaten key
-            cheat[i].func.i(cheat[i].arg); // call cheat handler
-          }
+
+        if (cht->chars_read >= cht->sequence_len
+            && cht->param_chars_read >= -cht->arg)
+        {
+            if (cht->param_chars_read)
+            {
+                static char argbuf[CHEAT_ARGS_MAX + 1];
+
+                // process the arg buffer
+                memcpy(argbuf, cht->parameter_buf, -cht->arg);
+
+                cht->func.s(argbuf);
+            }
+            else
+            {
+                // call cheat handler
+                cht->func.i(cht->arg);
+
+                if (cht->repeatable)
+                {
+                    --cht->chars_read;
+                }
+            }
+
+            if (!cht->repeatable)
+            {
+                cht->chars_read = cht->param_chars_read = 0;
+            }
+            rc = 1;
+        }
     }
-  return ret;
+
+    return rc;
 }
 
-static const struct {
-  int input;
-  const cheat_when_t when;
-  const cheatf_t func;
-  const int arg;
+static const struct
+{
+    int input;
+    const cheat_when_t when;
+    const cheatf_t func;
+    const int arg;
 } cheat_input[] = {
-  { input_iddqd,     not_net|not_demo, {.v = cheat_god},      0 },
-  { input_idkfa,     not_net|not_demo, {.v = cheat_kfa},      0 },
-  { input_idfa,      not_net|not_demo, {.v = cheat_fa},       0 },
-  { input_idclip,    not_net|not_demo, {.v = cheat_noclip},   0 },
-  { input_idbeholdh, not_net|not_demo, {.v = cheat_health},   0 },
-  { input_idbeholdm, not_net|not_demo, {.v = cheat_megaarmour}, 0 },
-  { input_idbeholdv, not_net|not_demo, {.i = cheat_pw},       pw_invulnerability },
-  { input_idbeholds, not_net|not_demo, {.i = cheat_pw},       pw_strength },
-  { input_idbeholdi, not_net|not_demo, {.i = cheat_pw},       pw_invisibility },
-  { input_idbeholdr, not_net|not_demo, {.i = cheat_pw},       pw_ironfeet },
-  { input_idbeholdl, not_dm,           {.i = cheat_pw},       pw_infrared },
-  { input_iddt,      not_dm,           {.v = cheat_ddt},      0 },
-  { input_notarget,  not_net|not_demo, {.v = cheat_notarget}, 0 },
-  { input_freeze,    not_net|not_demo, {.v = cheat_freeze},   0 },
-  { input_avj,       not_net|not_demo, {.v = cheat_avj},      0 },
+    { input_iddqd,     not_net | not_demo, {.v = cheat_god} },
+    { input_idkfa,     not_net | not_demo, {.v = cheat_kfa} },
+    { input_idfa,      not_net | not_demo, {.v = cheat_fa} },
+    { input_idclip,    not_net | not_demo, {.v = cheat_noclip} },
+    { input_idbeholdh, not_net | not_demo, {.v = cheat_health} },
+    { input_idbeholdm, not_net | not_demo, {.v = cheat_megaarmour} },
+    { input_idbeholdv, not_net | not_demo, {.i = cheat_pw}, pw_invulnerability },
+    { input_idbeholds, not_net | not_demo, {.i = cheat_pw}, pw_strength },
+    { input_idbeholdi, not_net | not_demo, {.i = cheat_pw}, pw_invisibility },
+    { input_idbeholdr, not_net | not_demo, {.i = cheat_pw}, pw_ironfeet },
+    { input_idbeholdl, not_dm,             {.i = cheat_pw}, pw_infrared },
+    { input_iddt,      not_dm,             {.v = cheat_ddt} },
+    { input_notarget,  not_net | not_demo, {.v = cheat_notarget} },
+    { input_freeze,    not_net | not_demo, {.v = cheat_freeze} },
+    { input_avj,       not_net | not_demo, {.v = cheat_avj} },
 
-  // [Nugget] ----------------------------------------------------------------
+    // [Nugget] ----------------------------------------------------------------
 
-  { input_idbeholda,  not_net|not_demo, {.i = cheat_pw},         pw_allmap },
-  { input_infammo,    not_net|not_demo, {.v = cheat_infammo},    0 },
-  { input_fastweaps,  not_net|not_demo, {.v = cheat_fastweaps},  0 },
-  { input_resurrect,  not_net|not_demo, {.v = cheat_resurrect},  0 },
-  { input_fly,        not_net|not_demo, {.v = cheat_fly},        0 },
-  { input_summonr,    not_net|not_demo, {.v = cheat_summonr},    0 },
-  { input_linetarget, not_net|not_demo, {.v = cheat_linetarget}, 0 },
-  { input_mdk,        not_net|not_demo, {.v = cheat_mdk},        0 },
-  { input_saitama,    not_net|not_demo, {.v = cheat_saitama},    0 },
-  { input_boomcan,    not_net|not_demo, {.v = cheat_boomcan},    0 },
+    { input_idbeholda,  not_net|not_demo, {.i = cheat_pw}, pw_allmap },
+    { input_infammo,    not_net|not_demo, {.v = cheat_infammo} },
+    { input_fastweaps,  not_net|not_demo, {.v = cheat_fastweaps} },
+    { input_resurrect,  not_net|not_demo, {.v = cheat_resurrect} },
+    { input_fly,        not_net|not_demo, {.v = cheat_fly} },
+    { input_summonr,    not_net|not_demo, {.v = cheat_summonr} },
+    { input_linetarget, not_net|not_demo, {.v = cheat_linetarget} },
+    { input_mdk,        not_net|not_demo, {.v = cheat_mdk} },
+    { input_saitama,    not_net|not_demo, {.v = cheat_saitama} },
+    { input_boomcan,    not_net|not_demo, {.v = cheat_boomcan} },
 };
 
 boolean M_CheatResponder(event_t *ev)
 {
-  int i;
-
-  if (strictmode && demorecording)
-    return false;
-
-  if (ev->type == ev_keydown && M_FindCheats(ev->data2.i))
-    return true;
-
-  if (WS_Override())
-    return false;
-
-  for (i = 0; i < arrlen(cheat_input); ++i)
-  {
-    if (M_InputActivated(cheat_input[i].input))
+    if (strictmode && demorecording)
     {
-      if (M_CheatAllowed(cheat_input[i].when))
-        cheat_input[i].func.i(cheat_input[i].arg);
-
-      return true;
+        return false;
     }
-  }
 
-  return false;
+    if (ev->type == ev_keydown && M_FindCheats(ev->data2.i))
+    {
+        return true;
+    }
+
+    if (WS_Override())
+    {
+        return false;
+    }
+
+    for (int i = 0; i < arrlen(cheat_input); ++i)
+    {
+        if (M_InputActivated(cheat_input[i].input))
+        {
+            if (CheatAllowed(cheat_input[i].when))
+            {
+                cheat_input[i].func.i(cheat_input[i].arg);
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 //----------------------------------------------------------------------------

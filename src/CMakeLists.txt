@@ -58,6 +58,7 @@ set(NUGGETDOOM_SOURCES
     i_sndfile.c            i_sndfile.h
     i_sound.c              i_sound.h
     i_system.c             i_system.h
+    i_thread.c             i_thread.h # [Nugget]
     i_timer.c              i_timer.h
     i_video.c              i_video.h
     info.c                 info.h

@@ -1050,9 +1050,9 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
       // [crispy] center view when dying
       target->player->centering = true;
 
-      if (target->player == &players[consoleplayer] && automapactive == AM_FULL)
+      if (target->player == &players[consoleplayer] && automapactive)
 	if (!demoplayback) // killough 11/98: don't switch out in demos, though
-	  AM_ChangeMode(AM_OFF); // don't die in auto map; switch view prior to dying
+	  AM_Stop();    // don't die in auto map; switch view prior to dying
 
       HU_Obituary(target, source, mod);
     }

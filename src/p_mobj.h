@@ -445,7 +445,7 @@ extern int itemrespawntime[];
 extern int iquehead;
 extern int iquetail;
 
-typedef enum vertaim_s {
+typedef enum vertaim_e {
   VERTAIM_AUTO,
   VERTAIM_DIRECT,
   VERTAIM_DIRECTAUTO,
@@ -454,6 +454,7 @@ typedef enum vertaim_s {
 } vertaim_t;
 
 extern vertaim_t vertical_aiming, default_vertical_aiming; // [Nugget] Replaces `direct_vertical_aiming`
+
 extern int max_pitch_angle, default_max_pitch_angle;
 void P_UpdateDirectVerticalAiming(void);
 
@@ -484,7 +485,7 @@ int     P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta);
 
 // [Nugget] ==================================================================
 
-extern boolean cheese, frights, flakes, allow_flakes;
+extern boolean cheese, frights, flakes, allow_flakes, faint_flakes;
 
 enum {
   FLINCH_OFF,

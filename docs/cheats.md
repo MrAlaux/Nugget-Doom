@@ -10,7 +10,7 @@ Typing IDBEHOLD will bring up a small menu where you can choose to enable one of
 `S`: Toggles berserk strength  
 `H`: Gives 200% health points  
 `M`: Gives megaarmor, with 200% armor points  
-`O`: Disables all currently active power-ups  
+`0`: Disables all currently active power-ups  
 
 `IDCLEV00` restarts the current level.
 
@@ -183,6 +183,9 @@ The following cheats in this section are developer-only: the `nugget_devmode` CV
 
 `FAUXDEMO`  
 Toggle faux-demo mode, which emulates the condition of demo/net play (disables some features).
+
+`MYRNG[X]`  
+Override the RNG output with `X`, which is a three-digit number between 0 and 255.
 
 `DIMLIGHT`  
 Toggle diminishing lighting.

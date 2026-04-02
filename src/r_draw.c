@@ -58,6 +58,7 @@ int viewheight;
 int viewwindowx;
 int viewwindowy;
 static pixel_t **ylookup = NULL;
+static pixel32_t **ylookup32 = NULL;
 static int *columnofs = NULL;
 static int linesize; // killough 11/98
 
@@ -68,6 +69,7 @@ byte *main_tranmap;     // killough 4/11/98
 // background.
 
 static pixel_t *background_buffer = NULL;
+static pixel32_t *background_buffer32 = NULL;
 
 //
 // R_DrawColumn
@@ -75,6 +77,7 @@ static pixel_t *background_buffer = NULL;
 //
 
 lighttable_t *dc_colormap[2]; // [crispy] brightmaps
+lighttable32_t *dc_colormap32[2];
 int dc_x;
 int dc_yl;
 int dc_yh;
@@ -100,7 +103,9 @@ byte dc_skycolor;
 
 // heightmask is the Tutti-Frutti fix -- killough
 
-void R_DrawColumn(void)
+void (*R_DrawColumn)(void) = NULL;
+
+static void DrawColumn8(void)
 {
     int count = dc_yh - dc_yl + 1;
     if (count <= 0)
@@ -191,7 +196,9 @@ void R_DrawColumn(void)
 // opaque' decision is made outside this routine, not down where the
 // actual code differences are.
 
-void R_DrawTLColumn(void)
+void (*R_DrawTLColumn)(void) = NULL;
+
+static void DrawTLColumn8(void)
 {
     int count = dc_yh - dc_yl + 1;
     if (count <= 0)
@@ -270,7 +277,174 @@ void R_DrawTLColumn(void)
     }
 }
 
-// [Nugget] Sprite shadows /--------------------------------------------------
+// [Nugget] /=================================================================
+
+static void DrawColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+        }
+    }
+}
+
+static void DrawTLColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    #define SRCPIXEL \
+        V_IndexToRGB( \
+            tranmap[ \
+                V_TranMapRowFromRGB(*dest) \
+                + V_IndexFromRGB(colormap[brightmap[src]][src])] \
+         )
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+        }
+    }
+}
+
+// Sprite shadows ------------------------------------------------------------
 
 const byte *sprite_shadows_tranmap;
 
@@ -279,14 +453,18 @@ void R_InitShadowTranMap(void)
   sprite_shadows_tranmap = R_GetGenericTranMap(sprite_shadows_tran_pct);
 }
 
-void R_DrawColumnShadow(void)
+void (*R_DrawColumnShadow)(void) = NULL;
+
+static void DrawColumnShadow8(void)
 {
     int count = dc_yh - dc_yl + 1;
 
     if (count <= 0) { return; }
 
+#ifdef RANGECHECK
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
+#endif
 
     pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
@@ -296,13 +474,34 @@ void R_DrawColumnShadow(void)
     } while (--count);
 }
 
-// [Nugget] -----------------------------------------------------------------/
+static void DrawColumnShadow32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+
+    if (count <= 0) { return; }
+
+#ifdef RANGECHECK
+    if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+
+    do {
+        *dest = V_IndexToRGB(sprite_shadows_tranmap[V_TranMapRowFromRGB(*dest)]);
+        dest += linesize;
+    } while (--count);
+}
+
+// [Nugget] =================================================================/
 
 //
 // Sky drawing: for showing just a color above the texture
 // Taken from Eternity Engine eternity-engine/source/r_draw.c:L170-234
 
-void R_DrawSkyColumn(void)
+void (*R_DrawSkyColumn)(void) = NULL;
+
+static void DrawSkyColumn8(void)
 {
     int count = dc_yh - dc_yl + 1;
 
@@ -431,6 +630,146 @@ void R_DrawSkyColumn(void)
             frac += fracstep;
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
             dest += linesize; // killough 11/98
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+        }
+    }
+}
+
+// [Nugget]
+static void DrawSkyColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const lighttable32_t *const colormap = dc_colormap32[0];
+    const byte skycolor = dc_skycolor;
+
+    int i, n;
+
+    if (frac < -2 * FRACUNIT)
+    {
+        n = (-frac - 2 * FRACUNIT + fracstep - 1) / fracstep;
+        if (n > count)
+        {
+            n = count;
+        }
+
+        for (i = 0; i < n; ++i)
+        {
+            *dest = colormap[skycolor];
+            dest += linesize;
+            frac += fracstep;
+        }
+
+        if (!(count -= n))
+        {
+            return;
+        }
+    }
+
+    if (frac < -FRACUNIT)
+    {
+        n = (-frac - FRACUNIT + fracstep - 1) / fracstep;
+        if (n > count)
+        {
+            n = count;
+        }
+
+        for (i = 0; i < n; ++i)
+        {
+            *dest = main_tranmap
+                [(main_tranmap[
+                    V_TranMapRowFromRGB(colormap[source[0]])
+                  + V_IndexFromRGB(colormap[skycolor])
+                  ] << 8)
+                 + V_IndexFromRGB(colormap[skycolor])];
+            *dest = V_IndexToRGB(*dest);
+            dest += linesize;
+            frac += fracstep;
+        }
+
+        if (!(count -= n))
+        {
+            return;
+        }
+    }
+
+    if (frac < 0)
+    {
+        n = (-frac + fracstep - 1) / fracstep;
+        if (n > count)
+        {
+            n = count;
+        }
+
+        for (i = 0; i < n; ++i)
+        {
+            *dest =
+                main_tranmap[V_TranMapRowFromRGB(colormap[source[0]])
+                             + V_IndexFromRGB(colormap[skycolor])];
+            *dest = V_IndexToRGB(*dest);
+            dest += linesize;
+            frac += fracstep;
+        }
+
+        if (!(count -= n))
+        {
+            return;
+        }
+    }
+
+    int heightmask = dc_texheight - 1;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= FRACBITS;
+
+        while (frac >= heightmask)
+        {
+            frac -= heightmask;
+        }
+
+        do
+        {
+            *dest = colormap[source[frac >> FRACBITS]];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            dest += linesize;
+            frac += fracstep;
+            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            dest += linesize;
             frac += fracstep;
         }
         if (count & 1)
@@ -621,7 +960,7 @@ static void DrawFuzzColumnBlocky(void)
         lines += count & mask;
         count &= ~mask;
 
-        const byte fuzz =
+        const pixel_t fuzz =
             fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
 
         do
@@ -640,7 +979,7 @@ static void DrawFuzzColumnBlocky(void)
 
     if (cutoff)
     {
-        const byte fuzz = fullcolormap
+        const pixel_t fuzz = fullcolormap
             [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
         memset(dest, fuzz, fuzzblocksize);
     }
@@ -718,7 +1057,7 @@ static void DrawFuzzColumnRefraction(void)
         lines += count & mask;
         count &= ~mask;
 
-        const byte fuzz = fullcolormap[dark + dest[linesize * offset]];
+        const pixel_t fuzz = fullcolormap[dark + dest[linesize * offset]];
 
         do
         {
@@ -739,7 +1078,7 @@ static void DrawFuzzColumnRefraction(void)
 
     if (cutoff)
     {
-        const byte fuzz =
+        const pixel_t fuzz =
             fullcolormap[dark + dest[linesize * (offset - FUZZOFF) / 2]];
         memset(dest, fuzz, fuzzblocksize);
     }
@@ -774,6 +1113,242 @@ static void DrawFuzzColumnShadow(void)
     } while (--count);
 }
 
+// [Nugget] /=================================================================
+
+static void DrawFuzzColumn32Original(void)
+{
+    boolean cutoff = false;
+
+    if (!dc_yl)
+    {
+        dc_yl = 1;
+    }
+
+    if (dc_yh == viewheight - 1)
+    {
+        dc_yh = viewheight - 2;
+        cutoff = true;
+    }
+
+    int count = dc_yh - dc_yl;
+
+    if (count < 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+
+    count++;
+
+    do
+    {
+        *dest =
+            fullcolormap32[(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+        dest += linesize;
+
+        ++fuzzpos;
+
+        fuzzpos &= (fuzzpos - FUZZTABLE) >> (8 * sizeof(fuzzpos) - 1);
+    } while (--count);
+
+    if (cutoff)
+    {
+        *dest = fullcolormap32
+            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+    }
+}
+
+static void DrawFuzzColumn32Blocky(void)
+{
+    boolean cutoff = false;
+
+    if (dc_x % fuzzblocksize)
+    {
+        return;
+    }
+
+    if (!dc_yl)
+    {
+        dc_yl = 1;
+    }
+
+    if (dc_yh == viewheight - 1)
+    {
+        dc_yh = viewheight - 2;
+        cutoff = true;
+    }
+
+    int count = dc_yh - dc_yl;
+
+    if (count < 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    ++count;
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+
+    int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
+
+    const int fuzzblockwidth = MIN(fuzzblocksize, video.width - dc_x);
+
+    do
+    {
+        count -= lines;
+
+        const int mask = count >> (8 * sizeof(mask) - 1);
+        lines += count & mask;
+        count &= ~mask;
+
+        const pixel32_t fuzz =
+            fullcolormap32[(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+
+        do
+        {
+            V_RGBSet(dest, fuzz, fuzzblockwidth);
+            dest += linesize;
+        } while (--lines);
+
+        ++fuzzpos;
+
+        fuzzpos &= (fuzzpos - FUZZTABLE) >> (8 * sizeof(fuzzpos) - 1);
+
+        lines = fuzzblocksize;
+    } while (count);
+
+    if (cutoff)
+    {
+        const pixel32_t fuzz = fullcolormap32
+            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+        V_RGBSet(dest, fuzz, fuzzblocksize);
+    }
+}
+
+static void DrawFuzzColumn32Refraction(void)
+{
+    boolean cutoff = false;
+
+    if (dc_x % fuzzblocksize)
+    {
+        return;
+    }
+
+    if (!dc_yl)
+    {
+        dc_yl = 1;
+    }
+
+    if (dc_yh == viewheight - 1)
+    {
+        dc_yh = viewheight - 2;
+        cutoff = true;
+    }
+
+    int count = dc_yh - dc_yl;
+
+    if (count < 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    ++count;
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+
+    int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
+
+    const int fuzzblockwidth = MIN(fuzzblocksize, video.width - dc_x);
+
+    int dark = FUZZDARK << CRSB;
+    int offset = 0;
+
+    do
+    {
+        count -= lines;
+
+        const int mask = count >> (8 * sizeof(mask) - 1);
+        lines += count & mask;
+        count &= ~mask;
+
+        const pixel32_t fuzz = fullcolormap32[dark + V_IndexFromRGB(dest[linesize * offset])];
+
+        do
+        {
+            V_RGBSet(dest, fuzz, fuzzblockwidth);
+            dest += linesize;
+        } while (--lines);
+
+        ++fuzzpos;
+
+        fuzzpos &= (fuzzpos - FUZZTABLE) >> (8 * sizeof(fuzzpos) - 1);
+
+        dark = fuzzdark[fuzzpos] << CRSB;
+        offset = fuzzoffset[fuzzpos];
+
+        lines = fuzzblocksize;
+    } while (count);
+
+    if (cutoff)
+    {
+        const pixel32_t fuzz =
+            fullcolormap32[dark + V_IndexFromRGB(dest[linesize * (offset - FUZZOFF) / 2])];
+        V_RGBSet(dest, fuzz, fuzzblocksize);
+    }
+}
+
+static void DrawFuzzColumn32Shadow(void)
+{
+    int count = dc_yh - dc_yl;
+
+    if (count < 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+
+    count++;
+
+    do
+    {
+        *dest = fullcolormap32[(8<<CRSB) * 256 + V_IndexFromRGB(*dest)];
+
+        dest += linesize;
+    } while (--count);
+}
+
+// [Nugget] =================================================================/
+
 fuzzmode_t fuzzmode;
 void (*R_DrawFuzzColumn)(void) = DrawFuzzColumnOriginal;
 
@@ -781,6 +1356,36 @@ void R_SetFuzzColumnMode(void)
 {
     fuzzmode_t mode =
         (strictmode || (netgame && !solonet)) ? FUZZ_BLOCKY : fuzzmode;
+
+    if (truecolor_rendering)
+    {
+        switch (mode)
+        {
+            case FUZZ_BLOCKY:
+                if (current_video_height > SCREENHEIGHT)
+                {
+                    fuzzblocksize = FixedToInt(video.yscale);
+                    R_DrawFuzzColumn = DrawFuzzColumn32Blocky;
+                }
+                else
+                {
+                    R_DrawFuzzColumn = DrawFuzzColumn32Original;
+                }
+                break;
+            case FUZZ_REFRACTION:
+                fuzzblocksize = FixedToInt(video.yscale);
+                R_DrawFuzzColumn = DrawFuzzColumn32Refraction;
+                break;
+            case FUZZ_SHADOW:
+                R_DrawFuzzColumn = DrawFuzzColumn32Shadow;
+                break;
+            case FUZZ_ORIGINAL:
+                R_DrawFuzzColumn = DrawFuzzColumn32Original;
+                break;
+        }
+
+        return;
+    }
 
     switch (mode)
     {
@@ -820,7 +1425,9 @@ void R_SetFuzzColumnMode(void)
 
 byte *dc_translation, *translationtables;
 
-void R_DrawTranslatedColumn(void)
+void (*R_DrawTranslatedColumn)(void) = NULL;
+
+static void DrawTranslatedColumn8(void)
 {
     int count = dc_yh - dc_yl + 1;
     if (count <= 0)
@@ -843,6 +1450,87 @@ void R_DrawTranslatedColumn(void)
     const byte *translation = dc_translation;
     lighttable_t *const *colormap = dc_colormap;
     const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+        }
+    }
+}
+
+// [Nugget]
+static void DrawTranslatedColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const byte *const translation = dc_translation;
+    lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
     byte src;
@@ -952,6 +1640,7 @@ int ds_x1;
 int ds_x2;
 
 lighttable_t *ds_colormap[2];
+lighttable32_t *ds_colormap32[2];
 const byte *ds_brightmap;
 
 uint32_t ds_xfrac;
@@ -962,7 +1651,9 @@ uint32_t ds_ystep;
 // start of a 64*64 tile image
 byte *ds_source;
 
-void R_DrawSpan(void)
+void (*R_DrawSpan)(void) = NULL;
+
+static void DrawSpan8(void)
 {
     int count = ds_x2 - ds_x1 + 1;
     pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
@@ -1023,10 +1714,181 @@ void R_DrawSpan(void)
     #undef XSHIFT
 }
 
+// [Nugget] /=================================================================
+
+static void DrawSpan32(void)
+{
+    int count = ds_x2 - ds_x1 + 1;
+    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
+    const byte *const source = ds_source;
+    lighttable32_t *const *colormap = ds_colormap32;
+    const byte *const brightmap = ds_brightmap;
+
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
+
+    #define XSHIFT (32 - 6)
+    #define YSHIFT (32 - 6 - 6)
+    #define YMASK  (63 * 64)
+
+    byte src;
+
+    #define DRAW_PIXEL(dest_index) \
+    { \
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+        dest[dest_index] = colormap[brightmap[src]][src]; \
+        xf += xs; \
+        yf += ys; \
+    }
+
+    while (count >= 4)
+    {
+        DRAW_PIXEL(0);
+        DRAW_PIXEL(1);
+        DRAW_PIXEL(2);
+        DRAW_PIXEL(3);
+
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        DRAW_PIXEL(0);
+        dest++;
+    }
+
+    #undef DRAW_PIXEL
+
+    #undef YSHIFT
+    #undef YMASK
+    #undef XSHIFT
+}
+
+// Radial fog ----------------------------------------------------------------
+
+void (*R_DrawSpanWithRadialFog)(void) = NULL;
+
+static void DrawSpanWithRadialFog8(void)
+{
+    int count = ds_x2 - ds_x1 + 1;
+    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
+    const byte *const source = ds_source;
+    lighttable_t **const colormap = ds_colormap;
+    const byte *const brightmap = ds_brightmap;
+
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
+
+    const uint16_t *sdl = spandistlight + ds_x1;
+
+    #define XSHIFT (32 - 6)
+    #define YSHIFT (32 - 6 - 6)
+    #define YMASK  (63 * 64)
+
+    byte src;
+
+    #define DRAW_PIXEL(dest_index) \
+    { \
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+        \
+        colormap[0] = colormap[1] + planezlightoffset[*sdl++]; \
+        \
+        dest[dest_index] = colormap[brightmap[src]][src]; \
+        xf += xs; \
+        yf += ys; \
+    }
+
+    while (count >= 4)
+    {
+        DRAW_PIXEL(0);
+        DRAW_PIXEL(1);
+        DRAW_PIXEL(2);
+        DRAW_PIXEL(3);
+
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        DRAW_PIXEL(0);
+        dest++;
+    }
+
+    #undef DRAW_PIXEL
+
+    #undef YSHIFT
+    #undef YMASK
+    #undef XSHIFT
+}
+
+static void DrawSpanWithRadialFog32(void)
+{
+    int count = ds_x2 - ds_x1 + 1;
+    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
+    const byte *const source = ds_source;
+    lighttable32_t **const colormap = ds_colormap32;
+    const byte *const brightmap = ds_brightmap;
+
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
+
+    const uint16_t *sdl = spandistlight + ds_x1;
+
+    #define XSHIFT (32 - 6)
+    #define YSHIFT (32 - 6 - 6)
+    #define YMASK  (63 * 64)
+
+    byte src;
+
+    #define DRAW_PIXEL(dest_index) \
+    { \
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+        \
+        colormap[0] = colormap[1] + planezlightoffset[*sdl++]; \
+        \
+        dest[dest_index] = colormap[brightmap[src]][src]; \
+        xf += xs; \
+        yf += ys; \
+    }
+
+    while (count >= 4)
+    {
+        DRAW_PIXEL(0);
+        DRAW_PIXEL(1);
+        DRAW_PIXEL(2);
+        DRAW_PIXEL(3);
+
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        DRAW_PIXEL(0);
+        dest++;
+    }
+
+    #undef DRAW_PIXEL
+
+    #undef YSHIFT
+    #undef YMASK
+    #undef XSHIFT
+}
+
+// [Nugget] =================================================================/
+
 void R_InitBufferRes(void)
 {
     columnofs = Z_Malloc(video.width * sizeof(*columnofs), PU_RENDERER, NULL);
-    ylookup = Z_Malloc(video.height * sizeof(*ylookup), PU_RENDERER, NULL);
+
+    if (truecolor_rendering)
+    {
+        ylookup32 = Z_Malloc(video.height * sizeof(*ylookup32), PU_RENDERER, NULL);
+    }
+    else
+    {
+        ylookup = Z_Malloc(video.height * sizeof(*ylookup), PU_RENDERER, NULL);
+    }
+
     solidcol = Z_Calloc(1, video.width * sizeof(*solidcol), PU_RENDERER, NULL);
 }
 
@@ -1059,16 +1921,33 @@ void R_InitBuffer(void)
 
     // Preclaculate all row offsets.
 
-    for (i = viewheight; i--;)
+    if (truecolor_rendering)
     {
-        ylookup[i] =
-            I_VideoBuffer + (i + viewwindowy) * linesize; // killough 11/98
-    }
+        for (i = viewheight; i--;)
+        {
+            ylookup32[i] =
+                I_VideoBuffer32 + (i + viewwindowy) * linesize;
+        }
 
-    if (background_buffer != NULL)
+        if (background_buffer32 != NULL)
+        {
+            Z_Free(background_buffer32);
+            background_buffer32 = NULL;
+        }
+    }
+    else
     {
-        Z_Free(background_buffer);
-        background_buffer = NULL;
+        for (i = viewheight; i--;)
+        {
+            ylookup[i] =
+                I_VideoBuffer + (i + viewwindowy) * linesize; // killough 11/98
+        }
+
+        if (background_buffer != NULL)
+        {
+            Z_Free(background_buffer);
+            background_buffer = NULL;
+        }
     }
 }
 
@@ -1122,15 +2001,29 @@ void R_FillBackScreen(void)
         return;
     }
 
-    // Allocate the background buffer if necessary
-    if (background_buffer == NULL)
+    if (truecolor_rendering)
     {
-        int size = video.width * video.height;
-        background_buffer =
-            Z_Malloc(size * sizeof(*background_buffer), PU_STATIC, NULL);
-    }
+        if (background_buffer32 == NULL)
+        {
+            int size = video.width * video.height;
+            background_buffer32 =
+                Z_Malloc(size * sizeof(*background_buffer32), PU_STATIC, NULL);
+        }
 
-    V_UseBuffer(background_buffer);
+        V_UseBuffer32(background_buffer32);
+    }
+    else
+    {
+        // Allocate the background buffer if necessary
+        if (background_buffer == NULL)
+        {
+            int size = video.width * video.height;
+            background_buffer =
+                Z_Malloc(size * sizeof(*background_buffer), PU_STATIC, NULL);
+        }
+
+        V_UseBuffer(background_buffer);
+    }
 
     V_DrawBackground(gamemode == commercial ? "GRNROCK" : "FLOOR7_2");
 
@@ -1145,6 +2038,18 @@ void R_FillBackScreen(void)
 
 void R_VideoErase(int x, int y, int w, int h)
 {
+    if (truecolor_rendering)
+    {
+        if (background_buffer32 == NULL)
+        {
+            return;
+        }
+
+        V_CopyRect32(x, y, background_buffer32, w, h, x, y);
+
+        return;
+    }
+
     if (background_buffer == NULL)
     {
         return;
@@ -1165,7 +2070,8 @@ void R_VideoErase(int x, int y, int w, int h)
 
 void R_DrawViewBorder(void)
 {
-    if (scaledviewwidth == video.unscaledw || background_buffer == NULL)
+    if (scaledviewwidth == video.unscaledw
+        || (truecolor_rendering ? !background_buffer32 : !background_buffer))
     {
         return;
     }
@@ -1181,6 +2087,36 @@ void R_DrawViewBorder(void)
     // copy bottom
     R_VideoErase(0, scaledviewy + scaledviewheight, video.unscaledw,
                  scaledviewy);
+}
+
+void R_InitDrawColorFunctions(void)
+{
+    if (truecolor_rendering)
+    {
+        R_DrawColumn = DrawColumn32;
+        R_DrawTranslatedColumn = DrawTranslatedColumn32;
+        R_DrawTLColumn = DrawTLColumn32;
+
+        R_DrawColumnShadow = DrawColumnShadow32;
+        R_DrawSkyColumn = DrawSkyColumn32;
+
+        R_DrawSpan = DrawSpan32;
+        R_DrawSpanWithRadialFog = DrawSpanWithRadialFog32;
+    }
+    else
+    {
+        R_DrawColumn = DrawColumn8;
+        R_DrawTranslatedColumn = DrawTranslatedColumn8;
+        R_DrawTLColumn = DrawTLColumn8;
+
+        R_DrawColumnShadow = DrawColumnShadow8;
+        R_DrawSkyColumn = DrawSkyColumn8;
+
+        R_DrawSpan = DrawSpan8;
+        R_DrawSpanWithRadialFog = DrawSpanWithRadialFog8;
+    }
+
+    colfunc = R_DrawColumn;
 }
 
 //----------------------------------------------------------------------------

@@ -344,7 +344,7 @@ void P_MovePlayer (player_t* player)
       else if (onground && !player->jumptics
                && mo->height == mo->info->height
                && ceilingz - floorz > mo->height)
-      { // Jump
+      {
         mo->momz = 8*FRACUNIT;
         player->jumptics = 20;
 
@@ -818,12 +818,12 @@ void P_PlayerThink (player_t* player)
                                  P_AproxDistance(player->mo->x - linetarget->x,
                                                  player->mo->y - linetarget->y));
 
-        slope = CLAMP(P_GetLinetargetBottomSlope(),
-                      P_GetLinetargetTopSlope(),
-                      slope);
+        slope = CLAMP(
+          slope, P_GetLinetargetBottomSlope(), P_GetLinetargetTopSlope()
+        );
 
         target_pitch = P_SlopeToPitch(slope);
-        target_pitch = CLAMP(-max_pitch_angle, max_pitch_angle, target_pitch);
+        target_pitch = CLAMP(target_pitch, -max_pitch_angle, max_pitch_angle);
       }
       else if (lock_time) { target_pitch = player->pitch; }
 

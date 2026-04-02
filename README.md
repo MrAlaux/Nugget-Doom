@@ -23,7 +23,7 @@ Note that this feature list is relative to [Woof!'s](https://github.com/fabiangr
 read the latter for more details.
 Some features were first implemented in Nugget Doom and later in Woof!, so they're not listed here anymore.
 
-The build corresponding to this README is based on [Woof! 15.2.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.2.0).
+The build corresponding to this README is based on [Woof! 15.3.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.3.0).
 
 Most of Nugget Doom's features come from other sources, like source ports and mods;
 the initial implementations for some are **ported from (p.f.)** said sources, while others are just **inspired by (i.b.)** them.
@@ -34,6 +34,28 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### General
 
+- **_Lighting Mode_** settings:
+  - _Vanilla_:
+    - Supports 16 distinct light levels for sectors
+  - _Smooth_ (a.k.a. _Smooth Diminishing Lighting_):
+    - Smoother lighting for floors and ceilings
+    - Supports 32 distinct light levels for sectors
+  - _Interpolated_:
+    - Partial true-color lighting
+    - Smoother lighting in general
+    - Theoretically compatible with all colormap effects
+    - Supports 256 distinct light levels for sectors
+  - _True-color_:
+    - Full true-color lighting
+    - Better color quality
+    - Smoothest lighting in general
+    - Does not support some colormap effects (colormap brightmaps and fog are still supported)
+    - Supports 256 distinct light levels for sectors
+  - Notes on the true-color modes:
+    - Compatible with custom tinted palettes
+    - No support for true-color (32-bit PNG) graphics; those are still palettized at startup
+    - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
+      especially with _Smooth Palette Tinting_ enabled
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
@@ -63,7 +85,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - _Use_ to reset the camera to the player's POV
   - _Fire_ to lock onto and let go of a sentient thing's POV
   - _Previous/Next Weapon_ to adjust the camera's movement speed
-  - Rapid _Strafe On_ double-press to center the camera vertically
+  - Quick _Strafe On_ double-press to center the camera vertically
 - **_Chasecam_** [i.b. ZDoom]
 - **Slow Motion** button
 - **Zoom** button
@@ -76,18 +98,22 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Thing Lighting Mode_** setting
   - _Hitbox_ suggested by [@fragglet](https://github.com/fragglet)
   - _Per-column_ inspired by PSX Hexen
+- **_Radial Fog_** setting
+  - The fidelity of the effect on floors and ceilings can be tuned through the CFG-only `radial_plane_fog_fidelity` CVAR;
+    greater values increase fidelity but cause more stutter
 - **_Flip Levels_** setting
-- **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
+- **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution
+  (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
 - **_No Berserk Tint_** setting
 - **_No Radiation Suit Tint_** setting
 - **_Night-Vision Visor Effect_** setting [i.b. International Doom]
+- **_Smooth Palette Tinting_** setting
 - **_Damage Tint Cap_** and **_Bonus Tint Cap_**, to attenuate or disable said screen tinting
 - **_Fake Contrast_** setting
 - Toggle for **diminishing lighting** (CFG-only: `diminishing_lighting`)
-  - _Diminishing lighting_ refers to geometry and entities becoming brighter as they come closer to the camera
+  - _Diminishing lighting_ (a.k.a. fog) refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
-- **Intermission ratio stats** setting, to use ratios for the stats on the intermission screen (CFG-only: `inter_ratio_stats`) [i.b. Heretic]
 - **Color settings** [p.f. International Doom]
   - _Contrast_ by [@pvictress](https://github.com/pvictress)
 - **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
@@ -96,6 +122,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
+- **Fixed bullet puffs not spawning when firing at planes far away from lines**
+- **Fixed bullet puffs not spawning when "hitting" the sky behind a line if said sky were the ceiling of the line's front sector**
+- **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees**
 
 ### Weapons
 
@@ -111,6 +140,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
+- **Made _Bobbing Weapon Alignment_ respect DeHackEd-set sprite offsets**
 - **Always Bob** setting (CFG-only: `always_bob`)
   - This setting forces the weapon to bob in every tic of its ready state,
     whether or not the `A_WeaponReady` action is called in said tic,
@@ -120,6 +150,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Bob While Switching_** setting
 - **_Weapon Inertia_** settings [by _ceski_]
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
+- **_Translucent [Weapon] When Invisible_** setting
 - **_[Weapon] Flash Opacity_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting (CFG-only: `sx_fix`)
@@ -134,6 +165,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Crosshair:**
   - Opacity setting
   - Vertical-only target lock-on
+  - Health/ammo bars
   - Horizontal-autoaim indicators
   - Option to account for fuzzy targets [i.b. From Doom With Love]
   - Dedicated toggle button
@@ -167,12 +199,14 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ### Automap
 
-- **Minimap mode** [i.b. DSDA-Doom]
+- **Minimap mode:** Quickly press the automap button twice to enable it [i.b. DSDA-Doom]
 - Button to **_Highlight Points of Interest_**; marks and keyed lines (default: <kbd>B</kbd>)
 - **_Tag Finder_** button [p.f. PrBoomX]
   - Position the automap pointer over a sector and press this button
     to highlight its activator line(s), and vice versa
-- Button to **_Teleport to Automap pointer_**
+- Button to **_Teleport to automap pointer_**
+- **The _Clear [Automap] Mark_ button now clears the mark under the crosshair when over one**
+- **Pressing _Place Mark_ while over a mark changes that mark's color**
 - **_Show Thing Hitboxes_** setting
 - **Keys now flash when flashing of keyed doors is enabled**
 - **Color for trigger lines**, used with IDDT (CFG-only: `mapcolor_trig`)
@@ -252,6 +286,9 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
+- **Intermission ratio stats** setting, to use ratios for the stats on the intermission screen (CFG-only: `inter_ratio_stats`) [i.b. Heretic]
+- Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen** (CFG-only: `inter_entering_delay`)
+  - When enabled, said state can also be accelerated like previous states by pressing the _Fire_ or _Use_ buttons
 - **When dying with _Free Look_ enabled, the camera is pitched towards the killer**
 - **Extended character cast** [partially p.f. Crispy Doom]
   - _Turn_ buttons to rotate
@@ -268,8 +305,10 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS` (last three unused)
   - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
-- **Customizable darkening level for dark menu background and Automap overlay** (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
-- The **Chaingun can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
+- **Customizable darkening level for dark menu background and Automap overlay**
+  (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+- The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
+  - This does not apply to HacX, as it provides a dummy, incongruous lump for the sound
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-only: `sp_chat`)
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
@@ -280,7 +319,8 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 
 # Releases
 
-Source code and Windows binaries (MSVC builds for Windows 7 and newer) for the latest release can be found on the [Release](https://github.com/MrAlaux/Nugget-Doom/releases/latest) page.
+Source code and Windows binaries (MSVC builds for Windows 7 and newer)
+for the latest release can be found on the [Release](https://github.com/MrAlaux/Nugget-Doom/releases/latest) page.
 
 The most recent list of changes can be found in the [Changelog](https://github.com/MrAlaux/Nugget-Doom/blob/master/CHANGELOG.md).
 
@@ -296,7 +336,8 @@ Nugget Doom follows a fairly simple (albeit arbitrary) **X.Y.Z** versioning syst
 
 Incrementing any of the first values will reset the latter (i.e. a major change to 1.1.2 would shift it to 2.0.0).
 
-The merging of changes from Woof! releases may affect any of the version values, but not necessarily in the same way as Woof!'s own version (i.e. `Woof! 11.Y.Z -> 12.Y.Z` doesn't necessarily mean `Nugget 2.Y.Z -> 3.Y.Z`).
+The merging of changes from Woof! releases may affect any of the version values,
+but not necessarily in the same way as Woof!'s own version (i.e. `Woof! 11.Y.Z -> 12.Y.Z` doesn't necessarily mean `Nugget 2.Y.Z -> 3.Y.Z`).
 
 # Compiling
 
@@ -318,7 +359,8 @@ The following build system and libraries need to be installed:
  * [libxmp](https://github.com/libxmp/libxmp) (optional)
  * [discord-rpc](https://github.com/discord/discord-rpc) (optional)
  
-Usually your distribution should have the corresponding packages in its repositories, and if your distribution has "dev" versions of those libraries, those are the ones you'll need.
+Usually your distribution should have the corresponding packages in its repositories,
+and if your distribution has "dev" versions of those libraries, those are the ones you'll need.
 
 Once installed, compilation should be as simple as:
 
@@ -364,6 +406,7 @@ Help was provided by:
 - [_Brad Harding_](https://github.com/bradharding)
 - [_ceski_](https://github.com/ceski-1)
 - [_Fabian Greffrath_](https://github.com/fabiangreffrath)
+- _Korp_
 - [_melak47_](https://github.com/melak47)
 - [_Mikolah_](https://github.com/mykola-ambar)
 - [_Roman Fomin_ (a.k.a. _rfomin_)](https://github.com/rfomin)
@@ -394,7 +437,7 @@ Copyright:
  © 2020-2024 Fabian Greffrath;  
  © 2020-2024 Roman Fomin;  
  © 2021-2022 Ryan Krafnick;  
- © 2021-2025 Alaux;  
+ © 2021-2026 Alaux;  
  © 2022 Julia Nechaevskaya;  
  © 2022-2024 ceski;  
  © 2023 Andrew Apted;  

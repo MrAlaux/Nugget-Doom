@@ -62,6 +62,9 @@ extern boolean hitbox_hitscan; // Hitbox-based hitscan collision
 void P_SaveIntercepts(void);
 void P_RestoreIntercepts(void);
 
+// Exact distance calculation
+fixed_t P_CalcDistance(const fixed_t dx, const fixed_t dy);
+
 // [Nugget] -----------------------------------------------------------------/
 
 typedef boolean (*traverser_t)(intercept_t *in);

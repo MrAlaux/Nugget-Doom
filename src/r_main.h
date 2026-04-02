@@ -30,6 +30,7 @@ struct seg_s;
 
 // [Nugget]
 struct mobj_s;
+struct sector_s;
 
 //
 // POV related.
@@ -91,11 +92,9 @@ extern int  walllightindex;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
-extern boolean setsmoothlight;
-void R_SmoothLight(void);
-
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
+extern lighttable32_t *fixedcolormap32;
 extern int           fixedcolormapindex;
 
 // Number of diminishing brightness levels.
@@ -166,12 +165,14 @@ extern boolean vertical_lockon;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
+extern boolean radial_fog;
 extern boolean flip_levels;
 extern boolean nightvision_visor;
 extern fakecontrast_t fake_contrast;
 extern boolean diminishing_lighting;
 extern boolean a11y_weapon_pspr;
 extern boolean a11y_invul_colormap;
+extern int pspr_invis_translucent;
 extern int pspr_translucency_pct;
 extern int zoom_fov;
 extern boolean comp_powerrunout;
@@ -191,8 +192,50 @@ void R_GetLightLevelAndTintInPoint(
   int *const tint_p
 );
 
+void R_GetLightLevelAndTintInSector(
+  struct sector_s *sector,
+  boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
+);
+
+#define PSPR_INVIS_TRANSLUCENCY 50
+
 #define POWER_RUNOUT(power) \
   ((STRICTMODE(comp_powerrunout) ? (power) >= 4*32 : (power) > 4*32) || (power) & 8)
+
+// True color
+void R_InitColorFunctions(void);
+
+// Lighting modes ------------------------------------------------------------
+
+typedef enum lightingmode_e {
+  LIGHTINGMODE_VANILLA,
+  LIGHTINGMODE_SMOOTH,
+  LIGHTINGMODE_INTERPOLATED,
+  LIGHTINGMODE_TRUECOLOR,
+
+  NUM_LIGHTINGMODES
+} lightingmode_t;
+
+extern lightingmode_t lighting_mode;
+
+extern int num_colormap_rows;
+
+boolean R_InitLightTablesPending(void);
+void R_DeferredInitLightTables(void);
+
+// Radial fog ----------------------------------------------------------------
+
+extern int light_distance_shift_bits;
+
+extern uint16_t **planedistlight, *spandistlight;
+
+extern boolean do_radial_fog;
+
+boolean R_InitDistLightTablesPending(void);
+void    R_DeferredInitDistLightTables(void);
+void    R_InitDistLightTables(void);
 
 // FOV effects ---------------------------------------------------------------
 
@@ -200,7 +243,7 @@ enum {
   FOVFX_ZOOM,
   FOVFX_SLOWMO,
   FOVFX_TELEPORT,
-  
+
   NUMFOVFX
 };
 
@@ -266,7 +309,10 @@ extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 // [Nugget] =================================================================/
 
 void R_InitLightTables(void);                // killough 8/9/98
-int R_GetLightIndex(fixed_t scale);
+
+// [Nugget]
+extern int (*R_GetLightIndex)(fixed_t scale, int x); // Made function pointer, added X parameter
+int R_GetLightIndexVanilla(fixed_t scale, int x);
 
 extern boolean setsizeneeded;
 void R_ExecuteSetViewSize(void);

@@ -45,11 +45,12 @@ void I_InitGraphics(void);
 void I_ShutdownGraphics(void);
 
 // Takes full 8 bit values.
-void I_SetPalette(byte *palette);
+void I_SetPalette(byte palette_index); // [Nugget] Pass index
 
 void I_FinishUpdate(void);
 
 void I_ReadScreen(pixel_t *dst);
+void I_ReadScreen32(pixel32_t *dst);
 
 void I_ResetScreen(void); // killough 10/98
 void I_ToggleVsync(void); // [JN] Calls native SDL vsync toggle
@@ -70,9 +71,19 @@ extern boolean toggle_exclusive_fullscreen;
 extern boolean correct_aspect_ratio;
 extern boolean screenvisible;
 
-// [Nugget]
+// [Nugget] /-----------------------------------------------------------------
+
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
+
+boolean I_SmoothPaletteTinting(void);
+int I_GetNumPalettes(void);
+void I_DeferredInitPalettes(void);
+void I_GetPalette(byte *colors, const byte palette_index);
+
+void I_DeferredInitColor(void);
+
+// [Nugget] -----------------------------------------------------------------/
 
 extern int gamma2;
 byte I_GetNearestColor(byte *palette, int r, int g, int b);

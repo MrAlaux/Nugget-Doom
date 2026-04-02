@@ -51,6 +51,7 @@
 // [Nugget] CVARs
 altinterpic_t alt_interpic;
 boolean inter_ratio_stats;
+boolean inter_entering_delay;
 
 #define LARGENUMBER 1994
 
@@ -434,6 +435,8 @@ boolean WI_AltInterpicOn(void)
 void WI_DisableAltInterpic(void)
 {
   old_alt_interpic_on = alt_interpic_on = false;
+
+  R_SetViewSize(screenblocks);
 }
 
 // [Nugget] -----------------------------------------------------------------/
@@ -1199,53 +1202,49 @@ WI_drawPercent
 //          t      -- the time value to be drawn
 // Returns: void
 //
-static void
-WI_drawTime
-( int   x,
-  int   y,
-  int   t,
-  boolean suck )
+static void WI_drawTime(int x, int y, int seconds, boolean suck)
 {
-
-  int   div;
-  int   n;
-
-  if (t<0)
-    return;
-
-  // [FG] total time for all levels never "sucks"
-  if (t <= 61*59 || !suck)  // otherwise known as 60*60 -1 == 3599
+    if (seconds < 0)
     {
-      const int oldx = x; // [Nugget]
-
-      div = 1;
-
-      do
-        {
-          n = (t / div) % 60;
-          x = WI_drawNum(x, y, n, 2) - SHORT(colon->width);
-          div *= 60;
-
-          // draw
-          if (div==60 || t / div)
-            V_DrawPatchSH(x, y, colon);
-      
-        } 
-      while (t / div && div < 3600);
-
-      // [FG] print at most in hhhh:mm:ss format
-      if ((n = (t / div)))
-      {
-        WI_drawNum(x, y, n, -1);
-      }
-
-      SHADOW_REDRAW(WI_drawTime(oldx, y, t, suck)) // [Nugget] HUD/menu shadows
+        return;
     }
-  else
+
+    // [Nugget]
+    const int oldx = x, oldseconds = seconds;
+
+    const int hours = seconds / 3600;
+
+    // [FG] total time for all levels never "sucks"
+    // Updated to match PrBoom's 100 hours, instead of vanilla's 1 hour
+    if (suck && hours >= 100)
     {
-      // "sucks"
-      V_DrawPatchSH(x - SHORT(sucks->width), y, sucks); 
+        // "sucks"
+        V_DrawPatchSH(x - SHORT(sucks->width), y, sucks);
+        return;
     }
+
+    seconds -= hours * 3600;
+    const int minutes = seconds / 60;
+    seconds -= minutes * 60;
+
+    const short colon_width = SHORT(colon->width);
+
+    x = WI_drawNum(x, y, seconds, 2) - colon_width;
+    V_DrawPatchSH(x, y, colon);
+
+    // [FG] print at most in hhhh:mm:ss format
+    if (hours)
+    {
+        x = WI_drawNum(x, y, minutes, 2) - colon_width;
+        V_DrawPatchSH(x, y, colon);
+        WI_drawNum(x, y, hours, -1);
+    }
+    else if (minutes)
+    {
+        WI_drawNum(x, y, minutes, -1);
+    }
+
+    SHADOW_REDRAW(WI_drawTime(oldx, y, oldseconds, suck)) // [Nugget] HUD/menu shadows
 }
 
 // ====================================================================
@@ -1345,11 +1344,13 @@ static void WI_End(void)
 // Args:    none
 // Returns: void
 //
-static void WI_initNoState(void)
+static void WI_initNoState(const boolean long_wait) // [Nugget] Parameter
 {
   state = NoState;
   acceleratestage = 0;
-  cnt = 10;
+
+  // [Nugget] Optional longer delay
+  cnt = (casual_play && inter_entering_delay && long_wait) ? TICRATE*3 : 10;
 }
 
 
@@ -1363,7 +1364,8 @@ static void WI_updateNoState(void)
 {
   WI_updateAnimatedBack();
 
-  if (!--cnt)
+  // [Nugget] Allow acceleration if the longer delay is enabled
+  if (!--cnt || (CASUALPLAY(inter_entering_delay) && acceleratestage))
     {
       WI_End();
       G_WorldDone();
@@ -1422,7 +1424,7 @@ static void WI_updateShowNextLoc(void)
   WI_updateAnimatedBack();
 
   if (!--cnt || acceleratestage)
-    WI_initNoState();
+    WI_initNoState(false);
   else
     snl_pointeron = (cnt & 31) < 20;
 }
@@ -1664,7 +1666,7 @@ static void WI_updateDeathmatchStats(void)
             if (NextLocAnimation())
               WI_initShowNextLoc();
             else if (gamemode == commercial)
-              WI_initNoState();
+              WI_initNoState(true);
             else
               WI_initShowNextLoc();
           }
@@ -2030,7 +2032,7 @@ static void WI_updateNetgameStats(void)
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
                   else if (gamemode == commercial)
-                    WI_initNoState();
+                    WI_initNoState(true);
                   else
                     WI_initShowNextLoc();
                 }
@@ -2340,7 +2342,7 @@ static void WI_updateStats(void)
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
                   else if (gamemode == commercial)
-                    WI_initNoState();
+                    WI_initNoState(true);
                   else
                     WI_initShowNextLoc();
                 }
@@ -2372,7 +2374,8 @@ static int NumWidth(int n)
 
   int digits;
 
-  if (n) {
+  if (n)
+  {
     digits = 0;
 
     do { digits++; } while (n /= 10);
@@ -2485,7 +2488,10 @@ static void WI_drawStats(void)
   const boolean wide_time = (wide_total && !draw_partime);
 
   V_DrawPatchSH(SP_TIMEX, SP_TIMEY, witime);
-  WI_drawTime((wide_time ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX,
+  // Why add a hardcoded +8 you ask?
+  // in oder to allow >1h long times, some minor alignment shifting is needed
+  // i.e. PrBoom switched SP_TIMEX to 8, instead of vanilla's 16
+  WI_drawTime((wide_time ? (SCREENWIDTH - SP_TIMEX) : (SCREENWIDTH/2 + 8)),
               SP_TIMEY, cnt_time, true);
 
   // Ty 04/11/98: redid logic: should skip only if with pwad but
@@ -2501,7 +2507,7 @@ static void WI_drawStats(void)
 
   // [FG] draw total time alongside level time and par time
   V_DrawPatchSH(SP_TIMEX, SP_TIMEY + 16, total);
-  WI_drawTime((wide_total ? SCREENWIDTH : SCREENWIDTH/2) - SP_TIMEX,
+  WI_drawTime((wide_total ? (SCREENWIDTH - SP_TIMEX) : (SCREENWIDTH/2 + 8)),
               SP_TIMEY + 16, cnt_total_time, false);
 }
 
@@ -2619,12 +2625,8 @@ void WI_Ticker(void)
   {
     old_alt_interpic_on = alt_interpic_on;
 
-    if (!alt_interpic_on)
-    { R_SetViewSize(screenblocks); }
-
-    R_ExecuteSetViewSize();
+    R_SetViewSize(alt_interpic_on ? 11 : screenblocks);
   }
-
 }
 
 // ====================================================================

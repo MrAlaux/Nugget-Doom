@@ -1,6 +1,7 @@
 set(BASE_SOURCES
     all-all/animated.lmp
     all-all/brghtmps.lmp
+    all-all/chexdeh.lmp
     all-all/compdb.lmp
     all-all/crblack.lmp
     all-all/crblue.lmp
@@ -20,8 +21,13 @@ set(BASE_SOURCES
     all-all/cross06.png
     all-all/cross07.png
     all-all/cross08.png
-    all-all/crossil.png # [Nugget]
-    all-all/crossir.png # [Nugget]
+
+    # [Nugget]
+    all-all/crossamb.png
+    all-all/crosshlb.png
+    all-all/crossil.png
+    all-all/crossir.png
+
     all-all/crpurple.lmp
     all-all/crred.lmp
     all-all/crtan.lmp
@@ -221,7 +227,6 @@ set(BASE_SOURCES
     betalevl.wad/umapinfo.lmp
 
     chex.wad/brghtmps.lmp
-    chex.wad/dehacked.lmp
     chex.wad/umapinfo.lmp
 
     chex2.wad/brghtmps.lmp

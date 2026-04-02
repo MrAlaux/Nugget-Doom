@@ -47,6 +47,10 @@ int ST_GetMessageFontHeight(void);
 boolean ST_IconAvailable(const int i);
 boolean ST_GetNughudOn(void);
 
+// Animated health/armor counts
+int ST_GetStatusBarHealth(void);
+int ST_GetStatusBarArmor(void);
+
 // Key blinking --------------------------------------------------------------
 
 typedef enum keyblink_e

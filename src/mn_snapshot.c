@@ -133,14 +133,33 @@ static void TakeSnapshot(void)
     }
 
     pixel_t *p = current_snapshot;
-    const pixel_t *s = I_VideoBuffer;
+
     int x, y;
-    for (y = 0; y < SCREENHEIGHT; y++)
+
+    if (truecolor_rendering)
     {
-        int line = V_ScaleY(y) * video.width;
-        for (x = video.deltaw; x < NONWIDEWIDTH + video.deltaw; x++)
+        const pixel32_t *s = I_VideoBuffer32;
+
+        for (y = 0; y < SCREENHEIGHT; y++)
         {
-            *p++ = s[line + V_ScaleX(x)];
+            int line = V_ScaleY(y) * video.width;
+            for (x = video.deltaw; x < NONWIDEWIDTH + video.deltaw; x++)
+            {
+                *p++ = V_IndexFromRGB(s[line + V_ScaleX(x)]);
+            }
+        }
+    }
+    else
+    {
+        const pixel_t *s = I_VideoBuffer;
+
+        for (y = 0; y < SCREENHEIGHT; y++)
+        {
+            int line = V_ScaleY(y) * video.width;
+            for (x = video.deltaw; x < NONWIDEWIDTH + video.deltaw; x++)
+            {
+                *p++ = s[line + V_ScaleX(x)];
+            }
         }
     }
 
@@ -180,20 +199,40 @@ boolean MN_DrawSnapshot(int n, int x, int y, int w, int h)
     const fixed_t step_x = (SCREENWIDTH << FRACBITS) / rect.sw;
     const fixed_t step_y = (SCREENHEIGHT << FRACBITS) / rect.sh;
 
-    pixel_t *dest = I_VideoBuffer + rect.sy * video.width + rect.sx;
-
     fixed_t srcx, srcy;
     int destx, desty;
-    pixel_t *destline, *srcline;
 
-    for (desty = 0, srcy = 0; desty < rect.sh; desty++, srcy += step_y)
+    if (truecolor_rendering)
     {
-        destline = dest + desty * video.width;
-        srcline = snapshots[n] + (srcy >> FRACBITS) * SCREENWIDTH;
+        pixel32_t *dest = I_VideoBuffer32 + rect.sy * video.width + rect.sx;
+        pixel32_t *destline;
+        pixel_t *srcline;
 
-        for (destx = 0, srcx = 0; destx < rect.sw; destx++, srcx += step_x)
+        for (desty = 0, srcy = 0; desty < rect.sh; desty++, srcy += step_y)
         {
-            *destline++ = srcline[srcx >> FRACBITS];
+            destline = dest + desty * video.width;
+            srcline = snapshots[n] + (srcy >> FRACBITS) * SCREENWIDTH;
+
+            for (destx = 0, srcx = 0; destx < rect.sw; destx++, srcx += step_x)
+            {
+                *destline++ = V_IndexToRGB(srcline[srcx >> FRACBITS]);
+            }
+        }
+    }
+    else
+    {
+        pixel_t *dest = I_VideoBuffer + rect.sy * video.width + rect.sx;
+        pixel_t *destline, *srcline;
+
+        for (desty = 0, srcy = 0; desty < rect.sh; desty++, srcy += step_y)
+        {
+            destline = dest + desty * video.width;
+            srcline = snapshots[n] + (srcy >> FRACBITS) * SCREENWIDTH;
+
+            for (destx = 0, srcx = 0; destx < rect.sw; destx++, srcx += step_x)
+            {
+                *destline++ = srcline[srcx >> FRACBITS];
+            }
         }
     }
 

@@ -31,6 +31,8 @@ enum automapmode_e; // [Nugget]
 // CVARs
 extern boolean fancy_teleport;
 
+void AM_InitColorFunctions(void);
+
 void AM_ChangeMode(enum automapmode_e mode);
 
 void AM_UpdateMinimap(
@@ -86,7 +88,14 @@ typedef struct
  int64_t x,y;
 } mpoint_t;
 
-extern mpoint_t *markpoints;
+// [Nugget]
+typedef struct mapmark_s
+{
+  mpoint_t pt;
+  int color;
+} mapmark_t;
+
+extern mapmark_t *markpoints;
 extern int markpointnum, markpointnum_max;
 extern boolean followplayer;
 extern boolean automap_grid;

@@ -1453,10 +1453,19 @@ boolean comp_cgunnersfx; // [Nugget]
 void A_CPosAttack(mobj_t *actor)
 {
   int angle, bangle, damage, slope, t;
-  // [Nugget] Use Pistol sound (or Chaingun sound if available) instead
+
+  // [Nugget] Use Pistol sound (or Chaingun sound if available) instead /-----
+
   static int sound = -1;
+
   if (sound == -1)
-  { sound = (W_CheckNumForName("dschgun") > -1 ? sfx_chgun : sfx_pistol); }
+  {
+    sound = (W_CheckNumForName("dschgun") > -1 && gamemission != pack_hacx)
+          ? sfx_chgun
+          : sfx_pistol;
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   if (!actor->target)
     return;
@@ -1909,8 +1918,11 @@ static boolean P_HealCorpse(mobj_t* actor, int radius, statenum_t healstate, sfx
 		              corpsehit->type, corpsehit->x>>FRACBITS, corpsehit->y>>FRACBITS);
 		  }
 
-		  corpsehit->flags_extra &= ~MFX_COLOREDBLOOD;
-		  corpsehit->bloodcolor = 0;
+		  if (Woof_Random()) // [Nugget] *Maybe* let it happen
+		  {
+		    corpsehit->flags_extra &= ~MFX_COLOREDBLOOD;
+		    corpsehit->bloodcolor = 0;
+		  }
 
                   corpsehit->health = info->spawnhealth;
 		  P_SetTarget(&corpsehit->target, NULL);  // killough 11/98
@@ -3081,6 +3093,15 @@ void A_SpawnObject(mobj_t *actor)
 
   // [XA] don't bother with the dont-inherit-friendliness hack
   // that exists in A_Spawn, 'cause WTF is that about anyway?
+
+  // [Nugget] If the spawner is blood-colored
+  // (it is either a blood splat or a pool of guts),
+  // inherit blood color to spawnee
+  if (!strictmode && actor->flags_extra & MFX_COLOREDBLOOD)
+  {
+    mo->flags_extra |= MFX_COLOREDBLOOD;
+    mo->bloodcolor = actor->bloodcolor;
+  }
 }
 
 //

@@ -52,6 +52,7 @@ extern int hud_crosshair_target_color;
 // [Nugget]
 extern boolean hud_crosshair_on; // Crosshair toggle
 extern int     hud_crosshair_tran_pct; // Translucent crosshair
+extern boolean hud_crosshair_bars; // Health/ammo bars
 extern boolean hud_crosshair_indicators; // Horizontal-autoaim indicators
 extern boolean hud_crosshair_fuzzy; // Account for fuzzy targets
 

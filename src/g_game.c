@@ -116,7 +116,7 @@ boolean nugget_devmode;
 
 // ---------------------------------------------------------------------------
 
-boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
+static boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
 
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
 
@@ -544,6 +544,14 @@ int    bodyqueslot, bodyquesize, default_bodyquesize; // killough 2/8/98, 10/98
 static weapontype_t LastWeapon(void)
 {
     const weapontype_t weapon = players[consoleplayer].lastweapon;
+
+    // [Nugget] Weapon-switch interruption
+    if (CASUALPLAY(weapswitch_interruption))
+    {
+        const player_t *const player = players + consoleplayer;
+
+        if (player->pendingweapon == weapon) { return player->readyweapon; }
+    }
 
     if (weapon < wp_fist || weapon >= NUMWEAPONS
         || !G_WeaponSelectable(weapon))
@@ -1442,8 +1450,8 @@ static void G_DoLoadLevel(void)
   // Minimap
   if (minimap_was_on)
   {
-    AM_ChangeMode(AM_MINI);
     minimap_was_on = false;
+    AM_ChangeMode(AM_MINI);
   }
 
   // Slow Motion
@@ -1454,13 +1462,7 @@ static void G_DoLoadLevel(void)
   R_ClearShake();
 
   // Alt. intermission background
-  if (WI_AltInterpicOn())
-  {
-    R_SetViewSize(screenblocks);
-    R_ExecuteSetViewSize();
-
-    WI_DisableAltInterpic();
-  }
+  if (WI_AltInterpicOn()) { WI_DisableAltInterpic(); }
 
   // Freecam -----------------------------------------------------------------
 
@@ -2218,7 +2220,7 @@ void G_RestartWithLoadout(const boolean current)
   {
     if (automapactive == AM_MINI) { minimap_was_on = true; }
 
-    AM_ChangeMode(AM_OFF);
+    AM_Stop();
   }
 
   AM_clearMarks();
@@ -2256,12 +2258,11 @@ static void G_DoCompleted(void)
     if (playeringame[i])
       G_PlayerFinishLevel(i);        // take away cards and stuff
 
-  if (automapactive)
-  {
-    if (automapactive == AM_MINI) { minimap_was_on = true; }
+  // [Nugget] Minimap
+  if (automapactive == AM_MINI) { minimap_was_on = true; }
 
-    AM_ChangeMode(AM_OFF);
-  }
+  if (automapactive)
+    AM_Stop();
 
   wminfo.nextep = wminfo.epsd = gameepisode -1;
   wminfo.last = gamemap -1;
@@ -2775,7 +2776,7 @@ static void G_DoPlayDemo(void)
 
 #define VERSIONSIZE   16
 
-#define CURRENT_SAVE_VERSION "Nugget 4.5.0" // [Nugget]
+#define CURRENT_SAVE_VERSION "Nugget 4.6.0" // [Nugget]
 
 static const char *saveg_versions[] =
 {
@@ -2796,6 +2797,7 @@ static const char *saveg_versions[] =
     [saveg_nugget320] = "Nugget 3.2.0",
     [saveg_nugget330] = "Nugget 3.3.0",
     [saveg_nugget400] = "Nugget 4.0.0",
+    [saveg_nugget450] = "Nugget 4.5.0",
 
     // [Nugget] -------------------------------------------------------------/
 
@@ -3477,11 +3479,8 @@ static boolean DoLoadGame(boolean do_load_autosave)
   // we already have a save (the one we just loaded), so reset the countdown
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
 
-  if (setsizeneeded)
-    R_ExecuteSetViewSize();
-
-  // draw the pattern into the back screen
-  R_FillBackScreen();
+  // [Nugget] True color: remove `R_ExecuteSetViewSize()`
+  // and `R_FillBackScreen()` calls from here
 
   // killough 12/98: support -recordfrom and -loadgame -playdemo
   if (!command_loadgame)
@@ -3947,14 +3946,14 @@ void G_Ticker(void)
             displaymsg("Freecam Speed: %i unit%s", scaledspeed, (scaledspeed == 1) ? "" : "s");
           }
 
-          fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed))) * 100 / realtic_clock_rate;
+          const fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed))) * 100 / realtic_clock_rate;
 
-          fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward)),
-                  sidemove    = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));
+          const fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward));
+                fixed_t    sidemove = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));
 
           if (flip_levels) { sidemove = -sidemove; } // Flip levels
 
-          angle_t fangle = R_GetFreecamAngle() + angle;
+          const angle_t fangle = R_GetFreecamAngle() + angle;
 
           x = FixedMul(forwardmove, finecosine[ fangle          >> ANGLETOFINESHIFT])
             + FixedMul(sidemove,    finecosine[(fangle - ANG90) >> ANGLETOFINESHIFT]);
@@ -3967,7 +3966,7 @@ void G_Ticker(void)
 
         pitch = cmd->pitch << FRACBITS;
 
-        static int strafetic = -10;
+        static int strafetic = SHRT_MIN;
         static boolean strafedown = false;
 
         if (!INPUT(input_strafe))
@@ -3978,7 +3977,7 @@ void G_Ticker(void)
         {
           strafedown = true;
 
-          if (gametic - strafetic < 10)
+          if (gametic - strafetic < TICRATE * 2/7) // A bit under 0.3 seconds
           {
             center = true;
           }
@@ -6186,6 +6185,10 @@ void G_BindWeapVariables(void)
   M_BindBool("weaponsquat", &weaponsquat, NULL,
              false, ss_weap, wad_yes,
              "Squat weapon down upon landing/jumping");
+
+  M_BindBool("pspr_invis_translucent", &pspr_invis_translucent, NULL,
+             false, ss_weap, wad_yes,
+             "Make the weapon translucent instead of fuzzy when partially invisible");
 
   M_BindNum("pspr_translucency_pct", &pspr_translucency_pct, NULL,
             100, 0, 100, ss_weap, wad_yes,

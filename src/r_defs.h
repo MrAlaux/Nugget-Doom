@@ -393,7 +393,7 @@ typedef struct vissprite_s
   int mobjflags_extra; // Woof!
 
   // for color translation and shadow draw, maxbright frames as well
-  lighttable_t *colormap[2];
+  int colormap[2];
 
   // killough 3/27/98: height sector for underwater/fake ceiling support
   int heightsec;
@@ -413,6 +413,7 @@ typedef struct vissprite_s
 
   // [Nugget]
   fixed_t xscale, yscale;
+  byte lightnum;
   boolean fullbright;
   boolean flipped;
   boolean no_perc; // Thing lighting

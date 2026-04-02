@@ -102,6 +102,20 @@ int force_carousel;
 
 static patch_t *font_extras[HU_FONTEXTRAS] = { NULL };
 
+// Animated health/armor counts ----------------------------------------------
+
+static int sbar_health = 100, sbar_armor = 0;
+
+int ST_GetStatusBarHealth(void)
+{
+  return sbar_health;
+}
+
+int ST_GetStatusBarArmor(void)
+{
+  return sbar_armor;
+}
+
 // Key blinking --------------------------------------------------------------
 
 #define KEYBLINKMASK 0x8
@@ -125,6 +139,7 @@ static int nughud_patchlump[NUMNUGHUDPATCHES];
 
 static patch_t *nhbersrk,   // NHBERSRK
                *nhammo[4],  // NHAMMO#, from 0 to 3
+               *nhweap[9],  // NHWEAP#, from 0 to 8
                *nhambar[2], // NHAMBAR#, from 0 to 1
                *nhealth[2], // NHEALTH#, from 0 to 1
                *nhhlbar[2], // NHHLBAR#, from 0 to 1
@@ -148,11 +163,9 @@ static void UpdateNughudOn(void)
                   || (!normal_sbardef && screenblocks == 11));
 }
 
-static sbarelem_t *nughud_health_elem = NULL,
-                  *nughud_armor_elem = NULL;
-
 // Used for Status-Bar chunks
 static pixel_t *st_bar = NULL;
+static pixel32_t *st_bar32 = NULL;
 static int stbar_height = 32;
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align);
@@ -233,8 +246,9 @@ static void UpdateNughudStacks(void);
 
 // graphics are drawn to a backing screen and blitted to the real screen
 static pixel_t *st_backing_screen = NULL;
+static pixel32_t *st_backing_screen32 = NULL;
 
-// [Nugget] Animated health/armor count
+// [Nugget] Animated health/armor counts
 static boolean hud_animated_counts;
 
 static boolean sts_colored_numbers;
@@ -728,12 +742,12 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
     return result;
 }
 
-// [Nugget] Animated health/armor count
+// [Nugget]
 static int SmoothCount(int shownval, int realval)
 {
     int step = realval - shownval;
 
-    if (strictmode || !hud_animated_counts || !step)
+    if (!step || !hud_animated_counts || strictmode)
     {
         return realval;
     }
@@ -764,23 +778,13 @@ static int ResolveNumber(sbe_number_t *number, player_t *player)
     switch (number->type)
     {
         case sbn_health:
-            // [Nugget] Animated health/armor count
-            if (number->oldvalue == -1)
-            {
-                number->oldvalue = player->health;
-            }
-            result = SmoothCount(number->oldvalue, player->health);
-            number->oldvalue = result;
+            // [Nugget] Animated health/armor counts
+            result = sbar_health;
             break;
 
         case sbn_armor:
-            // [Nugget] Animated health/armor count
-            if (number->oldvalue == -1)
-            {
-                number->oldvalue = player->armorpoints;
-            }
-            result = SmoothCount(number->oldvalue, player->armorpoints);
-            number->oldvalue = result;
+            // [Nugget] Animated health/armor counts
+            result = sbar_armor;
             break;
 
         case sbn_frags:
@@ -1362,6 +1366,10 @@ static void UpdateStatusBar(player_t *player)
 
     statusbar = &sbardef->statusbars[st_nughud ? 0 : barindex]; // [Nugget] NUGHUD
 
+    // [Nugget] Animated health/armor counts
+    sbar_health = SmoothCount(sbar_health, player->health);
+    sbar_armor  = SmoothCount(sbar_armor,  player->armorpoints);
+
     // [Nugget] Key blinking /------------------------------------------------
 
     static boolean was_blinking = false;
@@ -1502,12 +1510,6 @@ static void ResetElem(sbarelem_t *elem, player_t *player)
                 animation->frame_index = 0;
                 animation->duration_left = 0;
             }
-            break;
-
-        // [Nugget] Animated health/armor count
-        case sbe_number:
-        case sbe_percent:
-            elem->subtype.number->oldvalue = -1;
             break;
 
         case sbe_widget:
@@ -1956,13 +1958,53 @@ static void DrawSolidBackground(void)
     const int depth = 16;
     int v;
 
+    if (truecolor_rendering)
+    {
+        for (v = 0; v < arrlen(vstep); v++)
+        {
+            int x, y;
+            const int v0 = vstep[v][0], v1 = vstep[v][1];
+            unsigned r = 0, g = 0, b = 0;
+            pixel32_t col;
+
+            for (y = v0; y < v1; y++)
+            {
+                int line = V_ScaleY(y) * video.width;
+                for (x = 0; x < depth; x++)
+                {
+                    pixel32_t *c = st_backing_screen32 + line + V_ScaleX(x);
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+
+                    c += V_ScaleX(width - 2 * x - 1);
+                    r += V_RedFromRGB(*c);
+                    g += V_GreenFromRGB(*c);
+                    b += V_BlueFromRGB(*c);
+                }
+            }
+
+            r /= 2 * depth * (v1 - v0);
+            g /= 2 * depth * (v1 - v0);
+            b /= 2 * depth * (v1 - v0);
+
+            col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
+
+            V_FillRectRGB(
+              0, v0, video.unscaledw, v1 - v0, V_ComponentsToRGB(col, r/2, g/2, b/2)
+            );
+        }
+
+        return;
+    }
+
     // [FG] separate colors for the top rows
     for (v = 0; v < arrlen(vstep); v++)
     {
         int x, y;
         const int v0 = vstep[v][0], v1 = vstep[v][1];
         unsigned r = 0, g = 0, b = 0;
-        byte col;
+        pixel_t col;
 
         for (y = v0; y < v1; y++)
         {
@@ -1998,7 +2040,18 @@ static void DrawBackground(const char *name)
 {
     if (st_refresh_background)
     {
-        V_UseBuffer(st_backing_screen);
+        // [Nugget] Redraw back screen
+        R_FillBackScreen();
+        R_DrawViewBorder();
+
+        if (truecolor_rendering)
+        {
+            V_UseBuffer32(st_backing_screen32);
+        }
+        else
+        {
+            V_UseBuffer(st_backing_screen);
+        }
 
         if (st_solidbackground)
         {
@@ -2031,7 +2084,14 @@ static void DrawBackground(const char *name)
         st_refresh_background = false;
     }
 
-    V_CopyRect(0, 0, st_backing_screen, video.unscaledw, ST_HEIGHT, 0, ST_Y);
+    if (truecolor_rendering)
+    {
+        V_CopyRect32(0, 0, st_backing_screen32, video.unscaledw, ST_HEIGHT, 0, ST_Y);
+    }
+    else
+    {
+        V_CopyRect(0, 0, st_backing_screen, video.unscaledw, ST_HEIGHT, 0, ST_Y);
+    }
 }
 
 static void DrawCenteredMessage(void)
@@ -2247,7 +2307,8 @@ static void DoPaletteStuff(player_t *player)
         // being covered in goo by an attacking flemoid.
         if (gameversion == exe_chex)
         {
-            palette = RADIATIONPAL;
+            // [Nugget] Smooth palette tinting
+            palette = I_SmoothPaletteTinting() ? 97 : RADIATIONPAL;
         }
         else
         {
@@ -2262,6 +2323,18 @@ static void DoPaletteStuff(player_t *player)
                 palette >>= 1;
             }
             palette += STARTREDPALS - STRICTMODE(comp_unusedpals); // [Nugget]
+
+            // [Nugget] Smooth palette tinting
+            if (I_SmoothPaletteTinting())
+            {
+              if (damagecount < 16
+                  && POWER_RUNOUT(player->powers[pw_ironfeet])
+                  && !STRICTMODE(no_radsuit_tint))
+              {
+                palette = 97 + damagecount;
+              }
+              else { palette = 0 + MIN(64, damagecount); }
+            }
         }
     }
     else if (player->bonuscount)
@@ -2272,6 +2345,18 @@ static void DoPaletteStuff(player_t *player)
             palette = NUMBONUSPALS - 1 + STRICTMODE(comp_unusedpals); // [Nugget]
         }
         palette += STARTBONUSPALS - STRICTMODE(comp_unusedpals); // [Nugget]
+
+        // [Nugget] Smooth palette tinting
+        if (I_SmoothPaletteTinting())
+        {
+          if (player->bonuscount < 16
+              && POWER_RUNOUT(player->powers[pw_ironfeet])
+              && !STRICTMODE(no_radsuit_tint))
+          {
+            palette = 112 + player->bonuscount;
+          }
+          else { palette = 64 + MIN(32, player->bonuscount); }
+        }
     }
     // killough 7/14/98: beta version did not cause green palette
     else if (beta_emulation)
@@ -2281,7 +2366,8 @@ static void DoPaletteStuff(player_t *player)
     else if (POWER_RUNOUT(player->powers[pw_ironfeet])
              && !STRICTMODE(no_radsuit_tint)) // [Nugget]
     {
-        palette = RADIATIONPAL;
+        // [Nugget] Smooth palette tinting
+        palette = I_SmoothPaletteTinting() ? 97 : RADIATIONPAL;
     }
     else
     {
@@ -2291,10 +2377,7 @@ static void DoPaletteStuff(player_t *player)
     if (palette != oldpalette)
     {
         oldpalette = palette;
-        // haleyjd: must cast to byte *, arith. on void pointer is
-        // a GNU C extension
-        I_SetPalette((byte *)W_CacheLumpName("PLAYPAL", PU_CACHE)
-                     + palette * 768);
+        I_SetPalette(palette); // [Nugget] Pass index
     }
 }
 
@@ -2383,9 +2466,19 @@ void ST_Drawer(void)
 
 void ST_Start(void)
 {
-    // [Nugget] Key blinking
+    // [Nugget] /=============================================================
+
+    const player_t *const player = &players[displayplayer];
+
+    // Animated health/armor counts
+    sbar_health = player->health;
+    sbar_armor  = player->armorpoints;
+
+    // Key blinking
     memset(keyblinkkeys, 0, sizeof(keyblinkkeys));
     keyblinktics = 0;
+
+    // [Nugget] =============================================================/
 
     if (!sbardef)
     {
@@ -2467,20 +2560,7 @@ void ST_Init(void)
     sbarelem_t *elem;
     array_foreach(elem, nughud_sbardef->statusbars[0].children)
     {
-        if (elem->type != sbe_widget)
-        {
-            if (elem->type == sbe_number || elem->type == sbe_percent)
-            {
-                switch (elem->subtype.number->type)
-                {
-                    case sbn_health:  nughud_health_elem = elem;  break;
-                    case sbn_armor:   nughud_armor_elem  = elem;  break;
-                    default:                                      break;
-                }
-            }
-
-            continue; 
-        }
+        if (elem->type != sbe_widget) { continue; }
 
         const sbarwidgettype_t type = elem->subtype.widget->type;
         const nughud_textline_t *ntl;
@@ -2535,13 +2615,29 @@ void ST_Init(void)
 void ST_InitRes(void)
 {
     // killough 11/98: allocate enough for hires
-    st_backing_screen =
-        Z_Malloc(video.width * V_ScaleY(ST_HEIGHT) * sizeof(*st_backing_screen),
-                 PU_RENDERER, 0);
+    if (truecolor_rendering)
+    {
+        st_backing_screen32 =
+            Z_Malloc(video.width * V_ScaleY(ST_HEIGHT) * sizeof(*st_backing_screen32),
+                     PU_RENDERER, 0);
+    }
+    else
+    {
+        st_backing_screen =
+            Z_Malloc(video.width * V_ScaleY(ST_HEIGHT) * sizeof(*st_backing_screen),
+                     PU_RENDERER, 0);
+    }
 
-  // [Nugget] Status-Bar chunks
-  // More than necessary (we only use the section visible in 4:3), but so be it
-  st_bar = Z_Malloc((video.width * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+    // [Nugget] Status-Bar chunks
+    // More than necessary (we only use the section visible in 4:3), but so be it
+    if (truecolor_rendering)
+    {
+        st_bar32 = Z_Malloc((video.width * V_ScaleY(stbar_height)) * sizeof(*st_bar32), PU_RENDERER, 0);
+    }
+    else
+    {
+        st_bar = Z_Malloc((video.width * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
+    }
 }
 
 const char **ST_StatusbarList(void)
@@ -2578,13 +2674,14 @@ const char **ST_StatusbarList(void)
     }
 
     maxscreenblocks += array_size(strings) - 1;
+    screenblocks = MIN(screenblocks, maxscreenblocks);
 
     return strings;
 }
 
 void ST_ResetPalette(void)
 {
-    I_SetPalette(W_CacheLumpName("PLAYPAL", PU_CACHE));
+    I_SetPalette(0); // [Nugget] Pass index
 }
 
 // [FG] draw Time widget on intermission screen
@@ -2625,7 +2722,7 @@ int ST_GetMessageFontHeight(void)
 {
   int height = 8;
 
-  if (!sbardef) { return height; }
+  if (!sbardef || !statusbar) { return height; }
 
   const sbarelem_t *child;
   array_foreach(child, statusbar->children)
@@ -2736,6 +2833,23 @@ void LoadNuggetGraphics(void)
     else if (!i) { break; }
   }
 
+  // Weapon icons ------------------------------------------------------------
+
+  // Load NHWEAP0 to NHWEAP8 if available
+  for (int i = 0;  i < 9;  i++)
+  {
+    M_snprintf(namebuf, sizeof(namebuf), "NHWEAP%d", i);
+
+    if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
+    {
+      nhweap[i] = (patch_t *) V_CachePatchNum(lumpnum, PU_STATIC);
+    }
+    else {
+      nhweap[0] = NULL;
+      break;
+    }
+  }
+
   // Health icons ------------------------------------------------------------
 
   // Load NHEALTH0 to NHEALTH1 if available
@@ -2838,19 +2952,13 @@ void ST_SetKeyBlink(player_t* player, int blue, int yellow, int red)
 
 // NUGHUD --------------------------------------------------------------------
 
+// Status-Bar chunks
+static boolean st_refresh_chunkbg = true;
+
 void ST_refreshBackground(void)
 {
   st_refresh_background = true;
-
-  // Status-Bar chunks -------------------------------------------------------
-
-  patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
-
-  V_UseBuffer(st_bar);
-
-  V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
-
-  V_RestoreBuffer();
+  st_refresh_chunkbg = true; // Status-Bar chunks
 }
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align)
@@ -2874,8 +2982,11 @@ static int NughudWideShift(const int wide)
          :                    0;
 }
 
-static void DrawNughudPatch(nughud_vlignable_t *widget, patch_t *patch, boolean no_offsets)
-{
+static void DrawNughudPatch(
+  const nughud_vlignable_t *const widget,
+  patch_t *const patch,
+  const boolean no_offsets
+) {
   int x, y;
 
   x = widget->x + NughudWideShift(widget->wide)
@@ -2886,7 +2997,8 @@ static void DrawNughudPatch(nughud_vlignable_t *widget, patch_t *patch, boolean 
     - ((widget->vlign == -1) ? SHORT(patch->height)   :
        (widget->vlign ==  0) ? SHORT(patch->height)/2 : 0);
 
-  if (no_offsets) {
+  if (no_offsets)
+  {
     x += SHORT(patch->leftoffset);
     y += SHORT(patch->topoffset);
   }
@@ -2894,7 +3006,7 @@ static void DrawNughudPatch(nughud_vlignable_t *widget, patch_t *patch, boolean 
   V_DrawPatch(x, y, patch);
 }
 
-static void DrawNughudSBChunk(nughud_sbchunk_t *chunk)
+static void DrawNughudSBChunk(const nughud_sbchunk_t *const chunk)
 {
   int x  = chunk->x + NughudWideShift(chunk->wide) + video.deltaw,
       y  = chunk->y,
@@ -2909,18 +3021,30 @@ static void DrawNughudSBChunk(nughud_sbchunk_t *chunk)
   sh = MIN(ST_HEIGHT - chunk->sy, sh);
   sh = MIN(SCREENHEIGHT - y,      sh);
 
-  V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
+  if (truecolor_rendering)
+  {
+    V_CopyRect32(sx, sy, st_bar32, sw, sh, x, y);
+  }
+  else
+  {
+    V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
+  }
 }
 
-static void DrawNughudBar(nughud_bar_t *widget, patch_t **patches, int units, int maxunits)
-{
+static void DrawNughudBar(
+  const nughud_bar_t *const widget,
+  patch_t *const *const patches,
+  const int units,
+  const int maxunits
+) {
   if (widget->x > -1 && patches[0])
   {
     const boolean twobars = patches[1] && maxunits < units;
 
     for (int i = 0;  i < (1 + twobars);  i++)
     {
-      const int slices = MIN(100 * (2 - twobars), (units * 100 / maxunits) - (100 * i)) * 100 / widget->ups;
+      const int slices = MIN(100 * (2 - twobars), (units * 100 / maxunits) - (100 * i))
+                       * 100 / widget->ups;
 
       const int xstep = (widget->xstep || widget->ystep)
                         ? widget->xstep : SHORT(patches[i]->width);
@@ -2946,9 +3070,29 @@ static void DrawNughudGraphics(void)
 {
   if (!st_nughud) { return; }
 
-  player_t *plyr = &players[displayplayer];
+  const player_t *const plyr = &players[displayplayer];
 
   // Status-Bar chunks -------------------------------------------------------
+
+  if (st_refresh_chunkbg)
+  {
+    st_refresh_chunkbg = false;
+
+    patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
+
+    if (truecolor_rendering)
+    {
+      V_UseBuffer32(st_bar32);
+    }
+    else
+    {
+      V_UseBuffer(st_bar);
+    }
+
+    V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
+
+    V_RestoreBuffer();
+  }
 
   for (int i = 0;  i < NUMSBCHUNKS;  i++)
   {
@@ -2980,11 +3124,8 @@ static void DrawNughudGraphics(void)
       );
     }
 
-    const int health = nughud_health_elem ? SmoothCount(nughud_health_elem->subtype.number->oldvalue, plyr->health)
-                                          : plyr->health;
-
-    const int armor = nughud_armor_elem ? SmoothCount(nughud_armor_elem->subtype.number->oldvalue, plyr->armorpoints)
-                                        : plyr->armorpoints;
+    const int health = sbar_health,
+               armor = sbar_armor;
 
     DrawNughudBar(&nughud.healthbar, nhhlbar, health, maxhealth);
     DrawNughudBar(&nughud.armorbar,  nharbar,  armor, max_armor/2);
@@ -3027,8 +3168,7 @@ static void DrawNughudGraphics(void)
 
   if (nughud.ammoicon.x > -1 && weaponinfo[plyr->readyweapon].ammo != am_noammo)
   {
-    patch_t *patch;
-    int lump;
+    patch_t *patch = NULL;
     boolean no_offsets = false;
 
     if (nhammo[0])
@@ -3036,10 +3176,10 @@ static void DrawNughudGraphics(void)
       patch = nhammo[CLAMP(weaponinfo[plyr->readyweapon].ammo, 0, 3)];
     }
     else {
-      char namebuf[32];
-      boolean big = nughud.ammoicon_big;
-
       no_offsets = true;
+
+      char namebuf[32];
+      const boolean big = nughud.ammoicon_big;
 
       switch (CLAMP(weaponinfo[plyr->readyweapon].ammo, 0, 3))
       {
@@ -3049,20 +3189,50 @@ static void DrawNughudGraphics(void)
         case 3: M_snprintf(namebuf, sizeof(namebuf), big ? "BROKA0" : "ROCKA0"); break;
       }
 
-      if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
-      {
-        patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
-      }
-      else { patch = NULL; }
+      const int lump = (W_CheckNumForName)(namebuf, ns_sprites);
+
+      if (lump >= 0)
+      { patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC); }
     }
 
     if (patch) { DrawNughudPatch(&nughud.ammoicon, patch, no_offsets); }
   }
 
+  if (nughud.weaponicon.x > -1)
+  {
+    patch_t *patch = NULL;
+    boolean no_offsets = true;
+
+    const weapontype_t weap = plyr->readyweapon;
+
+    if (weap < 0 || NUMWEAPONS <= weap)
+    {
+      patch = (patch_t *) V_CachePatchNum(
+        (W_CheckNumForName)("SMUNKN0", ns_global), PU_STATIC
+      );
+    }
+    else if (nhweap[0])
+    {
+      no_offsets = false;
+      patch = nhweap[weap];
+    }
+    else {
+      const char *const carousel_icons[] = {
+        "SMFIST0", "SMPISG0", "SMSHOT0", "SMMGUN0", "SMLAUN0", "SMPLAS0",
+        "SMBFGG0", "SMCSAW0", "SMSGN20"
+      };
+
+      patch = (patch_t *) V_CachePatchNum(
+        (W_CheckNumForName)(carousel_icons[weap], ns_global), PU_STATIC
+      );
+    }
+
+    DrawNughudPatch(&nughud.weaponicon, patch, no_offsets);
+  }
+
   if (nughud.healthicon.x > -1)
   {
-    patch_t *patch;
-    int lump;
+    patch_t *patch = NULL;
     boolean no_offsets = false;
 
     if (nhealth[0])
@@ -3070,9 +3240,9 @@ static void DrawNughudGraphics(void)
       patch = nhealth[plyr->powers[pw_strength] ? 1 : 0];
     }
     else {
-      char namebuf[32];
-
       no_offsets = true;
+
+      char namebuf[32];
 
       switch (plyr->powers[pw_strength] ? 1 : 0)
       {
@@ -3080,11 +3250,10 @@ static void DrawNughudGraphics(void)
         case 1: M_snprintf(namebuf, sizeof(namebuf), "PSTRA0"); break;
       }
 
-      if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
-      {
-        patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
-      }
-      else { patch = NULL; }
+      const int lump = (W_CheckNumForName)(namebuf, ns_sprites);
+
+      if (lump >= 0)
+      { patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC); }
     }
 
     if (patch) { DrawNughudPatch(&nughud.healthicon, patch, no_offsets); }
@@ -3092,8 +3261,7 @@ static void DrawNughudGraphics(void)
 
   if (nughud.armoricon.x > -1)
   {
-    patch_t *patch;
-    int lump;
+    patch_t *patch = NULL;
     boolean no_offsets = false;
 
     if (nharmor[0])
@@ -3101,9 +3269,9 @@ static void DrawNughudGraphics(void)
       patch = nharmor[CLAMP(plyr->armortype, 0, 2)];
     }
     else {
-      char namebuf[32];
-
       no_offsets = true;
+
+      char namebuf[32];
 
       switch (CLAMP(plyr->armortype, 0, 2))
       {
@@ -3112,11 +3280,10 @@ static void DrawNughudGraphics(void)
         case 2: M_snprintf(namebuf, sizeof(namebuf), "ARM2A0"); break;
       }
 
-      if ((lump = (W_CheckNumForName)(namebuf, ns_sprites)) >= 0)
-      {
-        patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC);
-      }
-      else { patch = NULL; }
+      const int lump = (W_CheckNumForName)(namebuf, ns_sprites);
+
+      if (lump >= 0)
+      { patch = (patch_t *) V_CachePatchNum(lump, PU_STATIC); }
     }
 
     if (patch) { DrawNughudPatch(&nughud.armoricon, patch, no_offsets); }
@@ -3129,8 +3296,7 @@ static boolean NughudAddToStack(
   const nughud_textline_t *const ntl,
   sbarelem_t *const elem,
   const int stack
-)
-{
+) {
   if (ntl->x != -1 || ntl->y != -1) { return false; }
 
   for (int i = 0;  i < NUMSQWIDGETS;  i++)
@@ -3152,10 +3318,10 @@ static boolean NughudAddToStack(
   return true;
 }
 
-static int NughudSortWidgets(const void *_p1, const void *_p2)
+static int NughudSortWidgets(const void *const _p1, const void *const _p2)
 {
-  const widgetpair_t *p1 = (widgetpair_t *) _p1,
-                     *p2 = (widgetpair_t *) _p2;
+  const widgetpair_t *const p1 = (widgetpair_t *) _p1,
+                     *const p2 = (widgetpair_t *) _p2;
 
   if (!p1->ntl) { return 0; }
 
@@ -3172,65 +3338,64 @@ static int NughudSortWidgets(const void *_p1, const void *_p2)
 
 static void UpdateNughudStacks(void)
 {
-    if (!st_nughud) { return; }
+  if (!st_nughud) { return; }
 
-    for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
-    {
-        nughud_stackqueues[i].offset = 0;
+  for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
+  {
+    nughud_stackqueues[i].offset = 0;
 
-        int secondtime = 0;
+    int secondtime = 0;
 
-        do {
-            for (int j = 0;  j < NUMSQWIDGETS;  j++)
-            {
-                const widgetpair_t *const pair = &nughud_stackqueues[i].pairs[j];
+    do {
+      for (int j = 0;  j < NUMSQWIDGETS;  j++)
+      {
+        const widgetpair_t *const pair = &nughud_stackqueues[i].pairs[j];
 
-                if (!pair->ntl) { continue; }
+        if (!pair->ntl) { continue; }
 
-                sbarelem_t *const elem = pair->elem;
+        sbarelem_t *const elem = pair->elem;
 
-                if (!CheckConditions(elem->conditions, &players[displayplayer]))
-                { continue; }
+        if (!CheckConditions(elem->conditions, &players[displayplayer]))
+        { continue; }
 
-                sbe_widget_t *const wid = elem->subtype.widget;
-                const nughud_vlignable_t *const stack = &nughud.stacks[i];
-                const sbarwidgettype_t type = wid->type;
+        const sbe_widget_t *const wid = elem->subtype.widget;
+        const nughud_vlignable_t *const stack = &nughud.stacks[i];
+        const sbarwidgettype_t type = wid->type;
 
-                if (secondtime && i == pair->ntl->stack - 1)
-                {
-                    elem->y_pos = stack->y - nughud_stackqueues[i].offset;
+        if (secondtime && i == pair->ntl->stack - 1)
+        {
+          elem->y_pos = stack->y - nughud_stackqueues[i].offset;
 
-                    if (!((type == sbw_message || type == sbw_chat) && nughud.message_defx))
-                    {
-                        elem->alignment = NughudConvertAlignment(stack->wide, stack->align);
-                        elem->x_pos = stack->x;
-                    }
-                }
+          if (!((type == sbw_message || type == sbw_chat) && nughud.message_defx))
+          {
+            elem->alignment = NughudConvertAlignment(stack->wide, stack->align);
+            elem->x_pos = stack->x;
+          }
+        }
 
-                const int numlines = array_size(wid->lines);
-                const int lineheight = wid->font->maxheight;
+        const int numlines = array_size(wid->lines);
+        const int lineheight = wid->font->maxheight;
 
-                for (int k = 0;  k < numlines;  k++)
-                {
-                    if (!wid->lines[k].totalwidth
-                        && !(type == sbw_chat && ST_GetChatOn()))
-                    {
-                        continue;
-                    }
+        for (int k = 0;  k < numlines;  k++)
+        {
+          if (!wid->lines[k].totalwidth && !(type == sbw_chat && ST_GetChatOn()))
+          {
+            continue;
+          }
 
-                    if (!secondtime)
-                    {
-                        switch (stack->vlign) {
-                            case -1:  nughud_stackqueues[i].offset += lineheight;      break;
-                            case  0:  nughud_stackqueues[i].offset += lineheight / 2;  break;
-                            case  1:  default:                                         break;
-                        }
-                    }
-                    else { nughud_stackqueues[i].offset -= lineheight; }
-                }
+          if (!secondtime)
+          {
+            switch (stack->vlign) {
+              case -1:  nughud_stackqueues[i].offset += lineheight;      break;
+              case  0:  nughud_stackqueues[i].offset += lineheight / 2;  break;
+              case  1:  default:                                         break;
             }
-        } while (!secondtime++);
-    }
+          }
+          else { nughud_stackqueues[i].offset -= lineheight; }
+        }
+      }
+    } while (!secondtime++);
+  }
 }
 
 // NUGHUD loading ------------------------------------------------------------
@@ -3239,8 +3404,7 @@ static hudfont_t LoadNughudHUDFont(
   const char *const name,
   const fonttype_t type,
   const char *const stem
-)
-{
+) {
   hudfont_t font = {0};
 
   font.name = M_StringDuplicate(name);
@@ -3275,8 +3439,7 @@ static sbarelem_t CreateNughudNumber(
   numberfont_t *const font,
   const int maxlength,
   const boolean is_percent
-)
-{
+) {
   sbarelem_t elem = {0};
 
   elem.cr = elem.crboom = CR_NONE;
@@ -3301,8 +3464,7 @@ static sbarelem_t CreateNughudNumber(
 static sbarelem_t CreateNughudGraphic(
   const nughud_widget_t nw,
   const char *const name
-)
-{
+) {
   sbarelem_t elem = {0};
 
   elem.cr = elem.crboom = CR_NONE;
@@ -3326,8 +3488,7 @@ static sbarelem_t CreateNughudWidget(
   const nughud_textline_t ntl,
   const sbarwidgettype_t type,
   hudfont_t *const font
-)
-{
+) {
   sbarelem_t elem = {0};
 
   elem.cr = elem.crboom = CR_NONE;
@@ -3907,6 +4068,9 @@ void ST_BindSTSVariables(void)
 
   // [Nugget] /---------------------------------------------------------------
 
+  M_BindBool("hud_animated_counts", &hud_animated_counts, NULL,
+             false, ss_stat, wad_yes, "Animated health/armor counts");
+
   M_BindBool("sts_show_berserk", &sts_show_berserk, NULL,
              true, ss_stat, wad_yes,
              "Show Berserk on the status bar when using the Fist, if available");
@@ -3958,20 +4122,28 @@ void ST_BindSTSVariables(void)
             0, 0, 2, ss_stat, wad_no,
             "Change crosshair color when locking on target (1 = Highlight; 2 = Health)");
 
-  // [Nugget] Vertical-only option
+  // [Nugget] /---------------------------------------------------------------
+
+  // Vertical-only option
   M_BindNum("hud_crosshair_lockon", &hud_crosshair_lockon, NULL,
             0, 0, 2, ss_stat, wad_no,
             "Lock crosshair on target (1 = Vertically only; 2 = Fully)");
 
-  // [Nugget] Horizontal autoaim indicators
+  // Health/ammo bars
+  M_BindBool("hud_crosshair_bars", &hud_crosshair_bars, NULL,
+             false, ss_stat, wad_no,
+             "Health/ammo bars besides the crosshair");
+
+  // Horizontal-autoaim indicators
   M_BindBool("hud_crosshair_indicators", &hud_crosshair_indicators, NULL,
              false, ss_stat, wad_no,
              "Horizontal-autoaim indicators for crosshair");
 
-  // [Nugget]
   M_BindBool("hud_crosshair_fuzzy", &hud_crosshair_fuzzy, NULL,
              false, ss_stat, wad_no,
              "Account for fuzzy targets when coloring and/or locking-on");
+
+  // [Nugget] ---------------------------------------------------------------/
 
   M_BindNum("hud_crosshair_color", &hud_crosshair_color, NULL,
             CR_GRAY, CR_BRICK, CR_NONE, ss_stat, wad_no,

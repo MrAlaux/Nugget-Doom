@@ -45,7 +45,7 @@
 #include "m_swap.h"
 #include "p_maputl.h"
 #include "r_things.h"
-#include "w_wad.h" // W_CheckNumForName
+#include "v_fmt.h"
 
 // [Nugget] /=================================================================
 
@@ -162,10 +162,19 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
           psp->sx = state->misc1 << FRACBITS;
           psp->sy = state->misc2 << FRACBITS;
           // [FG] centered weapon sprite
-          // [Nugget] If applicable, subtract 1 pixel from the `misc1` calculation,
-          // for consistency with the first-person-sprite-centering correction
-          psp->sx2 = (state->misc1 - STRICTMODE(sx_fix)) << FRACBITS;
-          psp->sy2 = state->misc2 << FRACBITS;
+          psp->sx2 = psp->sx;
+          psp->sy2 = psp->sy;
+
+          // [Nugget] --------------------------------------------------------
+
+          if (STRICTMODE(sx_fix))
+          {
+            // Subtract 1 pixel for consistency
+            psp->sx2 -= 1<<FRACBITS;
+          }
+
+          psp->sxf = psp->sx2;
+          psp->syf = psp->sy2;
         }
 
       // Call action routine.
@@ -224,6 +233,8 @@ static void P_BringUpWeapon(player_t *player)
   }
 
   // [Nugget]
+  psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
+  psp->syf = 0;
   psp->dy = 0; // [crispy] squat down weapon sprite
   psp->wix = psp->wiy = 0; // Reset offsets for weapon inertia
 
@@ -544,11 +555,15 @@ static void P_NuggetBobbing(player_t* player)
 {
   pspdef_t *psp = player->psprites;
 
-  if ((player->attackdown && STRICTMODE(center_weapon) != WEAPON_BOBBING) // [FG] not attacking means idle
-      || !psp->state || psp->state->misc1 || (player->switching && !switch_bob))
+  if (!psp->state
+      || (player->switching && !switch_bob)
+      || ((player->attackdown || psp->state->misc1) // [FG] not attacking means idle
+          && STRICTMODE(center_weapon) != WEAPON_BOBBING))
   {
     return;
   }
+
+  const boolean fixed_position = (psp->sxf != (STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0));
 
   // Extended weapon bobbing percentage setting
   const fixed_t bob = player->bob * weapon_bobbing_pct / 100;
@@ -581,7 +596,9 @@ static void P_NuggetBobbing(player_t* player)
       break;
   }
 
-  if (!player->switching)
+  if (fixed_position) { psp->sx2 += psp->sxf; }
+
+  if (!player->switching) // Don't bob vertically while switching, regardless of the setting
   {
     // `sy` - Used for all styles; their specific values are added to this one right after
     psp->sy2 = WEAPONTOP + abs(psp->dy); // Squat weapon down on impact
@@ -617,6 +634,8 @@ static void P_NuggetBobbing(player_t* player)
         psp->sy2 += FixedMul(bob, finesine[angle & (FINEANGLES/2 - 1)]);
         break;
     }
+
+    if (fixed_position) { psp->sy2 += psp->syf - WEAPONTOP; }
   }
 }
 
@@ -651,7 +670,8 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
       {
         player->pendingweapon = wp_nochange;
       }
-      else {
+      else
+      {
         // change weapon (pending weapon should already be validated)
         statenum_t newstate = weaponinfo[player->readyweapon].downstate;
         P_SetPsprite(player, ps_weapon, newstate);
@@ -675,6 +695,10 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
     }
   else
     player->attackdown = false;
+
+  // [Nugget]
+  psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
+  psp->syf = 0;
 
   P_ApplyBobbing(&psp->sx, &psp->sy, player->bob);
 
@@ -1088,7 +1112,14 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
         slope = player->slope;
       }
       else
+
+// desync fix: mh1910-430
+// in PrBoom, autoaim can only be activated with AIM cheat in beta emulation
+#ifdef MBF_STRICT
       if (autoaim || !beta_emulation)
+#else
+      if (autoaim || vertical_aiming == VERTAIM_DIRECTAUTO) // [Nugget] Vertical aiming
+#endif
 	{
 	  // killough 8/2/98: make autoaiming prefer enemies
 	  int mask = MF_FRIEND;
@@ -1294,7 +1325,11 @@ void A_FireCGun(player_t *player, pspdef_t *psp)
   static int sound = -1;
 
   if (sound == -1)
-  { sound = ((W_CheckNumForName("dschgun") > -1) ? sfx_chgun : sfx_pistol); }
+  {
+    sound = (W_CheckNumForName("dschgun") > -1 && gamemission != pack_hacx)
+          ? sfx_chgun
+          : sfx_pistol;
+  }
 
   // [Nugget] ===============================================================/
 
@@ -1534,7 +1569,7 @@ static void WeaponInertiaVertical(
 
       ash = R_GetActualSpriteHeight(sprite, frame);
 
-      const patch_t *const patch = (patch_t *) W_CacheLumpNum(ash->lump, PU_CACHE);
+      const patch_t *const patch = (patch_t *) V_CachePatchNum(ash->lump, PU_CACHE);
       spritetopoffset = SHORT(patch->topoffset);
     }
 
@@ -1687,6 +1722,8 @@ void P_MovePsprites(player_t *player)
   player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
 
   // [Nugget]
+  player->psprites[ps_flash].sxf    = player->psprites[ps_weapon].sxf;
+  player->psprites[ps_flash].syf    = player->psprites[ps_weapon].syf;
   player->psprites[ps_flash].dy     = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].wix    = player->psprites[ps_weapon].wix;
   player->psprites[ps_flash].oldwix = player->psprites[ps_weapon].oldwix;
