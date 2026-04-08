@@ -277,7 +277,7 @@ void HU_UpdateCrosshair(void)
                            || hud_crosshair_fuzzy)) // [Nugget]
         {
             crosshair_target = linetarget;
-            crosshair.side = side; // [Nugget]
+            crosshair.side = side * (flip_levels ? -1 : 1); // [Nugget]
         }
 
         if (hud_crosshair_target && crosshair_target)

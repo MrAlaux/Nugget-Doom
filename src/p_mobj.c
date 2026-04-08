@@ -1934,7 +1934,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 {
   mobj_t *const mobj = Z_Malloc(sizeof(*mobj), PU_LEVEL, NULL);
 
-  static mobjinfo_t info = {0};
+  static mobjinfo_t info = { .scale = FRACUNIT };
 
   memset(mobj, 0, sizeof(*mobj));
 
