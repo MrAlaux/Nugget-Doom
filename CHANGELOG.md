@@ -8,4 +8,4 @@
 
 ## Bug Fixes
 
-None.
+- **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
