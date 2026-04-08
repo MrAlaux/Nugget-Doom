@@ -1572,6 +1572,9 @@ static void D_InitTables(void)
     mobjinfo[i].bloodcolor       = 0; // Normal
     // DEHEXTRA
     mobjinfo[i].droppeditem      = MT_NULL;
+
+    // [Nugget] Sprite scaling
+    mobjinfo[i].scale = FRACUNIT;
   }
 
   mobjinfo[MT_VILE].flags2    = MF2_SHORTMRANGE | MF2_DMGIGNORED | MF2_NOTHRESHOLD;

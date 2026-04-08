@@ -1168,6 +1168,9 @@ enum
     // DEHEXTRA
     DEH_MOBJINFO_DROPPEDITEM,
 
+    // [Nugget] Sprite scaling
+    DEH_MOBJINFO_SCALE,
+
     DEH_MOBJINFOMAX
 };
 
@@ -1211,6 +1214,9 @@ static const char *deh_mobjinfo[] = {
 
     // DEHEXTRA
     "Dropped item", // .droppeditem
+
+    // [Nugget] Sprite scaling
+    "Scale", // .scale (from ZDoom)
 };
 
 // Strings that are used to indicate flags ("Bits" in mobjinfo)
@@ -3626,6 +3632,18 @@ static boolean deh_GetData(char *s, char *k, long *l, char **strval)
             val = 0; // in case "thiskey =" with no value
             okrc = false;
         }
+
+        // [Nugget] Sprite scaling
+        if (!strncasecmp(buffer, "Scale", 5))
+        {
+          float fval = 0;
+          sscanf(t, " %f", &fval);
+
+          val = fval * FRACUNIT;
+          val = MAX(0, val);
+        }
+        else
+
         // we've incremented t
         // val = strtol(t,NULL,0);  // killough 8/9/98: allow hex or octal input
         M_StrToInt(t, &val);

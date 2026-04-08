@@ -702,11 +702,9 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 	vis->x2 = x2;
 
 	// [Nugget]
-	vis->xscale = vis->yscale = 0;
+	vis->yscale = vis->scale;
 	vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
-	vis->fullbright = false;
-	vis->no_perc = false;
-	vis->flipped = false;
+	vis->flags = 0;
 
 	if (thing->subsector->sector->floorlightsec >= 0)
 	{
@@ -729,7 +727,7 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 	{
 		vis->colormap[0] = vis->colormap[1] = 0;
 
-		vis->fullbright = true; // [Nugget]
+		vis->flags |= VSF_FULLBRIGHT; // [Nugget]
 	}
 	else
 	{
@@ -913,9 +911,9 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 	boolean do_voxel_radial_fog = false;
 	int lightnum = spr->lightnum;
 
-	if (!spr->no_perc && !shadow && !fixedcolormapindex)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapindex)
 	{
-		do_voxel_radial_fog = do_radial_fog && !spr->fullbright;
+		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
 		{
@@ -934,7 +932,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
-			lightnum = spr->fullbright
+			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
 			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
 
@@ -1193,9 +1191,9 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 	boolean do_voxel_radial_fog = false;
 	int lightnum = spr->lightnum;
 
-	if (!spr->no_perc && !shadow && !fixedcolormapindex)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapindex)
 	{
-		do_voxel_radial_fog = do_radial_fog && !spr->fullbright;
+		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
 		{
@@ -1214,7 +1212,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
-			lightnum = spr->fullbright
+			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
 			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
 
@@ -1471,9 +1469,9 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	boolean do_voxel_radial_fog = false;
 	int lightnum = spr->lightnum;
 
-	if (!spr->no_perc && !shadow && !fixedcolormapindex)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapindex)
 	{
-		do_voxel_radial_fog = do_radial_fog && !spr->fullbright;
+		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
 		{
@@ -1492,7 +1490,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
-			lightnum = spr->fullbright
+			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
 			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
 
@@ -1695,9 +1693,9 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 	boolean do_voxel_radial_fog = false;
 	int lightnum = spr->lightnum;
 
-	if (!spr->no_perc && !shadow && !fixedcolormapindex)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapindex)
 	{
-		do_voxel_radial_fog = do_radial_fog && !spr->fullbright;
+		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
 		{
@@ -1716,7 +1714,7 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
 
-			lightnum = spr->fullbright
+			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
 			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
 

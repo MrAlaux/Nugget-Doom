@@ -1,6 +1,6 @@
 ## New Features
 
-None.
+- **DeHackEd thing sprite `Scale` property** support
 
 ## Changes
 

@@ -378,6 +378,16 @@ typedef struct patch_s
 // i.e. a sprite object that is partly visible.
 //
 
+// [Nugget]
+typedef enum visspriteflag_s
+{
+  VSF_FULLBRIGHT = 0x00000001,
+  VSF_FLIPPED    = 0x00000002,
+  VSF_SHADOW     = 0x00000004,
+  VSF_SCALED     = 0x00000008,
+  VSF_NO_PERC    = 0x00000010,
+} visspriteflag_t;
+
 typedef struct vissprite_s
 {
   int x1, x2;
@@ -411,12 +421,14 @@ typedef struct vissprite_s
   // andrewj: voxel support
   int voxel_index;
 
-  // [Nugget]
-  fixed_t xscale, yscale;
+  // [Nugget] ----------------------------------------------------------------
+
+  // Sprite scaling
+  float scale_mult;
+  fixed_t yiscale, yscale;
+
+  visspriteflag_t flags;
   byte lightnum;
-  boolean fullbright;
-  boolean flipped;
-  boolean no_perc; // Thing lighting
 } vissprite_t;
 
 //

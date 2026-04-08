@@ -1525,6 +1525,10 @@ typedef struct
     int bloodcolor;   // [FG] colored blood and gibs
     // DEHEXTRA
     mobjtype_t droppeditem; // mobj to drop after death
+
+    // [Nugget]
+    int scale; // Sprite scaling: ZDoom DeHackEd scale
+
     // [FG] Obituaries
     char *obituary, *obituary_melee;
 } mobjinfo_t;
