@@ -692,7 +692,7 @@ static void DrawVisSpriteLoop8(
       {
         fixed_t offset = (frac - pcl_offset) * pcl_scale_mult;
 
-        if (vis->flipped) { offset = -offset; }
+        if (vis->flags & VSF_FLIPPED) { offset = -offset; }
 
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
@@ -756,7 +756,7 @@ static void DrawVisSpriteLoop32(
       {
         fixed_t offset = (frac - pcl_offset) * pcl_scale_mult;
 
-        if (vis->flipped) { offset = -offset; }
+        if (vis->flags & VSF_FLIPPED) { offset = -offset; }
 
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
@@ -788,7 +788,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   // mixed with translucent/non-translucent 2s normals
 
   // [Nugget] Sprite shadows
-  if (vis->shadow)
+  if (vis->flags & VSF_SHADOW)
   {
     colfunc = R_DrawColumnShadow;
   }
@@ -837,7 +837,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   // [Nugget] /===============================================================
 
   // Sprite scaling
-  if (vis->scaled)
+  if (vis->flags & VSF_SCALED)
   {
     spryscale = vis->yscale;
     dc_texturemid = FixedMul(dc_texturemid, FixedMul(dc_iscale, vis->scale));
@@ -853,7 +853,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   fixed_t pcl_offset = 0;
   fixed_t pcl_cosine = 0, pcl_sine = 0;
 
-  if (!vis->fullbright && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapoffset)
+  if (!(vis->flags & VSF_FULLBRIGHT) && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapoffset)
   {
     do_sprite_radial_fog = do_radial_fog;
 
@@ -1131,10 +1131,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   vis->scale_mult = scale_mult;
   vis->yscale = xscale;
   vis->lightnum = lightnum;
-  vis->fullbright = false;
-  vis->flipped = flip;
-  vis->shadow = false;
-  vis->scaled = have_scale;
+  vis->flags = (VSF_FLIPPED * flip) | (VSF_SCALED * have_scale);
 
   if (flip)
     {
@@ -1161,7 +1158,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   else if (frame & FF_FULLBRIGHT)
   {
     vis->colormap[0] = vis->colormap[1] = 0;       // full bright  // killough 3/20/98
-    vis->fullbright = true; // [Nugget]
+    vis->flags |= VSF_FULLBRIGHT; // [Nugget]
   }
   else
     {      // diminished light
@@ -1287,7 +1284,8 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   shadow_vis->yscale = shadow_yscale;
 
-  shadow_vis->shadow = shadow_vis->scaled = true;
+  // Thing lighting: set `VSF_FULLBRIGHT` to make per-column lighting not apply to shadows
+  shadow_vis->flags = VSF_FULLBRIGHT|VSF_SCALED|VSF_SHADOW;
 
   fixed_t shadow_tx, shadow_tx_clipped;
 
@@ -1349,9 +1347,6 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   { shadow_vis->startfrac += shadow_vis->xiscale * (shadow_vis->x1 - shadow_x1); }
 
   shadow_vis->yiscale = FixedDiv(FRACUNIT, shadow_yscale);
-
-  // Thing lighting: set true to make per-column lighting not apply to shadows
-  shadow_vis->fullbright = true;
 }
 
 //
@@ -1549,9 +1544,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   vis->scale_mult = 1.0f;
   vis->yscale = vis->scale;
   vis->lightnum = 0;
-  vis->fullbright = true; // Don't apply per-column lighting and radial fog
-  vis->flipped = flip;
-  vis->shadow = vis->scaled = false;
+  vis->flags = (VSF_FLIPPED * flip) | VSF_FULLBRIGHT; // Don't apply per-column lighting and radial fog
 
   if (flip)
     {
@@ -1583,7 +1576,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   else if (psp->state->frame & FF_FULLBRIGHT)
   {
     vis->colormap[0] = vis->colormap[1] = 0;            // full bright // killough 3/20/98
-    vis->fullbright = true; // [Nugget]
+    vis->flags |= VSF_FULLBRIGHT; // [Nugget]
   }
   else
   {

@@ -703,7 +703,7 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 	// [Nugget]
 	vis->yscale = vis->scale;
 	vis->lightnum = lightnum;
-	vis->fullbright = vis->flipped = vis->shadow = vis->scaled = false;
+	vis->flags = 0;
 
 	// get light level...
 
@@ -718,7 +718,7 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 	else if (thing->frame & FF_FULLBRIGHT)
 	{
 		vis->colormap[0] = vis->colormap[1] = 0;
-		vis->fullbright = true; // [Nugget]
+		vis->flags |= VSF_FULLBRIGHT; // [Nugget]
 	}
 	else
 	{
@@ -886,7 +886,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!spr->fullbright && !shadow && !fixedcolormapoffset)
+	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
 	{
 		do_voxel_radial_fog = do_radial_fog;
 
@@ -1148,7 +1148,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!spr->fullbright && !shadow && !fixedcolormapoffset)
+	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
 	{
 		do_voxel_radial_fog = do_radial_fog;
 
@@ -1408,7 +1408,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!spr->fullbright && !shadow && !fixedcolormapoffset)
+	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
 	{
 		do_voxel_radial_fog = do_radial_fog;
 
@@ -1614,7 +1614,7 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!spr->fullbright && !shadow && !fixedcolormapoffset)
+	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
 	{
 		do_voxel_radial_fog = do_radial_fog;
 
