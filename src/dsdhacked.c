@@ -417,6 +417,9 @@ void dsdh_EnsureMobjInfoCapacity(int limit)
         mobjinfo[i].splash_group = SG_DEFAULT;
         mobjinfo[i].altspeed = NO_ALTSPEED;
         mobjinfo[i].meleerange = MELEERANGE;
+
+        // [Nugget] Sprite scaling
+        mobjinfo[i].scale = FRACUNIT;
     }
 }
 

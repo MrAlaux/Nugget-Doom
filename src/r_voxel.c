@@ -701,10 +701,9 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 	vis->x2 = x2;
 
 	// [Nugget]
-	vis->yscale = 0;
+	vis->yscale = vis->scale;
 	vis->lightnum = lightnum;
-	vis->fullbright = false;
-	vis->flipped = false;
+	vis->fullbright = vis->flipped = vis->shadow = vis->scaled = false;
 
 	// get light level...
 

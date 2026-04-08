@@ -389,11 +389,17 @@ typedef struct vissprite_s
   int voxel_index;
 
   // [Nugget]
-  fixed_t xscale, yscale;
+
+  // Sprite scaling
+  float scale_mult;
+  fixed_t yiscale, yscale;
+
   byte *tranmap;
   byte lightnum;
   boolean fullbright;
   boolean flipped;
+  boolean shadow;
+  boolean scaled;
 } vissprite_t;
 
 //
