@@ -1968,7 +1968,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 {
   mobj_t *const mobj = arena_alloc(thinkers_arena, mobj_t);
 
-  static mobjinfo_t info = {0};
+  static mobjinfo_t info = { .scale = FRACUNIT };
 
   memset(mobj, 0, sizeof(*mobj));
 

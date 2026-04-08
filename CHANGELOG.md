@@ -16,5 +16,6 @@
 ## Bug Fixes
 
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
+- **Horizontal-autoaim indicators not accounting for _Flip Levels_**
 
 [^1]: This will affect existing config files.
