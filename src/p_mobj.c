@@ -77,8 +77,6 @@ void P_UpdateDirectVerticalAiming(void)
 // Returns true if the mobj is still present.
 //
 
-int setmobjstate_recursion = 0; // detects recursion
-
 boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
 {
   state_t*  st;
@@ -87,11 +85,12 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
 
   // fast transition table
   statenum_t *seenstate = seenstate_tab;      // pointer to table
+  static int recursion;                       // detects recursion
   statenum_t i = state;                       // initial state
   boolean ret = true;                         // return value
   statenum_t* tempstate = NULL;               // for use with recursion
 
-  if (setmobjstate_recursion++)               // if recursion detected,
+  if (recursion++)                            // if recursion detected,
     seenstate = tempstate = Z_Calloc(num_states, sizeof(statenum_t), PU_STATIC, 0); // allocate state table
 
   do
@@ -125,7 +124,7 @@ boolean P_SetMobjState(mobj_t* mobj,statenum_t state)
   if (ret && !mobj->tics)  // killough 4/9/98: detect state cycles
     displaymsg("Warning: State Cycle Detected");
 
-  if (!--setmobjstate_recursion)
+  if (!--recursion)
     for (;(state=seenstate[i]);i=state-1)
       seenstate[i] = 0;  // killough 4/9/98: erase memory of states
 

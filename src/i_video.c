@@ -237,6 +237,7 @@ void I_DeferredInitColor(void)
   resetneeded = true;
 }
 
+static void CreateTexture(void);
 static void InitColorFunctions(void);
 
 static void InitColor(void)
@@ -244,6 +245,8 @@ static void InitColor(void)
     init_color_pending = false;
 
     truecolor_rendering = lighting_mode >= LIGHTINGMODE_INTERPOLATED;
+
+    CreateTexture();
 
     R_DeferredInitColormaps();
     R_DeferredInitLightTables();
@@ -280,10 +283,10 @@ static int unscaled_actualheight;
 static int max_video_width, max_video_height;
 static int max_width, max_height;
 static int max_height_adjusted;
-static int display_refresh_rate;
+static float display_refresh_rate;
 
 static boolean use_limiter;
-static int targetrefresh;
+static float targetrefresh;
 
 // haleyjd 10/08/05: Chocolate DOOM application focus state code added
 
@@ -294,7 +297,7 @@ static boolean grabmouse = true, default_grabmouse;
 // when the screen isnt visible, don't render the screen
 boolean screenvisible = true;
 
-boolean drs_skip_frame;
+static boolean drs_skip_frame;
 
 void *I_GetSDLWindow(void)
 {
@@ -517,7 +520,7 @@ static void HandleWindowEvent(SDL_WindowEvent *event)
             break;
     }
 
-    drs_skip_frame = true;
+    I_ResetDRS();
 }
 
 // [FG] fullscreen toggle from Chocolate Doom 3.0
@@ -597,13 +600,13 @@ static void UpdateLimiter(void)
 {
     if (uncapped)
     {
-        if (fpslimit >= display_refresh_rate && display_refresh_rate > 0
+        if (fpslimit >= display_refresh_rate && display_refresh_rate > 0.0f
             && use_vsync)
         {
             // SDL will limit framerate using vsync.
             use_limiter = false;
         }
-        else if (fpslimit >= TICRATE && targetrefresh > 0)
+        else if (fpslimit >= TICRATE && targetrefresh > 0.0f)
         {
             use_limiter = true;
         }
@@ -839,38 +842,24 @@ static void UpdateRender(void)
         const int src_width = video.width,
                   dst_width = texture->w;
 
-        if (dst_width == src_width)
+        pixel32_t *dst = pixels;
+        pixel32_t *src = I_VideoBuffer32;
+        while (h--)
         {
-            V_RGBCopy(pixels, I_VideoBuffer32, src_width * h);
-        }
-        else
-        {
-            pixel32_t *dst = pixels;
-            pixel32_t *src = I_VideoBuffer32;
-            while (h--)
-            {
-                V_RGBCopy(dst, src, src_width);
-                dst += dst_width;
-                src += src_width;
-            }
+            V_RGBCopy(dst, src, src_width);
+            dst += dst_width;
+            src += src_width;
         }
     }
     else
     {
-        if (dst_pitch == src_pitch)
+        pixel_t *dst = pixels;
+        pixel_t *src = I_VideoBuffer;
+        while (h--)
         {
-            memcpy(pixels, I_VideoBuffer, src_pitch * h);
-        }
-        else
-        {
-            pixel_t *dst = pixels;
-            pixel_t *src = I_VideoBuffer;
-            while (h--)
-            {
-                memcpy(dst, src, src_pitch);
-                dst += dst_pitch;        
-                src += src_pitch;
-            }
+            memcpy(dst, src, src_pitch);
+            dst += dst_pitch;        
+            src += src_pitch;
         }
     }
 
@@ -885,11 +874,33 @@ static uint64_t frametime_start, frametime_withoutpresent;
 static void ResetResolution(int height);
 static void ResetLogicalSize(void);
 
+#define DRS_FRAME_HISTORY 60
+
+typedef struct
+{
+    double history[DRS_FRAME_HISTORY];
+    int history_index;
+    int history_frames;
+    int cooldown_counter;
+    int cooldown_frames;
+} drs_t;
+
+static drs_t drs;
+
+void I_ResetDRS(void)
+{
+    memset(drs.history, 0, sizeof(drs.history));
+    drs.history_index = 0;
+    drs.history_frames = MAX(DRS_FRAME_HISTORY, (int)(targetrefresh / 2.0f));
+    drs.cooldown_counter = 0;
+    drs.cooldown_frames = drs.history_frames;
+    drs_skip_frame = true;
+}
+
 void I_DynamicResolution(void)
 {
     if (!dynamic_resolution || current_video_height <= DRS_MIN_HEIGHT
-        || frametime_withoutpresent == 0 || targetrefresh <= 0
-        || menuactive)
+        || frametime_withoutpresent == 0 || menuactive)
     {
         return;
     }
@@ -901,12 +912,9 @@ void I_DynamicResolution(void)
         return;
     }
 
-    #define DRS_COOLDOWN_FRAMES 15
-    static int cooldown_counter;
-
-    if (cooldown_counter > 0)
+    if (drs.cooldown_counter > 0)
     {
-        --cooldown_counter;
+        --drs.cooldown_counter;
         return;
     }
 
@@ -914,18 +922,14 @@ void I_DynamicResolution(void)
     double target = (1.0 / targetrefresh) - 0.00125;
     double actual = frametime_withoutpresent / 1000000.0;
 
-    #define DRS_FRAME_HISTORY 30
-    static double frame_history[DRS_FRAME_HISTORY];
-    static int    frame_index;
-
-    frame_history[frame_index] = actual;
-    frame_index = (frame_index + 1) % DRS_FRAME_HISTORY;
+    drs.history[drs.history_index] = actual;
+    drs.history_index = (drs.history_index + 1) % drs.history_frames;
     double total = 0;
-    for (int i = 0; i < DRS_FRAME_HISTORY; ++i)
+    for (int i = 0; i < drs.history_frames; ++i)
     {
-        total += frame_history[i];
+        total += drs.history[i];
     }
-    const double avg_frame_time = total / DRS_FRAME_HISTORY;
+    const double avg_frame_time = total / drs.history_frames;
     const double performance_ratio = avg_frame_time / target;
 
     static boolean needs_upscale;
@@ -970,6 +974,12 @@ void I_DynamicResolution(void)
         return;
     }
 
+    if (newheight < current_video_height)
+    {
+        int mul = (newheight + (DRS_STEP - 1)) / DRS_STEP;
+        newheight = mul * DRS_STEP;
+    }
+
     if (newheight == oldheight)
     {
         return;
@@ -977,7 +987,7 @@ void I_DynamicResolution(void)
 
     needs_upscale = newheight < current_video_height;
 
-    cooldown_counter = DRS_COOLDOWN_FRAMES;
+    drs.cooldown_counter = drs.cooldown_frames;
 
     if (newheight < oldheight)
     {
@@ -1047,12 +1057,12 @@ void I_FinishUpdate(void)
 
     if (use_limiter)
     {
-        uint64_t target_time = 1000000ull / targetrefresh;
+        uint64_t target_time = (uint64_t)(1000000.0f / targetrefresh);
 
         while (true)
         {
             uint64_t current_time = I_GetTimeUS();
-            uint64_t elapsed_time = current_time - frametime_start;
+            int64_t elapsed_time = current_time - frametime_start;
 
             if (elapsed_time >= target_time)
             {
@@ -1060,7 +1070,7 @@ void I_FinishUpdate(void)
                 break;
             }
 
-            uint64_t remaining_time = target_time - elapsed_time;
+            int64_t remaining_time = target_time - elapsed_time;
 
             if (remaining_time > 1000ull)
             {
@@ -1377,11 +1387,6 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
         colors[i].a = 0xffu;
     }
 
-    if (!palette)
-    {
-        palette = SDL_CreatePalette(256);
-    }
-
     SDL_SetPaletteColors(palette, colors, 0, 256);
 
     if (vga_porch_flash)
@@ -1443,7 +1448,7 @@ boolean I_WritePNGfile(char *filename)
     int size = surface->h * pitch;
     void *pixels = malloc(size);
     if (!SDL_ConvertPixels(surface->w, surface->h,
-                           SDL_GetWindowPixelFormat(screen), surface->pixels,
+                           surface->format, surface->pixels,
                            surface->pitch, SDL_PIXELFORMAT_RGB24, pixels,
                            pitch))
     {
@@ -1491,7 +1496,7 @@ boolean I_WritePNGfile(char *filename)
     free(pixels);
     SDL_DestroySurface(surface);
 
-    drs_skip_frame = true;
+    I_ResetDRS();
 
     return !ret;
 }
@@ -1688,17 +1693,27 @@ static void I_ResetTargetRefresh(void)
 
     if (uncapped)
     {
-        // SDL may report native refresh rate as zero.
-        targetrefresh = (fpslimit >= TICRATE) ? fpslimit : display_refresh_rate;
+        if (fpslimit >= TICRATE)
+        {
+            targetrefresh = fpslimit;
+        }
+        else if (display_refresh_rate)
+        {
+            targetrefresh = display_refresh_rate;
+        }
+        else
+        {
+            targetrefresh = 60.0f;
+        }
     }
     else
     {
-        targetrefresh = TICRATE * realtic_clock_rate / 100;
+        targetrefresh = (float)TICRATE * realtic_clock_rate / 100.0f;
     }
 
     UpdateLimiter();
     MN_UpdateFpsLimitItem();
-    drs_skip_frame = true;
+    I_ResetDRS();
 }
 
 static void I_ResetInvalidDisplayIndex(void)
@@ -1858,16 +1873,58 @@ static void I_InitVideoParms(void)
     MN_UpdateDynamicResolutionItem();
 }
 
+// [Nugget]
+static void CreateTexture(void)
+{
+    if (texture)
+    {
+        SDL_DestroyTexture(texture);
+    }
+
+    const SDL_PixelFormat pixelformat = truecolor_rendering
+                                      ? SDL_PIXELFORMAT_ARGB8888
+                                      : SDL_PIXELFORMAT_INDEX8;
+
+    texture = SDL_CreateTexture(renderer, pixelformat,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                max_width, max_height);
+
+    if (!texture)
+    {
+        I_Error("Failed to create texture: %s", SDL_GetError());
+    }
+
+    I_SetPalette(0); // [Nugget] Pass index
+
+    if (truecolor_rendering)
+    {
+        if (!SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE))
+        {
+            I_Error("Failed to set blend mode: %s", SDL_GetError());
+        }
+    }
+    else
+    {
+        if (!SDL_SetTexturePalette(texture, palette))
+        {
+            I_Error("Failed to set palette: %s", SDL_GetError());
+        }
+    }
+
+    SDL_SetTextureScaleMode(texture,
+        smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
+}
+
 static void I_InitGraphicsMode(void)
 {
     SDL_WindowFlags flags = 0;
 
     // [FG] window flags
-    flags |= (SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_INPUT_FOCUS);
+    flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_INPUT_FOCUS;
 
     if (fullscreen)
     {
-        flags |= (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_MOUSE_GRABBED);
+        flags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_MOUSE_GRABBED;
     }
     else
     {
@@ -1920,6 +1977,11 @@ static void I_InitGraphicsMode(void)
         SDL_SetRenderVSync(renderer, 1);
     }
 
+    palette = SDL_CreatePalette(256);
+
+    // [Nugget] Factored texture creation out into `CreateTexture()`
+    texture = NULL;
+
     I_Printf(VB_DEBUG, "SDL %d.%d.%d (%s) render driver: %s (%s)",
              SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION,
              SDL_GetPlatform(),
@@ -1950,38 +2012,6 @@ static int GetCurrentVideoHeight(void)
 
 static void CreateVideoBuffer(void)
 {
-    if (texture)
-    {
-        SDL_DestroyTexture(texture);
-    }
-
-    // [Nugget]
-    const SDL_PixelFormat pixelformat = truecolor_rendering
-                                      ? SDL_PIXELFORMAT_ARGB8888
-                                      : SDL_PIXELFORMAT_INDEX8;
-
-    texture = SDL_CreateTexture(renderer, pixelformat,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                video.width, video.height);
-    if (!texture)
-    {
-        I_Error("Failed to create texture: %s", SDL_GetError());
-    }
-
-    I_SetPalette(0); // [Nugget] Pass index
-
-    if (truecolor_rendering)
-    {
-        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
-    }
-    else
-    {
-        SDL_SetTexturePalette(texture, palette);
-    }
-
-    SDL_SetTextureScaleMode(texture,
-        smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
-
     if (I_VideoBuffer)
     {
         free(I_VideoBuffer);

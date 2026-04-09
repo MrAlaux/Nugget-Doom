@@ -11,12 +11,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-#include "p_keyframe.h"
-
+#include "doomstat.h"
 #include "doomtype.h"
 #include "g_game.h"
 #include "i_timer.h"
 #include "m_config.h"
+#include "p_keyframe.h"
 
 // [Nugget]
 #include "r_main.h"
@@ -149,7 +149,10 @@ void G_SaveAutoKeyframe(void)
         
         Push(P_SaveKeyframe(current_tic));
 
-        disable_rewind = (I_GetTimeMS() - time > rewind_timeout);
+        if (rewind_timeout)
+        {
+            disable_rewind = (I_GetTimeMS() - time > rewind_timeout);
+        }
         if (disable_rewind)
         {
             displaymsg("Slow key framing: rewind disabled");
@@ -192,6 +195,10 @@ void G_LoadAutoKeyframe(void)
         }
 
         G_ClearInput();
+        if (!freelook)
+        {
+            players[consoleplayer].pitch = 0;
+        }
         break;
     }
 

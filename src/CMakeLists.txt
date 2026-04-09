@@ -103,6 +103,7 @@ set(NUGGETDOOM_SOURCES
                            p_action.h
     p_ambient.c            p_ambient.h
     p_ceilng.c
+    p_dirty.c              p_dirty.h
     p_doors.c
     p_enemy.c              p_enemy.h
     p_extnodes.c           p_extnodes.h

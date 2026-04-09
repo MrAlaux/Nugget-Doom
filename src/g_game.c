@@ -68,6 +68,7 @@
 #include "mn_menu.h"
 #include "mn_snapshot.h"
 #include "net_defs.h"
+#include "p_dirty.h"
 #include "p_enemy.h"
 #include "p_inter.h"
 #include "p_map.h"
@@ -686,6 +687,7 @@ void G_SetTimeScale(void)
 
     I_SetTimeScale(time_scale);
 
+    I_ResetDRS();
     setrefreshneeded = true;
 }
 
@@ -1390,6 +1392,8 @@ static void G_DoLoadLevel(void)
     }
     reset_inventory = false;
   }
+
+  P_ClearDirtyArrays();
 
   P_SetupLevel (gameepisode, gamemap, 0, gameskill);
 
@@ -3187,7 +3191,7 @@ static void DoSaveGame(char *name)
   gameaction = ga_nothing;
   savedescription[0] = 0;
 
-  drs_skip_frame = true;
+  I_ResetDRS();
 
   // [Nugget] Periodic auto save:
   // reset the countdown, even if this was a manual save
