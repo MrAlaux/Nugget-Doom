@@ -48,10 +48,16 @@ void *M_ArenaAlloc(arena_t *arena, size_t size, size_t align)
 {
     array_foreach_type(block, arena->deleted, block_t)
     {
-        if (block->size == size && block->align == align
-            && array_size(block->ptrs))
+        if (block->size == size && block->align == align)
         {
-            return array_pop(block->ptrs);
+            if (array_size(block->ptrs))
+            {
+                return array_pop(block->ptrs);
+            }
+            else
+            {
+                break;
+            }
         }
     }
 
@@ -123,8 +129,7 @@ arena_t *M_ArenaInit(size_t reserve, size_t commit)
 
 static void FreeBlocks(block_t *blocks)
 {
-    block_t *block;
-    array_foreach(block, blocks)
+    array_foreach_type(block, blocks, block_t)
     {
         array_free(block->ptrs);
     }
@@ -156,7 +161,7 @@ static block_t *CopyBlocks(const block_t *from)
     }
 
     block_t *to = NULL;
-    array_resize(to, numblocks);
+    array_grow(to, numblocks);
 
     for (int i = 0; i < numblocks; ++i)
     {
@@ -164,12 +169,7 @@ static block_t *CopyBlocks(const block_t *from)
         to[i].size = from[i].size;
         to[i].align = from[i].align;
 
-        int numptrs = array_size(from[i].ptrs);
-        if (numptrs)
-        {
-            array_resize(to[i].ptrs, numptrs);
-            memcpy(to[i].ptrs, from[i].ptrs, numptrs * sizeof(void *));
-        }
+        array_copy(to[i].ptrs, from[i].ptrs);
     }
 
     return to;

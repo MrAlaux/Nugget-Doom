@@ -37,6 +37,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "g_game.h"
+#include "i_exit.h"
 #include "i_input.h"
 #include "i_printf.h"
 #include "i_system.h"
@@ -237,7 +238,6 @@ void I_DeferredInitColor(void)
   resetneeded = true;
 }
 
-static void CreateTexture(void);
 static void InitColorFunctions(void);
 
 static void InitColor(void)
@@ -246,7 +246,7 @@ static void InitColor(void)
 
     truecolor_rendering = lighting_mode >= LIGHTINGMODE_INTERPOLATED;
 
-    CreateTexture();
+    I_SetPalette(0);
 
     R_DeferredInitColormaps();
     R_DeferredInitLightTables();
@@ -267,8 +267,8 @@ static SDL_Window *screen;
 static SDL_Renderer *renderer;
 static SDL_Palette *palette;
 static SDL_Texture *texture;
-static SDL_Rect blit_rect = {0};
-static SDL_FRect renderer_rect = {0.0f};
+static SDL_Rect rect = {0};
+static SDL_FRect frect = {0.0f};
 
 static int window_x, window_y;
 static int window_width, window_height;
@@ -833,8 +833,8 @@ static void UpdateRender(void)
     // video buffer in order to emulate HOM effects.
     void *pixels;
     int dst_pitch;
-    SDL_LockTexture(texture, &blit_rect, &pixels, &dst_pitch);
-    int h = blit_rect.h;
+    SDL_LockTexture(texture, &rect, &pixels, &dst_pitch);
+    int h = rect.h;
     int src_pitch = video.width;
 
     if (truecolor_rendering)
@@ -866,7 +866,7 @@ static void UpdateRender(void)
     SDL_UnlockTexture(texture);
 
     SDL_RenderClear(renderer);
-    SDL_RenderTexture(renderer, texture, &renderer_rect, NULL);
+    SDL_RenderTexture(renderer, texture, &frect, NULL);
 }
 
 static uint64_t frametime_start, frametime_withoutpresent;
@@ -943,10 +943,10 @@ void I_DynamicResolution(void)
 
     int oldheight = video.height;
     int newheight = 0;
+    int step_multipler = 1;
 
     if (performance_ratio > DRS_DOWNSCALE_T1)
     {
-        int step_multipler = 1;
         if (performance_ratio > DRS_DOWNSCALE_T3)
         {
             step_multipler = 3;
@@ -960,14 +960,13 @@ void I_DynamicResolution(void)
     }
     else if (performance_ratio < DRS_UPSCALE_T1 && needs_upscale)
     {
-        int step_multiplier = 1;
         if (performance_ratio < DRS_UPSCALE_T2)
         {
-            step_multiplier = 2;
+            step_multipler = 2;
         }
 
         newheight =
-            MIN(current_video_height, oldheight + DRS_STEP * step_multiplier);
+            MIN(current_video_height, oldheight + DRS_STEP * step_multipler);
     }
     else
     {
@@ -991,11 +990,11 @@ void I_DynamicResolution(void)
 
     if (newheight < oldheight)
     {
-        VX_DecreaseMaxDist();
+        VX_DecreaseMaxDist(step_multipler);
     }
     else
     {
-        VX_IncreaseMaxDist();
+        VX_IncreaseMaxDist(step_multipler);
     }
 
     ResetResolution(newheight);
@@ -1350,8 +1349,6 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
 
         if (vga_porch_flash)
         {
-            // "flash" the pillars/letterboxes with palette changes,
-            // emulating VGA "porch" behaviour
             SDL_SetRenderDrawColor(
                 renderer,
                 V_RedFromRGB(palcolors[0]),
@@ -1643,9 +1640,9 @@ static void ResetResolution(int height)
 
 static void ResetLogicalSize(void)
 {
-    blit_rect.w = video.width;
-    blit_rect.h = video.height;
-    SDL_RectToFRect(&blit_rect, &renderer_rect);
+    rect.w = video.width;
+    rect.h = video.height;
+    SDL_RectToFRect(&rect, &frect);
 
     if (!SDL_SetRenderLogicalPresentation(renderer, video.width, actualheight,
         stretch_to_fit ? SDL_LOGICAL_PRESENTATION_STRETCH // [Nugget]
@@ -1873,48 +1870,6 @@ static void I_InitVideoParms(void)
     MN_UpdateDynamicResolutionItem();
 }
 
-// [Nugget]
-static void CreateTexture(void)
-{
-    if (texture)
-    {
-        SDL_DestroyTexture(texture);
-    }
-
-    const SDL_PixelFormat pixelformat = truecolor_rendering
-                                      ? SDL_PIXELFORMAT_ARGB8888
-                                      : SDL_PIXELFORMAT_INDEX8;
-
-    texture = SDL_CreateTexture(renderer, pixelformat,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                max_width, max_height);
-
-    if (!texture)
-    {
-        I_Error("Failed to create texture: %s", SDL_GetError());
-    }
-
-    I_SetPalette(0); // [Nugget] Pass index
-
-    if (truecolor_rendering)
-    {
-        if (!SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE))
-        {
-            I_Error("Failed to set blend mode: %s", SDL_GetError());
-        }
-    }
-    else
-    {
-        if (!SDL_SetTexturePalette(texture, palette))
-        {
-            I_Error("Failed to set palette: %s", SDL_GetError());
-        }
-    }
-
-    SDL_SetTextureScaleMode(texture,
-        smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
-}
-
 static void I_InitGraphicsMode(void)
 {
     SDL_WindowFlags flags = 0;
@@ -1979,8 +1934,14 @@ static void I_InitGraphicsMode(void)
 
     palette = SDL_CreatePalette(256);
 
-    // [Nugget] Factored texture creation out into `CreateTexture()`
-    texture = NULL;
+    // [Nugget] True color: don't set palette yet
+
+    // Blank out the full screen area in case there is any junk in
+    // the borders that won't otherwise be overwritten.
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
 
     I_Printf(VB_DEBUG, "SDL %d.%d.%d (%s) render driver: %s (%s)",
              SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION,
@@ -2012,6 +1973,42 @@ static int GetCurrentVideoHeight(void)
 
 static void CreateVideoBuffer(void)
 {
+    if (texture)
+    {
+        SDL_DestroyTexture(texture);
+    }
+
+    // [Nugget]
+    const SDL_PixelFormat pixelformat = truecolor_rendering
+                                      ? SDL_PIXELFORMAT_ARGB8888
+                                      : SDL_PIXELFORMAT_INDEX8;
+
+    texture = SDL_CreateTexture(renderer, pixelformat,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                video.width, video.height);
+    if (!texture)
+    {
+        I_Error("Failed to create texture: %s", SDL_GetError());
+    }
+
+    if (truecolor_rendering)
+    {
+        if (!SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE))
+        {
+            I_Error("Failed to set blend mode: %s", SDL_GetError());
+        }
+    }
+    else
+    {
+        if (!SDL_SetTexturePalette(texture, palette))
+        {
+            I_Error("Failed to set palette: %s", SDL_GetError());
+        }
+    }
+
+    SDL_SetTextureScaleMode(texture,
+        smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
+
     if (I_VideoBuffer)
     {
         free(I_VideoBuffer);
@@ -2066,6 +2063,9 @@ void I_ResetScreen(void)
     CreateVideoBuffer();
     ResetLogicalSize();
 
+    SDL_SetTextureScaleMode(texture, smooth_scaling ? SDL_SCALEMODE_PIXELART
+                                                    : SDL_SCALEMODE_NEAREST);
+
     static aspect_ratio_mode_t oldwidescreen;
     if (oldwidescreen != widescreen)
     {
@@ -2088,7 +2088,7 @@ void I_ShutdownGraphics(void)
         default_current_video_height = current_video_height;
     }
 
-    UpdateGrab();
+    SetShowCursor(true);
 
     SDL_DestroyTexture(texture);
 
@@ -2127,6 +2127,13 @@ void I_InitGraphics(void)
 
     // clear out events waiting at the start and center the mouse
     I_ResetRelativeMouseState();
+}
+
+void I_QuitVideo(void)
+{
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+
+    SDL_Quit();
 }
 
 static void InitColorFunctions(void)

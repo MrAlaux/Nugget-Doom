@@ -13,8 +13,8 @@
 
 #include "config.h"
 #include "doomtype.h"
+#include "i_exit.h"
 #include "i_printf.h"
-#include "i_system.h"
 
 #ifdef HAVE_DISCORD_RPC
 
@@ -81,6 +81,7 @@ void I_UpdateDiscordPresence(const char *curstate, const char *curstatus)
         Discord_Initialize(curappid, &handlers, 1, NULL);
         
         I_AtExit(Discord_ClearPresence, true);
+        I_AtSignal(Discord_ClearPresence);
     }
 
     DiscordRichPresence presence = {0};

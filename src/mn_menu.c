@@ -39,6 +39,7 @@
 #include "g_game.h"
 #include "g_rewind.h"
 #include "g_umapinfo.h"
+#include "i_exit.h"
 #include "i_input.h"
 #include "i_printf.h"
 #include "i_system.h"
@@ -2873,7 +2874,8 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_rewind))
     {
-        G_LoadAutoKeyframe();
+        G_Rewind();
+        return true;
     }
 
     // [Nugget] /-------------------------------------------------------------

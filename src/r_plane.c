@@ -202,7 +202,7 @@ static void DrawPlane8(fixed_t distance, int tint)
     ds_colormap[0] = thiscolormap + fixedcolormapindex * 256;
     ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                       ? thiscolormap
-                      : dc_colormap[0];
+                      : ds_colormap[0];
   }
   else
   {
@@ -232,7 +232,7 @@ static void DrawPlane8(fixed_t distance, int tint)
       ds_colormap[0] = thiscolormap + lightindex * 256;
       ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                         ? thiscolormap
-                        : dc_colormap[0];
+                        : ds_colormap[0];
     }
   }
 
@@ -257,7 +257,7 @@ static void DrawPlane32(fixed_t distance, int tint)
     ds_colormap32[0] = thiscolormap + fixedcolormapindex * 256;
     ds_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                         ? thiscolormap
-                        : dc_colormap32[0];
+                        : ds_colormap32[0];
   }
   else
   {
@@ -287,7 +287,7 @@ static void DrawPlane32(fixed_t distance, int tint)
       ds_colormap32[0] = thiscolormap + lightindex * 256;
       ds_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                           ? thiscolormap
-                          : dc_colormap32[0];
+                          : ds_colormap32[0];
     }
   }
 
