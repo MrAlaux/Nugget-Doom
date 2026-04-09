@@ -14,6 +14,7 @@
 #include <SDL3/SDL.h>
 
 #include "doomtype.h"
+#include "i_exit.h"
 #include "i_printf.h"
 #include "i_system.h"
 #include "i_thread.h"
@@ -79,7 +80,8 @@ void I_InitThreading(void)
   const int total_threads = 1 + worker_threads;
 
   I_Printf(
-    VB_INFO, "Using %i thread%s.", total_threads, (total_threads != 1) ? "s" : ""
+    VB_INFO, "%s: Using %i thread%s.",
+    __func__, total_threads, (total_threads != 1) ? "s" : ""
   );
 }
 
