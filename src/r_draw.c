@@ -37,9 +37,6 @@
 #include "v_video.h"
 #include "z_zone.h"
 
-// [Nugget]
-#include "r_data.h"
-
 //
 // All drawing to the view buffer is accomplished in this file.
 // The other refresh files only know about ccordinates,

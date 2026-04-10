@@ -37,6 +37,7 @@
 #include "am_map.h"
 #include "g_game.h"
 #include "m_nughud.h"
+#include "r_tranmap.h"
 
 static player_t *plr = players;
 

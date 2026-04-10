@@ -164,9 +164,10 @@ inline static int64_t saveg_read64(void)
 // Enum values are 32-bit integers.
 
 #define saveg_read_enum saveg_read32
-#define saveg_write_enum saveg_write32
 
 // [Nugget] -----------------------------------------------------------------/
+
+#define saveg_write_enum saveg_write32 // [Nugget]
 
 typedef enum
 {
@@ -184,12 +185,13 @@ typedef enum
   saveg_woof1300 = saveg_nugget320,
   saveg_nugget330,
   saveg_nugget400,
-  saveg_woof1500 = saveg_nugget400,
   saveg_nugget450,
+  saveg_nugget500,
+  saveg_woof1500 = saveg_nugget500,
 
   // [Nugget] ---------------------------------------------------------------/
 
-  saveg_current, // saveg_nugget460
+  saveg_current, // saveg_nugget600
 } saveg_compat_t;
 
 extern saveg_compat_t saveg_compat;

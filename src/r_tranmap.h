@@ -32,4 +32,8 @@ extern byte *tranmap;
 void R_InitTranMap(boolean progress);
 byte *R_NormalTranMap(int alpha, boolean progress, boolean force);
 
+// [Nugget]
+byte *R_GetGenericTranMap(int filter_pct);
+void R_InitMessageFadeoutTranMaps(void);
+
 #endif

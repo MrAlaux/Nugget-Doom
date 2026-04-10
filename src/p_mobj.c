@@ -51,7 +51,7 @@
 // [Nugget]
 #include "m_array.h"
 #include "p_user.h"
-#include "r_data.h"
+#include "r_tranmap.h"
 
 // [Nugget] CVARs
 int viewheight_value;

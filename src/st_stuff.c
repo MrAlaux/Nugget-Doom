@@ -64,6 +64,7 @@
 // [Nugget]
 #include "mn_internal.h"
 #include "m_nughud.h"
+#include "r_tranmap.h"
 #include "sounds.h"
 
 // [Nugget] /=================================================================

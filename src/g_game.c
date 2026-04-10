@@ -2802,7 +2802,7 @@ static void G_DoPlayDemo(void)
 
 #define VERSIONSIZE   16
 
-#define CURRENT_SAVE_VERSION "Nugget 4.6.0" // [Nugget]
+#define CURRENT_SAVE_VERSION "Nugget 6.0.0" // [Nugget]
 
 static const char *saveg_versions[] =
 {
@@ -2819,11 +2819,12 @@ static const char *saveg_versions[] =
 
     [saveg_nugget200] = "Nugget 2.0.0",
     [saveg_nugget210] = "Nugget 2.1.0",
-    [saveg_nugget300] = "Nugget 2.4.0", // Yes, these were mislabeled
+    [saveg_nugget300] = "Nugget 2.4.0", // Mislabeled
     [saveg_nugget320] = "Nugget 3.2.0",
     [saveg_nugget330] = "Nugget 3.3.0",
     [saveg_nugget400] = "Nugget 4.0.0",
     [saveg_nugget450] = "Nugget 4.5.0",
+    [saveg_nugget500] = "Nugget 4.6.0", // Mislabeled
 
     // [Nugget] -------------------------------------------------------------/
 

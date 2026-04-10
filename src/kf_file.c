@@ -38,6 +38,9 @@
 #include "r_state.h"
 #include "s_sndinfo.h"
 
+// [Nugget]
+#include "r_tranmap.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -486,8 +489,31 @@ static void read_mobj_t(mobj_t *str, thinker_class_t tc)
     str->oldangle = read32();
     str->bloodcolor = read32();
 
-    // TODO
-    // P_SetActualHeight(str);
+    // [Nugget] Removed `actualheight`
+
+    // [Nugget] --------------------------------------------------------------
+
+    // Alt. sprites
+    str->altsprite = read32();
+    str->altframe = read32();
+
+    // Alt. states
+    readp_index(str->altstate, altstates);
+    str->alttics = read32();
+
+    str->isvisual = read32();
+
+    if (str->isvisual)
+    {
+        static mobjinfo_t info = { .scale = FRACUNIT };
+        str->info = &info;
+    }
+
+    str->gentranmap_pct = read8();
+
+    str->gentranmap = (str->gentranmap_pct >= 0)
+                    ? R_GetGenericTranMap(str->gentranmap_pct)
+                    : NULL;
 }
 
 static void write_mobj_t(mobj_t *str)
@@ -552,6 +578,19 @@ static void write_mobj_t(mobj_t *str)
     write32(str->oldz);
     write32(str->oldangle);
     write32(str->bloodcolor);
+
+    // [Nugget] --------------------------------------------------------------
+
+    // Alt. sprites
+    write32(str->altsprite);
+    write32(str->altframe);
+
+    // Alt. states
+    writep_index(str->altstate, altstates);
+    write32(str->alttics);
+
+    write32(str->isvisual);
+    write8(str->gentranmap_pct);
 }
 
 static void read_ticcmd_t(ticcmd_t *str)
@@ -584,6 +623,15 @@ static void read_pspdef_t(pspdef_t *str)
     str->sy2 = read32();
     str->oldsx2 = read32();
     str->oldsy2 = read32();
+
+    // [Nugget]
+    str->dy = read32();
+    str->wix = read32();
+    str->wiy = read32();
+    str->oldwix = read32();
+    str->oldwiy = read32();
+    str->sxf = read32();
+    str->syf = read32();
 }
 
 static void write_pspdef_t(pspdef_t *str)
@@ -596,6 +644,15 @@ static void write_pspdef_t(pspdef_t *str)
     write32(str->sy2);
     write32(str->oldsx2);
     write32(str->oldsy2);
+
+    // [Nugget]
+    write32(str->dy);
+    write32(str->wix);
+    write32(str->wiy);
+    write32(str->oldwix);
+    write32(str->oldwiy);
+    write32(str->sxf);
+    write32(str->syf);
 }
 
 static void read_player_t(player_t *str)
@@ -678,6 +735,10 @@ static void read_player_t(player_t *str)
 
     str->lastweapon = read_enum();
     str->nextweapon = read_enum();
+
+    // [Nugget]
+    str->jumptics = read32();
+    str->crouchoffset = read32();
 }
 
 static void write_player_t(player_t *str)
@@ -757,6 +818,10 @@ static void write_player_t(player_t *str)
 
     write_enum(str->lastweapon);
     write_enum(str->nextweapon);
+
+    // [Nugget]
+    write32(str->jumptics);
+    write32(str->crouchoffset);
 }
 
 static void read_ceiling_t(ceiling_t *str, thinker_class_t tc)
@@ -1902,8 +1967,12 @@ static void ArchiveAutoMap(void)
     {
         for (int i = 0; i < markpointnum; ++i)
         {
-            write64(markpoints[i].x);
-            write64(markpoints[i].y);
+            // [Nugget] Changed struct
+            write64(markpoints[i].pt.x);
+            write64(markpoints[i].pt.y);
+
+            // [Nugget]
+            write32(markpoints[i].color);
         }
     }
 }
@@ -1934,8 +2003,12 @@ static void UnArchiveAutoMap(void)
 
         for (int i = 0; i < markpointnum; ++i)
         {
-            markpoints[i].x = read64();
-            markpoints[i].y = read64();
+            // [Nugget] Changed struct
+            markpoints[i].pt.x = read64();
+            markpoints[i].pt.y = read64();
+
+            // [Nugget]
+            markpoints[i].color = read32();
         }
     }
 }
