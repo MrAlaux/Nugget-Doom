@@ -62,12 +62,15 @@ set(NUGGETDOOM_SOURCES
     i_timer.c              i_timer.h
     i_video.c              i_video.h
     info.c                 info.h
+    kf_file.c
+    kf_memory.c
+    m_arena.c              m_arena.h
     m_argv.c               m_argv.h
                            m_array.h
-    m_arena.c              m_arena.h
     m_bbox.c               m_bbox.h
     m_cheat.c              m_cheat.h
     m_config.c             m_config.h
+    m_hashmap.c            m_hashmap.h
                            m_fixed.h
     m_input.c              m_input.h
     m_io.c                 m_io.h
@@ -110,7 +113,7 @@ set(NUGGETDOOM_SOURCES
     p_floor.c
     p_genlin.c
     p_inter.c              p_inter.h
-    p_keyframe.c           p_keyframe.h
+                           p_keyframe.h
     p_lights.c
     p_map.c                p_map.h
     p_maputl.c             p_maputl.h
@@ -139,6 +142,7 @@ set(NUGGETDOOM_SOURCES
                            r_state.h
     r_swirl.c              r_swirl.h
     r_things.c             r_things.h
+    r_tranmap.c            r_tranmap.h
     r_voxel.c              r_voxel.h
     s_musinfo.c            s_musinfo.h
     s_sndinfo.c            s_sndinfo.h

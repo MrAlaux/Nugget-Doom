@@ -429,7 +429,6 @@ static float GetPitch(pitchrange_t pitch_range)
             pitch += 16 - (M_Random() & 31);
         }
 
-        pitch = CLAMP(pitch, 0, 255);
         return steptable[pitch];
     }
     else
@@ -1436,13 +1435,16 @@ static void InitFinalDoomMusic()
 
 static void InitPitchStepTable(void)
 {
-    const double base = pitch_bend_range / 100.0;
-
-    // This table provides step widths for pitch parameters.
     for (int i = 0; i < arrlen(steptable); i++)
     {
-        // [FG] variable pitch bend range
-        steptable[i] = pow(base, (double)(2 * (i - NORM_PITCH)) / NORM_PITCH);
+        // Strictly speaking, it should be the inverse of that value.
+        // In Chocolate Doom, this formula determines how much larger the
+        // destination buffer for the pitch-shifted sound is compared to the
+        // original sound. That is, how much *slower* this sound is played.
+        // In OpenAL, though, the pitch value means how much *faster* the sound
+        // is played.
+
+        steptable[i] = 2.0f - (float)i / NORM_PITCH;
     }
 }
 
