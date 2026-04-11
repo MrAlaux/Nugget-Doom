@@ -62,7 +62,7 @@
 #include "st_stuff.h"
 #include "sounds.h"
 #include "st_widgets.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "ws_stuff.h"
@@ -4770,15 +4770,17 @@ void MN_DrawStringCR(int cx, int cy, byte *cr1, byte *cr2, const char *ch)
         }
         */
 
+        patch_t *patch = hu_font[c];
+
         // V_DrawpatchTranslated() will draw the string in the
         // desired color, colrngs[color]
         if (cr && cr2)
         {
-            V_DrawPatchTRTRSH(cx, cy, (crop_t){0}, hu_font[c], cr, cr2); // [Nugget] HUD/menu shadows
+            V_DrawPatchTranslatedTwiceSH(cx, cy, patch, cr, cr2); // [Nugget] HUD/menu shadows
         }
         else
         {
-            V_DrawPatchTranslatedSH(cx, cy, hu_font[c], cr); // [Nugget] HUD/menu shadows
+            V_DrawPatchTranslatedSH(cx, cy, patch, cr); // [Nugget] HUD/menu shadows
         }
 
         // The screen is cramped, so trim one unit from each

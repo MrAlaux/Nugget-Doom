@@ -45,7 +45,7 @@
 #include "st_widgets.h"
 #include "tables.h"
 #include "v_flextran.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "ws_stuff.h"
 #include "z_zone.h"
@@ -819,7 +819,7 @@ static void AM_initScreenSize(void)
   if (automapoverlay && scaledviewheight == SCREENHEIGHT)
     f_h = video.height;
   else
-    f_h = V_ScaleY(SCREENHEIGHT - ST_HEIGHT);
+    f_h = V_ScaleY(SCREENHEIGHT - st_height);
 
   // [Nugget]
   f_x2 = f_x + f_w;
@@ -3078,9 +3078,11 @@ static void AM_drawMarks(void)
 	    {
 	      // [Nugget] Translation
 	      if (cr1 && cr2)
-	        V_DrawPatchTRTR(((fx << FRACBITS) / video.xscale) - video.deltaw,
-	                        (fy << FRACBITS) / video.yscale,
-	                        (crop_t){0}, marknums[d], cr1, cr2);
+	        V_DrawPatchTranslatedTwice(
+	          ((fx << FRACBITS) / video.xscale) - video.deltaw,
+	          (fy << FRACBITS) / video.yscale,
+	          marknums[d], cr1, cr2
+	        );
 	      else
 	        V_DrawPatchTranslated(((fx << FRACBITS) / video.xscale) - video.deltaw,
 	                              (fy << FRACBITS) / video.yscale,

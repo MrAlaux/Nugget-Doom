@@ -75,6 +75,8 @@ typedef enum
     sbc_episodeequal,
     sbc_levelgreaterequal,
     sbc_levelless,
+    sbc_patchempty,
+    sbc_patchnotempty,
 
     sbc_max,
 } sbarconditiontype_t;
@@ -84,6 +86,7 @@ typedef struct
     sbarconditiontype_t condition;
     int param;
     int param2;
+    const char *param_string;
 } sbarcondition_t;
 
 typedef enum
@@ -141,6 +144,7 @@ typedef enum
 
 typedef enum
 {
+    sbw_none = -1,
     sbw_monsec,
     sbw_time,
     sbw_coord,
@@ -167,6 +171,9 @@ typedef enum
     sbw_max = sbw_max_woof + sbw_max_nugget,
 } sbarwidgettype_t;
 
+extern const char *sbw_names[];
+extern int sbw_names_len;
+
 typedef enum
 {
     sbe_h_left = 0x00,
@@ -181,11 +188,14 @@ typedef enum
 
     sbe_v_mask = 0x0C,
 
-    // Woof!
-    sbe_wide_left = 0x10,
-    sbe_wide_right = 0x20,
+    sbe_ignore_xoffset = 0x10,
+    sbe_ignore_yoffset = 0x20,
 
-    sbe_wide_force = 0x40, // [Nugget] NUGHUD
+    // Woof!
+    sbe_wide_left = 0x40,
+    sbe_wide_right = 0x80,
+
+    sbe_wide_force = 0x100, // [Nugget] NUGHUD
 } sbaralignment_t;
 
 typedef struct

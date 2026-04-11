@@ -28,11 +28,10 @@
 
 #include "doomtype.h"
 #include "m_fixed.h"
+#include "r_defs.h"
 
 // [Nugget]
 #include "r_state.h"
-
-struct patch_s;
 
 //
 // VIDEO
@@ -171,38 +170,114 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
 void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
                   int destx, int desty);
 
-// killough 11/98: Consolidated V_DrawPatch and V_DrawPatchFlipped
-
 typedef struct
 {
-    int topoffset;
-    int leftoffset;
-    int midoffset;
+    int left;
+    int top;
+    boolean center;
     int width;
-    int height;    
+    int height;
 } crop_t;
+extern crop_t zero_crop;
 
-void V_DrawPatchGeneral(int x, int y, crop_t rect, struct patch_s *patch,
-                        boolean flipped);
-
-#define V_DrawPatch(x, y, p) V_DrawPatchGeneral(x, y, (crop_t){0}, p, false)
-
-#define V_DrawPatchFlipped(x, y, p) V_DrawPatchGeneral(x, y, (crop_t){0}, p, true)
-
-void V_DrawPatchTranslated(int x, int y, struct patch_s *patch, byte *outr);
-
-void V_DrawPatchTR(int x, int y, crop_t rect, struct patch_s *patch, byte *outr);
-
-void V_DrawPatchTRTR(int x, int y, crop_t rect, struct patch_s *patch,
-                     byte *outr1, byte *outr2);
-
-void V_DrawPatchTL(int x, int y, crop_t rect, struct patch_s *patch,
-                   const byte *tl);
-
-void V_DrawPatchTRTL(int x, int y, crop_t rect, struct patch_s *patch,
-                     byte *outr, const byte *tl);
+// On-screen patch drawing functions for specific purposes
+void V_DrawPatch(int x, int y, patch_t *patch);
+void V_DrawPatchCastCall(patch_t *patch, const byte *tranmap, const byte *xlat, boolean flip);
+void V_DrawPatchCropped(int x, int y, patch_t *patch, crop_t crop);
+void V_DrawPatchGeneral(int x, int y, int xoffset, int yoffset, const byte *tranmap, byte *xlat, patch_t *patch, crop_t crop);
+void V_DrawPatchTranslated(int x, int y, patch_t *patch, byte* xlat);
+void V_DrawPatchTranslatedTwice(int x, int y, patch_t *patch, byte* xlat, byte* xlat2);
+void V_DrawPatchFullScreen(patch_t *patch);
 
 // [Nugget] /=================================================================
+
+void V_DrawPatchAll(
+    int x,
+    int y,
+    int xoffset,
+    int yoffset,
+    crop_t crop,
+    struct patch_s *patch,
+    boolean flip,
+    const byte *xlat,
+    const byte *xlat2,
+    const byte *tranmap
+);
+
+#define V_DrawPatchTRTL2(x, y, patch, xlat, tranmap) \
+  V_DrawPatchAll(x, y, 0, 0, zero_crop, patch, false, xlat, NULL, tranmap)
+
+void V_DrawPatchShadow(
+    int x,
+    int y,
+    crop_t crop,
+    struct patch_s *patch,
+    boolean flip
+);
+
+void V_DrawPatchShadowed(
+    int x,
+    int y,
+    int xoffset,
+    int yoffset,
+    crop_t crop,
+    struct patch_s *patch,
+    boolean flip,
+    const byte *xlat,
+    const byte *xlat2,
+    const byte *tranmap
+);
+
+#define V_DrawPatchSH(x, y, patch) \
+    V_DrawPatchShadowed( \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      patch, false, NULL, NULL, NULL \
+    )
+
+#define V_DrawPatchCastCallSH(patch, tranmap, xlat, flip) \
+    V_DrawPatchShadowed( \
+      160, 170, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      patch, flip, xlat, NULL, tranmap \
+    )
+
+#define V_DrawPatchCroppedSH(x, y, patch, crop) \
+    V_DrawPatchShadowed( \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), crop, \
+      patch, false, NULL, NULL, NULL \
+    )
+
+#define V_DrawPatchGeneralSH(x, y, xoffset, yoffset, tranmap, xlat, patch, crop) \
+    V_DrawPatchShadowed( \
+      x, y, xoffset, yoffset, crop, \
+      patch, false, xlat, NULL, tranmap \
+    )
+
+#define V_DrawPatchTranslatedSH(x, y, patch, xlat) \
+    V_DrawPatchShadowed( \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      patch, false, xlat, NULL, NULL \
+    )
+
+#define V_DrawPatchTranslatedTwiceSH(x, y, patch, xlat, xlat2) \
+    V_DrawPatchShadowed( \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      patch, false, xlat, xlat2, NULL \
+    )
+
+extern void (*V_ShadowRect)(int x, int y, int width, int height);
+
+#define SHADOW_REDRAW(_code_) \
+    if (hud_menu_shadows) \
+    { \
+        const boolean old_shadows = hud_menu_shadows; \
+        hud_menu_shadows = false; \
+    \
+        _code_; \
+    \
+        hud_menu_shadows = old_shadows; \
+    }
+
+// ---------------------------------------------------------------------------
 
 extern int automap_overlay_darkening;
 extern int menu_backdrop_darkening;
@@ -284,71 +359,7 @@ extern int hud_menu_shadows_filter_pct;
 void V_InitShadowTranMap(void);
 void V_ToggleShadows(const boolean on);
 
-// ---------------------------------------------------------------------------
-
-void V_DrawPatchTRTRTL(int x, int y, crop_t rect, struct patch_s *patch,
-                       byte *outr1, byte *outr2, const byte *tl);
-
-void V_DrawPatchTranslucent2(int x, int y, crop_t rect, struct patch_s *patch, boolean flipped,
-                             byte *outr1, byte *outr2, const byte *tl);
-
-#define V_DrawPatchTL2(x, y, p, tp) \
-  V_DrawPatchTranslucent2(x, y, (crop_t){0}, p, false, NULL, NULL, tp)
-
-#define V_DrawPatchFlippedTL2(x, y, p, tp) \
-  V_DrawPatchTranslucent2(x, y, (crop_t){0}, p, true, NULL, NULL, tp)
-
-#define V_DrawPatchTRTL2(x, y, p, cr, tp) \
-  V_DrawPatchTranslucent2(x, y, (crop_t){0}, p, false, cr, NULL, tp)
-
-#define V_DrawPatchTRTRTL2(x, y, c, p, cr1, cr2, tp) \
-  V_DrawPatchTranslucent2(x, y, c, p, false, cr1, cr2, tp)
-
-void V_DrawPatchShadow(int x, int y, crop_t crop, struct patch_s *const patch, boolean flipped);
-
-void V_DrawPatchShadowed(int x, int y, crop_t rect, struct patch_s *patch, boolean flipped,
-                         byte *outr1, byte *outr2, const byte *tl);
-
-#define V_DrawPatchSH(x, y, p) \
-  V_DrawPatchShadowed(x, y, (crop_t){0}, p, false, NULL, NULL, NULL)
-
-#define V_DrawPatchFlippedSH(x, y, p) \
-  V_DrawPatchShadowed(x, y, (crop_t){0}, p, true, NULL, NULL, NULL)
-
-#define V_DrawPatchTranslatedSH(x, y, p, cr) \
-  V_DrawPatchShadowed(x, y, (crop_t){0}, p, false, cr, NULL, NULL)
-
-#define V_DrawPatchTRSH(x, y, c, p, cr) \
-  V_DrawPatchShadowed(x, y, c, p, false, cr, NULL, NULL)
-
-#define V_DrawPatchTRTRSH(x, y, c, p, cr1, cr2) \
-  V_DrawPatchShadowed(x, y, c, p, false, cr1, cr2, NULL)
-
-#define V_DrawPatchTLSH(x, y, c, p, tp) \
-  V_DrawPatchShadowed(x, y, c, p, false, NULL, NULL, tp)
-
-#define V_DrawPatchTRTLSH(x, y, c, p, cr, tp) \
-  V_DrawPatchShadowed(x, y, c, p, false, cr, NULL, tp)
-
-#define V_DrawPatchTRTRTLSH(x, y, c, p, cr1, cr2, tp) \
-  V_DrawPatchShadowed(x, y, c, p, false, cr1, cr2, tp)
-
-extern void (*V_ShadowRect)(int x, int y, int width, int height);
-
-#define SHADOW_REDRAW(_code_)                     \
-  if (hud_menu_shadows)                           \
-  {                                               \
-    const boolean old_shadows = hud_menu_shadows; \
-    hud_menu_shadows = false;                     \
-                                                  \
-    _code_;                                       \
-                                                  \
-    hud_menu_shadows = old_shadows;               \
-  }
-
 // [Nugget] =================================================================/
-
-void V_DrawPatchFullScreen(struct patch_s *patch);
 
 // Draw a linear block of pixels into the view buffer.
 

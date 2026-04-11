@@ -220,7 +220,6 @@ boolean JS_GetBoolean(json_t *json)
     return yyjson_get_bool(json);
 }
 
-// [Nugget]
 boolean JS_GetBooleanValue(json_t *json, const char *string)
 {
     json_t *obj = JS_GetObject(json, string);

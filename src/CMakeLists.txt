@@ -157,7 +157,7 @@ set(NUGGETDOOM_SOURCES
     statdump.c             statdump.h
     tables.c               tables.h
     v_flextran.c           v_flextran.h
-    v_fmt.c                v_fmt.h
+    v_patch.c              v_patch.h
     v_trans.c              v_trans.h
     v_video.c              v_video.h
     w_wad.c                w_wad.h

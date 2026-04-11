@@ -22,10 +22,9 @@
 #include "m_json.h"
 #include "m_misc.h"
 #include "m_swap.h"
-#include "r_data.h"
 #include "r_defs.h"
 #include "r_tranmap.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -36,15 +35,18 @@ static hudfont_t *hudfonts;
 static boolean ParseSbarCondition(json_t *json, sbarcondition_t *out)
 {
     json_t *condition = JS_GetObject(json, "condition");
-    json_t *param = JS_GetObject(json, "param");
-    if (!JS_IsNumber(condition) || !JS_IsNumber(param))
+    if (!JS_IsNumber(condition))
     {
         return false;
     }
     out->condition = JS_GetInteger(condition);
-    out->param = JS_GetInteger(param);
-
-    out->param2 = JS_GetIntegerValue(json, "param2"); // optional parameter
+    out->param = JS_GetIntegerValue(json, "param");
+    out->param2 = JS_GetIntegerValue(json, "param2");
+    const char *params = JS_GetStringValue(json, "param_string");
+    if (params)
+    {
+        out->param_string = M_StringDuplicate(params);
+    }
     return true;
 }
 
@@ -66,7 +68,7 @@ static boolean ParseSbarFrame(json_t *json, sbarframe_t *out)
     return true;
 }
 
-static const char *sbw_names[] =
+const char *sbw_names[] =
 {
     [sbw_monsec] = "stat_totals",
     [sbw_time] = "time",
@@ -83,16 +85,24 @@ static const char *sbw_names[] =
     [sbw_powers] = "powerup_timers", // [Nugget] Powerup timers
 };
 
+int sbw_names_len = arrlen(sbw_names);
+
 static crop_t ParseCrop(json_t *json)
 {
-    crop_t crop = {
-        .topoffset = JS_GetIntegerValue(json, "topoffset"),
-        .leftoffset = JS_GetIntegerValue(json, "leftoffset"),
-        .midoffset = JS_GetIntegerValue(json, "midoffset"),
-        .width = JS_GetIntegerValue(json, "width"),
-        .height = JS_GetIntegerValue(json, "height")
-    };
-    return crop;
+    json_t *js_crop = JS_GetObject(json, "crop");
+    if (js_crop)
+    {
+        crop_t crop = {
+            .top = JS_GetIntegerValue(js_crop, "top"),
+            .left = JS_GetIntegerValue(js_crop, "left"),
+            .center = JS_GetBooleanValue(js_crop, "center"),
+            .width = JS_GetIntegerValue(js_crop, "width"),
+            .height = JS_GetIntegerValue(js_crop, "height")
+        };
+        return crop;
+    }
+
+    return zero_crop;
 }
 
 static boolean ParseSbarElem(json_t *json, sbarelem_t *out);
@@ -113,16 +123,16 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
     out->y_pos = JS_GetInteger(y_pos);
     out->alignment = JS_GetInteger(alignment);
 
-    const char *tranmap = JS_GetStringValue(json, "tranmap");
-    if (tranmap)
-    {
-        out->tranmap = W_CacheLumpName(tranmap, PU_STATIC);
-    }
-
     json_t *translucency = JS_GetObject(json, "translucency");
     if (JS_IsBoolean(translucency) && JS_GetBoolean(translucency))
     {
         out->tranmap = main_tranmap;
+    }
+
+    const char *tranmap = JS_GetStringValue(json, "tranmap");
+    if (tranmap)
+    {
+        out->tranmap = W_CacheLumpName(tranmap, PU_STATIC);
     }
 
     const char *translation = JS_GetStringValue(json, "translation");
@@ -564,7 +574,7 @@ static boolean ParseStatusBar(json_t *json, statusbar_t *out)
 
 sbardef_t *ST_ParseSbarDef(void)
 {
-    json_t *json = JS_Open("SBARDEF", "statusbar", (version_t){1, 1, 0});
+    json_t *json = JS_Open("SBARDEF", "statusbar", (version_t){1, 1, 1});
     if (json == NULL)
     {
         return NULL;
@@ -576,6 +586,11 @@ sbardef_t *ST_ParseSbarDef(void)
     if (v.major == 1 && v.minor < 1)
     {
         load_defaults = true;
+    }
+
+    if (v.major == 1 && v.minor == 1 && v.revision == 0)
+    {
+        I_Error("SBARDEF v1.1.0 is not supported. Update your HUD mod.");
     }
 
     // [Nugget] /-------------------------------------------------------------
@@ -682,7 +697,7 @@ sbardef_t *ST_ParseSbarDef(void)
     statusbar_t *statusbar;
     array_foreach(statusbar, out->statusbars)
     {
-        json_t *js_widgets = JS_GetObject(data, "widgets");
+        json_t *js_widgets = JS_GetObject(data, "components");
         json_t *js_widget = NULL;
 
         JS_ArrayForEach(js_widget, js_widgets)
@@ -690,7 +705,6 @@ sbardef_t *ST_ParseSbarDef(void)
             sbarelem_t elem = {0};
             if (ParseSbarElem(js_widget, &elem))
             {
-                elem.y_pos += (statusbar->height - SCREENHEIGHT);
                 array_push(statusbar->children, elem);
             }
         }
