@@ -4859,7 +4859,7 @@ void G_ReloadDefaults(boolean keep_demover)
 
   if (old_strictmode != strictmode)
   {
-    P_SegLengths(true); // Fake contrast
+    P_InitFakeContrast();
 
     old_strictmode = strictmode;
   }

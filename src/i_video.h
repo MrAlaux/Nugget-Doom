@@ -83,6 +83,9 @@ int I_GetNumPalettes(void);
 void I_DeferredInitPalettes(void);
 void I_GetPalette(byte *colors, const byte palette_index);
 
+boolean I_ResetPalettePending(void);
+void I_DeferredResetPalette(void);
+
 void I_DeferredInitColor(void);
 
 // [Nugget] -----------------------------------------------------------------/

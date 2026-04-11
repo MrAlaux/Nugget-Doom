@@ -349,7 +349,7 @@ void V_SetCurrentColormap(const int colormap_index)
 boolean hud_menu_shadows;
 int hud_menu_shadows_filter_pct;
 
-byte *shadow_tranmap = NULL;
+const byte *shadow_tranmap = NULL;
 
 static boolean drawshadows = true;
 
@@ -1261,7 +1261,7 @@ void V_DrawPatchTRTR(int x, int y, crop_t crop, patch_t *patch,
 // [Nugget] /-----------------------------------------------------------------
 
 void V_DrawPatchTRTRTL(int x, int y, crop_t crop, struct patch_s *const patch,
-                       byte *const outr1, byte *const outr2, byte *const tl)
+                       byte *const outr1, byte *const outr2, const byte *const tl)
 {
     x += video.deltaw;
 
@@ -1274,7 +1274,7 @@ void V_DrawPatchTRTRTL(int x, int y, crop_t crop, struct patch_s *const patch,
 }
 
 void V_DrawPatchTranslucent2(int x, int y, crop_t crop, struct patch_s *const patch, boolean flipped,
-                             byte *const outr1, byte *const outr2, byte *const tl)
+                             byte *const outr1, byte *const outr2, const byte *const tl)
 {
     x += video.deltaw;
 
@@ -1304,7 +1304,7 @@ void V_DrawPatchShadow(int x, int y, crop_t crop, struct patch_s *const patch, b
 }
 
 void V_DrawPatchShadowed(int x, int y, crop_t crop, struct patch_s *const patch, boolean flipped,
-                         byte *const outr1, byte *const outr2, byte *const tl)
+                         byte *const outr1, byte *const outr2, const byte *const tl)
 {
     V_DrawPatchShadow(x, y, crop, patch, flipped);
 

@@ -287,10 +287,10 @@ void V_ToggleShadows(const boolean on);
 // ---------------------------------------------------------------------------
 
 void V_DrawPatchTRTRTL(int x, int y, crop_t rect, struct patch_s *patch,
-                       byte *outr1, byte *outr2, byte *tl);
+                       byte *outr1, byte *outr2, const byte *tl);
 
 void V_DrawPatchTranslucent2(int x, int y, crop_t rect, struct patch_s *patch, boolean flipped,
-                             byte *outr1, byte *outr2, byte *tl);
+                             byte *outr1, byte *outr2, const byte *tl);
 
 #define V_DrawPatchTL2(x, y, p, tp) \
   V_DrawPatchTranslucent2(x, y, (crop_t){0}, p, false, NULL, NULL, tp)
@@ -307,7 +307,7 @@ void V_DrawPatchTranslucent2(int x, int y, crop_t rect, struct patch_s *patch, b
 void V_DrawPatchShadow(int x, int y, crop_t crop, struct patch_s *const patch, boolean flipped);
 
 void V_DrawPatchShadowed(int x, int y, crop_t rect, struct patch_s *patch, boolean flipped,
-                         byte *outr1, byte *outr2, byte *tl);
+                         byte *outr1, byte *outr2, const byte *tl);
 
 #define V_DrawPatchSH(x, y, p) \
   V_DrawPatchShadowed(x, y, (crop_t){0}, p, false, NULL, NULL, NULL)

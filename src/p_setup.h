@@ -54,7 +54,9 @@ void P_SidedefInit(side_t * const sidedef);
 void P_LinedefInit(line_t * const linedef);
 void P_ProcessSideDefs(side_t *side, int i, char *bottomtexture, char *midtexture, char *toptexture);
 
-extern boolean src_ain; // [Nugget]
+// [Nugget]
+extern boolean src_ain;
+void P_InitFakeContrast(void);
 
 #endif
 

@@ -35,7 +35,7 @@ byte *R_NormalTranMap(int alpha, boolean force);
 #define GetNormalTranMap(alpha) R_NormalTranMap(alpha, false)
 
 // [Nugget]
-byte *R_GetGenericTranMap(int filter_pct);
+const byte *R_GetGenericTranMap(int filter_pct);
 void R_InitMessageFadeoutTranMaps(void);
 
 #endif

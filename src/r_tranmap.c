@@ -355,7 +355,7 @@ static byte *R_InitGenericTranMap(const int filter_pct)
 // 0% and 100% are trivial, but we'll allow them for now
 static byte *generic_tranmaps[101] = { NULL };
 
-byte *R_GetGenericTranMap(const int filter_pct)
+const byte *R_GetGenericTranMap(const int filter_pct)
 {
   byte **const tmap = &generic_tranmaps[filter_pct];
 

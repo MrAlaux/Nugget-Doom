@@ -227,7 +227,20 @@ static void InitPalettes(void)
     memcpy(*palettes, playpal, sizeof(**palettes) * 768 * 14);
   }
 
+  I_DeferredResetPalette();
   R_DeferredInitColormaps();
+}
+
+static boolean reset_palette_pending = false;
+
+boolean I_ResetPalettePending(void)
+{
+  return reset_palette_pending;
+}
+
+void I_DeferredResetPalette(void)
+{
+  reset_palette_pending = true;
 }
 
 static boolean init_color_pending = false;
@@ -246,8 +259,7 @@ static void InitColor(void)
 
     truecolor_rendering = lighting_mode >= LIGHTINGMODE_INTERPOLATED;
 
-    I_SetPalette(0);
-
+    I_DeferredResetPalette();
     R_DeferredInitColormaps();
     R_DeferredInitLightTables();
 
@@ -1318,6 +1330,8 @@ void I_GetPalette(byte *const colors, const byte palette_index)
 
 void I_SetPalette(byte palette_index) // [Nugget] Pass index
 {
+    reset_palette_pending = false;
+
     if (truecolor_rendering)
     {
         static int old_palettes, old_red, old_green, old_blue, old_gamma, old_saturation, old_contrast;
@@ -2074,9 +2088,14 @@ void I_ResetScreen(void)
 {
     resetneeded = false;
 
-    // [Nugget]
+    // [Nugget] /-------------------------------------------------------------
+
     if (init_palettes_pending) { InitPalettes(); }
     if (init_color_pending)    { InitColor(); }
+
+    I_SetPalette(0);
+
+    // [Nugget] -------------------------------------------------------------/
 
     widescreen = default_widescreen;
 
@@ -2127,9 +2146,14 @@ void I_InitGraphics(void)
     I_InitVideoParms();
     I_InitGraphicsMode(); // killough 10/98
 
-    // [Nugget]
+    // [Nugget] /-------------------------------------------------------------
+
     InitPalettes();
     InitColor();
+
+    I_SetPalette(0);
+
+    // [Nugget] -------------------------------------------------------------/
 
     ResetResolution(GetCurrentVideoHeight());
     I_UpdateHudAnchoring();

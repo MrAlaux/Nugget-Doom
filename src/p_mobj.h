@@ -416,7 +416,7 @@ typedef struct mobj_s
     int                 alttics;
 
     boolean             isvisual;
-    byte                *gentranmap;
+    const byte          *gentranmap;
     signed char         gentranmap_pct;
 } mobj_t;
 
