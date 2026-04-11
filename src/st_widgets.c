@@ -1025,6 +1025,9 @@ static const statsformatfunc_t StatsFormatFuncs[] = {
     StatsFormatFunc_Remaining, StatsFormatFunc_Count,
 };
 
+static char killchar = 'K';
+static char statscolor = '\x36'; // red
+
 static void UpdateMonSec(sbe_widget_t *widget)
 {
     ST_ClearLines(widget);
@@ -1093,9 +1096,9 @@ static void UpdateMonSec(sbe_widget_t *widget)
             _labelcolorvar_ = '0' + _labelcolor_;                                \
         }
 
-    USE_ICON(killlabel,   'K', killlabelcolor,   hudcolor_kills,   0);
-    USE_ICON(itemlabel,   'I', itemlabelcolor,   hudcolor_items,   1);
-    USE_ICON(secretlabel, 'S', secretlabelcolor, hudcolor_secrets, 2);
+    USE_ICON(killlabel,   killchar, killlabelcolor,   hudcolor_kills,   0);
+    USE_ICON(itemlabel,   'I',      itemlabelcolor,   hudcolor_items,   1);
+    USE_ICON(secretlabel, 'S',      secretlabelcolor, hudcolor_secrets, 2);
 
     #undef USE_ICON
 
@@ -1535,6 +1538,20 @@ void ST_InitWidgets(void)
     }
 
     ST_ResetMessageColors();
+
+    if (gamemission == pack_chex || gamemission == pack_chex3v)
+    {
+        killchar = 'F';
+        statscolor = '\x33'; // green
+    }
+    else if (gamemission == pack_hacx)
+    {
+        statscolor = '\x3a'; // blue2
+    }
+    else if (gamemission == pack_rekkr)
+    {
+        statscolor = '\x35'; // gold
+    }
 }
 
 void ST_ResetMessageColors(void)

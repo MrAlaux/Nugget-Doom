@@ -34,7 +34,6 @@
 #include "i_video.h"
 #include "p_mobj.h"
 #include "p_pspr.h"
-#include "p_setup.h" // P_SegLengths
 #include "r_bsp.h"
 #include "r_data.h"
 #include "r_defs.h"
@@ -60,8 +59,8 @@
 #include "m_nughud.h"
 #include "m_random.h"
 #include "p_map.h"
+#include "p_setup.h"
 #include "p_user.h"
-#include "s_sound.h"
 #include "wi_stuff.h"
 
 // Fineangles in the SCREENWIDTH wide window.
@@ -1340,8 +1339,8 @@ void R_InitLightTables (void)
     }
   }
 
-  // [Nugget]: [crispy] re-calculate fake contrast
-  P_SegLengths(true);
+  // [Nugget]
+  P_InitFakeContrast();
 
   setsizeneeded = true;
   R_DeferredInitDistLightTables(); // [Nugget] Radial fog
@@ -1512,8 +1511,6 @@ void R_ExecuteSetViewSize (void)
 
   for (i=0 ; i<viewwidth ; i++)
     {
-      fixed_t cosadj = abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
-      distscale[i] = FixedDiv(FRACUNIT,cosadj);
       // thing clipping
       screenheightarray[i] = viewheight;
     }
@@ -2382,9 +2379,6 @@ void R_BindRenderVariables(void)
 
   M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
              "Translucency for some things");
-  M_BindNum("tran_filter_pct", &tranmap_alpha, NULL,
-            66, 0, 100, ss_none, wad_yes,
-            "Percent of foreground/background translucency mix");
 
   M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
              "Randomly mirrored death animations");

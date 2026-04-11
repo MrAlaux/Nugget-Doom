@@ -25,12 +25,14 @@
 #ifndef __R_TRANMAP__
 #define __R_TRANMAP__
 
-extern byte *main_tranmap;
-extern byte *tranmap;
+extern const byte *tranmap;
+extern const byte *main_tranmap;
+extern const byte *main_addimap;
 
 // killough 3/6/98: translucency initialization
-void R_InitTranMap(boolean progress);
-byte *R_NormalTranMap(int alpha, boolean progress, boolean force);
+void R_InitTranMap(void);
+byte *R_NormalTranMap(int alpha, boolean force);
+#define GetNormalTranMap(alpha) R_NormalTranMap(alpha, false)
 
 // [Nugget]
 byte *R_GetGenericTranMap(int filter_pct);

@@ -276,6 +276,7 @@ static statusbar_t *statusbar;
 
 static int st_cmd_x, st_cmd_y;
 
+hud_anchoring_t hud_anchoring;
 int st_wide_shift;
 
 static patch_t **facepatches = NULL;
@@ -1554,7 +1555,7 @@ static boolean draw_shadow = false; // [Nugget] HUD/menu shadows
 
 static void DrawPatchEx(int x, int y, crop_t crop, int maxheight,
                         sbaralignment_t alignment, patch_t *patch,
-                        crange_idx_e cr, crange_idx_e cr2, byte *tl)
+                        crange_idx_e cr, crange_idx_e cr2, const byte *tl)
 {
     if (!patch)
     {
@@ -1721,9 +1722,9 @@ static void DrawGlyphLine(int x, int y, sbarelem_t *elem, widgetline_t *line,
     if (glyph)
     {
         // [Nugget] Message fadeout
-        byte *const tl = (!elem->tranmap && line->tran_pct)
-                         ? R_GetGenericTranMap(line->tran_pct)
-                         : elem->tranmap;
+        const byte *const tl = (!elem->tranmap && line->tran_pct)
+                             ? R_GetGenericTranMap(line->tran_pct)
+                             : elem->tranmap;
 
         // [Nugget] Message flash
         DrawPatchEx(x + line->xoffset, y, (crop_t){0}, font->maxheight,
@@ -2070,7 +2071,8 @@ static void DrawBackground(const char *name)
 
             V_TileBlock64(ST_Y, video.unscaledw, ST_HEIGHT, flat);
 
-            if (screenblocks == 10)
+            if (screenblocks == 10
+                || (automapactive && automapoverlay == AM_OVERLAY_OFF))
             {
                 patch_t *patch = V_CachePatchName("brdr_b", PU_CACHE);
                 for (int x = 0; x < video.unscaledw; x += 8)
@@ -2107,7 +2109,8 @@ static void DrawStatusBar(void)
 {
     player_t *player = &players[displayplayer];
 
-    if (!statusbar->fullscreenrender)
+    if (screenblocks <= 10
+        || (automapactive && automapoverlay == AM_OVERLAY_OFF))
     {
         DrawBackground(statusbar->fillflat);
     }
@@ -2271,7 +2274,7 @@ boolean ST_Responder(event_t *ev)
     }
 }
 
-boolean palette_changes = true;
+pal_change_t palette_changes = PAL_CHANGE_ON;
 
 static void DoPaletteStuff(player_t *player)
 {
@@ -2295,8 +2298,9 @@ static void DoPaletteStuff(player_t *player)
         }
     }
 
-    // [Nugget] Disable palette tint in menus or when controlling freecam
-    if (STRICTMODE(!palette_changes || (no_menu_tint && menuactive)
+    if (STRICTMODE(palette_changes == PAL_CHANGE_OFF
+                   // [Nugget]
+                   || (no_menu_tint && menuactive)
                    || R_GetFreecamMode() == FREECAM_CAM))
     {
         palette = 0;
@@ -2314,16 +2318,21 @@ static void DoPaletteStuff(player_t *player)
         else
         {
             palette = (damagecount + 7) >> 3;
+
+            // [Nugget]
+            if (STRICTMODE(comp_unusedpals))
+            { palette = player->damagecount >> 3; }
+
             if (palette >= NUMREDPALS)
             {
-                palette = NUMREDPALS - 1 + STRICTMODE(comp_unusedpals); // [Nugget]
+                palette = NUMREDPALS - 1;
             }
-            // [crispy] tune down a bit so the menu remains legible
-            if (menuactive || paused)
+            // tune down a bit so the menu remains legible
+            if (menuactive || paused || STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
             {
-                palette >>= 1;
+                palette /= 2;
             }
-            palette += STARTREDPALS - STRICTMODE(comp_unusedpals); // [Nugget]
+            palette += STARTREDPALS;
 
             // [Nugget] Smooth palette tinting
             if (I_SmoothPaletteTinting())
@@ -2341,11 +2350,20 @@ static void DoPaletteStuff(player_t *player)
     else if (player->bonuscount)
     {
         palette = (player->bonuscount + 7) >> 3;
+
+        // [Nugget]
+        if (STRICTMODE(comp_unusedpals))
+        { palette = player->bonuscount >> 3; }
+
         if (palette >= NUMBONUSPALS)
         {
-            palette = NUMBONUSPALS - 1 + STRICTMODE(comp_unusedpals); // [Nugget]
+            palette = NUMBONUSPALS - 1;
         }
-        palette += STARTBONUSPALS - STRICTMODE(comp_unusedpals); // [Nugget]
+        if (STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
+        {
+            palette /= 2;
+        }
+        palette += STARTBONUSPALS;
 
         // [Nugget] Smooth palette tinting
         if (I_SmoothPaletteTinting())
@@ -4054,8 +4072,9 @@ void ST_BindSTSVariables(void)
              true, ss_stat, wad_yes,
              "Replace second-to-last HUD with NUGHUD");
 
-  M_BindNum("st_wide_shift", &st_wide_shift,
-            NULL, -1, -1, UL, ss_stat, wad_no, "HUD widescreen shift (-1 = Default)");
+  M_BindNum("hud_anchoring", &hud_anchoring, NULL, HUD_ANCHORING_16_9,
+            HUD_ANCHORING_WIDE, HUD_ANCHORING_21_9, ss_stat, wad_no,
+            "HUD anchoring (0 = Wide; 1 = 4:3; 2 = 16:9; 3 = 21:9)");
   M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
              false, ss_stat, wad_yes, "Colored numbers on the status bar");
   M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,

@@ -935,7 +935,7 @@ void P_PlayerThink (player_t* player)
 
 	if ((newweapon != wp_plasma && newweapon != wp_bfg)
 	    || (gamemode != shareware) )
-	  player->nextweapon = player->pendingweapon = newweapon;
+	  player->pendingweapon = newweapon;
     }
 
   // check for use
@@ -1029,12 +1029,18 @@ void P_PlayerThink (player_t* player)
   // But white flashes occurred when invulnerability wore off.
 
   // [Nugget]: [crispy] A11Y
-  if (STRICTMODE(!a11y_invul_colormap))
+  if (STRICTMODE(!a11y_invul_colormap) && player->powers[pw_invulnerability])
+  {
+    player->fixedcolormap = 1;
+  }
+  else
+
+  if (STRICTMODE(palette_changes == PAL_CHANGE_OFF))
   {
     if (player->powers[pw_invulnerability] || player->powers[pw_infrared])
-    { player->fixedcolormap = 1; }
+      player->fixedcolormap = 1;
     else
-    { player->fixedcolormap = 0; }
+      player->fixedcolormap = 0;
   }
   else
   player->fixedcolormap = 

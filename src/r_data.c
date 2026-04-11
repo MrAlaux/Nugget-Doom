@@ -623,6 +623,11 @@ void R_InitTextures (void)
     {
       strncpy (name,name_p+i*8, 8);
       patchlookup[i] = W_CheckNumForName(name);
+
+      // [EB] some wads use the texture namespace but then still use those in pnames
+      if (patchlookup[i] == -1)
+        patchlookup[i] = (W_CheckNumForName)(name, ns_textures);
+
       if (patchlookup[i] == -1)
         {
           // killough 4/17/98:
@@ -703,27 +708,13 @@ void R_InitTextures (void)
   textureheight = Z_Malloc(numtextures*sizeof*textureheight, PU_STATIC, 0);
   texturebrightmap = Z_Malloc (numtextures * sizeof(*texturebrightmap), PU_STATIC, 0);
 
-  {  // Really complex printing shit...
-    int temp1 = W_GetNumForName("S_START");
-    int temp2 = W_GetNumForName("S_END") - 1;
-
-    // 1/18/98 killough:  reduce the number of initialization dots
-    // and make more accurate
-
-    int temp3 = 8+(temp2-temp1+255)/128 + (numtextures+255)/128;  // killough
-    I_PutChar(VB_INFO, '[');
-    for (i = 0; i < temp3; i++)
-      I_PutChar(VB_INFO, ' ');
-    I_PutChar(VB_INFO, ']');
-    for (i = 0; i < temp3; i++)
-      I_PutChar(VB_INFO, '\x8');
-  }
+  // Complex printing shit factored out
+  M_ProgressBarStart(numtextures, __func__);
 
   // TEXTURE1 & TEXTURE2 only. TX_ markers parsed below.
   for (i=0 ; i<numtextures1 + numtextures2 ; i++, directory++)
     {
-      if (!(i&127))          // killough
-        I_PutChar(VB_INFO, '.');
+      M_ProgressBarMove(i); // killough
 
       if (i == numtextures1)
         {
@@ -786,10 +777,7 @@ void R_InitTextures (void)
   {
     for (i = (numtextures1 + numtextures2), k = 0; i < numtextures; i++, k++)
     {
-      if (!(i&127))
-      {
-        I_PutChar(VB_INFO, '.');
-      }
+      M_ProgressBarMove(i);
 
       int tx_lump = first_tx + k;
       texture = textures[i] = Z_Malloc(sizeof(texture_t), PU_STATIC, 0);
@@ -814,6 +802,8 @@ void R_InitTextures (void)
       RegisterTexture(texture, i);
     }
   }
+
+  M_ProgressBarEnd();
 
   Z_Free(patchlookup);         // killough
 
@@ -906,10 +896,11 @@ void R_InitSpriteLumps(void)
   // [Nugget]
   spriteheight = Z_Malloc(numspritelumps * sizeof(*spriteheight), PU_STATIC, 0);
 
+  M_ProgressBarStart(numspritelumps, __func__);
+
   for (i=0 ; i< numspritelumps ; i++)
     {
-      if (!(i&127))            // killough
-        I_PutChar(VB_INFO, '.');
+      M_ProgressBarMove(i); // killough
 
       patch = V_CachePatchNum(firstspritelump+i, PU_CACHE);
       spritewidth[i] = SHORT(patch->width)<<FRACBITS;
@@ -919,6 +910,8 @@ void R_InitSpriteLumps(void)
       // [Nugget]
       spriteheight[i] = SHORT(patch->height) << FRACBITS;
     }
+
+  M_ProgressBarEnd();
 }
 
 //
@@ -1325,7 +1318,7 @@ void R_InitData(void)
   R_InitFlatBrightmaps();
   R_InitTextures();
   R_InitSpriteLumps();
-  R_InitTranMap(true);                  // killough 2/21/98, 3/6/98
+  R_InitTranMap();                      // killough 2/21/98, 3/6/98
   R_InitColormaps();                    // killough 3/20/98
 
   R_InitSkyDefs();
@@ -1381,13 +1374,29 @@ int R_FlatNumForName(const char *name)    // killough -- const added
   if (i == NO_TEXTURE)
   {
     I_Printf(VB_WARNING, "R_FlatNumForName: %.8s not found", name);
-    i = (W_CheckNumForName)("-NO_TEX-", ns_flats); // highlight missing flats
-    if (i == NO_TEXTURE)
-    {
-      I_Error("Could not find '-NO_TEX-' lump");
-    }
+    return i;
   }
   return i - firstflat;
+}
+
+byte *R_MissingFlat(void)
+{
+    static byte *buffer = NULL;
+
+    if (buffer == NULL)
+    {
+        const byte c1 = colrngs[CR_PURPLE][v_lightest_color];
+        const byte c2 = v_darkest_color;
+
+        buffer = Z_Malloc(FLATSIZE, PU_LEVEL, (void **)&buffer);
+
+        for (int i = 0; i < FLATSIZE; i++)
+        {
+            buffer[i] = ((i & 16) == 16) != ((i & 1024) == 1024) ? c1 : c2;
+        }
+    }
+
+    return buffer;
 }
 
 //

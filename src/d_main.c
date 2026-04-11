@@ -322,6 +322,12 @@ void D_Display (void)
         I_DynamicResolution();
     }
 
+  // [Nugget] True color: brought from below
+  // clean up border stuff
+  if ((gamestate != oldgamestate && gamestate != GS_LEVEL)
+      || I_ResetPalettePending())
+    I_SetPalette (0); // [Nugget] Pass index
+
   // [Nugget] True color
   if (R_InitColormapsPending())
   { R_InitColormaps(); }
@@ -343,11 +349,6 @@ void D_Display (void)
 
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
-
-  // [Nugget] True color: brought from below
-  // clean up border stuff
-  if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-    I_SetPalette (0); // [Nugget] Pass index
 
   switch (gamestate)                // do buffered drawing
     {
@@ -2589,7 +2590,7 @@ void D_DoomMain(void)
   I_Printf(VB_INFO, "M_Init: Init miscellaneous info.");
   M_Init();
 
-  I_Printf(VB_INFO, "R_Init: Init DOOM refresh daemon - ");
+  I_Printf(VB_INFO, "R_Init: Init DOOM refresh daemon.");
   R_Init();
 
   I_Printf(VB_INFO, "P_Init: Init Playloop state.");
@@ -2919,7 +2920,8 @@ void D_BindMiscVariables(void)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  BIND_BOOL_GENERAL(palette_changes, true, "Palette changes when taking damage or picking up items");
+  BIND_NUM_GENERAL(palette_changes, PAL_CHANGE_ON, PAL_CHANGE_OFF, PAL_CHANGE_REDUCED,
+    "Palette changes when taking damage or picking up items (0 = Off; 1 = On; 2 = Reduced)");
   BIND_NUM_GENERAL(organize_savefiles, -1, -1, 1,
     "Organize save files");
   M_BindStr("net_player_name", &net_player_name, DEFAULT_PLAYER_NAME, wad_no,

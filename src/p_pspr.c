@@ -165,8 +165,7 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
           psp->sx2 = psp->sx;
           psp->sy2 = psp->sy;
 
-          // [Nugget] --------------------------------------------------------
-
+          // [Nugget]
           if (STRICTMODE(sx_fix))
           {
             // Subtract 1 pixel for consistency
@@ -232,9 +231,10 @@ static void P_BringUpWeapon(player_t *player)
     psp->sy2 = psp->oldsy2 = psp->sy;
   }
 
+  psp->sxf = psp->syf = 0;
+
   // [Nugget]
   psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
-  psp->syf = 0;
   psp->dy = 0; // [crispy] squat down weapon sprite
   psp->wix = psp->wiy = 0; // Reset offsets for weapon inertia
 
@@ -334,7 +334,7 @@ int P_SwitchWeapon(player_t *player)
   int newweapon = currentweapon;
   int i = NUMWEAPONS+1;   // killough 5/2/98
 
-  G_NextWeaponReset();
+  G_NextWeaponReset(currentweapon);
 
   // [XA] use fixed behavior for mbf21. no need
   // for a discrete compat option for this, as
@@ -696,9 +696,9 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
   else
     player->attackdown = false;
 
-  // [Nugget]
-  psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
-  psp->syf = 0;
+  psp->sxf = psp->syf = 0;
+
+  if (STRICTMODE(sx_fix)) { psp->sxf = -(1<<FRACBITS); } // [Nugget]
 
   P_ApplyBobbing(&psp->sx, &psp->sy, player->bob);
 
@@ -1634,6 +1634,8 @@ void P_NuggetResetWeaponInertia(void)
 
 // [Nugget] Moved weapon-alignment macros above
 
+boolean psp_interp;
+
 void P_MovePsprites(player_t *player)
 {
   pspdef_t *psp = player->psprites;
@@ -1692,8 +1694,14 @@ void P_MovePsprites(player_t *player)
     else if (center_weapon_strict) // [Nugget] Removed `uncapped` check
     {
       // [FG] don't center during lowering and raising states
-      if (psp->state->misc1 || player->switching)
+      if ((psp->state->misc1 && center_weapon_strict != WEAPON_BOBBING) ||
+          player->switching)
       {
+      }
+      // [FG] not attacking means idle
+      else if (!player->attackdown || center_weapon_strict == WEAPON_BOBBING)
+      {
+        // [Nugget] Do nothing; `P_NuggetBobbing()` handled this already
       }
       // [FG] center the weapon sprite horizontally and push up vertically
       else if (player->attackdown && center_weapon_strict & WEAPON_CENTERED) // [Nugget] Horizontal weapon centering
@@ -1704,6 +1712,27 @@ void P_MovePsprites(player_t *player)
       }
     }
   }
+
+  static spritenum_t oldsprite = -1;
+  static int oldframe = -1;
+  static fixed_t oldsxf = -1, oldsyf = -1;
+
+  spritenum_t sprite = -1;
+  int frame = -1;
+
+  if (psp->state)
+  {
+    sprite = psp->state->sprite;
+    frame = psp->state->frame & FF_FRAMEMASK;
+  }
+
+  psp_interp = !((oldsprite != sprite || oldframe != frame) &&
+                 (oldsxf != psp->sxf || oldsyf != psp->syf));
+
+  oldsprite = sprite;
+  oldframe = frame;
+  oldsxf = psp->sxf;
+  oldsyf = psp->syf;
 
   // [Nugget]: [crispy] squat down weapon sprite a bit after hitting the ground
   if (psp->dy)
@@ -1720,10 +1749,10 @@ void P_MovePsprites(player_t *player)
   player->psprites[ps_flash].sy2 = player->psprites[ps_weapon].sy2;
   player->psprites[ps_flash].oldsx2 = player->psprites[ps_weapon].oldsx2;
   player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
+  player->psprites[ps_flash].sxf = player->psprites[ps_weapon].sxf;
+  player->psprites[ps_flash].syf = player->psprites[ps_weapon].syf;
 
   // [Nugget]
-  player->psprites[ps_flash].sxf    = player->psprites[ps_weapon].sxf;
-  player->psprites[ps_flash].syf    = player->psprites[ps_weapon].syf;
   player->psprites[ps_flash].dy     = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].wix    = player->psprites[ps_weapon].wix;
   player->psprites[ps_flash].oldwix = player->psprites[ps_weapon].oldwix;

@@ -673,6 +673,8 @@ static void saveg_read_player_t(player_t *str)
     }
 
     str->nextweapon = str->readyweapon;
+
+    str->switching = weapswitch_none;
 }
 
 static void saveg_read_ceiling_t(ceiling_t *str)
@@ -1152,12 +1154,12 @@ void P_UnArchiveWorld(void)
 
         // [crispy] add overflow guard for the flattranslation[] array
         if (floorpic >= 0 && floorpic < numflats
-            && W_LumpLength(firstflat + floorpic) >= 64 * 64)
+            && W_LumpLength(firstflat + floorpic) >= FLATSIZE)
         {
             sec->floorpic = floorpic;
         }
         if (ceilingpic >= 0 && ceilingpic < numflats
-            && W_LumpLength(firstflat + ceilingpic) >= 64 * 64)
+            && W_LumpLength(firstflat + ceilingpic) >= FLATSIZE)
         {
             sec->ceilingpic = ceilingpic;
         }
@@ -1316,6 +1318,12 @@ void P_UnArchiveThinkers(void)
 
         mobj->thinker.function.p1 = P_MobjThinker;
         P_AddThinker(&mobj->thinker);
+
+        // pre Woof 16.0.0 hack
+        if (mobj->type == MT_MUSICSOURCE)
+        {
+            mobj->args[0] = mobj->health - 1000;
+        }
     }
 
     // killough 2/14/98: adjust target and tracer fields, plus

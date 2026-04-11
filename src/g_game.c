@@ -45,6 +45,7 @@
 #include "g_rewind.h"
 #include "g_umapinfo.h"
 #include "hu_command.h"
+#include "hu_crosshair.h"
 #include "hu_obituary.h"
 #include "i_exit.h"
 #include "i_gamepad.h"
@@ -1230,7 +1231,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
       cmd->buttons |= BT_CHANGE;
       cmd->buttons |= newweapon<<BT_WEAPONSHIFT;
       if (!nextweapon_cmd)
-        G_NextWeaponReset();
+        G_NextWeaponReset(newweapon);
     }
 
     WS_UpdateStateTic();
@@ -2487,7 +2488,6 @@ static void G_DoWorldDone(void)
   P_ArchiveDirtyArraysCurrentLevel();
 
   idmusnum = -1;             //jff 3/17/98 allow new level's music to be loaded
-  musinfo.from_savegame = false;
   gamestate = GS_LEVEL;
   gameepisode = wminfo.nextep + 1;
   gamemap = wminfo.next+1;
@@ -3414,7 +3414,6 @@ static boolean DoLoadGame(boolean do_load_autosave)
           musinfo.lastmapthing = NULL;
           musinfo.tics = 0;
           musinfo.current_item = lumpnum;
-          musinfo.from_savegame = true;
           S_ChangeMusInfoMusic(lumpnum, true);
       }
   }
@@ -3621,8 +3620,9 @@ screenshotpalette_t screenshot_palette; // [Nugget]
 
 void G_CleanScreenshot(void)
 {
-  int old_screenblocks;
-  boolean old_hide_weapon;
+  const int old_screenblocks = screenblocks;
+  const int old_hud_crosshair = hud_crosshair;
+  const boolean old_hide_weapon = hide_weapon;
 
   if (!(screenshot_palette & SHOTPAL_CLEAN)) // [Nugget]
     ST_ResetPalette();
@@ -3630,13 +3630,15 @@ void G_CleanScreenshot(void)
   if (gamestate != GS_LEVEL)
       return;
 
-  old_screenblocks = screenblocks;
-  old_hide_weapon = hide_weapon;
+  hud_crosshair = 0;
   hide_weapon = true;
+
   R_SetViewSize(11);
   R_ExecuteSetViewSize();
   R_RenderPlayerView(&players[displayplayer]);
   R_SetViewSize(old_screenblocks);
+
+  hud_crosshair = old_hud_crosshair;
   hide_weapon = old_hide_weapon;
 }
 
@@ -4415,7 +4417,6 @@ void G_DeferedInitNew(skill_t skill, int episode, int map)
   d_episode = episode;
   d_map = map;
   gameaction = ga_newgame;
-  musinfo.from_savegame = false;
 
   if (demorecording)
   {

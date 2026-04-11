@@ -1530,7 +1530,7 @@ typedef struct
     int scale; // Sprite scaling: ZDoom DeHackEd scale
 
     // [FG] Obituaries
-    char *obituary, *obituary_melee;
+    char *obituary, *obituary_melee, *obituary_self;
 } mobjinfo_t;
 
 #define NO_ALTSPEED -1

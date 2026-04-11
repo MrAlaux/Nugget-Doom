@@ -57,6 +57,7 @@ void R_PrecacheLevel (void);
 // Floor/ceiling opaque texture tiles,
 // lookup by name. For animation?
 int R_FlatNumForName (const char* name);   // killough -- const added
+byte *R_MissingFlat(void);
 
 // Called by P_Ticker for switches and animations,
 // returns the texture number for the texture name.
@@ -72,9 +73,6 @@ void R_InvulMode(void);
 boolean R_IsPatchLump (const int lump);
 
 extern int numflats;
-
-
-extern int32_t tranmap_alpha;
 
 typedef enum
 {

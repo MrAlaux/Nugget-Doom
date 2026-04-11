@@ -1223,7 +1223,8 @@ void V_DrawPatchTranslated(int x, int y, patch_t *patch, byte *outr)
     V_DrawPatchTR(x, y, (crop_t){0}, patch, outr);
 }
 
-void V_DrawPatchTL(int x, int y, crop_t crop, struct patch_s *patch, byte *tl)
+void V_DrawPatchTL(int x, int y, crop_t crop, struct patch_s *patch,
+                   const byte *tl)
 {
     x += video.deltaw;
 
@@ -1234,7 +1235,7 @@ void V_DrawPatchTL(int x, int y, crop_t crop, struct patch_s *patch, byte *tl)
 }
 
 void V_DrawPatchTRTL(int x, int y, crop_t crop, struct patch_s *patch,
-                     byte *outr, byte *tl)
+                     byte *outr, const byte *tl)
 {
     x += video.deltaw;
 

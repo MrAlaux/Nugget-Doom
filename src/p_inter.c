@@ -947,8 +947,7 @@ static void WatchKill(player_t* player, mobj_t* target)
 
 boolean tossdrop; // [Nugget]
 
-static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
-                       mobj_t *inflictor) // [Nugget] Receive inflictor
+static void P_KillMobj(mobj_t *source, mobj_t *inflictor, mobj_t *target, method_t mod)
 {
   mobjtype_t item;
   mobj_t     *mo;
@@ -967,8 +966,10 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
   if (source && source->player)
     {
       // count for intermission
+#ifdef MBF_STRICT
       // killough 7/20/98: don't count friends
       if (!(target->flags & MF_FRIEND))
+#endif
 	if (target->flags & MF_COUNTKILL)
 	  WatchKill(source->player, target);
       if (target->player)
@@ -979,8 +980,10 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
         {
           // count all monster deaths,
           // even those caused by other monsters
+#ifdef MBF_STRICT
 	  // killough 7/20/98: don't count friends
 	  if (!(target->flags & MF_FRIEND))
+#endif
 	    WatchKill(players, target);
         }
 #ifndef MBF_STRICT
@@ -1054,7 +1057,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
 	if (!demoplayback) // killough 11/98: don't switch out in demos, though
 	  AM_Stop();    // don't die in auto map; switch view prior to dying
 
-      HU_Obituary(target, source, mod);
+      HU_Obituary(target, inflictor, source, mod);
     }
 
   if (target->info->xdeathstate
@@ -1275,7 +1278,7 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
   else
   if (target->health <= 0)
     {
-      P_KillMobj(source, target, mod, inflictor); // [Nugget] Pass inflictor
+      P_KillMobj(source, inflictor, target, mod);
       return;
     }
 

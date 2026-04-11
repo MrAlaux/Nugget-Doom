@@ -357,6 +357,7 @@ enum
     str_curve,
     str_center_weapon,
     str_screensize,
+    str_hud_anchoring,
     str_show_widgets,
     str_show_adv_widgets,
     str_stats_format,
@@ -396,6 +397,7 @@ enum
     str_widescreen,
     // [Nugget] Removed `str_bobbing_pct`
     str_screen_melt,
+    str_palette_changes,
     str_invul_mode,
     str_skill,
     str_freelook,
@@ -2155,8 +2157,10 @@ static void SizeDisplayAlt(void)
 }
 
 // [Nugget] Minimap
-void MoveMinimap(void)
+static void UpdateHudAnchoring(void)
 {
+    I_UpdateHudAnchoring();
+
     if (automapactive == AM_MINI) { AM_Start(); }
 }
 
@@ -2164,6 +2168,10 @@ static void RefreshSolidBackground(void)
 {
     ST_refreshBackground(); // [Nugget] NUGHUD
 }
+
+static const char *hud_anchoring_strings[] = {
+    "Wide", "4:3", "16:9", "21:9"
+};
 
 #define H_X_THRM8 (M_X_THRM8 - 14)
 #define H_X       (M_X - 14)
@@ -2178,8 +2186,8 @@ static setup_menu_t stat_settings1[] = {
     // [Nugget] NUGHUD
     {"Use NUGHUD", S_ONOFF, H_X, M_SPC, {"use_nughud"}},
 
-    {"Wide Shift", S_THERMO, H_X_THRM8, M_THRM_SPC, {"st_wide_shift"},
-     .append = "px", .action = MoveMinimap}, // [Nugget] Minimap
+    {"HUD Anchoring", S_CHOICE, H_X, M_SPC, {"hud_anchoring"},
+     .strings_id = str_hud_anchoring, .action = UpdateHudAnchoring}, // [Nugget]
 
     MI_GAP,
 
@@ -2195,15 +2203,9 @@ static setup_menu_t stat_settings1[] = {
     MI_END
 };
 
-void MN_UpdateWideShiftItem(boolean reset)
+void MN_UpdateHudAnchoringItem(void)
 {
-    DisableItem(!video.deltaw, stat_settings1, "st_wide_shift");
-    SetItemLimit(stat_settings1, "st_wide_shift", 0, video.deltaw);
-    if (reset || st_wide_shift == -1)
-    {
-        st_wide_shift = video.deltaw;
-    }
-    st_wide_shift = CLAMP(st_wide_shift, 0, video.deltaw);
+    DisableItem(!video.deltaw, stat_settings1, "hud_anchoring");
 }
 
 // [Nugget] NUGHUD
@@ -2326,6 +2328,12 @@ static const char *secretmessage_strings[] = {
     "Off", "On", "Count",
     "Sound only", // [Nugget]
 };
+
+// [Nugget] Minimap
+static void MoveMinimap(void)
+{
+    if (automapactive == AM_MINI) { AM_Start(); }
+}
 
 static setup_menu_t stat_settings4[] = {
     {"Announce Revealed Secrets", S_CHOICE, H_X, M_SPC, {"hud_secret_message"},
@@ -2524,8 +2532,8 @@ void MN_DrawStatusHUD(void)
 
         const int halfwidth = SHORT(patch->width) / 2;
 
-        byte *const cr = colrngs[hud_crosshair_color],
-             *const xhair_tranmap = R_GetGenericTranMap(hud_crosshair_tran_pct); // Translucent crosshair
+        byte *const cr = colrngs[hud_crosshair_color];
+        const byte *const xhair_tranmap = R_GetGenericTranMap(hud_crosshair_tran_pct); // Translucent crosshair
 
         // [Nugget] ---------------------------------------------------------/
 
@@ -3935,6 +3943,8 @@ static const char *death_use_action_strings[] = {"default", "last save",
 
 static const char *screen_melt_strings[] = {"Off", "Melt", "Crossfade", "Fizzle", "Black Fade"}; // [Nugget] More wipes
 
+static const char *palette_changes_strings[] = {"Off", "On", "Reduced"};
+
 static const char *invul_mode_strings[] = {"Vanilla", "MBF", "Gray"};
 
 static const char *endoom_strings[] = {"Off", "PWAD Only", "Always"};
@@ -3961,8 +3971,8 @@ static setup_menu_t gen_settings6[] = {
     {"Screen wipe effect", S_CHOICE | S_STRICT, OFF_CNTR_X, M_SPC,
      {"screen_melt"}, .strings_id = str_screen_melt},
 
-    {"Pain/Pickup/Powerup flashes", S_ONOFF | S_STRICT, OFF_CNTR_X, M_SPC,
-     {"palette_changes"}, .action = UpdatePaletteItems}, // [Nugget]
+    {"Pain/Pickup/Powerup flashes", S_CHOICE | S_STRICT, OFF_CNTR_X, M_SPC,
+     {"palette_changes"}, .strings_id = str_palette_changes, .action = UpdatePaletteItems}, // [Nugget]
 
     {"Invulnerability effect", S_CHOICE | S_STRICT, OFF_CNTR_X, M_SPC,
      {"invul_mode"}, .strings_id = str_invul_mode, .action = R_InvulMode},
@@ -4137,11 +4147,6 @@ void MN_DrawView(void)
 
 // Page 7: Display (1) -------------------------------------------------------
 
-static void RecalculateFakeContrast(void)
-{
-  P_SegLengths(true);
-}
-
 static const char *sprite_shadows_strings[] = {
   "Off", "Simple", "3D", NULL
 };
@@ -4175,7 +4180,7 @@ setup_menu_t display_settings1[] = {
     {"Smooth Palette Tinting",       S_ONOFF,                 N_X, M_SPC, {"smooth_palette_tinting"}, .action = I_DeferredInitPalettes},
     {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
     {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
-    {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
+    {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = P_InitFakeContrast},
     {"Screen Wipe Speed Percentage", S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
     {"Alt. Intermission Background", S_CHOICE|S_STRICT,       N_X, M_SPC, {"alt_interpic"}, .strings_id = str_alt_interpic},
 
@@ -4302,11 +4307,6 @@ static void UpdatePaletteItems(void)
 }
 
 // [Nugget] -----------------------------------------------------------------/
-
-void MN_Trans(void) // To reset translucency after setting it in menu
-{
-    R_InitTranMap(false);
-}
 
 // Setting up for the General screen. Turn on flags, set pointers,
 // locate the first item on the screen where the cursor is allowed to
@@ -5904,6 +5904,7 @@ static const char **selectstrings[] = {
     [str_curve] = curve_strings,
     [str_center_weapon] = center_weapon_strings,
     [str_screensize] = NULL,
+    [str_hud_anchoring] = hud_anchoring_strings,
     [str_show_widgets] = show_widgets_strings,
     [str_show_adv_widgets] = show_adv_widgets_strings,
     [str_stats_format] = stats_format_strings,
@@ -5938,6 +5939,7 @@ static const char **selectstrings[] = {
     [str_widescreen] = widescreen_strings,
     // [Nugget] Removed unused `bobbing_pct_strings`
     [str_screen_melt] = screen_melt_strings,
+    [str_palette_changes] = palette_changes_strings,
     [str_invul_mode] = invul_mode_strings,
     [str_skill] = skill_strings,
     [str_freelook] = free_look_strings,
