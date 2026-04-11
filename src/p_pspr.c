@@ -45,7 +45,7 @@
 #include "m_swap.h"
 #include "p_maputl.h"
 #include "r_things.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 
 // [Nugget] /=================================================================
 

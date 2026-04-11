@@ -359,26 +359,26 @@ void HU_DrawCrosshair(void)
         hlx = bar_offset - (SHORT(crosshair.patch->width) % 2) + crosshair.hlw,
         amx = bar_offset;
 
-        V_DrawPatchTranslucent2(
+        V_DrawPatchGeneral(
             crosshair.x - hlx,
             y - crosshair.hlh,
-            (crop_t) { .topoffset = crosshair.hlc },
-            crosshair.hlpatch,
-            false,
+            SHORT(crosshair.hlpatch->leftoffset),
+            SHORT(crosshair.hlpatch->topoffset),
+            xhair_tranmap,
             crosshair.cr,
-            NULL,
-            xhair_tranmap
+            crosshair.hlpatch,
+            (crop_t) { .top = crosshair.hlc }
         );
 
-        V_DrawPatchTranslucent2(
+        V_DrawPatchGeneral(
             crosshair.x + amx,
             y - crosshair.amh,
-            (crop_t) { .topoffset = crosshair.amc },
-            crosshair.ampatch,
-            false,
+            SHORT(crosshair.ampatch->leftoffset),
+            SHORT(crosshair.ampatch->topoffset),
+            xhair_tranmap,
             crosshair.cr,
-            NULL,
-            xhair_tranmap
+            crosshair.ampatch,
+            (crop_t) { .top = crosshair.amc }
         );
     }
 
