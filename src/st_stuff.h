@@ -71,7 +71,7 @@ extern enum keyblink_e st_keyorskull[3];
 // Now sensitive for scaling.
 
 //#define ST_HEIGHT 32
-extern int st_height;
+extern int st_height, st_height_screenblocks10;
 #define ST_WIDTH  SCREENWIDTH
 #define ST_Y      (SCREENHEIGHT - st_height)
 

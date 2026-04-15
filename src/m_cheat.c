@@ -22,10 +22,11 @@
 #include <string.h>
 
 #include "am_map.h"
-#include "d_deh.h" // Ty 03/27/98 - externalized strings
 #include "d_event.h"
 #include "d_player.h"
 #include "d_think.h"
+#include "deh_strings.h"
+#include "deh_misc.h"
 #include "doomdata.h"
 #include "doomdef.h"
 #include "doomstat.h"
@@ -222,7 +223,7 @@ static void cheat_idgaf(void);
 //
 //-----------------------------------------------------------------------------
 
-struct cheat_s cheat[] = {
+cheat_sequence_t cheats_table[] = {
   {"idmus",      "Change music",      always,
    {.s = cheat_mus}, -2 },
 
@@ -564,8 +565,8 @@ static void DoResurrect(void)
 
   // Fix reviving as "zombie" if god mode was already enabled
   if (plyr->mo)
-    plyr->mo->health = god_health;  // Ty 03/09/98 - deh
-  plyr->health = god_health;
+    plyr->mo->health = deh_god_mode_health;  // Ty 03/09/98 - deh
+  plyr->health = deh_god_mode_health;
 }
 
 // Resurrection cheat adapted from Crispy's IDDQD
@@ -1075,7 +1076,7 @@ static void cheat_mus(char *buf)
   if (!isdigit(buf[0]) || !isdigit(buf[1]))
     return;
 
-  displaymsg("%s", s_STSTR_MUS); // Ty 03/27/98 - externalized
+  displaymsg(DEH_String(STSTR_MUS));
   
   // First check if we have a mapinfo entry for the requested level.
   if (gamemode == commercial)
@@ -1088,7 +1089,7 @@ static void cheat_mus(char *buf)
      musnum = W_CheckNumForName(entry->music);
 
      if (musnum == -1)
-        displaymsg("%s", s_STSTR_NOMUS);
+        displaymsg(DEH_String(STSTR_NOMUS));
      else
      {
         S_ChangeMusInfoMusic(musnum, 1);
@@ -1103,7 +1104,7 @@ static void cheat_mus(char *buf)
 
       //jff 4/11/98 prevent IDMUS00 in DOOMII and IDMUS36 or greater
       if (musnum < mus_runnin || musnum >= NUMMUSIC)
-        displaymsg("%s", s_STSTR_NOMUS); // Ty 03/27/98 - externalized
+        displaymsg(DEH_String(STSTR_NOMUS));
       else
         {
           S_ChangeMusic(musnum, 1);
@@ -1116,7 +1117,7 @@ static void cheat_mus(char *buf)
 
       //jff 4/11/98 prevent IDMUS0x IDMUSx0 in DOOMI and greater than introa
       if (musnum < mus_e1m1 || musnum >= mus_runnin)
-        displaymsg("%s", s_STSTR_NOMUS); // Ty 03/27/98 - externalized
+        displaymsg(DEH_String(STSTR_NOMUS));
       else
         {
           S_ChangeMusic(musnum, 1);
@@ -1139,7 +1140,7 @@ static void cheat_choppers(void)
     plyr->powers[pw_invulnerability] = true;
 
   plyr->bonuscount += 2; // trigger evil grin now
-  displaymsg("%s", s_STSTR_CHOPPERS); // Ty 03/27/98 - externalized
+  displaymsg(DEH_String(STSTR_CHOPPERS));
 }
 
 static void cheat_god(void)
@@ -1154,13 +1155,13 @@ static void cheat_god(void)
   if (plyr->cheats & CF_GODMODE)
     {
       if (plyr->mo)
-        plyr->mo->health = god_health;  // Ty 03/09/98 - deh
-
-      plyr->health = god_health;
-      displaymsg("%s", s_STSTR_DQDON); // Ty 03/27/98 - externalized
+        plyr->mo->health = deh_god_mode_health;  // Ty 03/09/98 - deh
+          
+      plyr->health = deh_god_mode_health;
+      displaymsg(DEH_String(STSTR_DQDON));
     }
   else 
-    displaymsg("%s", s_STSTR_DQDOFF); // Ty 03/27/98 - externalized
+    displaymsg(DEH_String(STSTR_DQDOFF));
 }
 
 static void cheat_buddha(void)
@@ -1226,17 +1227,17 @@ static void cheat_health(void)
   if (!(plyr->cheats & CF_GODMODE))
   {
     if (plyr->mo)
-      plyr->mo->health = mega_health;
-    plyr->health = mega_health;
-    displaymsg("%s", s_STSTR_BEHOLDX); // Ty 03/27/98 - externalized
+      plyr->mo->health = deh_megasphere_health;
+    plyr->health = deh_megasphere_health;
+    displaymsg(DEH_String(STSTR_BEHOLDX));
   }
 }
 
 static void cheat_megaarmour(void)
 {
-  plyr->armorpoints = idfa_armor;      // Ty 03/09/98 - deh
-  plyr->armortype = idfa_armor_class;  // Ty 03/09/98 - deh
-  displaymsg("%s", s_STSTR_BEHOLDX); // Ty 03/27/98 - externalized
+  plyr->armorpoints = deh_idfa_armor;      // Ty 03/09/98 - deh
+  plyr->armortype = deh_idfa_armor_class;  // Ty 03/09/98 - deh
+  displaymsg(DEH_String(STSTR_BEHOLDX));
 }
 
 static void cheat_tst(void)
@@ -1256,9 +1257,9 @@ static void cheat_fa(void)
       plyr->backpack = true;
     }
 
-  plyr->armorpoints = idfa_armor;      // Ty 03/09/98 - deh
-  plyr->armortype = idfa_armor_class;  // Ty 03/09/98 - deh
-
+  plyr->armorpoints = deh_idfa_armor;      // Ty 03/09/98 - deh
+  plyr->armortype = deh_idfa_armor_class;  // Ty 03/09/98 - deh
+        
   // You can't own weapons that aren't in the game // phares 02/27/98
   for (i=0;i<NUMWEAPONS;i++)
     if (!(((i == wp_plasma || i == wp_bfg) && gamemode == shareware) ||
@@ -1270,7 +1271,7 @@ static void cheat_fa(void)
       plyr->ammo[i] = plyr->maxammo[i];
 
   plyr->bonuscount += 2; // trigger evil grin now
-  displaymsg("%s", s_STSTR_FAADDED);
+  displaymsg(DEH_String(STSTR_FAADDED));
 }
 
 static void cheat_k(void)
@@ -1288,7 +1289,7 @@ static void cheat_kfa(void)
 {
   cheat_k();
   cheat_fa();
-  displaymsg("%s", s_STSTR_KFAADDED);
+  displaymsg(DEH_String(STSTR_KFAADDED));
 }
 
 static void cheat_noclip(void)
@@ -1296,8 +1297,7 @@ static void cheat_noclip(void)
   // Simplified, accepting both "noclip" and "idspispopd".
   // no clipping mode cheat
 
-  displaymsg("%s", (plyr->cheats ^= CF_NOCLIP) & CF_NOCLIP ? 
-    s_STSTR_NCON : s_STSTR_NCOFF); // Ty 03/27/98 - externalized
+  displaymsg(DEH_String(((plyr->cheats ^= CF_NOCLIP) & CF_NOCLIP )? STSTR_NCON : STSTR_NCOFF));
 }
 
 // 'behold?' power-up cheats (modified for infinite duration -- killough)
@@ -1324,13 +1324,13 @@ static void cheat_pw(int pw)
       if (pw != pw_strength && !comp[comp_infcheat])
         plyr->powers[pw] = -1;      // infinite duration -- killough
     }
-  displaymsg("%s", s_STSTR_BEHOLDX); // Ty 03/27/98 - externalized
+  displaymsg(DEH_String(STSTR_BEHOLDX));
 }
 
 // 'behold' power-up menu
 static void cheat_behold(void)
 {
-  displaymsg("%s", s_STSTR_BEHOLD); // Ty 03/27/98 - externalized
+  displaymsg(DEH_String(STSTR_BEHOLD));
 }
 
 // 'clev' change-level cheat
@@ -1407,7 +1407,7 @@ static void cheat_clev(char *buf)
 
   idmusnum = -1; //jff 3/17/98 revert to normal level music on IDCLEV
 
-  displaymsg("%s", s_STSTR_CLEV); // Ty 03/27/98 - externalized
+  displaymsg(DEH_String(STSTR_CLEV));
 
   G_DeferedInitNew(gameskill, epsd, map);
 }
@@ -1793,6 +1793,11 @@ static void cheat_cycle_mobj(mobj_t **last_mobj, int *last_count,
 
       mobj = (mobj_t *) th;
 
+      if (mobj->intflags & MIF_SPAWNED_BY_ICON)
+      {
+        continue;
+      }
+
       if ((!alive || mobj->health > 0) && mobj->flags & flags)
       {
         followplayer = false;
@@ -1978,13 +1983,11 @@ static void InitCheats(void)
 
     if (!init)
     {
-        struct cheat_s *cht;
-
         init = true;
 
-        for (cht = cheat; cht->cheat; cht++)
+        for (cheat_sequence_t *cht = cheats_table; cht->sequence; cht++)
         {
-            cht->sequence_len = strlen(cht->cheat);
+            cht->sequence_len = strlen(cht->sequence);
         }
     }
 }
@@ -1992,11 +1995,11 @@ static void InitCheats(void)
 static int M_FindCheats(char key)
 {
     int rc = 0, matchedbefore = 0;
-    struct cheat_s *cht;
+    cheat_sequence_t *cht;
 
     InitCheats();
 
-    for (cht = cheat; cht->cheat; cht++)
+    for (cht = cheats_table; cht->sequence; cht++)
     {
         if (!CheatAllowed(cht->when)
             || (cht->when & not_deh && cht->deh_modified))
@@ -2010,11 +2013,11 @@ static int M_FindCheats(char key)
             // and verifying.  reset back to the beginning
             // if a key is wrong
 
-            if (key == cht->cheat[cht->chars_read])
+            if (key == cht->sequence[cht->chars_read])
             {
                 ++cht->chars_read;
             }
-            else if (key == cht->cheat[0])
+            else if (key == cht->sequence[0])
             {
                 cht->chars_read = 1;
             }
@@ -2045,7 +2048,7 @@ static int M_FindCheats(char key)
             {
                 if (cht->param_chars_read)
                 {
-                    static char argbuf[CHEAT_ARGS_MAX + 1];
+                    static char argbuf[MAX_CHEAT_PARAMS + 1];
 
                     // process the arg buffer
                     memcpy(argbuf, cht->parameter_buf, -cht->arg);

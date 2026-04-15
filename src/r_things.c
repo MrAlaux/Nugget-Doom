@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "d_player.h"
+#include "deh_strings.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "hu_crosshair.h" // [Alaux] Lock crosshair on target
@@ -368,7 +369,7 @@ void R_InitSpriteDefs(char **namelist)
 
   for (i=0 ; i<num_sprites + NUMALTSPRITES ; i++) // [Nugget] Alt. sprites
     {
-      const char *spritename = namelist[i];
+      const char *spritename = namelist[i] ? DEH_String(namelist[i]) : namelist[i];
       int j;
 
       if (!spritename)

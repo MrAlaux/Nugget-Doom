@@ -77,6 +77,22 @@ typedef enum
     sbc_levelless,
     sbc_patchempty,
     sbc_patchnotempty,
+    sbc_killsless,
+    sbc_killsgreaterequal,
+    sbc_itemsless,
+    sbc_itemsgreaterequal,
+    sbc_secretsless,
+    sbc_secretsgreaterequal,
+    sbc_killslesspct,
+    sbc_killsgreaterequalpct,
+    sbc_itemslesspct,
+    sbc_itemsgreaterequalpct,
+    sbc_secretslesspct,
+    sbc_secretsgreaterequalpct,
+    sbc_powerless,
+    sbc_powergreaterequal,
+    sbc_powerlesspct,
+    sbc_powergreaterequalpct,
 
     sbc_max,
 } sbarconditiontype_t;
@@ -109,6 +125,18 @@ typedef enum
     sbn_weaponammo,
     sbn_weaponmaxammo,
 
+    // Woof!
+    sbn_kills,
+    sbn_items,
+    sbn_secrets,
+    sbn_killspct,
+    sbn_itemspct,
+    sbn_secretspct,
+    sbn_totalkills,
+    sbn_totalitems,
+    sbn_totalsecrets,
+    sbn_power,
+
     sbn_max,
 } sbarnumbertype_t;
 
@@ -126,6 +154,8 @@ typedef enum
     // Woof!
     sbe_widget,
     sbe_carousel,
+    sbe_list,
+    sbe_string,
 
     // [Nugget] /-------------------------------------------------------------
 
@@ -170,6 +200,15 @@ typedef enum
 
     sbw_max = sbw_max_woof + sbw_max_nugget,
 } sbarwidgettype_t;
+
+typedef enum
+{
+    sbstr_none = -1,
+    sbstr_data,
+    sbstr_maptitle,
+    sbstr_label,
+    sbstr_author
+} sbstringtype_t;
 
 extern const char *sbw_names[];
 extern int sbw_names_len;
@@ -266,14 +305,14 @@ typedef struct
     // [Nugget]
     int tran_pct; // Message fadeout
     boolean flash; // Message flash
-} widgetline_t;
+} stringline_t;
 
 typedef struct sbe_widget_s
 {
     sbarwidgettype_t type;
     hudfont_t *default_font;
     hudfont_t *font;
-    widgetline_t *lines;
+    stringline_t *lines;
 
     int height;
 
@@ -285,6 +324,20 @@ typedef struct sbe_widget_s
     // [Nugget]
     boolean under_messages;
 } sbe_widget_t;
+
+typedef struct
+{
+    boolean horizontal;
+    int spacing;
+} sbe_list_t;
+
+typedef struct
+{
+    sbstringtype_t type;
+    stringline_t line;
+    hudfont_t *font;
+    const char *data;
+} sbe_string_t;
 
 // [Nugget]
 typedef struct sbe_minimap_s
@@ -303,6 +356,10 @@ struct sbarelem_s
     sbarcondition_t *conditions;
     sbarelem_t *children;
 
+    boolean enabled;
+    int width;
+    int height;
+
     const byte *tranmap;
     crange_idx_e cr;
     crange_idx_e crboom;
@@ -317,6 +374,8 @@ struct sbarelem_s
 
         // Woof!
         sbe_widget_t *widget;
+        sbe_list_t *list;
+        sbe_string_t *string;
 
         // [Nugget]
         sbe_minimap_t *minimap;

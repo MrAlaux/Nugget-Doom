@@ -683,7 +683,7 @@ void P_LoadLineDefs2(int lump)
             for (int j = 0; j < numlines; j++)
               if (lines[j].id == ld->args[0])
                 // if tag!=0, affect all matching linedefs
-                ld->tranmap = tranmap;
+                lines[j].tranmap = tranmap;
           break;
         }
       }

@@ -21,9 +21,9 @@
 #include <string.h>
 
 #include "d_player.h"
+#include "deh_frame.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "dsdhacked.h"
 #include "g_game.h"
 #include "i_printf.h"
 #include "info.h"
@@ -1392,11 +1392,11 @@ void P_SpawnMapThing (mapthing_t* mthing)
         {  // use secretcount to avoid multiple dogs in case of multiple starts
           players[mthing->type-1].secretcount = 1;
 
-          // killough 10/98: force it to be a friend
-          mthing->options |= MTF_FRIEND;
-          i = MT_DOGS;
-          goto spawnit;
-        }
+	  // killough 10/98: force it to be a friend
+	  mthing->options |= MTF_FRIEND;
+	  i = helper_type >= 0 ? helper_type : MT_DOGS;
+	  goto spawnit;
+	}
 
       // save spots for respawning in network games
       playerstarts[mthing->type-1] = *mthing;

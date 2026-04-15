@@ -29,8 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "d_deh.h"
 #include "d_player.h"
+#include "deh_strings.h"
 #include "doomdata.h"
 #include "doomstat.h"
 #include "g_game.h"
@@ -829,9 +829,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
           !player->cards[it_yellowcard] &&
           !player->cards[it_yellowskull])
         {
-          doomprintf(player, MESSAGES_NONE, "%s", s_PD_ANY); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_String(PD_ANY));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_EITHER, KEYBLINK_EITHER, KEYBLINK_EITHER); // [Nugget] Key blinking
           return false;
         }
@@ -840,9 +841,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
       if (!player->cards[it_redcard] &&
           (!skulliscard || !player->cards[it_redskull]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", skulliscard? s_PD_REDK : s_PD_REDC); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_StringColorized(skulliscard ? PD_REDK : PD_REDC));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_NONE, KEYBLINK_NONE, skulliscard ? KEYBLINK_EITHER : KEYBLINK_CARD); // [Nugget] Key blinking
           return false;
         }
@@ -851,9 +853,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
       if (!player->cards[it_bluecard] &&
           (!skulliscard || !player->cards[it_blueskull]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", skulliscard? s_PD_BLUEK : s_PD_BLUEC); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_StringColorized(skulliscard ? PD_BLUEK : PD_BLUEC));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, skulliscard ? KEYBLINK_EITHER : KEYBLINK_CARD, KEYBLINK_NONE, KEYBLINK_NONE); // [Nugget] Key blinking
           return false;
         }
@@ -862,9 +865,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
       if (!player->cards[it_yellowcard] &&
           (!skulliscard || !player->cards[it_yellowskull]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", skulliscard? s_PD_YELLOWK : s_PD_YELLOWC); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_StringColorized(skulliscard ? PD_YELLOWK : PD_YELLOWC));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_NONE, skulliscard ? KEYBLINK_EITHER : KEYBLINK_CARD, KEYBLINK_NONE); // [Nugget] Key blinking
           return false;
         }
@@ -873,9 +877,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
       if (!player->cards[it_redskull] &&
           (!skulliscard || !player->cards[it_redcard]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", skulliscard? s_PD_REDK : s_PD_REDS); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_StringColorized(skulliscard ? PD_REDK : PD_REDS));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_NONE, KEYBLINK_NONE, skulliscard ? KEYBLINK_EITHER : KEYBLINK_SKULL); // [Nugget] Key blinking
           return false;
         }
@@ -884,9 +889,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
       if (!player->cards[it_blueskull] &&
           (!skulliscard || !player->cards[it_bluecard]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", skulliscard? s_PD_BLUEK : s_PD_BLUES); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_StringColorized(skulliscard ? PD_BLUEK : PD_BLUES));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, skulliscard ? KEYBLINK_EITHER : KEYBLINK_SKULL, KEYBLINK_NONE, KEYBLINK_NONE); // [Nugget] Key blinking
           return false;
         }
@@ -895,9 +901,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
       if (!player->cards[it_yellowskull] &&
           (!skulliscard || !player->cards[it_yellowcard]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", skulliscard? s_PD_YELLOWK : s_PD_YELLOWS); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_StringColorized(skulliscard ? PD_YELLOWK : PD_YELLOWS));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_NONE, skulliscard ? KEYBLINK_EITHER : KEYBLINK_SKULL, KEYBLINK_NONE); // [Nugget] Key blinking
           return false;
         }
@@ -911,9 +918,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
            !player->cards[it_yellowcard] ||
            !player->cards[it_yellowskull]))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", s_PD_ALL6); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_String(PD_ALL6));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_BOTH, KEYBLINK_BOTH, KEYBLINK_BOTH); // [Nugget] Key blinking
           return false;
         }
@@ -924,9 +932,10 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
            // http://prboom.sourceforge.net/mbf-bugs.html
            !(player->cards[it_yellowcard] | (demo_version == DV_MBF ? !player->cards[it_yellowskull] : player->cards[it_yellowskull]))))
         {
-          doomprintf(player, MESSAGES_NONE, "%s", s_PD_ALL3); // Ty 03/27/98 - externalized
+          doomprintf(player, MESSAGES_NONE, DEH_String(PD_ALL3));
           S_StartSoundOptional(player->mo, sfx_locked, // [Nugget] Locked door sound
                                STRICTMODE(comp_keynoway) ? sfx_noway : sfx_oof); // [Nugget]
+
           ST_SetKeyBlink(player, KEYBLINK_EITHER, KEYBLINK_EITHER, KEYBLINK_EITHER); // [Nugget] Key blinking
           return false;
         }
@@ -2404,7 +2413,7 @@ static void P_SecretRevealed(player_t *player)
     }
     else
     {
-      player->secretmessage = s_HUSTR_SECRETFOUND;
+      player->secretmessage = DEH_String(HUSTR_SECRETFOUND);
     }
 
     S_StartSound(NULL, sfx_secret);

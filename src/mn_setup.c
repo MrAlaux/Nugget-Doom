@@ -18,11 +18,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "deh_thing.h"
 #include "hu_command.h"
 #include "mn_internal.h"
 
 #include "am_map.h"
-#include "d_deh.h"
 #include "d_main.h"
 #include "doomdef.h"
 #include "doomstat.h"
@@ -2350,8 +2350,7 @@ static setup_menu_t stat_settings4[] = {
     MI_GAP, // [Nugget]
 
     {"Center Messages",      S_ONOFF, H_X, M_SPC, {"message_centered"}},
-    {"Colorize Messages",    S_ONOFF, H_X, M_SPC, {"message_colorized"},
-     .action = ST_ResetMessageColors},
+    {"Colorize Messages",    S_ONOFF, H_X, M_SPC, {"message_colorized"}},
 
     // [Nugget] /-------------------------------------------------------------
 

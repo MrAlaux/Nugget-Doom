@@ -163,6 +163,15 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
 
     switch (type)
     {
+        case sbe_list:
+            {
+                sbe_list_t *list = calloc(1, sizeof(*list));
+                list->horizontal = JS_GetBooleanValue(json, "horizontal");
+                list->spacing = JS_GetIntegerValue(json, "spacing");
+                out->subtype.list = list;
+            }
+            break;
+
         case sbe_graphic:
             {
                 sbe_graphic_t *graphic = calloc(1, sizeof(*graphic));
@@ -322,9 +331,40 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
             }
             break;
 
+        case sbe_string:
+            {
+                sbe_string_t *string = calloc(1, sizeof(*string));
+                const char *font_name = JS_GetStringValue(json, "font");
+                if (!font_name)
+                {
+                    free(string);
+                    return false;
+                }
+                array_foreach_type(font, hudfonts, hudfont_t)
+                {
+                    if (!strcmp(font->name, font_name))
+                    {
+                        string->font = font;
+                        break;
+                    }
+                }
+                string->type = JS_GetIntegerValue(json, "type");
+                if (string->type == sbstr_data)
+                {
+                    const char *data = JS_GetStringValue(json, "data");
+                    if (data)
+                    {
+                        string->line.string = M_StringDuplicate(data);
+                    }
+                }
+                out->subtype.string = string;
+            }
+            break;
+
         // [Nugget] /---------------------------------------------------------
 
-        case sbe_minimap: {
+        case sbe_minimap:
+        {
             sbe_minimap_t *const minimap = calloc(1, sizeof(*minimap));
 
             minimap->width  = JS_GetNumberValue(json, "width");
@@ -356,7 +396,9 @@ static const char *sbe_names[] =
     [sbe_number] = "number",
     [sbe_percent] = "percent",
     [sbe_widget] = "component",
-    [sbe_carousel] = "carousel"
+    [sbe_carousel] = "carousel",
+    [sbe_list] = "list",
+    [sbe_string] = "string"
 };
 
 // [Nugget]
@@ -574,7 +616,7 @@ static boolean ParseStatusBar(json_t *json, statusbar_t *out)
 
 sbardef_t *ST_ParseSbarDef(void)
 {
-    json_t *json = JS_Open("SBARDEF", "statusbar", (version_t){1, 1, 1});
+    json_t *json = JS_Open("SBARDEF", "statusbar", (version_t){1, 2, 0});
     if (json == NULL)
     {
         return NULL;
@@ -590,7 +632,7 @@ sbardef_t *ST_ParseSbarDef(void)
 
     if (v.major == 1 && v.minor == 1 && v.revision == 0)
     {
-        I_Error("SBARDEF v1.1.0 is not supported. Update your HUD mod.");
+        I_Error("SBARDEF v1.1.0 is not supported.");
     }
 
     // [Nugget] /-------------------------------------------------------------
@@ -705,6 +747,10 @@ sbardef_t *ST_ParseSbarDef(void)
             sbarelem_t elem = {0};
             if (ParseSbarElem(js_widget, &elem))
             {
+                if (!statusbar->fullscreenrender)
+                {
+                    elem.y_pos -= SCREENHEIGHT - statusbar->height;
+                }
                 array_push(statusbar->children, elem);
             }
         }

@@ -97,29 +97,23 @@ byte *red2col[CR_LIMIT] = {0};
 // provided in v_video.h.
 //
 
-typedef struct
-{
-    const char *name;
-    byte **map1, **map2, **map_orig;
-} crdef_t;
-
 // killough 5/2/98: table-driven approach
-static const crdef_t crdefs[] =
+const crdef_t crdefs[] =
 {
-    {"CRBRICK",  &cr_brick,  &colrngs[CR_BRICK],  &red2col[CR_BRICK]},
-    {"CRTAN",    &cr_tan,    &colrngs[CR_TAN],    &red2col[CR_TAN]},
-    {"CRGRAY",   &cr_gray,   &colrngs[CR_GRAY],   &red2col[CR_GRAY]},
-    {"CRGREEN",  &cr_green,  &colrngs[CR_GREEN],  &red2col[CR_GREEN]},
-    {"CRBROWN",  &cr_brown,  &colrngs[CR_BROWN],  &red2col[CR_BROWN]},
-    {"CRGOLD",   &cr_gold,   &colrngs[CR_GOLD],   &red2col[CR_GOLD]},
-    {"CRRED",    &cr_red,    &colrngs[CR_RED],    &red2col[CR_RED]},
-    {"CRBLUE",   &cr_blue,   &colrngs[CR_BLUE1],  &red2col[CR_BLUE1]},
-    {"CRORANGE", &cr_orange, &colrngs[CR_ORANGE], &red2col[CR_ORANGE]},
-    {"CRYELLOW", &cr_yellow, &colrngs[CR_YELLOW], &red2col[CR_YELLOW]},
-    {"CRBLUE2",  &cr_blue2,  &colrngs[CR_BLUE2],  &red2col[CR_BLUE2]},
-    {"CRBLACK",  &cr_black,  &colrngs[CR_BLACK],  &red2col[CR_BLACK]},
-    {"CRPURPLE", &cr_purple, &colrngs[CR_PURPLE], &red2col[CR_PURPLE]},
-    {"CRWHITE",  &cr_white,  &colrngs[CR_WHITE],  &red2col[CR_WHITE]},
+    {"CRBRICK",  "\x1b\x30", &cr_brick,  &colrngs[CR_BRICK],  &red2col[CR_BRICK]},
+    {"CRTAN",    "\x1b\x31", &cr_tan,    &colrngs[CR_TAN],    &red2col[CR_TAN]},
+    {"CRGRAY",   "\x1b\x32", &cr_gray,   &colrngs[CR_GRAY],   &red2col[CR_GRAY]},
+    {"CRGREEN",  "\x1b\x33", &cr_green,  &colrngs[CR_GREEN],  &red2col[CR_GREEN]},
+    {"CRBROWN",  "\x1b\x34", &cr_brown,  &colrngs[CR_BROWN],  &red2col[CR_BROWN]},
+    {"CRGOLD",   "\x1b\x35", &cr_gold,   &colrngs[CR_GOLD],   &red2col[CR_GOLD]},
+    {"CRRED",    "\x1b\x36", &cr_red,    &colrngs[CR_RED],    &red2col[CR_RED]},
+    {"CRBLUE",   "\x1b\x37", &cr_blue,   &colrngs[CR_BLUE1],  &red2col[CR_BLUE1]},
+    {"CRORANGE", "\x1b\x38", &cr_orange, &colrngs[CR_ORANGE], &red2col[CR_ORANGE]},
+    {"CRYELLOW", "\x1b\x39", &cr_yellow, &colrngs[CR_YELLOW], &red2col[CR_YELLOW]},
+    {"CRBLUE2",  "\x1b\x3a", &cr_blue2,  &colrngs[CR_BLUE2],  &red2col[CR_BLUE2]},
+    {"CRBLACK",  "\x1b\x3b", &cr_black,  &colrngs[CR_BLACK],  &red2col[CR_BLACK]},
+    {"CRPURPLE", "\x1b\x3c", &cr_purple, &colrngs[CR_PURPLE], &red2col[CR_PURPLE]},
+    {"CRWHITE",  "\x1b\x3d", &cr_white,  &colrngs[CR_WHITE],  &red2col[CR_WHITE]},
     {NULL}
 };
 
@@ -915,21 +909,22 @@ static void DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
         else
         {
             patchcol->frac = (-columntop) << FRACBITS;
-            patchcol->y1 = patchcol->topoffset;
+            patchcol->y1 = 0;
         }
 
-        if (columntop + column->length - 1 < 0)
+        int columnbottom = columntop + column->length - 1;
+        if (patchcol->height)
+        {
+            columnbottom = MIN(columnbottom, ytop + patchcol->height - 1);
+        }
+
+        if (columnbottom < 0)
         {
             continue;
         }
-        if (columntop + column->length - 1 < SCREENHEIGHT)
+        if (columnbottom < SCREENHEIGHT)
         {
-            int y2 = columntop + column->length - 1;
-            if (patchcol->height)
-            {
-                y2 = MIN(y2, ytop + patchcol->height - 1);
-            }
-            patchcol->y2 = y2lookup[y2];
+            patchcol->y2 = y2lookup[columnbottom];
         }
         else
         {
@@ -938,8 +933,11 @@ static void DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
 
         // SoM: The failsafes should be completely redundant now...
         // haleyjd 05/13/08: fix clipping; y2lookup not clamped properly
-        if ((column->length > 0 && patchcol->y2 < patchcol->y1)
-            || patchcol->y2 >= video.height)
+        if (column->length > 0 && patchcol->y2 < patchcol->y1)
+        {
+            continue;
+        }
+        if (patchcol->y2 >= video.height)
         {
             patchcol->y2 = video.height - 1;
         }
@@ -1114,10 +1112,10 @@ void V_DrawPatchCastCall(patch_t *patch, const byte *tranmap, const byte *xlat, 
     DrawPatchInternal(160, 170, SHORT(patch->leftoffset), SHORT(patch->topoffset), tranmap, xlat, NULL, zero_crop, patch, flip);
 }
 
-// To not clutter up the stbar drawer
+// Ignore patch offsets
 void V_DrawPatchCropped(int x, int y, patch_t *patch, crop_t crop)
 {
-    DrawPatchInternal(x, 0, SHORT(patch->leftoffset), SHORT(patch->topoffset), NULL, NULL, NULL, crop, patch, false);
+    DrawPatchInternal(x, y, 0, 0, NULL, NULL, NULL, crop, patch, false);
 }
 
 // Uses almost everything
