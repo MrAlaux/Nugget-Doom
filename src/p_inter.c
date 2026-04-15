@@ -333,7 +333,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
   {
     if (special->altsprite == ASPR_NGCH)
     {
-      player->mo->health = player->health = MIN(maxhealthbonus, player->health + 1);
+      player->mo->health = player->health = MIN(deh_max_health_bonus, player->health + 1);
 
       static const char s[] = {
         0120, 0151, 0143, 0153, 0145, 0144, 040, 0165, 0160, 040,
@@ -345,9 +345,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
     }
     else if (special->altsprite == ASPR_NGCL)
     {
-      player->armorpoints = MIN(max_armor, player->armorpoints + 1);
+      player->armorpoints = MIN(deh_max_armor, player->armorpoints + 1);
 
-      if (!player->armortype) { player->armortype = green_armor_class; }
+      if (!player->armortype) { player->armortype = deh_green_armor_class; }
 
       static const char s[] = {
         0120, 0151, 0143, 0153, 0145, 0144, 040, 0165, 0160, 040,

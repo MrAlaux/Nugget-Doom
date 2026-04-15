@@ -69,6 +69,9 @@ void DEH_InitMobjInfo(void)
         mobjinfo[i].meleerange       = MELEERANGE;
         // Eternity
         mobjinfo[i].bloodcolor = 0;
+
+        // [Nugget] Sprite scaling
+        mobjinfo[i].scale = FRACUNIT;
     }
 
     // DEHEXTRA
@@ -194,6 +197,9 @@ void DEH_MobjInfoEnsureCapacity(int limit)
         mobjinfo[i].splash_group     = SG_DEFAULT;
         mobjinfo[i].altspeed         = NO_ALTSPEED;
         mobjinfo[i].meleerange       = MELEERANGE;
+
+        // [Nugget] Sprite scaling
+        mobjinfo[i].scale = FRACUNIT;
     }
 }
 
@@ -343,6 +349,9 @@ DEH_BEGIN_MAPPING(thing_mapping, mobjinfo_t)
     DEH_MAPPING("Blood Color", bloodcolor)
     // woof
     DEH_MAPPING("Woof Bits", flags_extra)
+
+    // [Nugget] Sprite scaling
+    DEH_MAPPING("Scale", scale)
 DEH_END_MAPPING
 
 //
@@ -437,6 +446,14 @@ static void DEH_ThingParseLine(deh_context_t *context, char *line, void *tag)
 
     // most values are integers
     int ivalue = atoi(value);
+
+    // [Nugget] Sprite scaling
+    if (!strcasecmp(variable_name, "Scale"))
+    {
+        ivalue = DoubleToFixed(atof(value));
+        ivalue = MAX(0, ivalue);
+    }
+    else
 
     if (!strcasecmp(variable_name, "Bits"))
     {

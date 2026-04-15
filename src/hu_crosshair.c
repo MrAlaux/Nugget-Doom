@@ -35,6 +35,7 @@
 
 // [Nugget]
 #include "am_map.h"
+#include "deh_misc.h"
 #include "g_game.h"
 #include "m_nughud.h"
 #include "r_tranmap.h"
@@ -203,11 +204,9 @@ void HU_UpdateCrosshair(void)
     // Health/ammo bars
     if (STRICTMODE(hud_crosshair_bars))
     {
-        extern int maxhealth;
-
         const int hlh = SHORT(crosshair.hlpatch->height); // Use full height
 
-        crosshair.hlc = hlh - ceil((float) hlh * ST_GetStatusBarHealth() / maxhealth);
+        crosshair.hlc = hlh - ceil((float) hlh * ST_GetStatusBarHealth() / deh_max_health);
         crosshair.hlc = MAX(0, crosshair.hlc);
 
         const ammotype_t ammo = weaponinfo[plr->readyweapon].ammo;
