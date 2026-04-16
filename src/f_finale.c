@@ -502,7 +502,7 @@ void F_StartFinale (void)
   gameaction = ga_nothing;
   gamestate = GS_FINALE;
   viewactive = false;
-  automapactive = AM_OFF;
+  automapactive = false;
 
   // killough 3/28/98: clear accelerative text flags
   acceleratestage = midstage = 0;

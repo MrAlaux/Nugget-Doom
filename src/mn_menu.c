@@ -2798,7 +2798,7 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_hud_timestats))
     {
-        if (automapactive == AM_FULL)
+        if (automapactive)
         {
             if ((hud_level_stats | hud_level_time) & HUD_WIDGET_AUTOMAP)
             {

@@ -257,7 +257,7 @@ int ddt_cheating = 0;         // killough 2/7/98: make global, rename to ddt_*
 
 boolean automap_grid = false;
 
-automapmode_t automapactive = AM_OFF;
+boolean automapactive = false;
 static boolean automapfirststart = true;
 
 overlay_t automapoverlay = AM_OVERLAY_OFF;
@@ -368,37 +368,6 @@ static int magic_line_color_pos = MAGIC_LINE_COLOR_MIN;
 
 static sector_t* magic_sector;
 static short     magic_tag = -1;
-
-// Minimap -------------------------------------------------------------------
-
-static int mm_x = 8,
-           mm_y = 0,
-           mm_ws = -2, // Widescreen shift
-           mm_w = 80,
-           mm_h = 80;
-
-static boolean mm_under_messages = true;
-
-void AM_UpdateMinimap(
-  const int x, const int y, const int ws,
-  const int w, const int h,
-  const boolean under_messages
-)
-{
-  mm_x = x;
-  mm_y = y;
-  mm_ws = ws;
-  mm_w = w;
-  mm_h = h;
-  mm_under_messages = under_messages;
-
-  if (automapactive == AM_MINI) { AM_Start(); }
-}
-
-static boolean reset_older = true;
-static int64_t older_m_x, older_m_y, older_m_w, older_m_h;
-
-#define FOLLOW (followplayer || automapactive == AM_MINI)
 
 // Highlight points of interest ----------------------------------------------
 
@@ -515,7 +484,7 @@ static void AM_restoreScaleAndLoc(void)
 {
   m_w = old_m_w;
   m_h = old_m_h;
-  if (!FOLLOW)
+  if (!followplayer)
   {
     m_x = old_m_x;
     m_y = old_m_y;
@@ -681,6 +650,8 @@ void AM_initVariables(void)
 {
   static event_t st_notify = {.type = ev_keyup, .data1.i = AM_MSGENTERED};
 
+  automapactive = true;
+
   m_paninc.x = m_paninc.y = 0;
   ftom_zoommul = FRACUNIT;
   mtof_zoommul = FRACUNIT;
@@ -691,7 +662,7 @@ void AM_initVariables(void)
 
   plr = &players[displayplayer];
   // [Alaux] Don't always snap back to player when reopening the Automap
-  if (FOLLOW || automapfirststart)
+  if (followplayer || automapfirststart)
   {
     m_x = (plr->mo->x >> FRACTOMAPBITS) - m_w/2;
     m_y = (plr->mo->y >> FRACTOMAPBITS) - m_h/2;
@@ -788,31 +759,6 @@ static void AM_initScreenSize(void)
   //
   // killough 11/98: ... finally add hires support :)
 
-  // [Nugget] Minimap
-  if (automapactive == AM_MINI)
-  {
-    int x = mm_x + video.deltaw;
-
-    x += (abs(mm_ws) == 2) ? video.deltaw      * (mm_ws / 2)
-       : (abs(mm_ws) == 1) ? ST_GetWideShift() *  mm_ws
-       :                     0;
-
-    f_x = V_ScaleX(x);
-    f_y = V_ScaleY(mm_y);
-
-    if (mm_under_messages)
-    { f_y += V_ScaleY((ST_GetNumMessageLines() + 1) * ST_GetMessageFontHeight() + 1); }
-
-     // Don't exceed boundaries of screen
-    f_w = V_ScaleX(MIN(SCREENWIDTH  - mm_x, mm_w));
-    f_h = V_ScaleY(MIN(SCREENHEIGHT - mm_y, mm_h));
-
-    f_x2 = f_x + f_w;
-    f_y2 = f_y + f_h;
-
-    return;
-  }
-
   f_w = video.width;
   if (automapoverlay && scaledviewheight == SCREENHEIGHT)
     f_h = video.height;
@@ -888,15 +834,14 @@ static void AM_LevelInit(void)
 //
 // Passed nothing, returns nothing
 //
-// [Nugget] Renamed, local
-static void AM_doStop (void)
+void AM_Stop (void)
 {
   static event_t st_notify = {.type = 0, .data1.i = ev_keyup, .data2.i = AM_MSGEXITED};
 
   memset(buttons_state, 0, sizeof(buttons_state));
 
   AM_unloadPics();
-
+  automapactive = false;
   ST_Responder(&st_notify);
   stopped = true;
 
@@ -920,34 +865,14 @@ void AM_Start()
 {
   static int lastlevel = -1, lastepisode = -1;
 
-  // [Nugget] Minimap /-------------------------------------------------------
-
-  static int last_automap = -1,
-             last_messages = -1,
-             last_wide_shift = -1;
-
-  const int messages_height = ST_GetNumMessageLines();
-  const boolean wide_shift = ST_GetWideShift();
-
-  // [Nugget] ---------------------------------------------------------------/
-
   if (!stopped)
-    AM_doStop();
+    AM_Stop();
   stopped = false;
-  if (lastlevel != gamemap || lastepisode != gameepisode
-      || last_automap != automapactive || last_messages != messages_height
-      || last_wide_shift != wide_shift)
+  if (lastlevel != gamemap || lastepisode != gameepisode)
   {
     AM_LevelInit();
-
-    // [Nugget] Minimap
-    reset_older = reset_older || lastlevel != gamemap || lastepisode != gameepisode;
-
     lastlevel = gamemap;
     lastepisode = gameepisode;
-    last_automap = automapactive;
-    last_messages = messages_height;
-    last_wide_shift = wide_shift;
   }
   else
   {
@@ -985,95 +910,6 @@ static void AM_maxOutWindowScale(void)
   AM_activateNewScale();
 }
 
-// [Nugget] /=================================================================
-
-void AM_Stop(void)
-{
-  AM_ChangeMode(AM_FORCEOFF);
-}
-
-void AM_ChangeMode(automapmode_t mode)
-{
-  static int last_change_tic = SHRT_MIN;
-  static boolean minimap_on = false;
-
-  if (mode == AM_FORCEOFF)
-  {
-    mode = AM_OFF;
-  }
-  else if (automapactive != AM_MINI && gametic - last_change_tic < TICRATE/5) // 0.2 seconds
-  {
-    mode = AM_MINI;
-  }
-
-  const boolean minimap_toggled = mode && minimap_on != (mode == AM_MINI);
-
-  automapactive = mode;
-
-  if (automapactive == AM_MINI)
-  { memset(buttons_state, 0, sizeof(buttons_state)); }
-
-  fixed_t rx=0, ry=0, rw=0, rh=0; // Restored values
-
-  if (minimap_toggled)
-  {
-    minimap_on = automapactive == AM_MINI;
-
-    rx = older_m_x;
-    ry = older_m_y;
-    rw = older_m_w;
-    rh = older_m_h;
-
-    older_m_x = m_x;
-    older_m_y = m_y;
-    older_m_w = m_w;
-    older_m_h = m_h;
-  }
-
-  if (!automapactive)
-    AM_doStop();
-  else
-    AM_Start();
-
-  if (minimap_toggled)
-  {
-    if (reset_older)
-    {
-      reset_older = false;
-    }
-    else {
-      old_m_x = rx;
-      old_m_y = ry;
-      old_m_w = rw;
-      old_m_h = rh;
-
-      AM_restoreScaleAndLoc();
-      AM_activateNewScale();
-    }
-  }
-
-  if (tanz)
-  {
-    if (automapactive == AM_FULL)
-    {
-      if (gametic - last_change_tic >= TICRATE)
-      {
-        if ((tanzen = Woof_Random() == 156)) // Only because the table doesn't have 157
-        {
-          tanzf = 0;
-          tanzc = TANZC;
-          tanzd = TICRATE;
-        }
-      }
-    }
-    else { tanzen = false; }
-  }
-
-  last_change_tic = gametic;
-}
-
-// [Nugget] =================================================================/
-
 //
 // AM_Responder()
 //
@@ -1106,16 +942,17 @@ boolean AM_Responder
 
   rc = false;
 
-  if (automapactive != AM_FULL)
+  if (!automapactive)
   {
     if (M_InputActivated(input_map) && !WS_Override())
     {
-      AM_ChangeMode(AM_FULL); // [Nugget]
+      AM_Start ();
       viewactive = false;
       ST_refreshBackground();
       rc = true;
     }
     // [Nugget] Minimap: allow zooming
+    /*
     else if (automapactive == AM_MINI)
     {
       if (ev->type == ev_keydown)
@@ -1146,6 +983,7 @@ boolean AM_Responder
         }
       }
     }
+    */
   }
   else if (ev->type == ev_keydown ||
            ev->type == ev_mouseb_down ||
@@ -1202,7 +1040,7 @@ boolean AM_Responder
         bigstate = 0;
         viewactive = true;
         ST_refreshBackground();
-        AM_ChangeMode(AM_OFF); // [Nugget]
+        AM_Stop ();
       }
       else
       {
@@ -1489,7 +1327,7 @@ boolean map_point_coord; // [Nugget] Global
 
 void AM_Coordinates(const mobj_t *mo, fixed_t *x, fixed_t *y, fixed_t *z)
 {
-  *z = FOLLOW || !map_point_coord || !automapactive ? *x = mo->x, *y = mo->y, mo->z :
+  *z = followplayer || !map_point_coord || !automapactive ? *x = mo->x, *y = mo->y, mo->z :
     R_PointInSubsector(*x = (m_x+m_w/2) << FRACTOMAPBITS, *y = (m_y+m_h/2) << FRACTOMAPBITS)->sector->floorheight;
 }
 
@@ -1574,7 +1412,7 @@ void AM_Ticker (void)
     static int64_t old_m_x = -1, old_m_y = -1, old_m_w = -1, old_m_h = -1;
     static int old_markpointnum = -1;
 
-    if (automapactive != AM_FULL)
+    if (!automapactive)
     {
       pointed_mark_index = -1;
       old_m_x = -1; // Make the check be run when re-entering
@@ -1654,7 +1492,7 @@ static void (*AM_clearFB)(int color) = NULL;
 
 static void AM_clearFB8(int color)
 {
-  // [Nugget] Minimap: take `f_x` and `f_y` into account
+  // [Nugget] Take `f_x` and `f_y` into account
 
   int h = f_h;
   pixel_t *dest = I_VideoBuffer + ((f_y * video.width) + f_x);
@@ -1668,7 +1506,7 @@ static void AM_clearFB8(int color)
 
 static void AM_clearFB32(int color)
 {
-  // [Nugget] Minimap: take `f_x` and `f_y` into account
+  // [Nugget] Take `f_x` and `f_y` into account
 
   int h = f_h;
   pixel32_t *dest = I_VideoBuffer32 + ((f_y * video.width) + f_x);
@@ -1716,7 +1554,7 @@ static boolean AM_clipMline
   int   dy;
 
 
-// [Nugget] Minimap: take `f_x` and `f_y` into account
+// [Nugget] Take `f_x` and `f_y` into account
 #define DOOUTCODE(oc, mx, my) \
   (oc) = 0; \
   if ((my) < f_y) (oc) |= TOP; \
@@ -1780,28 +1618,28 @@ static boolean AM_clipMline
       dx = fl->b.x - fl->a.x;
       // [Woof!] 'int64_t' math to avoid overflows on long lines.
       tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-f_y))/dy);
-      tmp.y = f_y; // [Nugget] Minimap: take `f_y` into account
+      tmp.y = f_y; // [Nugget] Take `f_y` into account
     }
     else if (outside & BOTTOM)
     {
       dy = fl->a.y - fl->b.y;
       dx = fl->b.x - fl->a.x;
       tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y2)))/dy);
-      tmp.y = f_y2-1; // [Nugget] Minimap: take `f_y` into account
+      tmp.y = f_y2-1; // [Nugget] Take `f_y` into account
     }
     else if (outside & RIGHT)
     {
       dy = fl->b.y - fl->a.y;
       dx = fl->b.x - fl->a.x;
       tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x2-1 - fl->a.x))/dx);
-      tmp.x = f_x2-1; // [Nugget] Minimap: take `f_x` into account
+      tmp.x = f_x2-1; // [Nugget] Take `f_x` into account
     }
     else if (outside & LEFT)
     {
       dy = fl->b.y - fl->a.y;
       dx = fl->b.x - fl->a.x;
       tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x-fl->a.x))/dx);
-      tmp.x = f_x; // [Nugget] Minimap: take `f_x` into account
+      tmp.x = f_x; // [Nugget] Take `f_x` into account
     }
 
     if (outside == outcode1)
@@ -1887,7 +1725,7 @@ static void AM_drawFline_Vanilla(fline_t* fl, int color)
   // For debugging only
   if
   (
-    // [Nugget] Minimap: take `f_x` and `f_y` into account
+    // [Nugget] Take `f_x` and `f_y` into account
        fl->a.x < f_x || fl->a.x >= f_x2
     || fl->a.y < f_y || fl->a.y >= f_y2
     || fl->b.x < f_x || fl->b.x >= f_x2
@@ -2647,7 +2485,7 @@ static void AM_transformPoint(mpoint_t *pt)
   {
     int64_t tmpx;
     // [crispy] smooth automap rotation
-    angle_t smoothangle = FOLLOW ? ANG90 - viewangle : mapangle;
+    angle_t smoothangle = followplayer ? ANG90 - viewangle : mapangle;
 
     pt->x -= mapcenter.x;
     pt->y -= mapcenter.y;
@@ -3072,7 +2910,7 @@ static void AM_drawMarks(void)
 	    if (d == 1)           // killough 2/22/98: less spacing for '1'
 	      fx += (video.xscale >> FRACBITS);
 
-	    // [Nugget] Minimap: take `f_x` and `f_y` into account
+	    // [Nugget] Take `f_x` and `f_y` into account
 	    if (fx >= f_x && fx < f_x2 - w && fy >= f_y && fy < f_y2 - h)
 	    {
 	      // [Nugget] Translation
@@ -3107,7 +2945,7 @@ static void AM_drawMarks(void)
 static void AM_drawCrosshair(int color)
 {
   // [crispy] do not draw the useless dot on the player arrow
-  if (!FOLLOW)
+  if (!followplayer)
   {
     PUTDOT((f_w + 1) / 2, (f_h + 1) / 2, color); // single point for now
   }
@@ -3115,57 +2953,8 @@ static void AM_drawCrosshair(int color)
 
 // [Nugget] /-----------------------------------------------------------------
 
-static void (*AM_shadeMinimap)(void) = NULL;
-
-static void AM_shadeMinimap8(void)
-{
-  const lighttable_t *const colormap = colormaps[0] + (automap_overlay_darkening * 256);
-
-  const int pitch = video.width,
-            width = f_x2 - f_x;
-
-  pixel_t       *           row = I_VideoBuffer + (f_y * pitch + f_x);
-  pixel_t const *const last_row = row + ((f_y2 - f_y) * pitch);
-
-  for (; row < last_row;  row += pitch)
-  {
-    pixel_t *           pixel = row;
-    pixel_t *const last_pixel = pixel + width;
-
-    for (; pixel < last_pixel;  pixel++)
-    { *pixel = colormap[*pixel]; }
-  }
-}
-
-static void AM_shadeMinimap32(void)
-{
-  const lighttable32_t *const colormap = colormaps32[0] + ((automap_overlay_darkening<<CRSB) * 256);
-
-  const int pitch = video.width,
-            width = f_x2 - f_x;
-
-  pixel32_t       *           row = I_VideoBuffer32 + (f_y * pitch + f_x);
-  pixel32_t const *const last_row = row + ((f_y2 - f_y) * pitch);
-
-  for (; row < last_row;  row += pitch)
-  {
-    pixel32_t *           pixel = row;
-    pixel32_t *const last_pixel = pixel + width;
-
-    for (; pixel < last_pixel;  pixel++)
-    { *pixel = colormap[V_IndexFromRGB(*pixel)]; }
-  }
-}
-
 void AM_shadeScreen(void)
 {
-  // Minimap
-  if (automapactive == AM_MINI)
-  {
-    AM_shadeMinimap();
-    return;
-  }
-
   if (!MN_MenuIsShaded())
     V_ShadeScreen(automap_overlay_darkening); // [Nugget] Parameterized
 }
@@ -3186,7 +2975,7 @@ void AM_Drawer (void)
   // move AM_doFollowPlayer and AM_changeWindowLoc from AM_Ticker for
   // interpolation
 
-  if (FOLLOW)
+  if (followplayer)
   {
     AM_doFollowPlayer();
   }
@@ -3203,7 +2992,7 @@ void AM_Drawer (void)
     mapcenter.x = m_x + m_w / 2;
     mapcenter.y = m_y + m_h / 2;
     // [crispy] keep the map static if not following the player
-    if (automaprotate && FOLLOW)
+    if (automaprotate && followplayer)
     {
       mapangle = ANG90 - plr->mo->angle;
     }
@@ -3222,7 +3011,7 @@ void AM_Drawer (void)
       GetTanzerF(tanzf),
       NUMTANZERFL,
       scale_ftom * current_video_height / SCREENHEIGHT,
-      automaprotate ? (FOLLOW ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
+      automaprotate ? (followplayer ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
       v_lightest_color,
       (m_x + m_x2) / 2,
       (m_y + m_y2) / 2
@@ -3364,14 +3153,12 @@ void AM_InitColorFunctions(void)
   {
     AM_clearFB = AM_clearFB32;
     AM_putWuDot = AM_putWuDot32;
-    AM_shadeMinimap = AM_shadeMinimap32;
     PUTDOT = PUTDOT32;
     PutLine = PutLine32;
   }
   else {
     AM_clearFB = AM_clearFB8;
     AM_putWuDot = AM_putWuDot8;
-    AM_shadeMinimap = AM_shadeMinimap8;
     PUTDOT = PUTDOT8;
     PutLine = PutLine8;
   }

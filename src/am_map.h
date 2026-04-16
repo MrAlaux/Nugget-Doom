@@ -33,14 +33,6 @@ extern boolean fancy_teleport;
 
 void AM_InitColorFunctions(void);
 
-void AM_ChangeMode(enum automapmode_e mode);
-
-void AM_UpdateMinimap(
-  const int x, const int y, const int ws,
-  const int w, const int h,
-  const boolean under_messages
-);
-
 extern boolean tanz;
 
 // [Nugget] =================================================================/

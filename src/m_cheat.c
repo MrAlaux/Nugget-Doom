@@ -702,7 +702,7 @@ static void SummonMobj(boolean friendly)
 
   const mobj_t *const playermo = viewplayer ? viewplayer->mo : plyr->mo;
 
-  if (automapactive == AM_FULL && !followplayer)
+  if (automapactive && !followplayer)
   {
     const int oldcoords = map_point_coord;
 
@@ -769,21 +769,21 @@ static void cheat_summonr(void)
 
 static void cheat_reveal_key(void)
 {
-  if (automapactive != AM_FULL) { return; }
+  if (!automapactive) { return; }
 
   displaymsg("Key Finder: Red, Yellow or Blue?");
 }
 
 static void cheat_reveal_keyx(void)
 {
-  if (automapactive != AM_FULL) { return; }
+  if (!automapactive) { return; }
 
   displaymsg("Key Finder: Card or Skull?");
 }
 
 static void cheat_reveal_keyxx(int key)
 {
-  if (automapactive != AM_FULL) { return; }
+  if (!automapactive) { return; }
 
   static int last_count;
   static mobj_t *last_mobj;
@@ -834,7 +834,7 @@ static void cheat_reveal_keyxx(int key)
 // Exit finder
 static void cheat_reveal_exit(void)
 {
-  if (automapactive != AM_FULL) { return; }
+  if (!automapactive) { return; }
 
   static int last_exit_line = -1;
   int i, start_i;
@@ -1732,7 +1732,7 @@ static void cheat_reveal_secret(void)
 {
   static int last_secret = -1;
 
-  if (automapactive == AM_FULL)
+  if (automapactive)
   {
     int i, start_i;
 
@@ -1811,7 +1811,7 @@ static void cheat_cycle_mobj(mobj_t **last_mobj, int *last_count,
 
 static void cheat_reveal_kill(void)
 {
-  if (automapactive == AM_FULL)
+  if (automapactive)
   {
     static int last_count;
     static mobj_t *last_mobj;
@@ -1822,7 +1822,7 @@ static void cheat_reveal_kill(void)
 
 static void cheat_reveal_item(void)
 {
-  if (automapactive == AM_FULL)
+  if (automapactive)
   {
     static int last_count;
     static mobj_t *last_mobj;

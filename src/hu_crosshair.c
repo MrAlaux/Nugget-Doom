@@ -317,7 +317,7 @@ void HU_UpdateCrosshairLock(int x, int y)
 
 void HU_DrawCrosshair(void)
 {
-    if (plr->playerstate != PST_LIVE || automapactive == AM_FULL || menuactive || paused
+    if (plr->playerstate != PST_LIVE || automapactive || menuactive || paused
       // [Nugget] New conditions
       // Crash fix
       || !crosshair.cr

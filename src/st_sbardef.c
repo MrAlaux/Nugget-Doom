@@ -361,25 +361,6 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
             }
             break;
 
-        // [Nugget] /---------------------------------------------------------
-
-        case sbe_minimap:
-        {
-            sbe_minimap_t *const minimap = calloc(1, sizeof(*minimap));
-
-            minimap->width  = JS_GetNumberValue(json, "width");
-            minimap->width  = CLAMP(minimap->width, 32, 96);
-
-            minimap->height = JS_GetNumberValue(json, "height");
-            minimap->height = CLAMP(minimap->height, 32, 96);
-
-            minimap->under_messages = JS_GetBooleanValue(json, "under_messages");
-
-            out->subtype.minimap = minimap;
-        }
-
-        // [Nugget] ---------------------------------------------------------/
-
         default:
             break;
     }
@@ -404,7 +385,7 @@ static const char *sbe_names[] =
 // [Nugget]
 static const char *nugget_sbe_names[] =
 {
-    [sbe_minimap - sbe_start_nugget] = "minimap",
+    // [sbe_something - sbe_start_nugget] = "something",
 };
 
 static boolean ParseSbarElem(json_t *json, sbarelem_t *out)

@@ -385,7 +385,7 @@ void D_Display (void)
 
       x += (scaledviewwidth - SHORT(patch->width)) / 2 - video.deltaw;
 
-      if (automapactive != AM_FULL)
+      if (!automapactive)
         y += scaledviewy;
 
       V_DrawPatchSH(x, y, patch); // [Nugget] HUD/menu shadows

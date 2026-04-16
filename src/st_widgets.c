@@ -885,11 +885,11 @@ static void UpdateTitle(sbe_widget_t *widget)
 
 static boolean WidgetEnabled(widgetstate_t state)
 {
-    if (automapactive == AM_FULL && !(state & HUD_WIDGET_AUTOMAP))
+    if (automapactive && !(state & HUD_WIDGET_AUTOMAP))
     {
         return false;
     }
-    else if (automapactive != AM_FULL && !(state & HUD_WIDGET_HUD))
+    else if (!automapactive && !(state & HUD_WIDGET_HUD))
     {
         return false;
     }
@@ -1030,7 +1030,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
 
     // [Nugget] /-------------------------------------------------------------
 
-    const boolean *const showstats = (automapactive == AM_FULL) ? hud_stats_show_map : hud_stats_show;
+    const boolean *const showstats = automapactive ? hud_stats_show_map : hud_stats_show;
 
     if (!(showstats[SHOWSTATS_KILLS] || showstats[SHOWSTATS_ITEMS] || showstats[SHOWSTATS_SECRETS]))
     { return; }
@@ -1099,7 +1099,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
 
     statsformatfunc_t StatsFormatFunc = StatsFormatFuncs[
         // [Nugget]
-        ((automapactive == AM_FULL && hud_stats_format_map)
+        ((automapactive && hud_stats_format_map)
          ? hud_stats_format_map : hud_stats_format) - 1
     ];
 

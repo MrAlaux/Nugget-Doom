@@ -256,15 +256,7 @@ extern int snd_MusicVolume;    // maximum volume for music
 //  status bar explicitely.
 extern  boolean statusbaractive;
 
-// [Nugget]
-typedef enum automapmode_e {
-  AM_FORCEOFF = -1,
-  AM_OFF,
-  AM_FULL,
-  AM_MINI, // Minimap
-} automapmode_t;
-
-extern  automapmode_t automapactive; // In AutoMap mode?
+extern  boolean automapactive; // In AutoMap mode?
 
 typedef enum
 {
@@ -275,9 +267,8 @@ typedef enum
 
 extern  overlay_t automapoverlay;
 
-// [Nugget] Minimap support
-#define automap_on (automapactive == AM_FULL && !automapoverlay)
-#define automap_off (automapactive != AM_FULL || automapoverlay)
+#define automap_on (automapactive && !automapoverlay)
+#define automap_off (automapactive || automapoverlay)
 
 extern  boolean menuactive;    // Menu overlayed?
 extern  boolean menu_pause_demos;

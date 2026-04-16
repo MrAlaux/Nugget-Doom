@@ -162,8 +162,8 @@ typedef enum
     sbe_max_woof,
 
     sbe_start_nugget = 32,
-    sbe_minimap = 32,
-    sbe_end_nugget,
+    //sbe_something = 32,
+    sbe_end_nugget = 32,
 
     sbe_max_nugget = sbe_end_nugget - sbe_start_nugget,
 
@@ -339,14 +339,6 @@ typedef struct
     const char *data;
 } sbe_string_t;
 
-// [Nugget]
-typedef struct sbe_minimap_s
-{
-    int width;
-    int height;
-    boolean under_messages;
-} sbe_minimap_t;
-
 struct sbarelem_s
 {
     sbarelementtype_t type;
@@ -376,9 +368,6 @@ struct sbarelem_s
         sbe_widget_t *widget;
         sbe_list_t *list;
         sbe_string_t *string;
-
-        // [Nugget]
-        sbe_minimap_t *minimap;
     } subtype;
 };
 

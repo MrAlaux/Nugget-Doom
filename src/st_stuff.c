@@ -376,8 +376,8 @@ static void LoadFacePatches(void)
 
 static boolean CheckWidgetState(widgetstate_t state)
 {
-    if ((state == HUD_WIDGET_AUTOMAP && automapactive == AM_FULL)
-        || (state == HUD_WIDGET_HUD && automapactive != AM_FULL)
+    if ((state == HUD_WIDGET_AUTOMAP && automapactive)
+        || (state == HUD_WIDGET_HUD && !automapactive)
         || (state == HUD_WIDGET_ALWAYS))
     {
         return true;
@@ -565,15 +565,15 @@ static boolean CheckConditions(sbarcondition_t *conditions, player_t *player)
                     int enabled = 0;
                     if (cond->param & sbc_mode_overlay)
                     {
-                        enabled |= (automapactive == AM_FULL && automapoverlay);
+                        enabled |= (automapactive && automapoverlay);
                     }
                     if (cond->param & sbc_mode_automap)
                     {
-                        enabled |= (automapactive == AM_FULL && !automapoverlay);
+                        enabled |= (automapactive && !automapoverlay);
                     }
                     if (cond->param & sbc_mode_hud)
                     {
-                        enabled |= automapactive != AM_FULL;
+                        enabled |= !automapactive;
                     }
                     result &= (enabled > 0);
                 }
@@ -1633,21 +1633,7 @@ static void UpdateStatusBar(player_t *player)
         // [Nugget]
         if (oldbarindex != barindex)
         {
-          if (child->type == sbe_minimap)
-          {
-              sbe_minimap_t *const mm = child->subtype.minimap;
-              int ws = 0;
-
-              if (child->alignment & sbe_wide_left)  { ws -= 1; }
-              if (child->alignment & sbe_wide_right) { ws += 1; }
-              if (child->alignment & sbe_wide_force) { ws *= 2; }
-
-              AM_UpdateMinimap(
-                  child->x_pos, child->y_pos, ws,
-                  mm->width, mm->height, mm->under_messages
-              );
-          }
-          else if ((child->type == sbe_number || child->type == sbe_percent)
+          if ((child->type == sbe_number || child->type == sbe_percent)
                    && child->subtype.number->type == sbn_ammoselected)
           {
               st_ammo_elem = child;
@@ -4351,6 +4337,7 @@ end_amnum:
 
   // Minimap -----------------------------------------------------------------
 
+  /*
   {
     sbarelem_t elem = {0};
     elem.cr = elem.crboom = CR_NONE;
@@ -4371,6 +4358,7 @@ end_amnum:
 
     array_push(sb.children, elem);
   }
+  */
 
   // -------------------------------------------------------------------------
 

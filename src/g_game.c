@@ -121,8 +121,6 @@ boolean nugget_devmode;
 
 // ---------------------------------------------------------------------------
 
-static boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
-
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
 
 static float mouse_h_modifier = 1.0f,
@@ -1455,13 +1453,6 @@ static void G_DoLoadLevel(void)
   // Hide messages (but don't delete them outright)
   ST_HideMessages();
 
-  // Minimap
-  if (minimap_was_on)
-  {
-    minimap_was_on = false;
-    AM_ChangeMode(AM_MINI);
-  }
-
   // Slow Motion
   G_ResetSlowMotion();
 
@@ -2225,12 +2216,7 @@ void G_RestartWithLoadout(const boolean current)
     memcpy(player->maxammo,     initial_loadout.maxammo,     sizeof(player->maxammo));
   }
 
-  if (automapactive)
-  {
-    if (automapactive == AM_MINI) { minimap_was_on = true; }
-
-    AM_Stop();
-  }
+  if (automapactive) { AM_Stop(); }
 
   AM_clearMarks();
 
@@ -2266,9 +2252,6 @@ static void G_DoCompleted(void)
   for (i=0; i<MAXPLAYERS; i++)
     if (playeringame[i])
       G_PlayerFinishLevel(i);        // take away cards and stuff
-
-  // [Nugget] Minimap
-  if (automapactive == AM_MINI) { minimap_was_on = true; }
 
   if (automapactive)
     AM_Stop();
@@ -2443,7 +2426,7 @@ frommapinfo:
 
   gamestate = GS_INTERMISSION;
   viewactive = false;
-  automapactive = AM_OFF;
+  automapactive = false;
 
   // [FG] -statdump implementation from Chocolate Doom
   if (gamemode == commercial || gamemap != 8)
@@ -5038,7 +5021,7 @@ void G_InitNew(skill_t skill, int episode, int map)
   usergame = true;                // will be set false if a demo
   paused = false;
   demoplayback = false;
-  automapactive = AM_OFF;
+  automapactive = false;
   viewactive = true;
   gameepisode = episode;
   gamemap = map;

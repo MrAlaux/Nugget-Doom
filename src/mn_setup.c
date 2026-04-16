@@ -2156,14 +2156,6 @@ static void SizeDisplayAlt(void)
     MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
 
-// [Nugget] Minimap
-static void UpdateHudAnchoring(void)
-{
-    I_UpdateHudAnchoring();
-
-    if (automapactive == AM_MINI) { AM_Start(); }
-}
-
 static void RefreshSolidBackground(void)
 {
     ST_refreshBackground(); // [Nugget] NUGHUD
@@ -2187,7 +2179,7 @@ static setup_menu_t stat_settings1[] = {
     {"Use NUGHUD", S_ONOFF, H_X, M_SPC, {"use_nughud"}},
 
     {"HUD Anchoring", S_CHOICE, H_X, M_SPC, {"hud_anchoring"},
-     .strings_id = str_hud_anchoring, .action = UpdateHudAnchoring}, // [Nugget]
+     .strings_id = str_hud_anchoring, .action = I_UpdateHudAnchoring},
 
     MI_GAP,
 
@@ -2329,12 +2321,6 @@ static const char *secretmessage_strings[] = {
     "Sound only", // [Nugget]
 };
 
-// [Nugget] Minimap
-static void MoveMinimap(void)
-{
-    if (automapactive == AM_MINI) { AM_Start(); }
-}
-
 static setup_menu_t stat_settings4[] = {
     {"Announce Revealed Secrets", S_CHOICE, H_X, M_SPC, {"hud_secret_message"},
      .strings_id = str_secretmessage},
@@ -2365,7 +2351,7 @@ static setup_menu_t stat_settings4[] = {
     // Message flash
     {"Message Flash", S_ONOFF, H_X, M_SPC, {"message_flash"}},
 
-    {"Message Lines", S_NUM, H_X, M_SPC, {"hud_msg_lines"}, .action = MoveMinimap},
+    {"Message Lines", S_NUM, H_X, M_SPC, {"hud_msg_lines"}},
 
     {"Group Repeated Messages", S_ONOFF, H_X, M_SPC, {"hud_msg_group"}},
 
