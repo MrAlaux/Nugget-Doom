@@ -263,7 +263,7 @@ typedef enum
 extern  overlay_t automapoverlay;
 
 #define automap_on (automapactive && !automapoverlay)
-#define automap_off (automapactive || automapoverlay)
+#define automap_off (!automapactive || automapoverlay)
 
 extern  boolean menuactive;    // Menu overlayed?
 extern  boolean menu_pause_demos;

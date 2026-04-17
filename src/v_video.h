@@ -392,9 +392,9 @@ extern void (*V_TileBlock64)(int line, int width, int height, const byte *src);
 
 void V_DrawBackground(const char *patchname);
 
-extern void (*V_ShadeScreen)(int level); // [Nugget]
+void V_ShadeScreen(int level); // [Nugget] Parameterized
 
-void V_ShadeRect(int x, int y, int width, int height);
+extern void (*V_ShadeRect)(int x, int y, int width, int height, int level); // [Nugget] Parameterized
 
 // [FG] colored blood and gibs
 

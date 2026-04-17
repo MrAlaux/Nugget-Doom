@@ -42,6 +42,8 @@ extern boolean comp_godface;
 extern boolean comp_unusedpals;
 extern int force_carousel;
 
+void ST_ToggleMinimap(void);
+
 int ST_GetWideShift(void);
 int ST_GetMessageFontHeight(void);
 boolean ST_IconAvailable(const int i);
