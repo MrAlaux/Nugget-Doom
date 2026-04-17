@@ -1204,52 +1204,6 @@ void V_DrawPatchFullScreen(patch_t *patch)
     DrawPatchInternal(x - video.deltaw, 0, 0, 0, NULL, NULL, NULL, zero_crop, patch, false);
 }
 
-void (*V_ShadeScreen)(int level) = NULL;
-
-static void V_ShadeScreen8(const int level) // [Nugget]
-{
-    const lighttable_t *darkcolormap = &colormaps[0][level * 256];
-
-    pixel_t *row = dest_screen;
-    int height = video.height;
-
-    while (height--)
-    {
-        int width = video.width;
-        pixel_t *col = row;
-
-        while (width--)
-        {
-           *col = darkcolormap[*col];
-            ++col;
-        }
-
-        row += linesize;
-    }
-}
-
-static void V_ShadeScreen32(const int level) // [Nugget]
-{
-    const lighttable32_t *darkcolormap = &colormaps32[0][level * 256 << COLORMAP_ROW_SHIFT_BITS];
-
-    pixel32_t *row = dest_screen32;
-    int height = video.height;
-
-    while (height--)
-    {
-        int width = video.width;
-        pixel32_t *col = row;
-
-        while (width--)
-        {
-           *col = darkcolormap[V_IndexFromRGB(*col)];
-            ++col;
-        }
-
-        row += linesize;
-    }
-}
-
 void V_ScaleRect(vrect_t *rect)
 {
     rect->sx = x1lookup[rect->x];
@@ -1367,7 +1321,7 @@ void V_FillRectRGB(int x, int y, int width, int height, pixel32_t color)
 
 void (*V_ShadowRect)(int x, int y, int width, int height) = NULL;
 
-void V_ShadowRect8(int x, int y, int width, int height)
+static void V_ShadowRect8(int x, int y, int width, int height)
 {
     vrect_t dstrect;
 
@@ -1386,22 +1340,24 @@ void V_ShadowRect8(int x, int y, int width, int height)
 
     ScaleClippedRect(&dstrect);
 
-    pixel_t *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+    pixel_t *row = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
     while (dstrect.sh--)
     {
-        for (int x = 0;  x < dstrect.sw;  x++)
-        {
-          pixel_t *const d = &dest[x];
+        int width = dstrect.sw;
+        pixel_t *col = row;
 
-          *d = shadow_tranmap[*d << 8];
+        while (width--)
+        {
+            *col = shadow_tranmap[*col << 8];
+            ++col;
         }
 
-        dest += linesize;
+        row += linesize;
     }
 }
 
-void V_ShadowRect32(int x, int y, int width, int height)
+static void V_ShadowRect32(int x, int y, int width, int height)
 {
     vrect_t dstrect;
 
@@ -1419,22 +1375,106 @@ void V_ShadowRect32(int x, int y, int width, int height)
 
     ScaleClippedRect(&dstrect);
 
-    pixel32_t *dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+    pixel32_t *row = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
 
     while (dstrect.sh--)
     {
-        for (int x = 0;  x < dstrect.sw;  x++)
-        {
-          pixel32_t *const d = &dest[x];
+        int width = dstrect.sw;
+        pixel32_t *col = row;
 
-          *d = V_IndexToRGB(shadow_tranmap[V_TranMapRowFromRGB(*d)]);
+        while (width--)
+        {
+            *col = V_IndexToRGB(shadow_tranmap[V_TranMapRowFromRGB(*col)]);
+            ++col;
         }
 
-        dest += linesize;
+        row += linesize;
     }
 }
 
 // [Nugget] -----------------------------------------------------------------/
+
+void (*V_ShadeRect)(int x, int y, int width, int height, int level) = NULL;
+
+static void V_ShadeRect8(int x, int y, int width, int height, const int level) // [Nugget] Parameterized
+{
+    vrect_t dstrect;
+
+    dstrect.x = x;
+    dstrect.y = y;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    ClipRect(&dstrect);
+
+    // clipped away completely?
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    ScaleClippedRect(&dstrect);
+
+    pixel_t *row = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+
+    const byte *darkcolormap = &colormaps[0][level * 256];
+
+    while (dstrect.sh--)
+    {
+        int width = dstrect.sw;
+        pixel_t *col = row;
+
+        while (width--)
+        {
+            *col = darkcolormap[*col];
+            ++col;
+        }
+
+        row += linesize;
+    }
+}
+
+static void V_ShadeRect32(int x, int y, int width, int height, const int level)
+{
+    vrect_t dstrect;
+
+    dstrect.x = x;
+    dstrect.y = y;
+    dstrect.w = width;
+    dstrect.h = height;
+
+    ClipRect(&dstrect);
+
+    if (dstrect.cw <= 0 || dstrect.ch <= 0)
+    {
+        return;
+    }
+
+    ScaleClippedRect(&dstrect);
+
+    pixel32_t *row = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+
+    const lighttable32_t *darkcolormap = &colormaps32[0][level * 256 << COLORMAP_ROW_SHIFT_BITS];
+
+    while (dstrect.sh--)
+    {
+        int width = dstrect.sw;
+        pixel32_t *col = row;
+
+        while (width--)
+        {
+            *col = darkcolormap[V_IndexFromRGB(*col)];
+            ++col;
+        }
+
+        row += linesize;
+    }
+}
+
+void V_ShadeScreen(const int level) // [Nugget] Parameterized
+{
+    V_ShadeRect(0, 0, video.unscaledw, SCREENHEIGHT, level);
+}
 
 //
 // V_CopyRect
@@ -2024,7 +2064,7 @@ void V_InitColorFunctions(void)
         DrawPatchColumnTRTRTL = DrawPatchColumn32TRTRTL;
 
         V_FillRect = V_FillRect32;
-        V_ShadeScreen = V_ShadeScreen32;
+        V_ShadeRect = V_ShadeRect32;
         V_ShadowRect = V_ShadowRect32;
         V_TileBlock64 = V_TileBlock64_32;
     }
@@ -2038,7 +2078,7 @@ void V_InitColorFunctions(void)
         DrawPatchColumnTRTRTL = DrawPatchColumn8TRTRTL;
 
         V_FillRect = V_FillRect8;
-        V_ShadeScreen = V_ShadeScreen8;
+        V_ShadeRect = V_ShadeRect8;
         V_ShadowRect = V_ShadowRect8;
         V_TileBlock64 = V_TileBlock64_8;
     }

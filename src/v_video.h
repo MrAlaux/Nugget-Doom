@@ -394,6 +394,8 @@ void V_DrawBackground(const char *patchname);
 
 extern void (*V_ShadeScreen)(int level); // [Nugget]
 
+void V_ShadeRect(int x, int y, int width, int height);
+
 // [FG] colored blood and gibs
 
 int V_BloodColor(int blood);

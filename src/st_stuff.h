@@ -70,7 +70,7 @@ extern enum keyblink_e st_keyorskull[3];
 // Size of statusbar.
 // Now sensitive for scaling.
 
-//#define ST_HEIGHT 32
+#define ST_HEIGHT 32
 extern int st_height, st_height_screenblocks10;
 #define ST_WIDTH  SCREENWIDTH
 #define ST_Y      (SCREENHEIGHT - st_height)

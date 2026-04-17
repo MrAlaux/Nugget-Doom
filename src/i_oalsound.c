@@ -451,7 +451,7 @@ static void GetAttribs(ALCint **attribs)
 void I_OAL_BindSoundVariables(void)
 {
     BIND_BOOL_GENERAL(snd_hrtf, false,
-        "[OpenAL 3D] Headphones mode (0 = No; 1 = Yes)");
+        "[OpenAL 3D] Headphones mode");
     BIND_NUM_SFX(snd_resampler, 1, 0, UL,
         "Sound resampler (0 = Nearest; 1 = Linear; ...)");
     BIND_NUM_SFX(snd_absorption, 5, 0, 10, // [Nugget] Enabled by default, and given menu item

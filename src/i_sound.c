@@ -803,7 +803,7 @@ void I_BindSoundVariables(void)
         "Play SNDINFO ambient sounds");
     BIND_BOOL_SFX(pitched_sounds, false,
         "Variable pitch for sound effects");
-    BIND_BOOL_SFX(full_sounds, false, "Play sounds in full length (prevents cutoffs)");
+    BIND_BOOL_SFX(full_sounds, false, "Play sounds in full length (prevent cutoffs)");
 
     // [Nugget]
     M_BindBool("s_clipping_dist_x2", &s_clipping_dist_x2, NULL,
@@ -814,11 +814,9 @@ void I_BindSoundVariables(void)
         "Number of sound channels");
     BIND_BOOL_SFX(snd_limiter, false, "Use sound output limiter");
     BIND_NUM(snd_channels_per_sfx, 5, 0, MAX_CHANNELS,
-        "[Limiter] Max number of channels allowed to simultaneously play the "
-        "same sound (0 = Off)");
+        "[Limiter] Max number of channels to play the same sound (0 = Off)");
     BIND_NUM(snd_volume_per_sfx, 5 * 100, 0, MAX_CHANNELS * 100,
-        "[Limiter] Max volume allowed for a sound that is played "
-        "simultaneously by multiple channels [percent] (0 = Off)");
+        "[Limiter] Max volume for sounds played by multiple channels [percent] (0 = Off)");
     BIND_NUM_GENERAL(snd_module, SND_MODULE_MBF, 0, NUM_SND_MODULES - 1,
         "Sound module (0 = Standard; 1 = OpenAL 3D; 2 = PC Speaker Sound)");
     for (int i = 0; i < arrlen(sound_modules); ++i)

@@ -19,6 +19,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include <math.h>
 
 #include "am_map.h"
 #include "d_event.h"
@@ -27,8 +28,10 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
+#include "i_system.h"
 #include "i_video.h"
 #include "m_config.h"
+#include "m_fixed.h"
 #include "m_input.h"
 #include "mn_menu.h"
 #include "m_misc.h"
@@ -54,6 +57,10 @@
 #include "p_map.h"
 #include "s_sound.h"
 #include "sounds.h"
+
+// [Nugget] Brought from below
+#define M_ARRAY_INIT_CAPACITY 500
+#include "m_array.h"
 
 // [Nugget] CVARs
 boolean fancy_teleport;
@@ -103,7 +110,9 @@ enum {
 
 static int map_keyed_door; // keyed doors are colored or flashing
 
-static boolean map_smooth_lines;
+boolean map_smooth_lines;
+static int map_line_thickness;
+static int thickness;
 
 static boolean map_hitboxes; // [Nugget] Show thing hitboxes
 
@@ -163,16 +172,12 @@ typedef struct
     fpoint_t a, b;
 } fline_t;
 
-typedef struct
-{
-    mpoint_t a, b;
-} mline_t;
-
 //
 // The vector graphics for the automap.
 //  A line drawing of the player pointing right,
 //   starting from the middle.
 //
+#if 0
 #define R ((8*MAPPLAYERRADIUS)/7)
 static mline_t player_arrow[] =
 {
@@ -232,8 +237,27 @@ static mline_t thintriangle_guy[] =
 };
 #undef R
 #define NUMTHINTRIANGLEGUYLINES (sizeof(thintriangle_guy)/sizeof(mline_t))
+#endif
 
-// [Nugget] Square hitbox /---------------------------------------------------
+static amdef_t *amdef;
+
+// [Nugget] /=================================================================
+
+// Tag Finder cross ----------------------------------------------------------
+
+static mline_t tf_cross[] =
+{
+  #define R (FRACUNIT)
+
+  { { -R, 0 }, { R, 0} },
+  { { 0, -R }, { 0, R } },
+
+  #undef R
+};
+
+#define NUM_TF_CROSS_LINES (sizeof(tf_cross)/sizeof(mline_t))
+
+// Square hitbox -------------------------------------------------------------
 
 #define R (FRACUNIT)
 
@@ -251,7 +275,7 @@ static mline_t square_hitbox[] =
 
 #define NUMSQUAREHITBOXLINES (sizeof(square_hitbox) / sizeof(mline_t))
 
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 int ddt_cheating = 0;         // killough 2/7/98: make global, rename to ddt_*
 
@@ -259,6 +283,18 @@ boolean automap_grid = false;
 
 boolean automapactive = false;
 static boolean automapfirststart = true;
+
+typedef struct
+{
+    int x;
+    int y;
+    int width;
+    int height;
+    fixed_t scale;
+    boolean active;
+} minimap_t;
+
+static minimap_t minimap;
 
 overlay_t automapoverlay = AM_OVERLAY_OFF;
 
@@ -648,8 +684,6 @@ static void AM_changeWindowLoc(void)
 //
 void AM_initVariables(void)
 {
-  static event_t st_notify = {.type = ev_keyup, .data1.i = AM_MSGENTERED};
-
   automapactive = true;
 
   m_paninc.x = m_paninc.y = 0;
@@ -671,14 +705,15 @@ void AM_initVariables(void)
   AM_Ticker(); // initialize variables for interpolation
   AM_changeWindowLoc();
 
+  // [Nugget]
+  f_x2 = f_x + f_w;
+  f_y2 = f_y + f_h;
+
   // for saving & restoring
   old_m_x = m_x;
   old_m_y = m_y;
   old_m_w = m_w;
   old_m_h = m_h;
-
-  // inform the status bar of the change
-  ST_Responder(&st_notify);
 
   // [Nugget] ----------------------------------------------------------------
 
@@ -749,25 +784,47 @@ static void AM_clearLastMark(void)
 
 static void AM_EnableSmoothLines(void)
 {
-  AM_drawFline = map_smooth_lines ? AM_drawFline_Smooth : AM_drawFline_Vanilla;
+    if (map_smooth_lines && video.height >= SCREENHEIGHT * 2)
+    {
+        AM_drawFline = AM_drawFline_Smooth;
+    }
+    else
+    {
+        AM_drawFline = AM_drawFline_Vanilla;
+    }
 }
 
 static void AM_initScreenSize(void)
 {
-  // killough 2/7/98: get rid of finit_ vars
-  // to allow runtime setting of width/height
-  //
-  // killough 11/98: ... finally add hires support :)
+    // killough 2/7/98: get rid of finit_ vars
+    // to allow runtime setting of width/height
+    //
+    // killough 11/98: ... finally add hires support :)
 
-  f_w = video.width;
-  if (automapoverlay && scaledviewheight == SCREENHEIGHT)
-    f_h = video.height;
-  else
-    f_h = V_ScaleY(SCREENHEIGHT - st_height);
+    if (minimap.active)
+    {
+        f_x = minimap.x;
+        f_y = minimap.y;
+        f_w = minimap.width;
+        f_h = minimap.height;
+    }
+    else
+    {
+        f_x = f_y = 0;
+        f_w = video.width;
+        if (automapoverlay && scaledviewheight == SCREENHEIGHT)
+        {
+            f_h = video.height;
+        }
+        else
+        {
+            f_h = V_ScaleY(SCREENHEIGHT - st_height);
+        }
+    }
 
-  // [Nugget]
-  f_x2 = f_x + f_w;
-  f_y2 = f_y + f_h;
+    // [Nugget]
+    f_x2 = f_x + f_w;
+    f_y2 = f_y + f_h;
 }
 
 void AM_ResetScreenSize(void)
@@ -787,6 +844,8 @@ void AM_ResetScreenSize(void)
   }
 
   AM_activateNewScale();
+
+  AM_ResetThickness();
 }
 
 //
@@ -802,11 +861,11 @@ static void AM_LevelInit(void)
 {
   automapfirststart = true;
 
-  f_x = f_y = 0;
-
   AM_initScreenSize();
 
   AM_EnableSmoothLines();
+
+  AM_ResetThickness();
 
   AM_findMinMaxBoundaries();
 
@@ -836,19 +895,55 @@ static void AM_LevelInit(void)
 //
 void AM_Stop (void)
 {
-  static event_t st_notify = {.type = 0, .data1.i = ev_keyup, .data2.i = AM_MSGEXITED};
-
   memset(buttons_state, 0, sizeof(buttons_state));
 
   AM_unloadPics();
   automapactive = false;
-  ST_Responder(&st_notify);
   stopped = true;
 
   // [Nugget] Tag Finder from PrBoomX
   findtag = false;
   magic_sector = NULL;
   magic_tag = -1;
+}
+
+static fixed_t full_min_scale_mtof;
+static fixed_t full_max_scale_mtof;
+static fixed_t full_scale_mtof;
+static fixed_t full_scale_ftom;
+
+static void ResetSwapScale(void)
+{
+    full_min_scale_mtof = min_scale_mtof;
+    full_max_scale_mtof = max_scale_mtof;
+    full_scale_mtof = scale_mtof;
+    full_scale_ftom = scale_ftom;
+}
+
+static void SwapScale(void)
+{
+    static boolean last_full_automap;
+
+    if (minimap.active)
+    {
+        if (last_full_automap)
+        {
+            ResetSwapScale();    
+        }
+        min_scale_mtof = max_scale_mtof = scale_mtof
+            = FixedDiv(f_w << FRACBITS, minimap.scale << MAPBITS);
+        scale_ftom = FixedDiv(FRACUNIT, scale_mtof); 
+    }
+    else
+    {
+        min_scale_mtof = full_min_scale_mtof;
+        max_scale_mtof = full_max_scale_mtof;
+        scale_mtof = full_scale_mtof;
+        scale_ftom = full_scale_ftom;
+    }
+
+    AM_activateNewScale();
+    last_full_automap = automapactive;
 }
 
 //
@@ -863,23 +958,46 @@ void AM_Stop (void)
 //
 void AM_Start()
 {
-  static int lastlevel = -1, lastepisode = -1;
+    static int lastlevel = -1, lastepisode = -1;
 
-  if (!stopped)
-    AM_Stop();
-  stopped = false;
-  if (lastlevel != gamemap || lastepisode != gameepisode)
-  {
-    AM_LevelInit();
-    lastlevel = gamemap;
-    lastepisode = gameepisode;
-  }
-  else
-  {
-    AM_ResetScreenSize();
-  }
-  AM_initVariables();
-  AM_loadPics();
+    if (!amdef)
+    {
+        amdef = AM_ParseAmDef();
+        if (!amdef)
+        {
+            I_Error("Error parsing AMAPDEF");
+        }
+    }
+
+    if (!stopped)
+    {
+        AM_Stop();
+    }
+    stopped = false;
+
+    if (lastlevel != gamemap || lastepisode != gameepisode)
+    {
+        AM_LevelInit();
+        ResetSwapScale();
+        lastlevel = gamemap;
+        lastepisode = gameepisode;
+    }
+    else
+    {
+        AM_ResetScreenSize();
+    }
+    AM_initVariables();
+    AM_loadPics();
+}
+
+void AM_MiniStart(void)
+{
+    // [Nugget]
+    const boolean oldactive = automapactive;
+
+    memset(&minimap, 0, sizeof(minimap_t));
+    AM_Start();
+    automapactive = oldactive;
 }
 
 //
@@ -908,6 +1026,26 @@ static void AM_maxOutWindowScale(void)
   scale_mtof = max_scale_mtof;
   scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
   AM_activateNewScale();
+}
+
+// [Nugget] Toggle minimap if the automap button is quickly pressed twice
+static boolean CheckQuickMapButtonDoublePress(void)
+{
+  static const int MINIMAP_TOGGLE_TICS = TICRATE/5; // 0.2 seconds
+  static int last_input_map_tic = -MINIMAP_TOGGLE_TICS;
+
+  boolean ret = false;
+
+  const boolean minimap_input_set = array_size(M_Input(input_map_mini)) > 0;
+
+  if (gametic - last_input_map_tic < MINIMAP_TOGGLE_TICS && !minimap_input_set)
+  {
+    ST_ToggleMinimap();
+    ret = true;
+  }
+
+  last_input_map_tic = gametic;
+  return ret;
 }
 
 //
@@ -946,44 +1084,17 @@ boolean AM_Responder
   {
     if (M_InputActivated(input_map) && !WS_Override())
     {
-      AM_Start ();
-      viewactive = false;
-      ST_refreshBackground();
+      if (!CheckQuickMapButtonDoublePress()) // [Nugget]
+      {
+        minimap.active = false;
+        AM_Start ();
+        SwapScale();
+        viewactive = false;
+        ST_refreshBackground();
+      }
+
       rc = true;
     }
-    // [Nugget] Minimap: allow zooming
-    /*
-    else if (automapactive == AM_MINI)
-    {
-      if (ev->type == ev_keydown)
-      {
-        rc = true;
-
-        if (M_InputActivated(input_map_zoomout))
-        {
-          buttons_state[ZOOM_OUT] = 1;
-        }
-        else if (M_InputActivated(input_map_zoomin))
-        {
-          buttons_state[ZOOM_IN] = 1;
-        }
-        else { rc = false; }
-      }
-      else if (ev->type == ev_keyup)
-      {
-        rc = false;
-
-        if (M_InputDeactivated(input_map_zoomout))
-        {
-          buttons_state[ZOOM_OUT] = 0;
-        }
-        else if (M_InputDeactivated(input_map_zoomin))
-        {
-          buttons_state[ZOOM_IN] = 0;
-        }
-      }
-    }
-    */
   }
   else if (ev->type == ev_keydown ||
            ev->type == ev_mouseb_down ||
@@ -1037,6 +1148,9 @@ boolean AM_Responder
     {
       if (!WS_Override() && !tanzd) // [Nugget]
       {
+        // [Nugget]
+        CheckQuickMapButtonDoublePress();
+
         bigstate = 0;
         viewactive = true;
         ST_refreshBackground();
@@ -1340,6 +1454,9 @@ void AM_Coordinates(const mobj_t *mo, fixed_t *x, fixed_t *y, fixed_t *z)
 //
 void AM_Ticker (void)
 {
+  if (!automapactive && !minimap.active)
+    return;
+
   // [Nugget] /===============================================================
 
   if (highlight_timer) { highlight_timer--; } //  Highlight points of interest
@@ -1410,17 +1527,13 @@ void AM_Ticker (void)
 
   {
     static int64_t old_m_x = -1, old_m_y = -1, old_m_w = -1, old_m_h = -1;
-    static int old_markpointnum = -1;
+    static int old_markpointnum = -1, old_tic = -1;
 
-    if (!automapactive)
+    if (old_m_x != m_x || old_m_y != m_y || old_m_w != m_w || old_m_h != m_h
+        || old_markpointnum != markpointnum || gametic - old_tic > 1)
     {
-      pointed_mark_index = -1;
-      old_m_x = -1; // Make the check be run when re-entering
-    }
-    else if (old_m_x != m_x || old_m_y != m_y || old_m_w != m_w || old_m_h != m_h
-             || old_markpointnum != markpointnum)
-    {
-      // The pointer has moved, or marks have changed; check if the pointer is near a mark
+      // The pointer has moved, marks have changed, or the automap was off;
+      // check if the pointer is near a mark
 
       old_m_x = m_x;
       old_m_y = m_y;
@@ -1457,6 +1570,8 @@ void AM_Ticker (void)
         }
       }
     }
+
+    old_tic = gametic;
   }
 
   if (tanzen)
@@ -1492,32 +1607,12 @@ static void (*AM_clearFB)(int color) = NULL;
 
 static void AM_clearFB8(int color)
 {
-  // [Nugget] Take `f_x` and `f_y` into account
-
-  int h = f_h;
-  pixel_t *dest = I_VideoBuffer + ((f_y * video.width) + f_x);
-
-  while (h--)
-  {
-    memset(dest, color, f_w);
-    dest += video.width;
-  }
+  memset(I_VideoBuffer, color, f_h * f_w);
 }
 
 static void AM_clearFB32(int color)
 {
-  // [Nugget] Take `f_x` and `f_y` into account
-
-  int h = f_h;
-  pixel32_t *dest = I_VideoBuffer32 + ((f_y * video.width) + f_x);
-
-  const pixel32_t color32 = V_IndexToRGB(color);
-
-  while (h--)
-  {
-    V_RGBSet(dest, color32, f_w);
-    dest += video.width;
-  }
+  V_RGBSet(I_VideoBuffer32, V_IndexToRGB(color), f_h * f_w);
 }
 
 //
@@ -1554,13 +1649,12 @@ static boolean AM_clipMline
   int   dy;
 
 
-// [Nugget] Take `f_x` and `f_y` into account
 #define DOOUTCODE(oc, mx, my) \
   (oc) = 0; \
-  if ((my) < f_y) (oc) |= TOP; \
-  else if ((my) >= f_y2) (oc) |= BOTTOM; \
-  if ((mx) < f_x) (oc) |= LEFT; \
-  else if ((mx) >= f_x2) (oc) |= RIGHT;
+  if ((my) < 0) (oc) |= TOP; \
+  else if ((my) >= f_y + f_h) (oc) |= BOTTOM; \
+  if ((mx) < 0) (oc) |= LEFT; \
+  else if ((mx) >= f_x + f_w) (oc) |= RIGHT;
 
 
   // do trivial rejects and outcodes
@@ -1618,28 +1712,28 @@ static boolean AM_clipMline
       dx = fl->b.x - fl->a.x;
       // [Woof!] 'int64_t' math to avoid overflows on long lines.
       tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-f_y))/dy);
-      tmp.y = f_y; // [Nugget] Take `f_y` into account
+      tmp.y = f_y;
     }
     else if (outside & BOTTOM)
     {
       dy = fl->a.y - fl->b.y;
       dx = fl->b.x - fl->a.x;
-      tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y2)))/dy);
-      tmp.y = f_y2-1; // [Nugget] Take `f_y` into account
+      tmp.x = fl->a.x + (fixed_t)(((int64_t)dx*(fl->a.y-(f_y+f_h)))/dy);
+      tmp.y = f_y + f_h - 1;
     }
     else if (outside & RIGHT)
     {
       dy = fl->b.y - fl->a.y;
       dx = fl->b.x - fl->a.x;
-      tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x2-1 - fl->a.x))/dx);
-      tmp.x = f_x2-1; // [Nugget] Take `f_x` into account
+      tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x+f_w-1 - fl->a.x))/dx);
+      tmp.x = f_x + f_w - 1;
     }
     else if (outside & LEFT)
     {
       dy = fl->b.y - fl->a.y;
       dx = fl->b.x - fl->a.x;
       tmp.y = fl->a.y + (fixed_t)(((int64_t)dy*(f_x-fl->a.x))/dx);
-      tmp.x = f_x; // [Nugget] Take `f_x` into account
+      tmp.x = f_x;
     }
 
     if (outside == outcode1)
@@ -1667,22 +1761,6 @@ static boolean AM_clipMline
 
 // [Nugget] /=================================================================
 
-// Factored out --------------------------------------------------------------
-
-static void (*PUTDOT)(int xx, int yy, int cc) = NULL;
-
-static void PUTDOT8(const int xx, const int yy, const int cc)
-{
-  I_VideoBuffer[(yy) * video.width + (xx)] = cc;
-}
-
-static void PUTDOT32(const int xx, const int yy, const int cc)
-{
-  I_VideoBuffer32[(yy) * video.width + (xx)] = V_IndexToRGB(cc);
-}
-
-// ---------------------------------------------------------------------------
-
 static void (*PutLine)(int x, int y, int dx, int color) = NULL;
 
 static void PutLine8(const int x, const int y, const int dx, const int color)
@@ -1709,235 +1787,356 @@ static void PutLine32(const int x, const int y, const int dx, const int color)
 // Passed the frame coordinates of line, and the color to be drawn
 // Returns nothing
 //
-static void AM_drawFline_Vanilla(fline_t* fl, int color)
-{
-  register int x;
-  register int y;
-  register int dx;
-  register int dy;
-  register int sx;
-  register int sy;
-  register int ax;
-  register int ay;
-  register int d;
 
-#ifdef RANGECHECK         // killough 2/22/98
-  // For debugging only
-  if
-  (
-    // [Nugget] Take `f_x` and `f_y` into account
-       fl->a.x < f_x || fl->a.x >= f_x2
-    || fl->a.y < f_y || fl->a.y >= f_y2
-    || fl->b.x < f_x || fl->b.x >= f_x2
-    || fl->b.y < f_y || fl->b.y >= f_y2
-  )
-  {
-    return;
-  }
+static void (*PutDot)(int x, int y, int color) = NULL;
+
+inline static void PutDot8(int x, int y, int color)
+{
+    I_VideoBuffer[y * video.width + x] = color;
+}
+
+inline static void PutDot32(int x, int y, int color)
+{
+    I_VideoBuffer32[y * video.width + x] = V_IndexToRGB(color);
+}
+
+static void AM_drawFline_Vanilla(fline_t *fl, int color)
+{
+#ifdef RANGECHECK // killough 2/22/98
+    // For debugging only
+    if (fl->a.x < f_x || fl->a.x >= f_x + f_w
+        || fl->a.y < f_y || fl->a.y >= f_y + f_h
+        || fl->b.x < f_x || fl->b.x >= f_x + f_w
+        || fl->b.y < f_y || fl->b.y >= f_y + f_h)
+    {
+        return;
+    }
 #endif
 
-// [Nugget] Factored PUTDOT() out
+    int dx = fl->b.x - fl->a.x;
+    int ax = 2 * (dx < 0 ? -dx : dx);
+    int sx = dx < 0 ? -1 : 1;
 
-  dx = fl->b.x - fl->a.x;
-  ax = 2 * (dx<0 ? -dx : dx);
-  sx = dx<0 ? -1 : 1;
+    int dy = fl->b.y - fl->a.y;
+    int ay = 2 * (dy < 0 ? -dy : dy);
+    int sy = dy < 0 ? -1 : 1;
 
-  dy = fl->b.y - fl->a.y;
-  ay = 2 * (dy<0 ? -dy : dy);
-  sy = dy<0 ? -1 : 1;
+    int x = fl->a.x;
+    int y = fl->a.y;
 
-  x = fl->a.x;
-  y = fl->a.y;
+    int d;
 
-  // [Nugget] Optimize straight horizontal lines
-  if (dx && !dy)
-  {
-    if (dx < 0)
+    // [Nugget] Optimize straight horizontal lines
+    if (dx && !dy)
     {
-      x += dx;
-      dx = -dx;
+        if (dx < 0)
+        {
+            x += dx;
+            dx = -dx;
+        }
+
+        PutLine(x, y, dx, color);
+
+        return;
     }
 
-    PutLine(x, y, dx, color);
-
-    return;
-  }
-
-  if (ax > ay)
-  {
-    d = ay - ax/2;
-    while (1)
+    if (ax > ay)
     {
-      PUTDOT(x,y,color);
-      if (x == fl->b.x) return;
-      if (d>=0)
-      {
-        y += sy;
-        d -= ax;
-      }
-      x += sx;
-      d += ay;
+        d = ay - ax / 2;
+        while (1)
+        {
+            PutDot(x, y, color);
+            if (x == fl->b.x)
+            {
+                return;
+            }
+            if (d >= 0)
+            {
+                y += sy;
+                d -= ax;
+            }
+            x += sx;
+            d += ay;
+        }
     }
-  }
-  else
-  {
-    d = ax - ay/2;
-    while (1)
+    else
     {
-      PUTDOT(x, y, color);
-      if (y == fl->b.y) return;
-      if (d >= 0)
-      {
-        x += sx;
-        d -= ay;
-      }
-      y += sy;
-      d += ax;
+        d = ax - ay / 2;
+        while (1)
+        {
+            PutDot(x, y, color);
+            if (y == fl->b.y)
+            {
+                return;
+            }
+            if (d >= 0)
+            {
+                x += sx;
+                d -= ay;
+            }
+            y += sy;
+            d += ax;
+        }
     }
-  }
 }
 
 //
-// AM_putWuDot
+// PutWuDot
 //
 // haleyjd 06/13/09: Pixel plotter for Wu line drawing.
 //
 
-static void (*AM_putWuDot)(int x, int y, int color, int weight) = NULL;
+static void (*PutWuDot)(int x, int y, int color, int weight) = NULL;
 
-static void AM_putWuDot8(int x, int y, int color, int weight)
+inline static void PutWuDot8(int x, int y, int color, int weight)
 {
-   pixel_t *dest = &I_VideoBuffer[y * video.width + x];
-   unsigned int *fg2rgb = Col2RGB8[weight];
-   unsigned int *bg2rgb = Col2RGB8[64 - weight];
-   unsigned int fg, bg;
+    pixel_t *dest = I_VideoBuffer + y * video.width + x;
+    unsigned int *fg2rgb = Col2RGB8[weight];
+    unsigned int *bg2rgb = Col2RGB8[64 - weight];
+    unsigned int fg, bg;
 
-   fg = fg2rgb[color];
-   bg = bg2rgb[*dest];
-   fg = (fg + bg) | 0x1f07c1f;
-   *dest = RGB32k[0][0][fg & (fg >> 15)];
+    fg = fg2rgb[color];
+    bg = bg2rgb[*dest];
+    fg = (fg + bg) | 0x1f07c1f;
+    *dest = RGB32k[0][0][fg & (fg >> 15)];
 }
 
-static void AM_putWuDot32(int x, int y, int color, int weight)
+inline static void PutWuDot32(int x, int y, int color, int weight)
 {
-   pixel32_t *dest = &I_VideoBuffer32[y * video.width + x];
-   unsigned int *fg2rgb = Col2RGB8[weight];
-   unsigned int *bg2rgb = Col2RGB8[64 - weight];
-   unsigned int fg, bg;
+    pixel32_t *dest = I_VideoBuffer32 + y * video.width + x;
+    unsigned int *fg2rgb = Col2RGB8[weight];
+    unsigned int *bg2rgb = Col2RGB8[64 - weight];
+    unsigned int fg, bg;
 
-   fg = fg2rgb[color];
-   bg = bg2rgb[V_IndexFromRGB(*dest)];
-   fg = (fg + bg) | 0x1f07c1f;
-   *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
+    fg = fg2rgb[color];
+    bg = bg2rgb[V_IndexFromRGB(*dest)];
+    fg = (fg + bg) | 0x1f07c1f;
+    *dest = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
 }
 
-
-// Given 65536, we need 2048; 65536 / 2048 == 32 == 2^5
-// Why 2048? ANG90 == 0x40000000 which >> 19 == 0x800 == 2048.
-// The trigonometric correction is based on an angle from 0 to 90.
-#define wu_fineshift 5
-
-// Given 64 levels in the Col2RGB8 table, 65536 / 64 == 1024 == 2^10
-#define wu_fixedshift 10
-
 //
-// AM_drawFlineWu
+// AM_drawFline_Smooth
 //
-// haleyjd 06/12/09: Wu line drawing for the automap, with trigonometric
-// brightness correction by SoM. I call this the Wu-McGranahan line drawing
-// algorithm.
+// A simple extension to Xiaolin Wu's line drawing algorithm to draw thick lines
 //
+
+// Helper function to swap two float values
+inline static void swap_float(float *a, float *b)
+{
+    float temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+// Main function to draw a thick anti-aliased line
 static void AM_drawFline_Smooth(fline_t *fl, int color)
 {
-   int dx, dy, xdir = 1;
-   int x, y;
+    float x1 = fl->a.x;
+    float y1 = fl->a.y;
+    float x2 = fl->b.x;
+    float y2 = fl->b.y;
+    float width = thickness;
 
-   // swap end points if necessary
-   if(fl->a.y > fl->b.y)
-   {
-      fpoint_t tmp = fl->a;
+    // Check if steep (|dy| > |dx|)
+    boolean steep = fabsf(y2 - y1) > fabsf(x2 - x1);
 
-      fl->a = fl->b;
-      fl->b = tmp;
-   }
+    // Swap x and y if steep
+    if (steep)
+    {
+        swap_float(&x1, &y1);
+        swap_float(&x2, &y2);
+    }
 
-   // determine change in x, y and direction of travel
-   dx = fl->b.x - fl->a.x;
-   dy = fl->b.y - fl->a.y;
+    // Ensure x1 <= x2
+    if (x1 > x2)
+    {
+        swap_float(&x1, &x2);
+        swap_float(&y1, &y2);
+    }
 
-   if(dx < 0)
-   {
-      dx   = -dx;
-      xdir = -xdir;
-   }
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float gradient = (dx == 0.0f) ? 1.0f : dy / dx;
 
-   // detect special cases -- horizontal, vertical, and 45 degrees;
-   // revert to Bresenham
-   if(dx == 0 || dy == 0 || dx == dy)
-   {
-      AM_drawFline_Vanilla(fl, color);
-      return;
-   }
+    // Adjust width for the line's slope
+    width = width * sqrtf(1.0f + gradient * gradient);
+    int width_int = (int)width;
 
-   // draw first pixel
-   PUTDOT(fl->a.x, fl->a.y, color);
+    // Handle first endpoint
+    int xend = (int)roundf(x1);
+    float yend = y1 - (width - 1.0f) * 0.5f + gradient * (xend - x1);
+    float xgap = 1.0f - (x1 + 0.5f - (float)xend);
+    int xpxl1 = xend;
+    int ypxl1 = (int)floorf(yend);
+    float fpart = yend - floorf(yend);
+    float rfpart = 1.0f - fpart;
 
-   x = fl->a.x;
-   y = fl->a.y;
+    // Draw first endpoint
+    if (steep)
+    {
+        int sx = ypxl1;
+        int sy = xpxl1;
+        if (sx >= f_x && sx < f_x + f_w && sy >= f_y && sy < f_y + f_h)
+        {
+            PutWuDot(sx, sy, color, rfpart * xgap * 64);
+            for (int i = 1; i < width_int; ++i)
+            {
+                sx = ypxl1 + i;
+                if (sx >= f_x && sx < f_x + f_w)
+                {
+                    PutDot(sx, sy, color);
+                }
+            }
+            sx = ypxl1 + (int)width;
+            if (sx >= f_x && sx < f_x + f_w)
+            {
+                PutWuDot(sx, sy, color, fpart * xgap * 64);
+            }
+        }
+    }
+    else
+    {
+        int sx = xpxl1;
+        int sy = ypxl1;
+        if (sx >= f_x && sx < f_x + f_w && sy >= f_y && sy < f_y + f_h)
+        {
+            PutWuDot(sx, sy, color, rfpart * xgap * 64);
+            for (int i = 1; i < width_int; ++i)
+            {
+                sy = ypxl1 + i;
+                if (sy >= f_y && sy < f_y + f_h)
+                {
+                    PutDot(sx, sy, color);
+                }
+            }
+            sy = ypxl1 + width_int;
+            if (sy >= f_y && sy < f_y + f_h)
+            {
+                PutWuDot(sx, sy, color, fpart * xgap * 64);
+            }
+        }
+    }
 
-   if(dy > dx)
-   {
-      // line is y-axis major.
-      uint16_t erroracc = 0,
-         erroradj = (uint16_t)(((uint32_t)dx << 16) / (uint32_t)dy);
+    float intery = yend + gradient; // First y-intersection for main loop
 
-      while(--dy)
-      {
-         uint16_t erroracctmp = erroracc;
+    // Handle second endpoint
+    xend = (int)roundf(x2);
+    yend = y2 - (width - 1.0f) * 0.5f + gradient * (xend - x2);
+    xgap = 1.0f - (x2 + 0.5f - (float)xend);
+    int xpxl2 = xend;
+    int ypxl2 = (int)floorf(yend);
+    fpart = yend - floorf(yend);
+    rfpart = 1.0f - fpart;
 
-         erroracc += erroradj;
+    // Draw second endpoint
+    if (steep)
+    {
+        int sx = ypxl2;
+        int sy = xpxl2;
+        if (sx >= f_x && sx < f_x + f_w && sy >= f_y && sy < f_y + f_h)
+        {
+            PutWuDot(sx, sy, color, rfpart * xgap * 64);
+            for (int i = 1; i < width_int; ++i)
+            {
+                sx = ypxl2 + i;
+                if (sx >= f_x && sx < f_x + f_w)
+                {
+                    PutDot(sx, sy, color);
+                }
+            }
+            sx = ypxl2 + width_int;
+            if (sx >= f_x && sx < f_x + f_w)
+            {
+                PutWuDot(sx, sy, color, fpart * xgap * 64);
+            }
+        }
+    }
+    else
+    {
+        int sx = xpxl2;
+        int sy = ypxl2;
+        if (sx >= f_x && sx < f_x + f_w && sy >= f_y && sy < f_y + f_h)
+        {
+            PutWuDot(sx, sy, color, rfpart * xgap * 64);
+            for (int i = 1; i < width_int; ++i)
+            {
+                sy = ypxl2 + i;
+                if (sy >= f_y && sy < f_y + f_h)
+                {
+                    PutDot(sx, sy, color);
+                }
+            }
+            sy = ypxl2 + width_int;
+            if (sy >= f_y && sy < f_y + f_h)
+            {
+                PutWuDot(sx, sy, color, fpart * xgap * 64);
+            }
+        }
+    }
 
-         // if error has overflown, advance x coordinate
-         if(erroracc <= erroracctmp)
-            x += xdir;
+    // Main loop
+    if (steep)
+    {
+        for (int x = xpxl1 + 1; x < xpxl2; ++x)
+        {
+            fpart = intery - floorf(intery);
+            rfpart = 1.0f - fpart;
+            int y = (int)floorf(intery);
+            int sx = y;
+            int sy = x;
 
-         y += 1; // advance y
+            if (sx >= f_x && sx < f_x + f_w && sy >= f_y && sy < f_y + f_h)
+            {
+                PutWuDot(sx, sy, color, rfpart * 64);
+                for (int i = 1; i < width_int; ++i)
+                {
+                    sx = y + i;
+                    if (sx >= f_x && sx < f_x + f_w)
+                    {
+                        PutDot(sx, sy, color);
+                    }
+                }
+                sx = y + width_int;
+                if (sx >= f_x && sx < f_x + f_w)
+                {
+                    PutWuDot(sx, sy, color, fpart * 64);
+                }
+            }
 
-         // the trick is in the trig!
-         AM_putWuDot(x, y, color,
-                     finecosine[erroracc >> wu_fineshift] >> wu_fixedshift);
-         AM_putWuDot(x + xdir, y, color,
-                     finesine[erroracc >> wu_fineshift] >> wu_fixedshift);
-      }
-   }
-   else
-   {
-      // line is x-axis major.
-      uint16_t erroracc = 0,
-         erroradj = (uint16_t)(((uint32_t)dy << 16) / (uint32_t)dx);
+            intery += gradient;
+        }
+    }
+    else
+    {
+        for (int x = xpxl1 + 1; x < xpxl2; ++x)
+        {
+            fpart = intery - floorf(intery);
+            rfpart = 1.0f - fpart;
+            int y = (int)floorf(intery);
+            int sx = x;
+            int sy = y;
 
-      while(--dx)
-      {
-         uint16_t erroracctmp = erroracc;
+            if (sx >= f_x && sx < f_x + f_w && sy >= f_y && sy < f_y + f_h)
+            {
+                PutWuDot(sx, sy, color, rfpart * 64);
+                for (int i = 1; i < width_int; ++i)
+                {
+                    sy = y + i;
+                    if (sy >= f_y && sy < f_y + f_h)
+                    {
+                        PutDot(sx, sy, color);
+                    }
+                }
+                sy = y + width_int;
+                if (sy >= f_y && sy < f_y + f_h)
+                {
+                    PutWuDot(sx, sy, color, fpart * 64);
+                }
+            }
 
-         erroracc += erroradj;
-
-         // if error has overflown, advance y coordinate
-         if(erroracc <= erroracctmp)
-            y += 1;
-
-         x += xdir; // advance x
-
-         // the trick is in the trig!
-         AM_putWuDot(x, y, color,
-                     finecosine[erroracc >> wu_fineshift] >> wu_fixedshift);
-         AM_putWuDot(x, y + 1, color,
-                     finesine[erroracc >> wu_fineshift] >> wu_fixedshift);
-      }
-   }
-
-   // draw last pixel
-   PUTDOT(fl->b.x, fl->b.y, color);
+            intery += gradient;
+        }
+    }
 }
 
 //
@@ -2113,8 +2312,7 @@ static int AM_DoorColor(int type)
 // jff 4/3/98 changed mapcolor_xxxx=-1 to disable drawing line completely
 //
 
-#define M_ARRAY_INIT_CAPACITY 500
-#include "m_array.h"
+// [Nugget] Moved `m_array.h` include above
 
 typedef struct
 {
@@ -2441,7 +2639,7 @@ static void AM_drawWalls(void)
   // [Nugget] Tag Finder from PrBoomX
   for (int i = 0;  i < array_size(crossmarks);  i++)
   {
-    AM_drawLineCharacter(cross_mark, NUMCROSSMARKLINES, 128<<MAPBITS, 0,
+    AM_drawLineCharacter(tf_cross, NUM_TF_CROSS_LINES, 128<<MAPBITS, 0,
                          crossmarks[i].color, crossmarks[i].x, crossmarks[i].y);
   }
   array_clear(crossmarks);
@@ -2618,8 +2816,8 @@ static void AM_drawPlayers(void)
     if (ddt_cheating)
       AM_drawLineCharacter
       (
-        cheat_player_arrow,
-        NUMCHEATPLYRLINES,
+        amdef->player_cheat,
+        array_size(amdef->player_cheat),
         0,
         smoothangle,
         cur_mapcolor_sngl,      //jff color
@@ -2629,8 +2827,8 @@ static void AM_drawPlayers(void)
     else
       AM_drawLineCharacter
       (
-        player_arrow,
-        NUMPLYRLINES,
+        amdef->player,
+        array_size(amdef->player),
         0,
         smoothangle,
         cur_mapcolor_sngl,      //jff color
@@ -2685,8 +2883,8 @@ static void AM_drawPlayers(void)
 
     AM_drawLineCharacter
     (
-      player_arrow,
-      NUMPLYRLINES,
+      amdef->player,
+      array_size(amdef->player),
       0,
       smoothangle,
       color,
@@ -2768,8 +2966,8 @@ static void AM_drawThings
           case 38: case 13: //jff  red key
             AM_drawLineCharacter
             (
-              cross_mark,
-              NUMCROSSMARKLINES,
+              amdef->key,
+              array_size(amdef->key),
               16<<MAPBITS,
               t->angle,
               key_flash ? cur_mapcolor_grid : cur_mapcolor_rkey!=-1? cur_mapcolor_rkey : cur_mapcolor_sprt,
@@ -2781,8 +2979,8 @@ static void AM_drawThings
           case 39: case 6: //jff yellow key
             AM_drawLineCharacter
             (
-              cross_mark,
-              NUMCROSSMARKLINES,
+              amdef->key,
+              array_size(amdef->key),
               16<<MAPBITS,
               t->angle,
               key_flash ? cur_mapcolor_grid : cur_mapcolor_ykey!=-1? cur_mapcolor_ykey : cur_mapcolor_sprt,
@@ -2794,8 +2992,8 @@ static void AM_drawThings
           case 40: case 5: //jff blue key
             AM_drawLineCharacter
             (
-              cross_mark,
-              NUMCROSSMARKLINES,
+              amdef->key,
+              array_size(amdef->key),
               16<<MAPBITS,
               t->angle,
               key_flash ? cur_mapcolor_grid : cur_mapcolor_bkey!=-1? cur_mapcolor_bkey : cur_mapcolor_sprt,
@@ -2813,8 +3011,8 @@ static void AM_drawThings
       //jff previously entire code
       AM_drawLineCharacter
       (
-        thintriangle_guy,
-        NUMTHINTRIANGLEGUYLINES,
+        amdef->thing,
+        array_size(amdef->thing),
         t->radius >> FRACTOMAPBITS, // [crispy] triangle size represents actual thing size
         t->angle,
         // killough 8/8/98: mark friends specially
@@ -2859,8 +3057,8 @@ static void AM_drawMarks(void)
 	int j = i;
 
 	// [crispy] center marks around player
-	pt.x = markpoints[i].pt.x;
-	pt.y = markpoints[i].pt.y;
+	pt.x = f_x + markpoints[i].pt.x;
+	pt.y = f_y + markpoints[i].pt.y;
 	AM_transformPoint(&pt);
 	fx = CXMTOF(pt.x);
 	fy = CYMTOF(pt.y);
@@ -2871,7 +3069,7 @@ static void AM_drawMarks(void)
 
 	// Center number on mark spot ----------------------------------------------
 
-	w -= video.yscale >> FRACBITS; // killough 2/22/98: 1 space backwards
+	w -= video.xscale >> FRACBITS; // killough 2/22/98: 1 space backwards
 
 	int num_digits = 1;
 
@@ -2910,8 +3108,7 @@ static void AM_drawMarks(void)
 	    if (d == 1)           // killough 2/22/98: less spacing for '1'
 	      fx += (video.xscale >> FRACBITS);
 
-	    // [Nugget] Take `f_x` and `f_y` into account
-	    if (fx >= f_x && fx < f_x2 - w && fy >= f_y && fy < f_y2 - h)
+	    if (fx >= f_x && fx < f_x + f_w - w && fy >= f_y && fy < f_y + f_h - h)
 	    {
 	      // [Nugget] Translation
 	      if (cr1 && cr2)
@@ -2947,19 +3144,9 @@ static void AM_drawCrosshair(int color)
   // [crispy] do not draw the useless dot on the player arrow
   if (!followplayer)
   {
-    PUTDOT((f_w + 1) / 2, (f_h + 1) / 2, color); // single point for now
+    PutDot((f_w + 1) / 2, (f_h + 1) / 2, color); // single point for now
   }
 }
-
-// [Nugget] /-----------------------------------------------------------------
-
-void AM_shadeScreen(void)
-{
-  if (!MN_MenuIsShaded())
-    V_ShadeScreen(automap_overlay_darkening); // [Nugget] Parameterized
-}
-
-// [Nugget] -----------------------------------------------------------------/
 
 //
 // AM_Drawer()
@@ -2968,67 +3155,91 @@ void AM_shadeScreen(void)
 //
 // Passed nothing, returns nothing
 //
-void AM_Drawer (void)
+void AM_Drawer(void)
 {
-  if (!automapactive) return;
+    // move AM_doFollowPlayer and AM_changeWindowLoc from AM_Ticker for
+    // interpolation
 
-  // move AM_doFollowPlayer and AM_changeWindowLoc from AM_Ticker for
-  // interpolation
-
-  if (followplayer)
-  {
-    AM_doFollowPlayer();
-  }
-
-  // Change X and Y location.
-  if (m_paninc.x || m_paninc.y)
-  {
-    AM_changeWindowLoc();
-  }
-
-  // [crispy/Woof!] required for AM_transformPoint()
-  if (automaprotate || ADJUST_ASPECT_RATIO)
-  {
-    mapcenter.x = m_x + m_w / 2;
-    mapcenter.y = m_y + m_h / 2;
-    // [crispy] keep the map static if not following the player
-    if (automaprotate && followplayer)
+    if (followplayer)
     {
-      mapangle = ANG90 - plr->mo->angle;
+        AM_doFollowPlayer();
     }
-  }
 
-  if (automapoverlay == AM_OVERLAY_OFF)
-    AM_clearFB(cur_mapcolor_back);       //jff 1/5/98 background default color
-  // [Alaux] Dark automap overlay
-  else if (automapoverlay == AM_OVERLAY_DARK)
-    AM_shadeScreen();
+    // Change X and Y location.
+    if (m_paninc.x || m_paninc.y)
+    {
+        AM_changeWindowLoc();
+    }
 
-  // [Nugget]
-  if (tanzen)
-  {
-    AM_drawLineCharacter(
-      GetTanzerF(tanzf),
-      NUMTANZERFL,
-      scale_ftom * current_video_height / SCREENHEIGHT,
-      automaprotate ? (followplayer ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
-      v_lightest_color,
-      (m_x + m_x2) / 2,
-      (m_y + m_y2) / 2
-    );
+    // [crispy/Woof!] required for AM_transformPoint()
+    if (automaprotate || ADJUST_ASPECT_RATIO)
+    {
+        mapcenter.x = m_x + m_w / 2;
+        mapcenter.y = m_y + m_h / 2;
+        // [crispy] keep the map static if not following the player
+        if (automaprotate && followplayer)
+        {
+            mapangle = ANG90 - plr->mo->angle;
+        }
+    }
 
-    return;
-  }
+    if (!minimap.active)
+    {
+        if (automapoverlay == AM_OVERLAY_OFF)
+        {
+            AM_clearFB(cur_mapcolor_back); // jff 1/5/98 background default
+                                           // color
+        }
+        // [Alaux] Dark automap overlay
+        else if (automapoverlay == AM_OVERLAY_DARK && !MN_MenuIsShaded())
+        {
+            V_ShadeScreen(automap_overlay_darkening); // [Nugget] Parameterized
+        }
+    }
 
-  if (automap_grid)                  // killough 2/28/98: change var name
-    AM_drawGrid(cur_mapcolor_grid);      //jff 1/7/98 grid default color
-  AM_drawWalls();
-  AM_drawPlayers();
-  if (ddt_cheating==2)
-    AM_drawThings(cur_mapcolor_sprt, 0); //jff 1/5/98 default double IDDT sprite
-  AM_drawCrosshair(cur_mapcolor_hair);   //jff 1/7/98 default crosshair color
+    // [Nugget]
+    if (tanzen)
+    {
+        AM_drawLineCharacter(
+            GetTanzerF(tanzf),
+            NUMTANZERFL,
+            scale_ftom * current_video_height / SCREENHEIGHT,
+            automaprotate ? (followplayer ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
+            v_lightest_color,
+            (m_x + m_x2) / 2,
+            (m_y + m_y2) / 2
+        );
 
-  AM_drawMarks();
+        return;
+    }
+
+    if (automap_grid) // killough 2/28/98: change var name
+    {
+        AM_drawGrid(cur_mapcolor_grid); // jff 1/7/98 grid default color
+    }
+    AM_drawWalls();
+    AM_drawPlayers();
+    if (ddt_cheating == 2)
+    {
+        AM_drawThings(cur_mapcolor_sprt, 0); // jff 1/5/98 default double IDDT sprite
+    }
+    AM_drawCrosshair(cur_mapcolor_hair); // jff 1/7/98 default crosshair color
+    AM_drawMarks();
+}
+
+void AM_MiniDrawer(int x, int y, int width, int height, fixed_t scale)
+{
+    minimap_t mm = {.active = true, .x = x, .y = y, .width = width,
+                    .height = height, .scale = scale};
+
+    if (memcmp(&mm, &minimap, sizeof(minimap_t)))
+    {
+        minimap = mm;
+        SwapScale();
+        AM_ResetScreenSize();
+    }
+
+    AM_Drawer();
 }
 
 typedef enum {
@@ -3146,21 +3357,34 @@ void AM_ColorPreset(void)
     ST_ResetTitle();
 }
 
+void AM_ResetThickness(void)
+{
+    if (!map_line_thickness)
+    {
+        thickness = MAX(1, video.height / SCREENHEIGHT - 1);
+    }
+    else
+    {
+        thickness = map_line_thickness;
+    }
+    AM_EnableSmoothLines();
+}
+
 // [Nugget] True color
 void AM_InitColorFunctions(void)
 {
   if (truecolor_rendering)
   {
     AM_clearFB = AM_clearFB32;
-    AM_putWuDot = AM_putWuDot32;
-    PUTDOT = PUTDOT32;
+    PutDot = PutDot32;
     PutLine = PutLine32;
+    PutWuDot = PutWuDot32;
   }
   else {
     AM_clearFB = AM_clearFB8;
-    AM_putWuDot = AM_putWuDot8;
-    PUTDOT = PUTDOT8;
+    PutDot = PutDot8;
     PutLine = PutLine8;
+    PutWuDot = PutWuDot8;
   }
 }
 
@@ -3190,6 +3414,8 @@ void AM_BindAutomapVariables(void)
             "Color key-locked doors on the automap (1 = Static; 2 = Flashing)");
   M_BindBool("map_smooth_lines", &map_smooth_lines, NULL, true, ss_none,
              wad_no, "Smooth automap lines");
+  M_BindNum("map_line_thickness", &map_line_thickness, NULL, 0, 0, 6,
+            ss_auto, wad_no, "Automap line thickness (0 = Auto, 1-6 = Thickness)");
 
   // [Nugget]
   M_BindBool("map_hitboxes", &map_hitboxes, NULL,
