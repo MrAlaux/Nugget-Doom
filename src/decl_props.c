@@ -221,7 +221,10 @@ static struct
     [prop_translation] =    {TYPE_None,  "Translation"},
     [prop_obituary] =       {TYPE_String, "Obituary"},
     [prop_obituary_melee] = {TYPE_String, "HitObituary"},
-    [prop_obituary_self] =  {TYPE_String, "SelfObituary"}
+    [prop_obituary_self] =  {TYPE_String, "SelfObituary"},
+
+    // [Nugget] Sprite scaling
+    [prop_scale] = {TYPE_Fixed, "Scale"},
 };
 
 static struct
@@ -484,6 +487,12 @@ void DECL_InstallMobjInfo(void)
                 case prop_obituary_self:
                     mobj->obituary_self = value.string;
                     break;
+
+                // [Nugget] Sprite scaling
+                case prop_scale:
+                    mobj->scale = value.number;
+                    break;
+
                 default:
                     break;
             }

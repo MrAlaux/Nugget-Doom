@@ -291,6 +291,9 @@ void P_InitAmbientSoundMobjInfo(void)
         .droppeditem = MT_NULL,
         .obituary = NULL,
         .obituary_melee = NULL,
+
+        // [Nugget] Sprite scaling
+        .scale = FRACUNIT,
     };
 
     zmt_ambientsound = DSDH_MobjInfoGetNewIndex();

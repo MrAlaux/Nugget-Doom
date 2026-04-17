@@ -228,7 +228,7 @@ jobs:
       - name: Test
         run: |
           cd demotest
-          python demotest --jobs 4 --port ../build/src/woof
+          python demotest --jobs 4 --port ../build/src/nugget-doom
 
       - name: Save demotest cache
         if: steps.cache-demotest.outputs.cache-hit != 'true'
@@ -240,12 +240,12 @@ jobs:
       - name: Universal Package (macOS)
         if: matrix.config.name == 'macOS uni (vcpkg)'
         run: |
-          lipo build/src/woof build-x64/src/woof -create -output woof
-          lipo build/src/woof-setup build-x64/src/woof-setup -create -output woof-setup
-          rm build/src/woof
-          rm build/src/woof-setup
-          mv woof build/src
-          mv woof-setup build/src
+          lipo build/src/nugget-doom build-x64/src/nugget-doom -create -output nugget-doom
+          lipo build/src/nugget-doom-setup build-x64/src/nugget-doom-setup -create -output nugget-doom-setup
+          rm build/src/nugget-doom
+          rm build/src/nugget-doom-setup
+          mv nugget-doom build/src
+          mv nugget-doom-setup build/src
 
       - name: Package
         run: |
@@ -263,19 +263,3 @@ jobs:
         if: matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
         shell: bash
         run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
-
-      - name: Release
-        if: matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
-        uses: ncipollo/release-action@v1
-        with:
-          name: Woof! ${{ env.VERSION }}
-          bodyFile: CHANGELOG.md
-          allowUpdates: true
-          artifacts: ${{ matrix.config.artifact-path }}
-
-      - name: Release (zsync)
-        if: runner.os == 'Linux' && matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
-        uses: ncipollo/release-action@v1
-        with:
-          allowUpdates: true
-          artifacts: build/*.zsync

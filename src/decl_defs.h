@@ -66,7 +66,10 @@ typedef enum
     prop_translation,
     prop_obituary,
     prop_obituary_melee,
-    prop_obituary_self
+    prop_obituary_self,
+
+    // [Nugget] Sprite scaling
+    prop_scale,
 } proptype_t;
 
 typedef union

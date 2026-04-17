@@ -52,6 +52,9 @@ void DSDH_MobjInfoInit(void)
         mobjinfo[i].meleerange       = MELEERANGE;
         // Eternity
         mobjinfo[i].bloodcolor = 0;
+
+        // [Nugget] Sprite scaling
+        mobjinfo[i].scale = FRACUNIT;
     }
 
     // DEHEXTRA
@@ -165,7 +168,10 @@ int DSDH_ThingTranslate(int thing_number)
         .projectile_group = PG_DEFAULT,
         .splash_group     = SG_DEFAULT,
         .altspeed         = NO_ALTSPEED,
-        .meleerange       = MELEERANGE
+        .meleerange       = MELEERANGE,
+
+        // [Nugget] Sprite scaling
+        .scale = FRACUNIT,
     };
     array_push(mobjinfo, mobj);
     ++num_mobj_types;

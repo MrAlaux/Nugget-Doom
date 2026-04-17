@@ -95,11 +95,11 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include "deh_bex_sounds.h"
 #include "i_thread.h"
 #include "m_nughud.h"
 #include "p_mobj.h"
 #include "r_data.h"
+#include "sounds.h"
 
 boolean devparm;        // started game with -devparm
 
