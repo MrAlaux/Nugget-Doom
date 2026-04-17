@@ -26,6 +26,7 @@
 #include "g_nextweapon.h"
 #include "i_printf.h"
 #include "i_video.h" // uncapped
+#include "m_fixed.h"
 #include "m_random.h"
 #include "p_action.h"
 #include "p_enemy.h"
@@ -989,7 +990,7 @@ void A_Saw(player_t *player, pspdef_t *psp)
   // killough 5/5/98: remove dependence on order of evaluation:
   int t = P_Random(pr_saw);
 
-  angle += (t - P_Random(pr_saw))<<18;
+  angle += shiftleft32(t - P_Random(pr_saw), 18);
 
   // Use meleerange + 1 so that the puff doesn't skip the flash
   range = (mbf21 ? player->mo->info->meleerange : MELEERANGE) + 1;
@@ -1224,7 +1225,7 @@ void P_GunShot(mobj_t *mo, boolean accurate)
   if (!accurate)
     {  // killough 5/5/98: remove dependence on order of evaluation:
       int t = P_Random(pr_misfire);
-      angle += (t - P_Random(pr_misfire))<<18;
+      angle += shiftleft32(t - P_Random(pr_misfire), 18);
     }
 
   // [Nugget] Explosive-hitscan cheat
@@ -1295,14 +1296,14 @@ void A_FireShotgun2(player_t *player, pspdef_t *psp)
       angle_t angle = player->mo->angle;
       // killough 5/5/98: remove dependence on order of evaluation:
       int t = P_Random(pr_shotgun);
-      angle += (t - P_Random(pr_shotgun))<<19;
+      angle += shiftleft32(t - P_Random(pr_shotgun), 19);
       t = P_Random(pr_shotgun);
 
       // [Nugget] Explosive-hitscan cheat
       if (player->cheats & CF_BOOMCAN) { P_SetIsBoomShot(true); }
 
       P_LineAttack(player->mo, angle, MISSILERANGE, bulletslope +
-                   ((t - P_Random(pr_shotgun))<<5), damage);
+                   shiftleft32(t - P_Random(pr_shotgun), 5), damage);
     }
 }
 

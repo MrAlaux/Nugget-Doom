@@ -1125,7 +1125,7 @@ static void M_LoadSelect(int choice)
     name = G_SaveGameName(slot);
     saveg_compat = saveg_woof510;
 
-    if (M_access(name, F_OK) != 0)
+    if (!M_FileExistsNotDir(name))
     {
         if (name)
         {
@@ -1927,19 +1927,20 @@ static void M_ChangeMessages(int choice)
 
 static void M_SizeDisplay(int choice)
 {
-    switch (choice)
+    if (choice == 0 && screenblocks > 3)
     {
-        case 0:
-            screenblocks--;
-            break;
-        case 1:
-            screenblocks++;
-            break;
-        default:
-            break;
+        screenblocks--;
     }
-    screenblocks = CLAMP(screenblocks, 3, maxscreenblocks);
+    else if (choice == 1 && screenblocks < maxscreenblocks)
+    {
+        screenblocks++;
+    }
+    else
+    {
+        return;
+    }
     R_SetViewSize(screenblocks /*, detailLevel obsolete -- killough */);
+    M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
 
     MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
@@ -2756,7 +2757,6 @@ boolean M_ShortcutResponder(const event_t *ev)
             return false;
         }
         M_SizeDisplay(0);
-        M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -2767,7 +2767,6 @@ boolean M_ShortcutResponder(const event_t *ev)
             return false;
         }
         M_SizeDisplay(1);
-        M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 

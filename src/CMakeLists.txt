@@ -18,14 +18,19 @@ set(NUGGETDOOM_SOURCES
                            doomdef.h
     doomstat.c             doomstat.h
                            doomtype.h
+                           decl_defs.h
+    decl_main.c            decl_main.h
+    decl_props.c
+    decl_states.c
+    decl_sounds.c          decl_sounds.h
     deh_ammo.c
     deh_bex_helper.c
     deh_bex_includes.c
-    deh_bex_music.c        deh_bex_music.h
+    deh_bex_music.c
     deh_bex_partimes.c     deh_bex_partimes.h
     deh_bex_pointers.c
-    deh_bex_sounds.c       deh_bex_sounds.h
-    deh_bex_sprites.c      deh_bex_sprites.h
+    deh_bex_sounds.c
+    deh_bex_sprites.c
     deh_bex_strings.c
     deh_cheat.c
     deh_defs.h
@@ -40,6 +45,11 @@ set(NUGGETDOOM_SOURCES
     deh_text.c
     deh_thing.c
     deh_weapon.c
+    dsdh_main.c            dsdh_main.h
+    dsdh_mobjinfo.c
+    dsdh_sounds.c
+    dsdh_sprites.c
+    dsdh_states.c
     f_finale.c             f_finale.h
     f_wipe.c               f_wipe.h
     g_compatibility.c      g_compatibility.h
@@ -85,7 +95,7 @@ set(NUGGETDOOM_SOURCES
     kf_memory.c
     m_arena.c              m_arena.h
     m_argv.c               m_argv.h
-                           m_array.h
+    m_array.c              m_array.h
     m_bbox.c               m_bbox.h
     m_cheat.c              m_cheat.h
     m_config.c             m_config.h
@@ -165,7 +175,6 @@ set(NUGGETDOOM_SOURCES
     r_tranmap.c            r_tranmap.h
     r_voxel.c              r_voxel.h
     s_musinfo.c            s_musinfo.h
-    s_sndinfo.c            s_sndinfo.h
     s_sound.c              s_sound.h
     s_trakinfo.c           s_trakinfo.h
     sounds.c               sounds.h

@@ -1,0 +1,4 @@
+metadata { type "declarate" version "1.0.0" }
+
+#include "possess"
+#include "doomimp"

@@ -22,7 +22,6 @@
 
 #include "i_sound.h"
 
-#include "deh_bex_sounds.h"
 #include "deh_strings.h"
 #include "doomstat.h"
 #include "doomtype.h"
@@ -92,7 +91,7 @@ boolean force_flip_pan; // Brought over from i_mbfsound.c, global
 int S_CLIPPING_DIST;
 int S_ATTENUATOR;
 
-boolean snd_ambient, default_snd_ambient;
+boolean snd_ambient;
 boolean snd_limiter;
 int snd_channels_per_sfx;
 int snd_volume_per_sfx;
@@ -271,9 +270,17 @@ int I_GetSfxLumpNum(sfxinfo_t *sfx)
 {
     if (sfx->lumpnum == -1)
     {
-        char namebuf[9] = {0};
-        M_snprintf(namebuf, sizeof(namebuf), "ds%s", DEH_String(sfx->name));
-        sfx->lumpnum = W_CheckNumForName(namebuf);
+        if (sfx->flags & SFX_NoPrefix)
+        {
+            sfx->lumpnum = W_CheckNumForName(sfx->name);
+        }
+        else
+        {
+            char namebuf[9] = {0};
+            M_snprintf(namebuf, sizeof(namebuf), "ds%s", DEH_String(sfx->name));
+            sfx->lumpnum = W_CheckNumForName(namebuf);
+        }
+
     }
 
     return sfx->lumpnum;
@@ -799,8 +806,6 @@ void I_BindSoundVariables(void)
         "Sound effects volume");
     M_BindNum("music_volume", &snd_MusicVolume, NULL, 8, 0, 15, ss_none, wad_no,
         "Music volume");
-    M_BindBool("snd_ambient", &default_snd_ambient, &snd_ambient, true, ss_none, wad_no,
-        "Play SNDINFO ambient sounds");
     BIND_BOOL_SFX(pitched_sounds, false,
         "Variable pitch for sound effects");
     BIND_BOOL_SFX(full_sounds, false, "Play sounds in full length (prevent cutoffs)");

@@ -1,0 +1,69 @@
+metadata { type "declarate" version "1.0.0" }
+
+//===========================================================================
+//
+// Imp
+//
+//===========================================================================
+
+sound ImpSight  { prefix lump "BGSIT1", "BGSIT2" }
+sound ImpPain   { prefix lump "POPAIN" }
+sound ImpMelee  { prefix lump "CLAW" }
+sound ImpDeath  { prefix lump "BGDTH1", "BGDTH2" }
+sound ImpActive { prefix lump "BGACT" }
+sound ImpAttack { prefix lump "FIRSHT" }
+sound ImpShotx  { prefix lump "FIRXPL" }
+
+thing DoomImp 3001 native
+{
+    health 60
+    radius 20
+    height 56
+    mass 100
+    speed 8
+    painchance 200
+
+    MONSTER
+
+    seesound ImpSight
+    painsound ImpPain
+    deathsound ImpDeath
+    activesound ImpActive
+
+    states
+    {
+    Spawn:
+        TROO AB 10 A_Look
+        loop
+    See:
+        TROO AABBCCDD 3 A_Chase
+        loop
+    Melee:
+    Missile:
+        TROO EF 8 A_FaceTarget
+        TROO G 6 A_TroopAttack
+        goto See
+    Pain:
+        TROO H 2
+        TROO H 2 A_Pain
+        goto See
+    Death:
+        TROO I 8
+        TROO J 8 A_Scream
+        TROO K 6
+        TROO L 6 A_Fall
+        TROO M -1
+        stop
+    XDeath:
+        TROO N 5
+        TROO O 5 A_XScream
+        TROO P 5
+        TROO Q 5 A_Fall
+        TROO RST 5
+        TROO U -1
+        stop
+    Raise:
+        TROO MLKJI 8
+        goto See
+    }
+}

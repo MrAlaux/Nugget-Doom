@@ -22,8 +22,6 @@
 
 #include <string.h>
 
-#include "deh_bex_music.h"
-#include "deh_bex_sounds.h"
 #include "deh_strings.h"
 #include "doomdef.h"
 #include "doomstat.h"
@@ -470,6 +468,12 @@ static boolean StartSoundEx(const mobj_t *origin, int sfx_id,
 #endif
 
     sfx = &S_sfx[sfx_id];
+
+    if (sfx->flags & SFX_Random)
+    {
+        sfx_id = S_RandomSound(sfx_id);
+        sfx = &S_sfx[sfx_id];
+    }
 
     // Initialize sound parameters
     if (ambient)
@@ -1446,7 +1450,6 @@ static void InitPitchStepTable(void)
 void S_Init(int sfxVolume, int musicVolume)
 {
     ResetActive();
-    S_PostParseSndInfo();
 
     // jff 1/22/98 skip sound init if sound not enabled
     if (!nosfxparm)

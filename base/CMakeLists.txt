@@ -1,4 +1,6 @@
 set(BASE_SOURCES
+    all-all/actors/possess.txt
+    all-all/actors/doomimp.txt
     all-all/animated.lmp
     all-all/amapdef.json
     all-all/chexdeh.lmp
@@ -33,6 +35,7 @@ set(BASE_SOURCES
     all-all/crtan.lmp
     all-all/crwhite.lmp
     all-all/cryellow.lmp
+    all-all/declare.txt
     all-all/dig033.png
     all-all/dig034.png # [Nugget]
     all-all/dig037.png

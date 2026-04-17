@@ -1,0 +1,265 @@
+metadata { type "declarate" version "1.0.0" }
+
+//===========================================================================
+//
+// Zombie man
+//
+//===========================================================================
+
+sound GruntSight  { prefix lump "POSIT1", "POSIT2", "POSIT3" }
+sound GruntActive { prefix lump "POSACT" }
+sound GruntPain   { prefix lump "POPAIN" }
+sound GruntDeath  { prefix lump "PODTH1", "PODTH2", "PODTH3" }
+sound GruntAttack { prefix lump "PISTOL" }
+
+thing ZombieMan 3004 native
+{
+    health 20
+    radius 20
+    height 56
+    speed 8
+    painchance 200
+
+    MONSTER
+
+    seesound GruntSight
+    attacksound GruntAttack
+    painsound GruntPain
+    deathsound GruntDeath
+    activesound GruntActive
+
+    dropitem "Clip"
+
+    states
+    {
+    Spawn:
+        POSS AB 10 A_Look
+        loop
+    See:
+        POSS AABBCCDD 4 A_Chase
+        loop
+    Missile:
+        POSS E 10 A_FaceTarget
+        POSS F 8 A_PosAttack
+        POSS E 8
+        goto See
+    Pain:
+        POSS G 3
+        POSS G 3 A_Pain
+        goto See
+    Death:
+        POSS H 5
+        POSS I 5 A_Scream
+        POSS J 5 A_Fall
+        POSS K 5
+        POSS L -1
+        stop
+    XDeath:
+        POSS M 5
+        POSS N 5 A_XScream
+        POSS O 5 A_Fall
+        POSS PQRST 5
+        POSS U -1
+        stop
+    Raise:
+        POSS K 5
+        POSS JIH 5
+        goto See
+    }
+}
+
+//===========================================================================
+//
+// Sergeant / Shotgun guy
+//
+//===========================================================================
+
+sound ShotGuyAttack { prefix lump "SHOTGN" }
+
+thing ShotgunGuy 3002 native
+{
+    health 30
+    radius 20
+    height 56
+    mass 100
+    speed 8
+    painchance 170
+
+    MONSTER
+
+    seesound GruntSight
+    attacksound ShotGuyAttack
+    painsound GruntPain
+    deathsound GruntDeath
+    activesound GruntActive
+
+    dropitem "Shotgun"
+
+    states
+    {
+    Spawn:
+        SPOS AB 10 A_Look
+        loop
+    See:
+        SPOS AABBCCDD 3 A_Chase
+        loop
+    Missile:
+        SPOS E 10 A_FaceTarget
+        SPOS F 10 bright A_SPosAttack
+        SPOS E 10
+        goto See
+    Pain:
+        SPOS G 3
+        SPOS G 3 A_Pain
+        goto See
+    Death:
+        SPOS H 5
+        SPOS I 5 A_Scream
+        SPOS J 5 A_Fall
+        SPOS K 5
+        SPOS L -1
+        stop
+    XDeath:
+        SPOS M 5
+        SPOS N 5 A_XScream
+        SPOS O 5 A_Fall
+        SPOS PQRST 5
+        SPOS U -1
+        stop
+    Raise:
+        SPOS L 5
+        SPOS KJIH 5
+        goto See
+    }
+}
+
+//===========================================================================
+//
+// Chaingunner
+//
+//===========================================================================
+
+thing ChaingunGuy 65 native
+{
+    health 70
+    radius 20
+    height 56
+    mass 100
+    speed 8
+    painchance 170
+
+    MONSTER
+
+    seesound GruntSight
+    painsound GruntPain
+    deathsound GruntDeath
+    activesound GruntActive
+    attacksound ShotGuyAttack
+
+    dropitem "Chaingun"
+
+    states
+    {
+    Spawn:
+        CPOS AB 10 A_Look
+        loop
+    See:
+        CPOS AABBCCDD 3 A_Chase
+        loop
+    Missile:
+        CPOS E 10 A_FaceTarget
+        CPOS FE 4 bright A_CPosAttack
+        CPOS F 1 A_CPosRefire
+        goto Missile+1
+    Pain:
+        CPOS G 3
+        CPOS G 3 A_Pain
+        goto See
+    Death:
+        CPOS H 5
+        CPOS I 5 A_Scream
+        CPOS J 5 A_Fall
+        CPOS KLM 5
+        CPOS N -1
+        stop
+    XDeath:
+        CPOS O 5
+        CPOS P 5 A_XScream
+        CPOS Q 5 A_Fall
+        CPOS RS 5
+        CPOS T -1
+        stop
+    Raise:
+        CPOS N 5
+        CPOS MLKJIH 5
+        goto See
+    }
+}
+
+//===========================================================================
+//
+// SS Nazi
+//
+//===========================================================================
+
+sound WolfSSSight { prefix lump "SSSIT" }
+sound WolfSSDeath { prefix lump "SSDTH" }
+
+thing WolfensteinSS 84 native
+{
+    health 50
+    radius 20
+    height 56
+    speed 8
+    painchance 170
+
+    MONSTER
+
+    seesound WolfSSSight
+    painsound GruntPain
+    deathsound WolfSSDeath
+    activesound GruntActive
+    attacksound ShotGuyAttack
+
+    dropitem "Clip"
+
+    states
+    {
+    Spawn:
+        SSWV AB 10 A_Look
+        loop
+    See:
+        SSWV AABBCCDD 3 A_Chase
+        loop
+    Missile:
+        SSWV E 10 A_FaceTarget
+        SSWV F 10 A_FaceTarget
+        SSWV G 4 bright A_CPosAttack
+        SSWV F 6 A_FaceTarget
+        SSWV G 4 bright A_CPosAttack
+        SSWV F 1 A_CPosRefire
+        goto Missile+1
+    Pain:
+        SSWV H 3
+        SSWV H 3 A_Pain
+        goto See
+    Death:
+        SSWV I 5
+        SSWV J 5 A_Scream
+        SSWV K 5 A_Fall
+        SSWV L 5
+        SSWV M -1
+        stop
+    XDeath:
+        SSWV N 5
+        SSWV O 5 A_XScream
+        SSWV P 5 A_Fall
+        SSWV QRSTU 5
+        SSWV V -1
+        stop
+    Raise:
+        SSWV M 5
+        SSWV LKJI 5
+        goto See
+    }
+}

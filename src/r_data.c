@@ -147,6 +147,37 @@ int       *flatterrain;
 int       *texturetranslation;
 const byte **texturebrightmap; // [crispy] brightmaps
 
+// Really complex printing shit...
+static void M_ProgressBarStart(const int item_count, const char *msg)
+{
+    const int loop_count = (item_count + 255) / 128;
+    I_Printf(VB_INFO, " %s: ", msg);
+
+    I_PutChar(VB_INFO, '[');
+    for (int i = 0; i <= loop_count; i++)
+    {
+        I_PutChar(VB_INFO, ' ');
+    }
+    I_PutChar(VB_INFO, ']');
+
+    for (int i = 0; i <= loop_count; i++)
+    {
+        I_PutChar(VB_INFO, '\x8');
+    }
+}
+
+static void M_ProgressBarMove(const int item_current)
+{
+    if (!(item_current & 127))
+    {
+        I_PutChar(VB_INFO, '.');
+    }
+}
+
+static void M_ProgressBarEnd(void)
+{
+    I_PutChar(VB_INFO, '\n');
+}
 
 // needed for pre-rendering
 fixed_t   *spritewidth, *spriteoffset, *spritetopoffset;
@@ -905,12 +936,12 @@ void R_InitSpriteLumps(void)
       M_ProgressBarMove(i); // killough
 
       patch = V_CachePatchNum(firstspritelump+i, PU_CACHE);
-      spritewidth[i] = SHORT(patch->width)<<FRACBITS;
-      spriteoffset[i] = SHORT(patch->leftoffset)<<FRACBITS;
-      spritetopoffset[i] = SHORT(patch->topoffset)<<FRACBITS;
+      spritewidth[i] = IntToFixed(SHORT(patch->width));
+      spriteoffset[i] = IntToFixed(SHORT(patch->leftoffset));
+      spritetopoffset[i] = IntToFixed(SHORT(patch->topoffset));
 
       // [Nugget]
-      spriteheight[i] = SHORT(patch->height) << FRACBITS;
+      spriteheight[i] = IntToFixed(SHORT(patch->height));
     }
 
   M_ProgressBarEnd();
@@ -1317,7 +1348,7 @@ void R_InitData(void)
   // mistaken as patches and by R_InitFlatBrightmaps() to set brightmaps for
   // flats.
   R_InitFlats();
-  R_InitFlatBrightmaps();
+  W_ProcessInWads("BRGHTMPS", R_ParseBrightmaps, PROCESS_PWAD);
   R_InitTextures();
   R_InitSpriteLumps();
   R_InitTranMap();                      // killough 2/21/98, 3/6/98

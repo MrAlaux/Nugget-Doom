@@ -31,6 +31,7 @@
 #include "g_nextweapon.h"
 #include "info.h"
 #include "m_cheat.h"
+#include "m_fixed.h"
 #include "p_map.h"
 #include "p_mobj.h"
 #include "p_pspr.h"
@@ -260,7 +261,7 @@ void P_MovePlayer (player_t* player)
   ticcmd_t *cmd = &player->cmd;
   mobj_t *mo = player->mo;
 
-  mo->angle += cmd->angleturn << 16;
+  mo->angle += IntToFixed(cmd->angleturn);
   onground = mo->z <= mo->floorz;
 
   // [Nugget] /---------------------------------------------------------------
@@ -437,7 +438,7 @@ void P_MovePlayer (player_t* player)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  player->ticangle += cmd->ticangleturn << FRACBITS;
+  player->ticangle += IntToFixed(cmd->ticangleturn);
 
   // killough 10/98:
   //
@@ -502,7 +503,7 @@ void P_MovePlayer (player_t* player)
 
   if (!menuactive && !demoplayback && !player->centering)
   {
-    player->pitch += cmd->pitch << FRACBITS;
+    player->pitch += IntToFixed(cmd->pitch);
     player->pitch = CLAMP(player->pitch, -max_pitch_angle, max_pitch_angle);
     player->slope = PlayerSlope(player);
   }

@@ -41,12 +41,14 @@
 #include "d_main.h"
 #include "d_player.h"
 #include "d_ticcmd.h"
+#include "decl_main.h"
 #include "deh_main.h"
 #include "deh_strings.h"
 #include "deh_thing.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
+#include "dsdh_main.h"
 #include "f_finale.h"
 #include "f_wipe.h"
 #include "g_compatibility.h"
@@ -72,14 +74,13 @@
 #include "net_client.h"
 #include "net_dedicated.h"
 #include "deh_misc.h" // deh_max_health_bonus
+#include "p_ambient.h"
 #include "p_setup.h"
-#include "r_bmaps.h"
 #include "r_defs.h"
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "r_voxel.h"
-#include "s_sndinfo.h"
 #include "s_sound.h"
 #include "s_trakinfo.h"
 #include "st_stuff.h"
@@ -1103,6 +1104,7 @@ static int GuessFileType(const char *name)
         iwad_found = true;
     }
     else if (M_StringEndsWith(lower, ".wad") ||
+             M_StringEndsWith(lower, ".pk3") ||
              M_StringEndsWith(lower, ".zip"))
     {
         ret = FILETYPE_PWAD;
@@ -1769,7 +1771,7 @@ void D_DoomMain(void)
   // [FG] emulate a specific version of Doom
   InitGameVersion();
 
-  DEH_InitTables();
+  DSDH_Init();
 
   modifiedgame = false;
 
@@ -2251,7 +2253,12 @@ void D_DoomMain(void)
   // End DeHackEd Loading
   //
 
-  W_ProcessInWads("BRGHTMPS", R_ParseBrightmaps, PROCESS_PWAD);
+  W_ProcessInWads("DECLARE", DECL_Parse, PROCESS_IWAD | PROCESS_PWAD);
+
+  DECL_Install();
+
+  // Ambient
+  P_InitAmbientSoundMobjInfo();
 
   M_NughudLoadOptions(); // [Nugget]
 
@@ -2331,8 +2338,6 @@ void D_DoomMain(void)
 
   // Allows PWAD HELP2 screen for DOOM 1 wads (using Ultimate Doom IWAD).
   pwad_help2 = gamemode == retail && W_IsWADLump(W_CheckNumForName("HELP2"));
-
-  W_ProcessInWads("SNDINFO", S_ParseSndInfo, PROCESS_IWAD | PROCESS_PWAD);
 
   W_ProcessInWads("TRAKINFO", S_ParseTrakInfo, PROCESS_IWAD | PROCESS_PWAD);
   D_SetupDemoLoop();

@@ -16,13 +16,11 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <time.h>
 
 #include "am_map.h"
@@ -3185,8 +3183,7 @@ static void DoSaveGame(char *name)
 
   if (!M_WriteFile(name, savebuffer, length))
   {
-      displaymsg("%s", errno ? strerror(errno)
-                             : "Could not save game: Error unknown");
+      displaymsg("Could not save game");
   }
   else if (show_save_messages && !saving_periodic_autosave) // [Nugget]
   {
@@ -3565,9 +3562,8 @@ boolean G_AutoSaveEnabled(void)
 //
 boolean G_LoadAutoSaveDeathUse(void)
 {
-  struct stat st;
   char *auto_path = G_AutoSaveName();
-  time_t auto_time = (M_stat(auto_path, &st) != -1 ? st.st_mtime : 0);
+  int64_t auto_time = M_FileMTime(auto_path);
   boolean result = (auto_time > 0);
 
   if (result)
@@ -3575,7 +3571,7 @@ boolean G_LoadAutoSaveDeathUse(void)
     if (savegameslot >= 0)
     {
       char *save_path = G_SaveGameName(savegameslot);
-      time_t save_time = (M_stat(save_path, &st) != -1 ? st.st_mtime : 0);
+      int64_t save_time = M_FileMTime(save_path);
       free(save_path);
       result = (auto_time > save_time);
     }
@@ -5097,7 +5093,7 @@ void G_RecordDemo(const char *name)
 
   // demo file name suffix counter
   static int j;
-  while (M_access(demoname, F_OK) == 0)
+  while (M_FileExistsNotDir(demoname))
   {
     M_snprintf(demoname, demoname_size, "%s-%05d.lmp", demoname_orig, j++);
   }
@@ -5746,8 +5742,7 @@ boolean G_CheckDemoStatus(void)
       G_AddDemoFooter();
 
       if (!M_WriteFile(demoname, demobuffer, demo_p - demobuffer))
-	I_Error("Error recording demo %s: %s", demoname,  // killough 11/98
-		errno ? strerror(errno) : "(Unknown Error)");
+	I_Error("Error recording demo %s", demoname); // killough 11/98
 
       Z_Free(demobuffer);
       demobuffer = NULL;  // killough
