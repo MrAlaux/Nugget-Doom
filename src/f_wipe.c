@@ -347,7 +347,7 @@ int wipe_renderMelt32(int width, int height, int ticks)
     int currcolend;
     int currrow;
 
-    V_UseBuffer32(wipe_scr32);
+    V_UseBuffer32(wipe_scr32, width);
     V_PutBlock32(0, 0, width, height, wipe_scr32_end);
     V_RestoreBuffer();
 

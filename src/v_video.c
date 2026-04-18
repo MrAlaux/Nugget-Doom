@@ -1972,9 +1972,10 @@ void V_UseBuffer(pixel_t *buffer, int pitch)
     linesize = pitch;
 }
 
-void V_UseBuffer32(pixel32_t *buffer)
+void V_UseBuffer32(pixel32_t *buffer, int pitch)
 {
     dest_screen32 = buffer;
+    linesize = pitch;
 }
 
 // Restore screen buffer to the i_video screen buffer.
@@ -1984,6 +1985,7 @@ void V_RestoreBuffer(void)
     if (truecolor_rendering)
     {
       dest_screen32 = I_VideoBuffer32;
+      linesize = video.width;
       return;
     }
 

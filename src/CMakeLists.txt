@@ -268,8 +268,8 @@ if(HAVE_ALSA)
 endif()
 
 if(HAVE_SNDFILE)
-    target_sources(woof PRIVATE i_sndfile.c)
-    target_link_libraries(woof PRIVATE SndFile::sndfile)
+    target_sources(nugget-doom PRIVATE i_sndfile.c)
+    target_link_libraries(nugget-doom PRIVATE SndFile::sndfile)
 endif()
 
 if(HAVE_FLUIDSYNTH)

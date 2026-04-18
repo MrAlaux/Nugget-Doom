@@ -340,7 +340,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         0141, 040, 0143, 0150, 0145, 0145, 0163, 0145, 056, 0
       };
 
-      pickupmsg(player, "%s", s);
+      pickupmsg(player, s);
       goto picked_up;
     }
     else if (special->altsprite == ASPR_NGCL)
@@ -355,7 +355,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         0141, 0156, 0164, 0145, 0162, 0156, 056, 0
       };
 
-      pickupmsg(player, "%s", s);
+      pickupmsg(player, s);
       goto picked_up;
     }
   }

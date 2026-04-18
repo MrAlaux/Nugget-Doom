@@ -1690,9 +1690,9 @@ void P_SegLengths(void)
         {
             // vanilla
             if (!dy)
-              li->fakecontrast = -1;
+              li->fakecontrast = -LIGHTBRIGHT;
             else if (!dx)
-              li->fakecontrast = +1;
+              li->fakecontrast = +LIGHTBRIGHT;
         }
     }
 
