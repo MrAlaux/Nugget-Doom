@@ -973,8 +973,7 @@ void P_SegLengths(void)
         }
     }
 
-    // [Nugget] If the map is non-UDMF,
-    // we already calculated vanilla fake contrast, so don't do it again
+    // [Nugget] We already calculated vanilla fake contrast, so don't do it again
     if (fake_contrast != FAKECONTRAST_VANILLA)
     { P_InitFakeContrast(); }
 }
@@ -983,7 +982,9 @@ void P_SegLengths(void)
 
 void P_InitFakeContrast(void)
 {
-    if (strictmode || mapformat.format == MAP_UDMF) { return; }
+    if (strictmode) { return; }
+
+    const boolean udmf = mapformat.format == MAP_UDMF;
 
     const int rightangle = abs(finesine[(ANG60/2) >> ANGLETOFINESHIFT]);
 
@@ -995,7 +996,13 @@ void P_InitFakeContrast(void)
             dx = li->v2->r_x - li->v1->r_x,
             dy = li->v2->r_y - li->v1->r_y;
 
-        if (fake_contrast == FAKECONTRAST_SMOOTH)
+        const sidedef_flags_t flags = (li->sidedef) ? li->sidedef->flags : SF_NONE;
+
+        if (udmf ? flags & SF_NO_FAKE_CONTRAST : fake_contrast == FAKECONTRAST_OFF)
+        {
+            li->fakecontrast = 0;
+        }
+        else if (udmf ? flags & SF_SMOOTH_CONTRAST : fake_contrast == FAKECONTRAST_SMOOTH)
         {
             if (!dy)
             {
@@ -1015,7 +1022,7 @@ void P_InitFakeContrast(void)
             }
             else { li->fakecontrast = 0; }
         }
-        else if (fake_contrast == FAKECONTRAST_VANILLA)
+        else // fake_contrast == FAKECONTRAST_VANILLA
         {
             if (!dy)
             {
@@ -1027,7 +1034,6 @@ void P_InitFakeContrast(void)
             }
             else { li->fakecontrast = 0; }
         }
-        else { li->fakecontrast = 0; }
     }
 }
 
