@@ -1966,9 +1966,10 @@ void V_Init(void)
 
 // Set the buffer that the code draws to.
 
-void V_UseBuffer(pixel_t *buffer)
+void V_UseBuffer(pixel_t *buffer, int pitch)
 {
     dest_screen = buffer;
+    linesize = pitch;
 }
 
 void V_UseBuffer32(pixel32_t *buffer)
@@ -1987,6 +1988,7 @@ void V_RestoreBuffer(void)
     }
 
     dest_screen = I_VideoBuffer;
+    linesize = video.width;
 }
 
 //

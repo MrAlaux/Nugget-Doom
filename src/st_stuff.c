@@ -1234,7 +1234,11 @@ static void UpdateNumber(sbarelem_t *elem, player_t *player)
     {
         if (elem->type == sbe_percent && font->percent != NULL && !st_nughud) // [Nugget] NUGHUD
         {
-            totalwidth += SHORT(font->percent->width) - font->monowidth;
+            const int extrawidth = SHORT(font->percent->width) - font->monowidth;
+            if (extrawidth > 0)
+            {
+                totalwidth += extrawidth;
+            }
         }
     }
     else if (font->type == sbf_proportional)
@@ -2448,11 +2452,11 @@ static void DrawBackground(const char *name)
 
         if (truecolor_rendering)
         {
-            V_UseBuffer32(st_backing_screen32);
+            V_UseBuffer32(st_backing_screen32, video.width);
         }
         else
         {
-            V_UseBuffer(st_backing_screen);
+            V_UseBuffer(st_backing_screen, video.width);
         }
 
         if (st_solidbackground && st_height > 3)
@@ -3051,16 +3055,19 @@ const char **ST_StatusbarList(void)
         return strings;
     }
 
-    statusbar_t *item;
-    array_foreach(item, normal_sbardef->statusbars)
+    for (int i = 0; i < array_size(normal_sbardef->statusbars); ++i)
     {
-        if (item->fullscreenrender)
+        statusbar_t *sb = &normal_sbardef->statusbars[i];
+        if (sb->name)
         {
-            array_push(strings, "Fullscreen");
+            array_push(strings, sb->name);
         }
         else
         {
-            array_push(strings, "Status Bar");
+            char buf[16];
+            buf[0] = '\0';
+            M_snprintf(buf, sizeof(buf), "HUD #%d", i + 1);
+            array_push(strings, M_StringDuplicate(buf));
         }
     }
 
@@ -3473,11 +3480,11 @@ static void DrawNughudGraphics(void)
 
     if (truecolor_rendering)
     {
-      V_UseBuffer32(st_bar32);
+      V_UseBuffer32(st_bar32, video.width);
     }
     else
     {
-      V_UseBuffer(st_bar);
+      V_UseBuffer(st_bar, video.width);
     }
 
     V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
@@ -3906,6 +3913,7 @@ static sbardef_t *CreateNughudSbarDef(void)
 
   sb.height = 200;
   sb.fullscreenrender = true;
+  sb.name = "NUGHUD";
 
   char namebuf[16];
 

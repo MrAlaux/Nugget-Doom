@@ -928,13 +928,13 @@ static void SwapScale(void)
     {
         if (last_full_automap)
         {
-            ResetSwapScale();    
+            ResetSwapScale();
         }
         min_scale_mtof = max_scale_mtof = scale_mtof
             = FixedDiv(f_w << FRACBITS, minimap.scale << MAPBITS);
         scale_ftom = FixedDiv(FRACUNIT, scale_mtof); 
     }
-    else
+    else if (!last_full_automap)
     {
         min_scale_mtof = full_min_scale_mtof;
         max_scale_mtof = full_max_scale_mtof;
@@ -1176,12 +1176,12 @@ boolean AM_Responder
     {
       followplayer = !followplayer;
       memset(buttons_state, 0, sizeof(buttons_state));
-      togglemsg(DEH_String(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF));
+      togglemsg("%s", DEH_String(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF));
     }
     else if (M_InputActivated(input_map_grid))
     {
       automap_grid = !automap_grid;      // killough 2/28/98
-      togglemsg(DEH_String(automap_grid ? AMSTR_GRIDON : AMSTR_GRIDOFF));
+      togglemsg("%s", DEH_String(automap_grid ? AMSTR_GRIDON : AMSTR_GRIDOFF));
     }
     else if (M_InputActivated(input_map_mark))
     {
@@ -1227,8 +1227,8 @@ boolean AM_Responder
       switch (automapoverlay)
       {
         case 2:  togglemsg("Dark Overlay On");        break;
-        case 1:  togglemsg(DEH_String(AMSTR_OVERLAYON));  break;
-        default: togglemsg(DEH_String(AMSTR_OVERLAYOFF)); break;
+        case 1:  togglemsg("%s", DEH_String(AMSTR_OVERLAYON));  break;
+        default: togglemsg("%s", DEH_String(AMSTR_OVERLAYOFF)); break;
       }
 
       AM_initScreenSize();
@@ -1238,7 +1238,7 @@ boolean AM_Responder
     else if (M_InputActivated(input_map_rotate))
     {
       automaprotate = !automaprotate;
-      togglemsg(DEH_String(automaprotate ? AMSTR_ROTATEON : AMSTR_ROTATEOFF));
+      togglemsg("%s", DEH_String(automaprotate ? AMSTR_ROTATEON : AMSTR_ROTATEOFF));
     }
 
     // [Nugget] /-------------------------------------------------------------

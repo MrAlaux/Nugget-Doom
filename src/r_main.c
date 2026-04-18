@@ -114,14 +114,6 @@ angle_t *xtoviewangle = NULL;   // killough 2/8/98
 // [FG] linear horizontal sky scrolling
 angle_t *linearskyangle = NULL;
 
-int LIGHTLEVELS;
-int LIGHTSEGSHIFT;
-int LIGHTBRIGHT;
-int MAXLIGHTSCALE;
-int LIGHTSCALESHIFT;
-int MAXLIGHTZ;
-int LIGHTZSHIFT;
-
 // killough 3/20/98: Support dynamic colormaps, e.g. deep water
 // killough 4/4/98: support dynamic number of them as well
 
@@ -344,6 +336,14 @@ static void ApplyBlockPostProcess32(void)
 // Lighting modes ------------------------------------------------------------
 
 lightingmode_t lighting_mode;
+
+int LIGHTLEVELS;
+int LIGHTSEGSHIFT;
+int LIGHTBRIGHT;
+int MAXLIGHTSCALE;
+int LIGHTSCALESHIFT;
+int MAXLIGHTZ;
+int LIGHTZSHIFT;
 
 static boolean init_light_tables = false;
 
@@ -1278,9 +1278,10 @@ static void R_InitTextureMapping(void)
 
 void R_InitLightTables (void)
 {
-  init_light_tables = false; // [Nugget] Lighting modes
+  // [Nugget] Lighting modes /------------------------------------------------
 
-  // [Nugget] Lighting modes
+  init_light_tables = false;
+
   if (lighting_mode >= LIGHTINGMODE_INTERPOLATED) // True color
   {
     num_colormap_rows = 256;
@@ -1305,7 +1306,7 @@ void R_InitLightTables (void)
     }
   }
 
-  // [Nugget] Radial fog
+  // Radial fog
   if (STRICTMODE(radial_fog))
   { LIGHTZSHIFT = MIN(LIGHTZSHIFT, 18 - radial_plane_fog_fidelity); }
 
@@ -1313,6 +1314,8 @@ void R_InitLightTables (void)
   LIGHTBRIGHT = LIGHTLEVELS / 16;
   MAXLIGHTSCALE = 3 << (16 - LIGHTSCALESHIFT);
   MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
+
+  // [Nugget] ---------------------------------------------------------------/
 
   // killough 4/4/98: dynamic colormaps
   // ScaleLight calculated below
@@ -1346,7 +1349,7 @@ void R_InitLightTables (void)
   R_DeferredInitDistLightTables(); // [Nugget] Radial fog
 }
 
-// [Nugget] Added X parameter
+// [Nugget] Added X parameter, renamed
 int R_GetLightIndexVanilla(const fixed_t scale, const int x)
 {
   const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
@@ -2003,7 +2006,7 @@ void R_SetupFrame (player_t *player)
   else
     extralight = player->extralight * LIGHTBRIGHT;
 
-  extralight += STRICTMODE(LIGHTBRIGHT * extra_level_brightness);
+  extralight += STRICTMODE(extra_level_brightness * LIGHTBRIGHT);
 
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];

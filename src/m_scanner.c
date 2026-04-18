@@ -46,6 +46,7 @@ static const char* const token_names[] =
     [TK_FloatConst] = "Float Constant",
     [TK_AnnotateStart] = "Annotation Start",
     [TK_AnnotateEnd] = "Annotation End",
+    [TK_ScopeResolution] = "Scope Resolution"
 };
 
 typedef struct
@@ -66,7 +67,7 @@ struct scanner_s
     parserstate_t state;
     parserstate_t nextstate, prevstate;
 
-    char *data;
+    const char *data;
     size_t length;
 
     int line;
@@ -849,8 +850,7 @@ scanner_t *SC_Open(const char *scriptname, const char *data, int length)
     s->neednext = true;
 
     s->length = length;
-    s->data = malloc(length);
-    memcpy(s->data, data, length);
+    s->data = data;
 
     CheckForWhitespace(s);
     s->state.scanpos = s->scanpos;
@@ -876,7 +876,6 @@ void SC_Close(scanner_t *s)
     {
         free((char *)s->scriptname);
     }
-    free(s->data);
     free(s);
 }
 
