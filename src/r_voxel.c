@@ -923,7 +923,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			int tint, *const tint_p = own_tint ? NULL : &tint;
+			int tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
@@ -1205,7 +1205,7 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 
 			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			int tint, *const tint_p = own_tint ? NULL : &tint;
+			int tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
@@ -1485,7 +1485,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			int tint, *const tint_p = own_tint ? NULL : &tint;
+			int tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
@@ -1711,7 +1711,7 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 
 			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			int tint, *const tint_p = own_tint ? NULL : &tint;
+			int tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
 			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 

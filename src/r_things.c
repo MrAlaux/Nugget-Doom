@@ -710,7 +710,7 @@ static void DrawVisSpriteLoop8(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum, tint, *const tint_p = own_tint ? NULL : &tint;
+        int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
         R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
@@ -794,7 +794,7 @@ static void DrawVisSpriteLoop32(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum, tint, *const tint_p = own_tint ? NULL : &tint;
+        int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
         R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
