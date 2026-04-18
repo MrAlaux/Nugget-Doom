@@ -169,11 +169,6 @@ static void UpdateNughudOn(void)
                   || (!normal_sbardef && screenblocks == 11));
 }
 
-// Used for Status-Bar chunks
-static pixel_t *st_bar = NULL;
-static pixel32_t *st_bar32 = NULL;
-static int stbar_height = 32;
-
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align);
 static void DrawNughudGraphics();
 static sbardef_t *CreateNughudSbarDef(void);
@@ -2917,10 +2912,6 @@ void ST_Init(void)
 
     // NUGHUD ----------------------------------------------------------------
 
-    const patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
-
-    stbar_height = MAX(32, SHORT(sbar->height));
-
     for (int i = 0;  i < NUMNUGHUDSTACKS;  i++)
     {
         stackqueue_t *const sq = &nughud_stackqueues[i];
@@ -2992,17 +2983,6 @@ void ST_Init(void)
 
 void ST_InitRes(void)
 {
-    // [Nugget] Status-Bar chunks
-    // More than necessary (we only use the section visible in 4:3), but so be it
-    if (truecolor_rendering)
-    {
-        st_bar32 = Z_Malloc((video.width * V_ScaleY(stbar_height)) * sizeof(*st_bar32), PU_RENDERER, 0);
-    }
-    else
-    {
-        st_bar = Z_Malloc((video.width * V_ScaleY(stbar_height)) * sizeof(*st_bar), PU_RENDERER, 0);
-    }
-
     if (!st_height)
     {
         return;
@@ -3350,13 +3330,9 @@ void ST_SetKeyBlink(player_t* player, int blue, int yellow, int red)
 
 // NUGHUD --------------------------------------------------------------------
 
-// Status-Bar chunks
-static boolean st_refresh_chunkbg = true;
-
 void ST_refreshBackground(void)
 {
   st_refresh_background = true;
-  st_refresh_chunkbg = true; // Status-Bar chunks
 }
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align)
@@ -3406,27 +3382,20 @@ static void DrawNughudPatch(
 
 static void DrawNughudSBChunk(const nughud_sbchunk_t *const chunk)
 {
-  int x  = chunk->x + NughudWideShift(chunk->wide) + video.deltaw,
-      y  = chunk->y,
-      sx = chunk->sx + video.deltaw,
-      sy = chunk->sy,
-      sw = chunk->sw,
-      sh = chunk->sh;
+  patch_t *const sbar =
+    V_CachePatchName(W_CheckWidescreenPatch("STBAR"), PU_CACHE);
 
-  sw = MIN(ST_WIDTH - chunk->sx, sw); // Don't exceed boundaries of bar buffer
-  sw = MIN(video.unscaledw - x,  sw); // Don't exceed boundaries of screen
+  const int x = chunk->x + NughudWideShift(chunk->wide),
+            y = chunk->y;
 
-  sh = MIN(stbar_height - chunk->sy, sh);
-  sh = MIN(SCREENHEIGHT - y,         sh);
+  const crop_t crop = {
+    .left   = chunk->sx + (SHORT(sbar->width) - ST_WIDTH) / 2,
+    .width  = chunk->sw,
+    .top    = chunk->sy,
+    .height = chunk->sh
+  };
 
-  if (truecolor_rendering)
-  {
-    V_CopyRect32(sx, sy, st_bar32, sw, sh, x, y);
-  }
-  else
-  {
-    V_CopyRect(sx, sy, st_bar, sw, sh, x, y);
-  }
+  V_DrawPatchCropped(x, y, sbar, crop);
 }
 
 static void DrawNughudBar(
@@ -3471,26 +3440,6 @@ static void DrawNughudGraphics(void)
   const player_t *const plyr = &players[displayplayer];
 
   // Status-Bar chunks -------------------------------------------------------
-
-  if (st_refresh_chunkbg)
-  {
-    st_refresh_chunkbg = false;
-
-    patch_t *const sbar = V_CachePatchName("STBAR", PU_STATIC);
-
-    if (truecolor_rendering)
-    {
-      V_UseBuffer32(st_bar32, video.width);
-    }
-    else
-    {
-      V_UseBuffer(st_bar, video.width);
-    }
-
-    V_DrawPatch((SCREENWIDTH - SHORT(sbar->width)) / 2 + SHORT(sbar->leftoffset), 0, sbar);
-
-    V_RestoreBuffer();
-  }
 
   for (int i = 0;  i < NUMSBCHUNKS;  i++)
   {
@@ -3547,9 +3496,9 @@ static void DrawNughudGraphics(void)
   {
     patch_t *const bg = V_CachePatchName("STFB0", PU_STATIC);
     const int x = nughud.face.x + NughudWideShift(nughud.face.wide),
-              y = nughud.face.y + stbar_height - SHORT(bg->height);
+              y = nughud.face.y + ST_HEIGHT - SHORT(bg->height);
 
-    nughud_sbchunk_t chunk; // Reuse the chunk drawing function for its bounds-checking
+    nughud_sbchunk_t chunk; // Reuse the chunk drawing function for convenience
 
     chunk.x = x + SHORT(bg->leftoffset);
     chunk.y = y - SHORT(bg->topoffset);
@@ -4225,6 +4174,10 @@ end_amnum:
       condition.param = 0;
 
       array_push(elem.conditions, condition);
+
+      sbe_facebackground_t *facebackground = calloc(1, sizeof(*facebackground));
+
+      elem.subtype.facebackground = facebackground;
 
       array_push(sb.children, elem);
     }
