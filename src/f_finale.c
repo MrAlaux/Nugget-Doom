@@ -909,7 +909,7 @@ void EndFinaleCast_Drawer(void)
     const byte *tranmap = ef_current_frame->tranmap;
     const byte *xlat = ef_current_frame->xlat;
     boolean flip = ef_current_frame->flipped;
-    V_DrawPatchCastCall(frame, tranmap, xlat, flip);
+    V_DrawPatchCastCallSH(frame, tranmap, xlat, flip); // HUD/menu shadows
 }
 
 //
@@ -1775,7 +1775,7 @@ static void F_CastDrawer(void)
   }
   else
 
-  V_DrawPatchCastCall(patch, NULL, NULL, flip);
+  V_DrawPatchCastCallSH(patch, NULL, NULL, flip); // HUD/menu shadows
 
   // [Nugget] Fancy cast -----------------------------------------------------
 
