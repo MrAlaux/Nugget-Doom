@@ -2978,7 +2978,7 @@ const char *gamma_strings[] = {
 
 void MN_ResetGamma(void)
 {
-    I_SetPalette(0); // [Nugget] Pass index
+    I_DeferredResetPalette(); // [Nugget]
 }
 
 static setup_menu_t gen_settings1[] = {
@@ -4190,7 +4190,7 @@ setup_menu_t display_settings1[] = {
 
 void SetPalette(void)
 {
-    I_SetPalette(0); // [Nugget] Pass index
+    I_DeferredResetPalette();
 }
 
 static setup_menu_t display_settings2[] = {
