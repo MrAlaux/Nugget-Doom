@@ -22,6 +22,7 @@
 
 #include "doomtype.h"
 #include "m_fixed.h"
+#include "p_mobj.h"
 #include "r_defs.h"
 
 // [Nugget] /=================================================================
@@ -72,6 +73,8 @@ void R_ClipVisSprite(vissprite_t *vis, int xl, int xh);
 void R_InitSpritesRes(void);
 
 void R_NearbySprites(void);
+
+extern const int GetThingTint(const mobj_t *const mo, const sector_t *const sector);
 
 void R_InitThingsColorFunctions(void);
 

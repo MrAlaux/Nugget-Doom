@@ -181,9 +181,9 @@ void R_InitVisplanesRes(void)
 // BASIC PRIMITIVE
 //
 
-static void (*DrawPlane)(fixed_t distance, int tint) = NULL;
+static void (*DrawPlane)(fixed_t distance, const int tint) = NULL;
 
-static void DrawPlane8(fixed_t distance, int tint)
+static void DrawPlane8(fixed_t distance, const int tint)
 {
   unsigned lookup;
   int lightindex;
@@ -191,9 +191,8 @@ static void DrawPlane8(fixed_t distance, int tint)
   // [Nugget] Radial fog
   void (*DrawSpan)(void) = R_DrawSpan;
 
-  lighttable_t *const thiscolormap = tint
-                                   ? colormaps[tint]
-                                   : fullcolormap;
+  const lighttable_t *const thiscolormap =
+    (tint >= 0) ? colormaps[tint] : fullcolormap;
 
   // ID24 per-sector colormaps
   if (fixedcolormapindex)
@@ -238,7 +237,7 @@ static void DrawPlane8(fixed_t distance, int tint)
   DrawSpan();
 }
 
-static void DrawPlane32(fixed_t distance, int tint)
+static void DrawPlane32(fixed_t distance, const int tint)
 {
   unsigned lookup;
   int lightindex;
@@ -246,9 +245,8 @@ static void DrawPlane32(fixed_t distance, int tint)
   // [Nugget] Radial fog
   void (*DrawSpan)(void) = R_DrawSpan;
 
-  lighttable32_t *const thiscolormap = tint
-                                     ? colormaps32[tint]
-                                     : fullcolormap32;
+  const lighttable32_t *const thiscolormap =
+    (tint >= 0) ? colormaps32[tint] : fullcolormap32;
 
   // ID24 per-sector colormaps
   if (fixedcolormapindex)
@@ -293,7 +291,7 @@ static void DrawPlane32(fixed_t distance, int tint)
   DrawSpan();
 }
 
-static void R_MapPlane(int y, int x1, int x2, int thiscolormap)
+static void R_MapPlane(int y, int x1, int x2, const int thiscolormap)
 {
   fixed_t distance;
   int dx;
@@ -504,7 +502,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
 
 // [FG] 32-bit integer math
 static void R_MakeSpans(int x, unsigned int t1, unsigned int b1,
-                        unsigned int t2, unsigned int b2, int colormap)
+                        unsigned int t2, unsigned int b2,
+                        const int colormap)
 {
   for (; t1 < t2 && t1 <= b1; t1++)
     R_MapPlane(t1, spanstart[t1], x-1, colormap);
@@ -726,7 +725,7 @@ static void do_draw_plane(visplane_t *pl)
 
     planezlightindex = light;
     planezlightoffset = &zlightoffset[light * MAXLIGHTZ];
-    int thiscolormap = pl->tint;
+    const int thiscolormap = pl->tint;
 
     for (int x = pl->minx; x <= stop; x++)
     {

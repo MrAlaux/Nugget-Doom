@@ -25,6 +25,7 @@
 #include "deh_strings.h"
 #include "doomdef.h"
 #include "doomstat.h"
+#include "doomtype.h"
 #include "hu_crosshair.h" // [Alaux] Lock crosshair on target
 #include "i_printf.h"
 #include "i_system.h"
@@ -667,9 +668,11 @@ static void DrawVisSpriteLoop8(
   column_t *column;
   int texturecolumn;
 
-  lighttable_t *const thiscolormap = vis->tint
-                                   ? colormaps[vis->tint]
-                                   : fullcolormap;
+  const lighttable_t *thiscolormap =
+    (vis->tint >= 0) ? colormaps[vis->tint] : fullcolormap;
+
+  // [Nugget] Thing lighting
+  const boolean own_tint = vis->flags & VSF_OWN_TINT;
 
   dc_colormap[0] = thiscolormap + vis->colormap[0];
   dc_colormap[1] = thiscolormap + vis->colormap[1];
@@ -707,22 +710,23 @@ static void DrawVisSpriteLoop8(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum, tint;
+        int lightnum, tint, *const tint_p = own_tint ? NULL : &tint;
 
-        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
         lightnum = (vis->flags & VSF_FULLBRIGHT)
                  ? LIGHTLEVELS-1
                  : (lightnum >> LIGHTSEGSHIFT) + extralight;
 
-        lighttable_t *const thiscolormap2 = tint ? colormaps[tint] : fullcolormap;
+        if (!own_tint)
+        { thiscolormap = (tint >= 0) ? colormaps[tint] : fullcolormap; }
 
-        dc_colormap[0] = thiscolormap2
+        dc_colormap[0] = thiscolormap
                        + (scalelightoffset + MAXLIGHTSCALE * CLAMP(lightnum, 0, LIGHTLEVELS-1))
                          [lightindex];
 
         dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                         ? thiscolormap2 : dc_colormap[0];
+                         ? thiscolormap : dc_colormap[0];
       }
 
       // [Nugget] ===========================================================/
@@ -748,9 +752,11 @@ static void DrawVisSpriteLoop32(
   column_t *column;
   int texturecolumn;
 
-  lighttable32_t *const thiscolormap = vis->tint
-                                     ? colormaps32[vis->tint]
-                                     : fullcolormap32;
+  const lighttable32_t *thiscolormap =
+    (vis->tint >= 0) ? colormaps32[vis->tint] : fullcolormap32;
+
+  // [Nugget] Thing lighting
+  const boolean own_tint = vis->flags & VSF_OWN_TINT;
 
   dc_colormap32[0] = thiscolormap + vis->colormap[0];
   dc_colormap32[1] = thiscolormap + vis->colormap[1];
@@ -788,24 +794,23 @@ static void DrawVisSpriteLoop32(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum, tint;
+        int lightnum, tint, *const tint_p = own_tint ? NULL : &tint;
 
-        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
         lightnum = (vis->flags & VSF_FULLBRIGHT)
                  ? LIGHTLEVELS-1
                  : (lightnum >> LIGHTSEGSHIFT) + extralight;
 
-        lighttable32_t *const thiscolormap2 = tint
-                                            ? colormaps32[tint]
-                                            : fullcolormap32;
+        if (!own_tint)
+        { thiscolormap = (tint >= 0) ? colormaps32[tint] : fullcolormap32; }
 
-        dc_colormap32[0] = thiscolormap2
+        dc_colormap32[0] = thiscolormap
                          + (scalelightoffset + MAXLIGHTSCALE * CLAMP(lightnum, 0, LIGHTLEVELS-1))
                            [lightindex];
 
         dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                           ? thiscolormap2 : dc_colormap32[0];
+                           ? thiscolormap : dc_colormap32[0];
       }
 
       // [Nugget] ===========================================================/
@@ -920,6 +925,14 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   );
 
   colfunc = R_DrawColumn;         // killough 3/14/98
+}
+
+inline const int GetThingTint(const mobj_t *const mo, const sector_t *const s)
+{
+  const int32_t tint = (mo->tint >= 0)         ? mo->tint
+                     : (s->floorlightsec >= 0) ? sectors[s->floorlightsec].tint
+                                               : s->tint;
+  return tint;
 }
 
 //
@@ -1164,15 +1177,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
   vis->flags = (VSF_FLIPPED * flip) | (VSF_SCALED * have_scale);
 
-  if (thing->subsector->sector->floorlightsec >= 0)
-  {
-    vis->tint = sectors[thing->subsector->sector->floorlightsec].tint;
-  }
-  else
-  {
-    vis->tint = thing->subsector->sector->tint;
-  }
-
   if (flip)
     {
       vis->startfrac = spritewidth[lump]-1;
@@ -1189,6 +1193,11 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   if (vis->x1 > x1)
     vis->startfrac += vis->xiscale*(vis->x1-x1);
   vis->patch = lump;
+
+  vis->tint = GetThingTint(thing, thing->subsector->sector);
+
+  // [Nugget] Thing lighting
+  if (thing->tint >= 0) { vis->flags |= VSF_OWN_TINT; }
 
   // get light level
   if (thing->flags & MF_SHADOW)
@@ -1485,11 +1494,15 @@ void R_NearbySprites (void)
   {
     mobj_t *thing = nearby_sprites[i];
     sector_t* sec = thing->subsector->sector;
+    sector_t tempsec;
+    int floorlightlevel, ceilinglightlevel;
+
+    R_FakeFlat(sec, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
     // [FG] sprites in sector have already been projected
     if (sec->validcount != validcount)
     {
-      R_ProjectSprite(thing, 0);
+      R_ProjectSprite(thing, (floorlightlevel + ceilinglightlevel) / 2);
     }
   }
 
@@ -1612,15 +1625,6 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
   vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
   vis->flags = (VSF_FLIPPED * flip) | VSF_NO_PERC;
 
-  if (players[consoleplayer].mo->subsector->sector->floorlightsec >= 0)
-  {
-    vis->tint = sectors[players[consoleplayer].mo->subsector->sector->floorlightsec].tint;
-  }
-  else
-  {
-    vis->tint = players[consoleplayer].mo->subsector->sector->tint;
-  }
-
   if (flip)
     {
       vis->xiscale = -pspriteiscale;
@@ -1638,6 +1642,11 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
     vis->startfrac += vis->xiscale*(vis->x1-x1);
 
   vis->patch = lump;
+
+  vis->tint = GetThingTint(viewplayer->mo, viewplayer->mo->subsector->sector);
+
+  // [Nugget] Thing lighting
+  if (viewplayer->mo->tint >= 0) { vis->flags |= VSF_OWN_TINT; }
 
   // killough 7/11/98: beta psprites did not draw shadows
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation

@@ -971,7 +971,7 @@ void (*colfunc)(void);                    // current column draw function
 //
 // killough 5/2/98: reformatted
 //
-int (*R_PointOnSide)(fixed_t x, fixed_t y, struct node_s *node);
+int (*R_PointOnSide)(fixed_t x, fixed_t y, struct node_s *node) = R_PointOnSideClassic;
 
 // Workaround for optimization bug in clang
 // fixes desync in competn/doom/fp2-3655.lmp and in dmnsns.wad dmn01m909.lmp
@@ -1018,31 +1018,8 @@ int R_PointOnSidePrecise(fixed_t x, fixed_t y, node_t *node)
 }
 
 // killough 5/2/98: reformatted
-int (*R_PointOnSegSide)(fixed_t x, fixed_t y, seg_t *line);
-
-int R_PointOnSegSideClassic(fixed_t x, fixed_t y, seg_t *line)
-{
-  fixed_t lx = line->v1->x;
-  fixed_t ly = line->v1->y;
-  fixed_t ldx = line->v2->x - lx;
-  fixed_t ldy = line->v2->y - ly;
-
-  if (!ldx)
-    return x <= lx ? ldy > 0 : ldy < 0;
-
-  if (!ldy)
-    return y <= ly ? ldx < 0 : ldx > 0;
-
-  x -= lx;
-  y -= ly;
-
-  // Try to quickly decide by looking at sign bits.
-  if ((ldy ^ ldx ^ x ^ y) < 0)
-    return (ldy ^ x) < 0;          // (left is negative)
-  return FixedMul(y, ldx>>FRACBITS) >= FixedMul(ldy>>FRACBITS, x);
-}
-
-int R_PointOnSegSidePrecise(fixed_t x, fixed_t y, seg_t *line)
+// [Woof!] rewritten to use only higher precision version
+int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
   fixed_t lx = line->v1->x;
   fixed_t ly = line->v1->y;
@@ -2012,17 +1989,28 @@ void R_SetupFrame (player_t *player)
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];
 
   // killough 3/20/98, 4/4/98: select colormap based on player status
+  const sector_t * sec = player->mo->subsector->sector;
 
-  if (player->mo->subsector->sector->heightsec != -1)
-    {
-      const sector_t *s = player->mo->subsector->sector->heightsec + sectors;
-      cm = viewz < s->interpfloorheight ? s->bottommap : viewz > s->interpceilingheight ?
-        s->topmap : s->midmap;
-      if (cm < 0 || cm > numcolormaps)
-        cm = 0;
-    }
+  if (sec->colormap)
+  {
+    cm = sec->colormap;
+  }
+  else if (sec->heightsec != -1)
+  {
+    const sector_t * const s = &sectors[sec->heightsec];
+    cm = viewz < s->interpfloorheight   ? s->bottommap
+       : viewz > s->interpceilingheight ? s->topmap
+                                        : s->midmap;
+  }
   else
+  {
     cm = 0;
+  }
+
+  if (cm < 0 || cm > numcolormaps)
+  {
+    cm = 0;
+  }
 
   V_SetCurrentColormap(cm);
 

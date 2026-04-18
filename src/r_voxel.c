@@ -703,14 +703,11 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 	vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
 	vis->flags = 0;
 
-	if (thing->subsector->sector->floorlightsec >= 0)
-	{
-		vis->tint = sectors[thing->subsector->sector->floorlightsec].tint;
-	}
-	else
-	{
-		vis->tint = thing->subsector->sector->tint;
-	}
+	// get light level...
+	vis->tint = GetThingTint(thing, thing->subsector->sector);
+
+	// [Nugget] Thing lighting
+	if (thing->tint >= 0) { vis->flags |= VSF_OWN_TINT; }
 
 	if (vis->mobjflags & MF_SHADOW)
 	{
@@ -896,9 +893,8 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const lighttable_t *thiscolormap = spr->tint
-	                                 ? colormaps[spr->tint]
-	                                 : fullcolormap;
+	const lighttable_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
 	const lighttable_t *colormap[2];
 
@@ -925,9 +921,11 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			int tint;
+			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+			int tint, *const tint_p = own_tint ? NULL : &tint;
+
+			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
 			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
@@ -935,7 +933,8 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 			lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
 
-			thiscolormap = tint ? colormaps[tint] : fullcolormap;
+			if (!own_tint)
+			{ thiscolormap = (tint >= 0) ? colormaps[tint] : fullcolormap; }
 
 			if (!do_voxel_radial_fog)
 			{
@@ -1176,9 +1175,8 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const lighttable32_t *thiscolormap = spr->tint
-	                                   ? colormaps32[spr->tint]
-	                                   : fullcolormap32;
+	const lighttable32_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
 	const lighttable32_t *colormap[2];
 
@@ -1205,9 +1203,11 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			int tint;
+			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+			int tint, *const tint_p = own_tint ? NULL : &tint;
+
+			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
 			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
@@ -1215,7 +1215,8 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 
 			lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
 
-			thiscolormap = tint ? colormaps32[tint] : fullcolormap32;
+			if (!own_tint)
+			{ thiscolormap = (tint >= 0) ? colormaps32[tint] : fullcolormap32; }
 
 			if (!do_voxel_radial_fog)
 			{
@@ -1454,9 +1455,8 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const lighttable_t *thiscolormap = spr->tint
-	                                 ? colormaps[spr->tint]
-	                                 : fullcolormap;
+	const lighttable_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
 	const lighttable_t *colormap[2];
 
@@ -1483,9 +1483,11 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			int tint;
+			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+			int tint, *const tint_p = own_tint ? NULL : &tint;
+
+			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
 			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
@@ -1493,7 +1495,8 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 			lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
 
-			thiscolormap = tint ? colormaps[tint] : fullcolormap;
+			if (!own_tint)
+			{ thiscolormap = (tint >= 0) ? colormaps[tint] : fullcolormap; }
 
 			if (!do_voxel_radial_fog)
 			{
@@ -1678,9 +1681,8 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const lighttable32_t *thiscolormap = spr->tint
-	                                   ? colormaps32[spr->tint]
-	                                   : fullcolormap32;
+	const lighttable32_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
 	const lighttable32_t *colormap[2];
 
@@ -1707,9 +1709,11 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			int tint;
+			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, &tint);
+			int tint, *const tint_p = own_tint ? NULL : &tint;
+
+			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
 			lightnum = (spr->flags & VSF_FULLBRIGHT)
 			         ? LIGHTLEVELS-1
@@ -1717,7 +1721,8 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 
 			lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
 
-			thiscolormap = tint ? colormaps32[tint] : fullcolormap32;
+			if (!own_tint)
+			{ thiscolormap = (tint >= 0) ? colormaps32[tint] : fullcolormap32; }
 
 			if (!do_voxel_radial_fog)
 			{
@@ -1995,6 +2000,7 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   const mobj_t *const playermo = players[displayplayer].mo;
 
   thing.subsector = playermo->subsector;
+  thing.tint = playermo->tint;
 
   // Thing lighting: use the player's radius
   thing.radius = playermo->radius;

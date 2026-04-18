@@ -70,8 +70,8 @@ static pixel32_t *background_buffer32 = NULL;
 // Source is the top of the column to scale.
 //
 
-lighttable_t *dc_colormap[2]; // [crispy] brightmaps
-lighttable32_t *dc_colormap32[2];
+const lighttable_t *dc_colormap[2]; // [crispy] brightmaps
+const lighttable32_t *dc_colormap32[2];
 int dc_x;
 int dc_yl;
 int dc_yh;
@@ -119,7 +119,7 @@ static void DrawColumn8(void)
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
     const byte *source = dc_source;
-    lighttable_t *const *colormap = dc_colormap;
+    const lighttable_t *const *colormap = dc_colormap;
     const byte *brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
@@ -212,7 +212,7 @@ static void DrawTLColumn8(void)
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
     const byte *source = dc_source;
-    lighttable_t *const *colormap = dc_colormap;
+    const lighttable_t *const *colormap = dc_colormap;
     const byte *brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
@@ -293,7 +293,7 @@ static void DrawColumn32(void)
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
     const byte *const source = dc_source;
-    lighttable32_t *const *colormap = dc_colormap32;
+    const lighttable32_t *const *colormap = dc_colormap32;
     const byte *const brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
@@ -372,7 +372,7 @@ static void DrawTLColumn32(void)
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
     const byte *const source = dc_source;
-    lighttable32_t *const *colormap = dc_colormap32;
+    const lighttable32_t *const *colormap = dc_colormap32;
     const byte *const brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
@@ -1442,7 +1442,7 @@ static void DrawTranslatedColumn8(void)
 
     const byte *source = dc_source;
     const byte *translation = dc_translation;
-    lighttable_t *const *colormap = dc_colormap;
+    const lighttable_t *const *colormap = dc_colormap;
     const byte *brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
@@ -1523,7 +1523,7 @@ static void DrawTranslatedColumn32(void)
 
     const byte *const source = dc_source;
     const byte *const translation = dc_translation;
-    lighttable32_t *const *colormap = dc_colormap32;
+    const lighttable32_t *const *colormap = dc_colormap32;
     const byte *const brightmap = dc_brightmap;
     int heightmask = dc_texheight - 1;
 
@@ -1633,8 +1633,8 @@ int ds_y;
 int ds_x1;
 int ds_x2;
 
-lighttable_t *ds_colormap[2];
-lighttable32_t *ds_colormap32[2];
+const lighttable_t *ds_colormap[2];
+const lighttable32_t *ds_colormap32[2];
 const byte *ds_brightmap;
 
 uint32_t ds_xfrac;
@@ -1652,7 +1652,7 @@ static void DrawSpan8(void)
     int count = ds_x2 - ds_x1 + 1;
     pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
     const byte *source = ds_source;
-    lighttable_t *const *colormap = ds_colormap;
+    const lighttable_t *const *colormap = ds_colormap;
     const byte *brightmap = ds_brightmap;
 
     // SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
@@ -1715,7 +1715,7 @@ static void DrawSpan32(void)
     int count = ds_x2 - ds_x1 + 1;
     pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
     const byte *const source = ds_source;
-    lighttable32_t *const *colormap = ds_colormap32;
+    const lighttable32_t *const *colormap = ds_colormap32;
     const byte *const brightmap = ds_brightmap;
 
     unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
@@ -1767,7 +1767,7 @@ static void DrawSpanWithRadialFog8(void)
     int count = ds_x2 - ds_x1 + 1;
     pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
     const byte *const source = ds_source;
-    lighttable_t **const colormap = ds_colormap;
+    const lighttable_t **const colormap = ds_colormap;
     const byte *const brightmap = ds_brightmap;
 
     unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
@@ -1820,7 +1820,7 @@ static void DrawSpanWithRadialFog32(void)
     int count = ds_x2 - ds_x1 + 1;
     pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
     const byte *const source = ds_source;
-    lighttable32_t **const colormap = ds_colormap32;
+    const lighttable32_t **const colormap = ds_colormap32;
     const byte *const brightmap = ds_brightmap;
 
     unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
