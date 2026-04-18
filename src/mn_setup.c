@@ -4153,7 +4153,7 @@ static const char *thing_lighting_strings[] = {
 };
 
 static const char *fake_contrast_strings[] = {
-  "Off", "Smooth", "Vanilla", NULL
+  "Off", "Vanilla", "Smooth", NULL
 };
 
 static const char *alt_interpic_strings[] = {

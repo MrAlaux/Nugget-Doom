@@ -2282,8 +2282,8 @@ void R_BindRenderVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("fake_contrast", &fake_contrast, NULL,
-            FAKECONTRAST_SMOOTH, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_display, wad_yes,
-            "Fake contrast for walls (0 = Off; 1 = Smooth; 2 = Vanilla)");
+            FAKECONTRAST_VANILLA, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_display, wad_yes,
+            "Fake contrast for walls (0 = Off; 1 = Vanilla; 2 = Smooth)");
 
   // (CFG-only)
   M_BindBool("diminishing_lighting", &diminishing_lighting, NULL,

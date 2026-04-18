@@ -153,8 +153,8 @@ typedef enum thinglighting_s {
 
 typedef enum fakecontrast_s {
   FAKECONTRAST_OFF,
-  FAKECONTRAST_SMOOTH,
   FAKECONTRAST_VANILLA,
+  FAKECONTRAST_SMOOTH,
 
   NUM_FAKECONTRAST
 } fakecontrast_t;
