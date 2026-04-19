@@ -297,8 +297,7 @@ static int have_xdthfaces;
 boolean ST_PlayerInvulnerable(player_t *player)
 {
     return (player->cheats & CF_GODMODE) ||
-        (player->powers[pw_invulnerability] > 4 * 32) ||
-        (player->powers[pw_invulnerability] & 8);
+        POWER_RUNOUT(player->powers[pw_invulnerability]);
 }
 
 //

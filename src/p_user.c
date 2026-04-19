@@ -1038,8 +1038,12 @@ void P_PlayerThink (player_t* player)
 
   if (STRICTMODE(palette_changes == PAL_CHANGE_OFF))
   {
-    if (player->powers[pw_invulnerability] || player->powers[pw_infrared])
+    // [Nugget] Separated invuln from light-amp
+
+    if (player->powers[pw_invulnerability])
       player->fixedcolormap = 1;
+    else if (player->powers[pw_infrared])
+      player->fixedcolormap = STRICTMODE(nightvision_visor) ? 33 : 1;
     else
       player->fixedcolormap = 0;
   }
