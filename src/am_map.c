@@ -1031,7 +1031,7 @@ static void AM_maxOutWindowScale(void)
 // [Nugget] Toggle minimap if the automap button is quickly pressed twice
 static boolean CheckQuickMapButtonDoublePress(void)
 {
-  static const int MINIMAP_TOGGLE_TICS = TICRATE/5; // 0.2 seconds
+  #define MINIMAP_TOGGLE_TICS (TICRATE/5) // 0.2 seconds
   static int last_input_map_tic = -MINIMAP_TOGGLE_TICS;
 
   boolean ret = false;
