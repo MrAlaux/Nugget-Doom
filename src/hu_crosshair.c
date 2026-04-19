@@ -17,6 +17,9 @@
 //
 //-----------------------------------------------------------------------------
 
+// [Nugget]
+#include <math.h>
+
 #include "hu_crosshair.h"
 #include "d_items.h"
 #include "doomstat.h"
@@ -27,13 +30,15 @@
 #include "r_main.h"
 #include "r_state.h"
 #include "st_stuff.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 
 // [Nugget]
 #include "am_map.h"
+#include "deh_misc.h"
 #include "g_game.h"
 #include "m_nughud.h"
+#include "r_tranmap.h"
 
 static player_t *plr = players;
 
@@ -88,7 +93,7 @@ void HU_InitCrosshair(void)
 
         if (W_IsWADLump(lump))
         {
-            if (R_IsPatchLump(lump))
+            if (V_LumpIsPatch(lump))
             {
                 crosshair_strings[i] = crosshair_lumps[i];
             }
@@ -182,7 +187,7 @@ void HU_UpdateCrosshair(void)
     plr = &players[displayplayer];
 
     crosshair.x = SCREENWIDTH / 2;
-    crosshair.y = (screenblocks <= 10) ? (SCREENHEIGHT - ST_HEIGHT) / 2
+    crosshair.y = (screenblocks <= 10) ? (SCREENHEIGHT - st_height) / 2
                                        : SCREENHEIGHT / 2;
 
     // [Nugget] /=============================================================
@@ -199,11 +204,9 @@ void HU_UpdateCrosshair(void)
     // Health/ammo bars
     if (STRICTMODE(hud_crosshair_bars))
     {
-        extern int maxhealth;
-
         const int hlh = SHORT(crosshair.hlpatch->height); // Use full height
 
-        crosshair.hlc = hlh - ceil((float) hlh * ST_GetStatusBarHealth() / maxhealth);
+        crosshair.hlc = hlh - ceil((float) hlh * ST_GetStatusBarHealth() / deh_max_health);
         crosshair.hlc = MAX(0, crosshair.hlc);
 
         const ammotype_t ammo = weaponinfo[plr->readyweapon].ammo;
@@ -302,8 +305,8 @@ void HU_UpdateCrosshairLock(int x, int y)
     int w = (crosshair.w * video.xscale) >> FRACBITS;
     int h = (crosshair.h * video.yscale) >> FRACBITS;
 
-    x = viewwindowx + BETWEEN(w, viewwidth - w - 1, x);
-    y = viewwindowy + BETWEEN(h, viewheight - h - 1, y);
+    x = viewwindowx + clampi(x, w, viewwidth - w - 1);
+    y = viewwindowy + clampi(y, h, viewheight - h - 1);
 
     // [Nugget] Vertical-only lock-on
     if (hud_crosshair_lockon == crosslockon_full)
@@ -314,7 +317,7 @@ void HU_UpdateCrosshairLock(int x, int y)
 
 void HU_DrawCrosshair(void)
 {
-    if (plr->playerstate != PST_LIVE || automapactive == AM_FULL || menuactive || paused
+    if (plr->playerstate != PST_LIVE || automapactive || menuactive || paused
       // [Nugget] New conditions
       // Crash fix
       || !crosshair.cr
@@ -330,7 +333,7 @@ void HU_DrawCrosshair(void)
 
     // [Nugget] NUGHUD
     const int y = crosshair.y + (nughud.viewoffset * STRICTMODE(ST_GetNughudOn()));
-    byte *const xhair_tranmap = R_GetGenericTranMap(hud_crosshair_tran_pct);
+    const byte *const xhair_tranmap = R_GetGenericTranMap(hud_crosshair_tran_pct);
 
     if (crosshair.patch)
     {
@@ -355,27 +358,27 @@ void HU_DrawCrosshair(void)
         hlx = bar_offset - (SHORT(crosshair.patch->width) % 2) + crosshair.hlw,
         amx = bar_offset;
 
-        V_SetPatchCrop(0, 0, crosshair.hlc, 0, false);
-
-        V_DrawPatchTRTL2(
+        V_DrawPatchGeneral(
             crosshair.x - hlx,
             y - crosshair.hlh,
-            crosshair.hlpatch,
+            SHORT(crosshair.hlpatch->leftoffset),
+            SHORT(crosshair.hlpatch->topoffset),
+            xhair_tranmap,
             crosshair.cr,
-            xhair_tranmap
+            crosshair.hlpatch,
+            (crop_t) { .top = crosshair.hlc }
         );
 
-        V_SetPatchCrop(0, 0, crosshair.amc, 0, false);
-
-        V_DrawPatchTRTL2(
+        V_DrawPatchGeneral(
             crosshair.x + amx,
             y - crosshair.amh,
-            crosshair.ampatch,
+            SHORT(crosshair.ampatch->leftoffset),
+            SHORT(crosshair.ampatch->topoffset),
+            xhair_tranmap,
             crosshair.cr,
-            xhair_tranmap
+            crosshair.ampatch,
+            (crop_t) { .top = crosshair.amc }
         );
-
-        V_ClearPatchCrop();
     }
 
     // Horizontal-autoaim indicators

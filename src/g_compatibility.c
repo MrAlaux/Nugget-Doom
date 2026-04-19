@@ -15,22 +15,22 @@
 //  DSDA Compatibility
 //
 
-#include <stdio.h>
 #include <string.h>
 
+#include "doomdata.h"
 #include "doomstat.h"
 #include "doomtype.h"
 #include "g_game.h"
 #include "i_printf.h"
 #include "m_array.h"
 #include "m_misc.h"
+#include "p_udmf.h"
 #include "w_wad.h"
 
 #include "m_json.h"
 #include "md5.h"
 
-static const char *comp_names[] =
-{
+static const char *comp_names[] = {
     [comp_telefrag] = "comp_telefrag",
     [comp_dropoff] = "comp_dropoff",
     [comp_vile] = "comp_vile",
@@ -57,7 +57,7 @@ static const char *comp_names[] =
     [comp_ledgeblock] = "comp_ledgeblock",
     [comp_friendlyspawn] = "comp_friendlyspawn",
     [comp_voodooscroller] = "comp_voodooscroller",
-    [comp_reservedlineflag] = "comp_reservedlineflag"
+    [comp_reservedlineflag] = "comp_reservedlineflag",
 };
 
 typedef byte md5_digest_t[16];
@@ -165,43 +165,53 @@ static void MD5UpdateLump(int lump, struct MD5Context *md5)
     MD5Update(md5, W_CacheLumpNum(lump, PU_CACHE), W_LumpLength(lump));
 }
 
-static void GetLevelCheckSum(int lump, md5_checksum_t* cksum)
+static void GetLevelCheckSum(int lump, md5_checksum_t *cksum, mapformat_t map)
 {
     struct MD5Context md5;
 
     MD5Init(&md5);
 
-    MD5UpdateLump(lump + ML_LABEL, &md5);
-    MD5UpdateLump(lump + ML_THINGS, &md5);
-    MD5UpdateLump(lump + ML_LINEDEFS, &md5);
-    MD5UpdateLump(lump + ML_SIDEDEFS, &md5);
-    MD5UpdateLump(lump + ML_SECTORS, &md5);
+    int behavior = lump + (map.built ? ML_BEHAVIOR : MLX_BEHAVIOR);
 
-    // ML_BEHAVIOR when it becomes applicable to comp options
+    if (map.format == MAP_UDMF)
+    {
+        MD5UpdateLump(lump + ML_TEXTMAP, &md5);
+        behavior = UDMF_FindLumps(lump).behavior;
+    }
+    else
+    {
+        MD5UpdateLump(lump + ML_LABEL, &md5);
+        MD5UpdateLump(lump + ML_THINGS, &md5);
+        MD5UpdateLump(lump + ML_LINEDEFS, &md5);
+        MD5UpdateLump(lump + ML_SIDEDEFS, &md5);
+        MD5UpdateLump(lump + (map.built ? ML_SECTORS : MLX_SECTORS), &md5);
+    }
+
+    if (W_LumpExistsWithName(behavior, "BEHAVIOR"))
+    {
+        MD5UpdateLump(behavior, &md5);
+    }
 
     MD5Final(cksum->digest, &md5);
 
-    for (int i = 0; i < sizeof(cksum->digest); ++i)
-    {
-        sprintf(&cksum->string[i * 2], "%02x", cksum->digest[i]);
-    }
-    cksum->string[32] = '\0';
+    M_DigestToString(cksum->digest, cksum->string, sizeof(cksum->digest));
 }
 
 // For casual players that aren't careful about setting complevels, this
 // function will apply comp options to automatically fix some issues that
 // appear when playing wads in mbf21 (since this is the default).
 
-void G_ApplyLevelCompatibility(int lump)
+void G_ApplyLevelCompatibility(int lump, mapformat_t mapformat)
 {
+    static demo_version_t old_demo_version;
     static boolean restore_comp;
     static int old_comp[COMP_TOTAL];
 
     if (restore_comp)
     {
-        if (demo_version != DV_MBF21)
+        if (demo_version != old_demo_version)
         {
-            demo_version = DV_MBF21;
+            demo_version = old_demo_version;
             G_ReloadDefaults(true);
         }
         memcpy(comp, old_comp, sizeof(*comp));
@@ -214,7 +224,7 @@ void G_ApplyLevelCompatibility(int lump)
 
     md5_checksum_t cksum;
 
-    GetLevelCheckSum(lump, &cksum);
+    GetLevelCheckSum(lump, &cksum, mapformat);
 
     I_Printf(VB_DEBUG, "Level checksum: %s", cksum.string);
 
@@ -224,6 +234,7 @@ void G_ApplyLevelCompatibility(int lump)
         if (!memcmp(record->checksum, cksum.digest, sizeof(md5_digest_t)))
         {
             memcpy(old_comp, comp, sizeof(*comp));
+            old_demo_version = demo_version;
             restore_comp = true;
 
             char *new_demover = record->complevel;
@@ -231,7 +242,8 @@ void G_ApplyLevelCompatibility(int lump)
             {
                 demo_version = G_GetNamedComplevel(new_demover);
                 G_ReloadDefaults(true);
-                I_Printf(VB_INFO, "Automatically setting compatibility level \"%s\"",
+                I_Printf(VB_INFO,
+                         "Automatically setting compatibility level \"%s\"",
                          G_GetCurrentComplevelName());
             }
 
@@ -245,7 +257,8 @@ void G_ApplyLevelCompatibility(int lump)
             {
                 comp[option->comp] = option->value;
 
-                I_Printf(VB_INFO, "Automatically setting comp option \"%s = %d\"",
+                I_Printf(VB_INFO,
+                         "Automatically setting comp option \"%s = %d\"",
                          comp_names[option->comp], option->value);
             }
 

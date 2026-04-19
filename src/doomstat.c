@@ -36,15 +36,13 @@ GameVersions_t gameversions[] = {
     { NULL,           NULL,       0},
 };
 
-// Language.
-Language_t   language = english;
-
 // Set if homebrew PWAD stuff has been added.
 boolean modifiedgame;
 
+boolean pwad_help2;
+
 // [Nugget] SSG in Doom 1
 boolean doom1_ssg;
-
 boolean have_ssg;
 
 //-----------------------------------------------------------------------------
@@ -115,6 +113,9 @@ boolean help_friends, default_help_friends;
 boolean monkeys, default_monkeys;
 
 boolean hide_weapon;
+
+// haleyjd 9/22/99
+int helper_type = -1; // in P_SpawnMapThing to substitute helper thing
 
 // [FG] centered weapon sprite
 int center_weapon;

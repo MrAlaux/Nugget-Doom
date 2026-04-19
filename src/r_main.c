@@ -1,6 +1,7 @@
 //
 //  Copyright (C) 1999 by
 //  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
+//  Copyright (C) 2020 by Ethan Watson
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -33,7 +34,6 @@
 #include "i_video.h"
 #include "p_mobj.h"
 #include "p_pspr.h"
-#include "p_setup.h" // P_SegLengths
 #include "r_bsp.h"
 #include "r_data.h"
 #include "r_defs.h"
@@ -59,8 +59,8 @@
 #include "m_nughud.h"
 #include "m_random.h"
 #include "p_map.h"
+#include "p_setup.h"
 #include "p_user.h"
-#include "s_sound.h"
 #include "wi_stuff.h"
 
 // Fineangles in the SCREENWIDTH wide window.
@@ -74,6 +74,7 @@ int viewangleoffset;
 int validcount = 1;         // increment every time a check is made
 lighttable_t *fixedcolormap;
 lighttable32_t *fixedcolormap32 = NULL;
+int fixedcolormapindex;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
 fixed_t  projection;
@@ -113,30 +114,26 @@ angle_t *xtoviewangle = NULL;   // killough 2/8/98
 // [FG] linear horizontal sky scrolling
 angle_t *linearskyangle = NULL;
 
-int LIGHTLEVELS;
-int LIGHTSEGSHIFT;
-int LIGHTBRIGHT;
-int MAXLIGHTSCALE;
-int LIGHTSCALESHIFT;
-int MAXLIGHTZ;
-int LIGHTZSHIFT;
-
 // killough 3/20/98: Support dynamic colormaps, e.g. deep water
 // killough 4/4/98: support dynamic number of them as well
 
 int numcolormaps;
-cmapoffset_t **(*c_scalelight) = NULL;
-cmapoffset_t **(*c_zlight) = NULL;
-cmapoffset_t *(*scalelight) = NULL;
-cmapoffset_t *scalelightfixed = NULL;
-cmapoffset_t *(*zlight) = NULL;
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
 
 lighttable32_t ***pal_colormaps = NULL;
 lighttable32_t *fullcolormap32 = NULL;
 lighttable32_t **colormaps32 = NULL;
-cmapoffset_t fixedcolormapoffset = 0;
+
+// updated thanks to Rum-and-Raisin Doom, Ethan Watson
+int* scalelightoffset;
+int* scalelightindex;
+int* zlightoffset;
+int* zlightindex;
+int* planezlightoffset;
+int  planezlightindex;
+int* walllightoffset;
+int  walllightindex;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -161,33 +158,57 @@ boolean R_SpriteShadowsOn(void)
   return sprite_shadows_on;
 }
 
-int R_GetLightLevelInPoint(
+void R_GetLightLevelAndTintInPoint(
   const fixed_t x,
   const fixed_t y,
-  const boolean force_mbf
+  const boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
 ) {
-  return R_GetLightLevelInSector(R_PointInSubsector(x, y)->sector, force_mbf);
+  sector_t *const sector = R_PointInSubsector(x, y)->sector;
+  R_GetLightLevelAndTintInSector(sector, force_mbf, lightlevel_p, tint_p);
 }
 
-int R_GetLightLevelInSector(
+void R_GetLightLevelAndTintInSector(
   sector_t *const sector,
-  const boolean force_mbf
+  const boolean force_mbf,
+  int *const lightlevel_p,
+  int *const tint_p
 ) {
-  if (demo_version > DV_BOOM || force_mbf)
+  if (lightlevel_p)
   {
-    sector_t tempsector;
-    int floorlightlevel, ceilinglightlevel;
+    int lightlevel;
 
-    R_FakeFlat(sector, &tempsector, &floorlightlevel, &ceilinglightlevel, false);
+    if (demo_version >= DV_MBF || force_mbf)
+    {
+      sector_t tempsector;
+      int floorlightlevel, ceilinglightlevel;
 
-    return (floorlightlevel + ceilinglightlevel) >> 1;
+      R_FakeFlat(sector, &tempsector, &floorlightlevel, &ceilinglightlevel, false);
+
+      lightlevel = (floorlightlevel + ceilinglightlevel) / 2;
+    }
+    else { lightlevel = sector->lightlevel; }
+
+    *lightlevel_p = lightlevel;
   }
 
-  return sector->lightlevel;
+  if (tint_p)
+  {
+    int tint;
+
+    if (sector->floorlightsec >= 0)
+    {
+      tint = sectors[sector->floorlightsec].tint;
+    }
+    else { tint = sector->tint; }
+
+    *tint_p = tint;
+  }
 }
 
 // True color
-static int num_colormap_rows;
+int num_colormap_rows = NUMCOLORMAPS;
 
 // CVARs ---------------------------------------------------------------------
 
@@ -235,10 +256,10 @@ static void ApplyBlockPostProcess(void)
       for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
       {
         memset(
-          dest + ((y + y2) * video.pitch) + x,
+          dest + ((y + y2) * video.width) + x,
           dest[
             ( (first_y ? viewwindowy + first_y
-                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
+                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
             + (first_x ? viewwindowx + first_x
                        : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
           ],
@@ -284,10 +305,10 @@ static void ApplyBlockPostProcess32(void)
       for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
       {
         V_RGBSet(
-          dest + ((y + y2) * video.pitch) + x,
+          dest + ((y + y2) * video.width) + x,
           dest[
             ( (first_y ? viewwindowy + first_y
-                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
+                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
             + (first_x ? viewwindowx + first_x
                        : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
           ],
@@ -316,6 +337,14 @@ static void ApplyBlockPostProcess32(void)
 
 lightingmode_t lighting_mode;
 
+int LIGHTLEVELS;
+int LIGHTSEGSHIFT;
+int LIGHTBRIGHT;
+int MAXLIGHTSCALE;
+int LIGHTSCALESHIFT;
+int MAXLIGHTZ;
+int LIGHTZSHIFT;
+
 static boolean init_light_tables = false;
 
 boolean R_InitLightTablesPending(void)
@@ -330,8 +359,6 @@ void R_DeferredInitLightTables(void)
 
 // Radial fog ----------------------------------------------------------------
 
-static int R_GetLightIndexVanilla(fixed_t scale, int x);
-
 #define RADFOG_MULT 1.414213562 // Square root of 2
 
 static int R_GetLightIndexRadFog(fixed_t scale, const int x)
@@ -340,7 +367,7 @@ static int R_GetLightIndexRadFog(fixed_t scale, const int x)
 
   const int index = ((int64_t) scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
 
-  return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+  return clampi(index, 0, MAXLIGHTSCALE - 1);
 }
 
 int (*R_GetLightIndex)(fixed_t scale, int x) = R_GetLightIndexVanilla;
@@ -612,7 +639,7 @@ static void ProcessFOVEffects(void)
           float step = zoomtarget - *target;
           const int sign = (step > 0) ? 1 : -1;
 
-          *target += BETWEEN(1, 16, fabs(step) / 3.0) * sign;
+          *target += CLAMP(fabs(step) / 3.0, 1, 16) * sign;
 
           if (   (sign > 0 && *target > zoomtarget)
               || (sign < 0 && *target < zoomtarget))
@@ -657,7 +684,7 @@ static void ProcessFOVEffects(void)
     }
   }
 
-  targetfov = BETWEEN(1.0f, 179.0f, targetfov);
+  targetfov = CLAMP(targetfov, 1.0f, 179.0f);
 
   if (r_fov != targetfov)
   {
@@ -926,7 +953,10 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     if (!(freecam.pitch = MAX(0, abs(freecam.pitch) - 4*ANG1) * ((freecam.pitch > 0) ? 1 : -1)))
     { freecam.centering = false; }
   }
-  else { freecam.pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, freecam.pitch + pitch); }
+  else {
+    freecam.pitch += pitch;
+    freecam.pitch  = CLAMP(freecam.pitch, -max_pitch_angle, max_pitch_angle);
+  }
 }
 
 // [Nugget] =================================================================/
@@ -941,13 +971,14 @@ void (*colfunc)(void);                    // current column draw function
 //
 // killough 5/2/98: reformatted
 //
+int (*R_PointOnSide)(fixed_t x, fixed_t y, struct node_s *node) = R_PointOnSideClassic;
 
 // Workaround for optimization bug in clang
 // fixes desync in competn/doom/fp2-3655.lmp and in dmnsns.wad dmn01m909.lmp
 #if defined(__clang__)
-int R_PointOnSide(volatile fixed_t x, volatile fixed_t y, node_t *node)
+int R_PointOnSideClassic(volatile fixed_t x, volatile fixed_t y, node_t *node)
 #else
-int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
+int R_PointOnSideClassic(fixed_t x, fixed_t y, node_t *node)
 #endif
 {
   if (!node->dx)
@@ -965,8 +996,29 @@ int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
   return FixedMul(y, node->dx>>FRACBITS) >= FixedMul(node->dy>>FRACBITS, x);
 }
 
-// killough 5/2/98: reformatted
+#if defined(__clang__)
+int R_PointOnSidePrecise(volatile fixed_t x, volatile fixed_t y, node_t *node)
+#else
+int R_PointOnSidePrecise(fixed_t x, fixed_t y, node_t *node)
+#endif
+{
+   if(!node->dx)
+      return x <= node->x ? node->dy > 0 : node->dy < 0;
 
+   if(!node->dy)
+      return y <= node->y ? node->dx < 0 : node->dx > 0;
+
+   x -= node->x;
+   y -= node->y;
+
+   // Try to quickly decide by looking at sign bits.
+   if((node->dy ^ node->dx ^ x ^ y) < 0)
+      return (node->dy ^ x) < 0;  // (left is negative)
+   return (int64_t)y * node->dx >= (int64_t)node->dy * x;
+}
+
+// killough 5/2/98: reformatted
+// [Woof!] rewritten to use only higher precision version
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
   fixed_t lx = line->v1->x;
@@ -986,7 +1038,7 @@ int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
   // Try to quickly decide by looking at sign bits.
   if ((ldy ^ ldx ^ x ^ y) < 0)
     return (ldy ^ x) < 0;          // (left is negative)
-  return FixedMul(y, ldx>>FRACBITS) >= FixedMul(ldy>>FRACBITS, x);
+  return (int64_t) y * ldx >= (int64_t) x * ldy;
 }
 
 //
@@ -1164,7 +1216,7 @@ static void R_InitTextureMapping(void)
   //  xtoviewangle will give the smallest view angle
   //  that maps to x.
 
-  linearskyfactor = FIXED2DOUBLE(slopefrac) * ANG90;
+  linearskyfactor = FixedToDouble(slopefrac) * ANG90;
 
   for (x=0; x<=viewwidth; x++)
     {
@@ -1203,40 +1255,10 @@ static void R_InitTextureMapping(void)
 
 void R_InitLightTables (void)
 {
-  init_light_tables = false; // [Nugget] Lighting modes
+  // [Nugget] Lighting modes /------------------------------------------------
 
-  int i, cm;
+  init_light_tables = false;
 
-  if (c_scalelight)
-  {
-    for (cm = 0; cm < numcolormaps; ++cm)
-    {
-      for (i = 0; i < LIGHTLEVELS; ++i)
-        Z_Free(c_scalelight[cm][i]);
-
-      Z_Free(c_scalelight[cm]);
-    }
-    Z_Free(c_scalelight);
-  }
-
-  if (scalelightfixed)
-  {
-    Z_Free(scalelightfixed);
-  }
-
-  if (c_zlight)
-  {
-    for (cm = 0; cm < numcolormaps; ++cm)
-    {
-      for (i = 0; i < LIGHTLEVELS; ++i)
-        Z_Free(c_zlight[cm][i]);
-
-      Z_Free(c_zlight[cm]);
-    }
-    Z_Free(c_zlight);
-  }
-
-  // [Nugget] Lighting modes
   if (lighting_mode >= LIGHTINGMODE_INTERPOLATED) // True color
   {
     num_colormap_rows = 256;
@@ -1261,7 +1283,7 @@ void R_InitLightTables (void)
     }
   }
 
-  // [Nugget] Radial fog
+  // Radial fog
   if (STRICTMODE(radial_fog))
   { LIGHTZSHIFT = MIN(LIGHTZSHIFT, 18 - radial_plane_fog_fidelity); }
 
@@ -1270,60 +1292,45 @@ void R_InitLightTables (void)
   MAXLIGHTSCALE = 3 << (16 - LIGHTSCALESHIFT);
   MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
 
-  scalelightfixed = Z_Malloc(MAXLIGHTSCALE * sizeof(*scalelightfixed), PU_STATIC, 0);
+  // [Nugget] ---------------------------------------------------------------/
 
   // killough 4/4/98: dynamic colormaps
-  c_zlight = Z_Malloc(sizeof(*c_zlight) * numcolormaps, PU_STATIC, 0);
-  c_scalelight = Z_Malloc(sizeof(*c_scalelight) * numcolormaps, PU_STATIC, 0);
-
-  for (cm = 0; cm < numcolormaps; ++cm)
-  {
-    c_zlight[cm] = Z_Malloc(LIGHTLEVELS * sizeof(**c_zlight), PU_STATIC, 0);
-    c_scalelight[cm] = Z_Malloc(LIGHTLEVELS * sizeof(**c_scalelight), PU_STATIC, 0);
-  }
+  // ScaleLight calculated below
+  int NumZLightEntries = LIGHTLEVELS * MAXLIGHTZ;
+  zlightoffset = (int*)Z_Malloc(sizeof(int) * NumZLightEntries, PU_STATIC, NULL);
+  zlightindex  = (int*)Z_Malloc(sizeof(int) * NumZLightEntries, PU_STATIC, NULL);
 
   // Calculate the light levels to use
   //  for each level / distance combination.
-  for (i=0; i< LIGHTLEVELS; i++)
+  for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
+  {
+    int lightz, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-lightlevel)*2)*num_colormap_rows/LIGHTLEVELS;
+    for (lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*num_colormap_rows/LIGHTLEVELS;
+      int scale = FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (lightz + 1) << LIGHTZSHIFT);
+      int level = startmap - (scale >> LIGHTSCALESHIFT) / DISTMAP;
+      level = CLAMP(level, 0, num_colormap_rows - 1);
 
-      for (cm = 0; cm < numcolormaps; ++cm)
-      {
-        c_scalelight[cm][i] = Z_Malloc(MAXLIGHTSCALE * sizeof(***c_scalelight), PU_STATIC, 0);
-        c_zlight[cm][i] = Z_Malloc(MAXLIGHTZ * sizeof(***c_zlight), PU_STATIC, 0);
-      }
-
-      for (j=0; j<MAXLIGHTZ; j++)
-        {
-          int scale = FixedDiv ((SCREENWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
-          int t, level = startmap - (scale >> LIGHTSCALESHIFT)/DISTMAP;
-
-          if (level < 0)
-            level = 0;
-          else
-            if (level >= num_colormap_rows)
-              level = num_colormap_rows-1;
-
-          // killough 3/20/98: Initialize multiple colormaps
-          level *= 256;
-          for (t=0; t<numcolormaps; t++)         // killough 4/4/98
-            c_zlight[t][i][j] = level;
-        }
+      // killough 3/20/98: Initialize multiple colormaps
+      // killough 4/4/98
+      // updated thanks to Rum-and-Raisin Doom
+      zlightindex[lightlevel * MAXLIGHTZ + lightz] = level;
+      zlightoffset[lightlevel * MAXLIGHTZ + lightz] = level * 256;
     }
+  }
 
-  // [Nugget]: [crispy] re-calculate fake contrast
-  P_SegLengths(true);
+  // [Nugget]
+  P_InitFakeContrast();
 
   setsizeneeded = true;
   R_DeferredInitDistLightTables(); // [Nugget] Radial fog
 }
 
-// [Nugget] Static, added X parameter
-static int R_GetLightIndexVanilla(const fixed_t scale, const int x)
+// [Nugget] Added X parameter, renamed
+int R_GetLightIndexVanilla(const fixed_t scale, const int x)
 {
   const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
-  return BETWEEN(0, MAXLIGHTSCALE - 1, index);
+  return clampi(index, 0, MAXLIGHTSCALE - 1);
 }
 
 static fixed_t viewpitch;
@@ -1359,7 +1366,7 @@ static void R_SetupFreelook(void)
 
   for (i = 0; i < viewheight; i++)
   {
-    dy = abs(((i - centery) << FRACBITS) + FRACUNIT / 2);
+    dy = abs(IntToFixed(i - centery) + FRACUNIT / 2);
     yslope[i] = FixedDiv(projection, dy);
   }
 }
@@ -1392,6 +1399,11 @@ void R_ExecuteSetViewSize (void)
 
   setsizeneeded = false;
 
+  if (setblocks == 10)
+  {
+    st_height = st_height_screenblocks10;
+  }
+
   if (setblocks == 11)
     {
       scaledviewwidth_nonwide = NONWIDEWIDTH;
@@ -1403,14 +1415,17 @@ void R_ExecuteSetViewSize (void)
     {
       scaledviewwidth_nonwide = NONWIDEWIDTH;
       scaledviewwidth = video.unscaledw;
-      scaledviewheight = SCREENHEIGHT - ST_HEIGHT;
+      scaledviewheight = SCREENHEIGHT - st_height;
     }
   else
     {
-      const int st_screen = SCREENHEIGHT - ST_HEIGHT;
+      const int st_screen = SCREENHEIGHT - st_height;
 
       scaledviewwidth_nonwide = setblocks * 32;
       scaledviewheight = (setblocks * st_screen / 10) & ~7; // killough 11/98
+
+      if (!scaledviewheight)
+        return;
 
       if (video.unscaledw > SCREENWIDTH)
         scaledviewwidth = (scaledviewheight * video.unscaledw / st_screen) & ~7;
@@ -1423,7 +1438,7 @@ void R_ExecuteSetViewSize (void)
   if (scaledviewwidth == video.unscaledw)
     scaledviewy = 0;
   else
-    scaledviewy = (SCREENHEIGHT - ST_HEIGHT - scaledviewheight) / 2;
+    scaledviewy = (SCREENHEIGHT - st_height - scaledviewheight) / 2;
 
   view.x = scaledviewx;
   view.y = scaledviewy;
@@ -1471,43 +1486,46 @@ void R_ExecuteSetViewSize (void)
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
   }
 
-  // [Nugget] FOV-based sky stretching;
-  // we intentionally use `custom_fov` to disregard any FOV effects
+  // [Nugget] FOV-based sky stretching /--------------------------------------
+
+  // We intentionally use `custom_fov` to disregard any FOV effects
   skyiscalediff = (custom_fov == FOV_DEFAULT)
                 ? FRACUNIT
                 : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
 
+  R_UpdateStretchSkies();
+
+  // [Nugget] ---------------------------------------------------------------/
+
   for (i=0 ; i<viewwidth ; i++)
     {
-      fixed_t cosadj = abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
-      distscale[i] = FixedDiv(FRACUNIT,cosadj);
       // thing clipping
       screenheightarray[i] = viewheight;
     }
 
+  // Lightz calculated above
+  int NumScaleLightEntries = LIGHTLEVELS * MAXLIGHTSCALE;
+  scalelightindex  = (int*)Z_Malloc(sizeof(int) * NumScaleLightEntries, PU_STATIC, NULL);
+  scalelightoffset = (int*)Z_Malloc(sizeof(int) * NumScaleLightEntries, PU_STATIC, NULL);
+
   // Calculate the light levels to use
   //  for each level / scale combination.
-  for (i=0; i<LIGHTLEVELS; i++)
+  for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
+  {
+    int startmap = ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+    for (int lightscale = 0; lightscale < MAXLIGHTSCALE; lightscale++)
     {
-      int j, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-i)*2)*num_colormap_rows/LIGHTLEVELS;
+      // killough 11/98:
+      int level = startmap - lightscale / DISTMAP;
+      level = CLAMP(level, 0, num_colormap_rows - 1);
 
-      for (j=0 ; j<MAXLIGHTSCALE ; j++)
-        {                                       // killough 11/98:
-          int t, level = startmap - j / DISTMAP;
-
-          if (level < 0)
-            level = 0;
-
-          if (level >= num_colormap_rows)
-            level = num_colormap_rows-1;
-
-          // killough 3/20/98: initialize multiple colormaps
-          level *= 256;
-
-          for (t=0; t<numcolormaps; t++)     // killough 4/4/98
-            c_scalelight[t][i][j] = level;
-        }
+      // killough 3/20/98: initialize multiple colormaps
+      // killough 4/4/98
+      // updated thanks to Rum-and-Raisin Doom
+      scalelightindex[lightlevel * MAXLIGHTSCALE + lightscale] = level;
+      scalelightoffset[lightlevel * MAXLIGHTSCALE + lightscale] = level * 256;
     }
+  }
 
   // [Nugget] Alt. intermission background
   if (!WI_AltInterpicOn())
@@ -1539,15 +1557,11 @@ void R_Init (void)
   R_SetViewSize(screenblocks);
   R_InitPlanes();
   R_InitLightTables();
-  R_InitSkyMap();
   R_InitTranslationTables();
   V_InitFlexTranTable();
 
   // [FG] spectre drawing mode
   R_SetFuzzColumnMode();
-
-  // [Nugget] `colfunc` initialized in this function
-  R_InitDrawFunctions();
 }
 
 //
@@ -1682,7 +1696,7 @@ void R_SetupFrame (player_t *player)
     player = &dummyplayer;
   }
 
-  int i, cm;
+  int cm;
   fixed_t pitch;
   const boolean use_localview = CheckLocalView(player);
   const boolean camera_ready = (
@@ -1740,10 +1754,10 @@ void R_SetupFrame (player_t *player)
     }
 
     if ((use_localview || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
-        && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
+        && raw_input && !player->centering && freelook) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;
-      basepitch = BETWEEN(-max_pitch_angle, max_pitch_angle, basepitch);
+      basepitch = CLAMP(basepitch, -max_pitch_angle, max_pitch_angle);
     }
     else
     {
@@ -1935,7 +1949,7 @@ void R_SetupFrame (player_t *player)
       {
         fixed_t frac;
 
-        viewz  = BETWEEN(sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT, viewz);
+        viewz  = CLAMP(viewz, sec->floorheight + FRACUNIT, sec->ceilingheight - FRACUNIT);
         frac   = FixedDiv(viewz - z, FixedMul(slope, dist));
         viewx -= FixedMul(dx, frac);
         viewy -= FixedMul(dy, frac);
@@ -1969,74 +1983,72 @@ void R_SetupFrame (player_t *player)
   else
     extralight = player->extralight * LIGHTBRIGHT;
 
-  extralight += STRICTMODE(LIGHTBRIGHT * extra_level_brightness);
+  extralight += STRICTMODE(extra_level_brightness * LIGHTBRIGHT);
 
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];
 
   // killough 3/20/98, 4/4/98: select colormap based on player status
+  const sector_t * sec = player->mo->subsector->sector;
 
-  if (player->mo->subsector->sector->heightsec != -1)
-    {
-      const sector_t *s = player->mo->subsector->sector->heightsec + sectors;
-      cm = viewz < s->interpfloorheight ? s->bottommap : viewz > s->interpceilingheight ?
-        s->topmap : s->midmap;
-      if (cm < 0 || cm > numcolormaps)
-        cm = 0;
-    }
-  else
-    cm = 0;
-
-  V_SetCurrentColormap(cm);
-
-  zlight = c_zlight[cm];
-  scalelight = c_scalelight[cm];
-
-  fixedcolormapoffset = 0;
-
-  if (truecolor_rendering)
+  if (sec->colormap)
   {
-    if (player->fixedcolormap)
-      {
-        // Only the first 32 original rows are expanded and should be shifted
-        const int cmaprow = (MIN(32, player->fixedcolormap) << COLORMAP_ROW_SHIFT_BITS)
-                          + MAX(0, player->fixedcolormap - 32);
-
-        fixedcolormapoffset = cmaprow * 256;
-
-        fixedcolormap32 = fullcolormap32
-          + fixedcolormapoffset;
-
-        walllights = scalelightfixed;
-
-        for (i=0 ; i<MAXLIGHTSCALE ; i++)
-          scalelightfixed[i] = fixedcolormapoffset;
-
-        // [Nugget] Set `dc_colormap` here
-        dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
-      }
-    else
-      fixedcolormap32 = NULL;
+    cm = sec->colormap;
+  }
+  else if (sec->heightsec != -1)
+  {
+    const sector_t * const s = &sectors[sec->heightsec];
+    cm = viewz < s->interpfloorheight   ? s->bottommap
+       : viewz > s->interpceilingheight ? s->topmap
+                                        : s->midmap;
   }
   else
   {
-    if (player->fixedcolormap)
-      {
-        fixedcolormapoffset = player->fixedcolormap * 256;
+    cm = 0;
+  }
 
-        fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
-          + fixedcolormapoffset;
+  if (cm < 0 || cm > numcolormaps)
+  {
+    cm = 0;
+  }
 
-        walllights = scalelightfixed;
+  V_SetCurrentColormap(cm);
 
-        for (i=0 ; i<MAXLIGHTSCALE ; i++)
-          scalelightfixed[i] = fixedcolormapoffset;
+  fixedcolormapindex = player->fixedcolormap;
 
-        // [Nugget] Set `dc_colormap` here
-        dc_colormap[0] = dc_colormap[1] = fixedcolormap;
-      }
+  if (truecolor_rendering)
+  {
+    if (fixedcolormapindex)
+    {
+      // Only the first 32 original rows are expanded and should be shifted
+      fixedcolormapindex = (MIN(32, fixedcolormapindex) << COLORMAP_ROW_SHIFT_BITS)
+                         + MAX(0, fixedcolormapindex - 32);
+
+      // killough 3/20/98: use fullcolormap
+      fixedcolormap32 = fullcolormap32 + fixedcolormapindex * 256;
+
+      // [Nugget] Set `dc_colormap` here
+      dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
+    }
     else
+    {
+      fixedcolormap32 = NULL;
+    }
+  }
+  else
+  {
+    if (fixedcolormapindex)
+    {
+      // killough 3/20/98: use fullcolormap
+      fixedcolormap = fullcolormap + fixedcolormapindex * 256;
+
+      // [Nugget] Set `dc_colormap` here
+      dc_colormap[0] = dc_colormap[1] = fixedcolormap;
+    }
+    else
+    {
       fixedcolormap = 0;
+    }
   }
 
   validcount++;
@@ -2257,7 +2269,7 @@ void R_BindRenderVariables(void)
   BIND_NUM_GENERAL(extra_level_brightness, 0, -8, 8, "Level brightness"); // [Nugget] Broader light-level range
   BIND_NUM_GENERAL(fuzzmode, FUZZ_BLOCKY, FUZZ_BLOCKY, FUZZ_ORIGINAL,
     "Partial Invisibility (0 = Blocky; 1 = Refraction; 2 = Shadow, 3 = Original)");
-  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for mouselook"); // [Nugget] Extended description
+  BIND_BOOL_GENERAL(stretchsky, false, "Stretch short skies for free look"); // [Nugget] Extended description
 
   // [Nugget] FOV-based sky stretching (CFG-only)
   M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,
@@ -2270,8 +2282,8 @@ void R_BindRenderVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("fake_contrast", &fake_contrast, NULL,
-            FAKECONTRAST_SMOOTH, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_display, wad_yes,
-            "Fake contrast for walls (0 = Off; 1 = Smooth; 2 = Vanilla)");
+            FAKECONTRAST_VANILLA, FAKECONTRAST_OFF, NUM_FAKECONTRAST-1, ss_display, wad_yes,
+            "Fake contrast for walls (0 = Off; 1 = Vanilla; 2 = Smooth)");
 
   // (CFG-only)
   M_BindBool("diminishing_lighting", &diminishing_lighting, NULL,
@@ -2366,9 +2378,6 @@ void R_BindRenderVariables(void)
 
   M_BindBool("translucency", &translucency, NULL, true, ss_gen, wad_yes,
              "Translucency for some things");
-  M_BindNum("tran_filter_pct", &tran_filter_pct, NULL,
-            66, 0, 100, ss_none, wad_yes,
-            "Percent of foreground/background translucency mix");
 
   M_BindBool("flipcorpses", &flipcorpses, NULL, false, ss_enem, wad_no,
              "Randomly mirrored death animations");

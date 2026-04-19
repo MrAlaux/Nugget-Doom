@@ -23,7 +23,6 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "i_oalcommon.h"
 #include "i_oalequalizer.h"
@@ -56,7 +55,6 @@
 #define VOL_TO_GAIN(x)          ((ALfloat)(x) / 127)
 
 static int snd_resampler;
-static boolean snd_limiter;
 static boolean snd_hrtf;
 static int snd_absorption;
 static int snd_doppler;
@@ -140,7 +138,10 @@ void I_OAL_ShutdownModule(void)
         {
             alDeleteBuffers(1, &S_sfx[i].buffer);
             S_sfx[i].cached = false;
-            S_sfx[i].lumpnum = -1;
+            if (!(S_sfx[i].flags & SFX_Ambient)) // Keep ambient sound lumpnums.
+            {
+                S_sfx[i].lumpnum = -1;
+            }
         }
     }
 }
@@ -254,9 +255,12 @@ void I_OAL_ResetSource2D(int channel)
     alSource3f(oal->sources[channel], AL_VELOCITY, 0.0f, 0.0f, 0.0f);
     alSourcef(oal->sources[channel], AL_ROLLOFF_FACTOR, 0.0f);
     alSourcei(oal->sources[channel], AL_SOURCE_RELATIVE, AL_TRUE);
+    alSourcei(oal->sources[channel], AL_REFERENCE_DISTANCE, 0);
+    alSourcei(oal->sources[channel], AL_MAX_DISTANCE, 0);
 }
 
-void I_OAL_ResetSource3D(int channel, boolean point_source)
+void I_OAL_ResetSource3D(int channel, boolean point_source,
+                         const sfxparams_t *params)
 {
     if (!oal)
     {
@@ -277,6 +281,8 @@ void I_OAL_ResetSource3D(int channel, boolean point_source)
 
     alSourcef(oal->sources[channel], AL_ROLLOFF_FACTOR, OAL_ROLLOFF_FACTOR);
     alSourcei(oal->sources[channel], AL_SOURCE_RELATIVE, AL_FALSE);
+    alSourcei(oal->sources[channel], AL_REFERENCE_DISTANCE, params->close_dist);
+    alSourcei(oal->sources[channel], AL_MAX_DISTANCE, params->clipping_dist);
 }
 
 void I_OAL_UpdateSourceParams(int channel, const ALfloat *position,
@@ -366,8 +372,6 @@ static void ResetParams(void)
     {
         I_OAL_ResetSource2D(i);
         alSource3i(oal->sources[i], AL_DIRECTION, 0, 0, 0);
-        alSourcei(oal->sources[i], AL_REFERENCE_DISTANCE, S_CLOSE_DIST);
-        alSourcei(oal->sources[i], AL_MAX_DISTANCE, S_CLIPPING_DIST);
     }
     // Spatialization is required even for 2D panning emulation.
     if (oal->SOFT_source_spatialize)
@@ -446,14 +450,13 @@ static void GetAttribs(ALCint **attribs)
 void I_OAL_BindSoundVariables(void)
 {
     BIND_BOOL_GENERAL(snd_hrtf, false,
-        "[OpenAL 3D] Headphones mode (0 = No; 1 = Yes)");
+        "[OpenAL 3D] Headphones mode");
     BIND_NUM_SFX(snd_resampler, 1, 0, UL,
         "Sound resampler (0 = Nearest; 1 = Linear; ...)");
     BIND_NUM_SFX(snd_absorption, 5, 0, 10, // [Nugget] Enabled by default, and given menu item
         "[OpenAL 3D] Air absorption effect (0 = Off; 10 = Max)");
     BIND_NUM_SFX(snd_doppler, 5, 0, 10, // [Nugget] Enabled by default
         "[OpenAL 3D] Doppler effect (0 = Off; 10 = Max)");
-    BIND_BOOL_SFX(snd_limiter, false, "Use sound output limiter");
 }
 
 boolean I_OAL_InitSound(int snd_module)
@@ -567,6 +570,34 @@ boolean I_OAL_AllowReinitSound(void)
     return (alcIsExtensionPresent(oal->device, "ALC_SOFT_HRTF") == ALC_TRUE);
 }
 
+static float GetSoundLength(ALuint buffer)
+{
+    float seconds = 0.0f;
+
+    if (alIsBuffer(buffer))
+    {
+        ALint frequency, bits, channels, size;
+
+        alGetError();
+        alGetBufferi(buffer, AL_FREQUENCY, &frequency);
+        alGetBufferi(buffer, AL_BITS, &bits);
+        alGetBufferi(buffer, AL_CHANNELS, &channels);
+        alGetBufferi(buffer, AL_SIZE, &size);
+
+        if (alGetError() == AL_NO_ERROR && size > 0)
+        {
+            const float denom = (float)channels * frequency * bits / 8.0f;
+
+            if (denom > 0.0f)
+            {
+                seconds = (float)size / denom;
+            }
+        }
+    }
+
+    return seconds;
+}
+
 static void FadeInOutMono8(byte *data, ALsizei size, ALsizei freq)
 {
     const int fadelen = freq * FADETIME / 1000000;
@@ -651,17 +682,21 @@ boolean I_OAL_CacheSound(sfxinfo_t *sfx)
             // Reference: https://www.doomworld.com/forum/post/949486
             sampledata += DMXPADSIZE;
             size -= DMXPADSIZE * 2;
-            FadeInOutMono8(sampledata, size, freq);
+            if (!sfx->looping)
+            {
+                FadeInOutMono8(sampledata, size, freq);
+            }
 
             // All Doom sounds are 8-bit
             format = AL_FORMAT_MONO8;
         }
+#ifdef HAVE_SNDFILE
         else
         {
             size = lumplen;
 
-            if (I_SND_LoadFile(lumpdata, &format, &wavdata, &size, &freq)
-                == false)
+            if (!I_SND_LoadFile(lumpdata, &format, &wavdata, &size, &freq,
+                                sfx->looping))
             {
                 I_Printf(VB_WARNING, " I_OAL_CacheSound: %s",
                          lumpinfo[lumpnum].name);
@@ -670,12 +705,17 @@ boolean I_OAL_CacheSound(sfxinfo_t *sfx)
 
             sampledata = wavdata;
         }
-
-        alGetError();
+#else
+        else
+        {
+            I_Printf(VB_ERROR, " I_OAL_CacheSound: %s", lumpinfo[lumpnum].name);
+            break;
+        }
+#endif
         alGenBuffers(1, &buffer);
         if (alGetError() != AL_NO_ERROR)
         {
-            I_Printf(VB_ERROR, "I_OAL_CacheSound: Error creating buffers.");
+            I_Printf(VB_ERROR, "I_OAL_CacheSound: Error creating buffer.");
             break;
         }
         alBufferData(buffer, format, sampledata, size, freq);
@@ -687,6 +727,19 @@ boolean I_OAL_CacheSound(sfxinfo_t *sfx)
 
         sfx->buffer = buffer;
         sfx->cached = true;
+
+        if (sfx->flags & SFX_Ambient)
+        {
+            sfx->length = GetSoundLength(sfx->buffer);
+
+            if ((uint64_t)(sfx->length * FRACUNIT) > INT_MAX)
+            {
+                // Ignore ambient sounds that are somehow over 32767.99998474
+                // seconds long.
+                sfx->length = 0.0f; 
+            }
+        }
+
         I_CacheRumble(sfx, format, sampledata, size, freq);
     }
 
@@ -709,20 +762,46 @@ boolean I_OAL_CacheSound(sfxinfo_t *sfx)
     return true;
 }
 
-boolean I_OAL_StartSound(int channel, sfxinfo_t *sfx, float pitch)
+float I_OAL_GetOffset(int channel)
+{
+    float offset;
+
+    if (!oal)
+    {
+        return 0.0f;
+    }
+
+    alGetError();
+    alGetSourcef(oal->sources[channel], AL_SEC_OFFSET, &offset);
+    if (alGetError() != AL_NO_ERROR)
+    {
+        I_Printf(VB_DEBUG, "I_OAL_GetOffset: Error getting offset.");
+        return 0.0f;
+    }
+
+    return offset;
+}
+
+boolean I_OAL_StartSound(int channel, sfxinfo_t *sfx, const sfxparams_t *params)
 {
     if (!oal)
     {
         return false;
     }
 
-    // [Nugget] Slow Motion
+    // [Nugget] Slow Motion /-------------------------------------------------
+
+    float pitch = params->pitch;
+
     if (!menuactive && G_GetSlowMotionFactor() != SLOWMO_FACTOR_NORMAL)
     { pitch *= (float) (SLOWMO_FACTOR_NORMAL*4 + G_GetSlowMotionFactor()) / (SLOWMO_FACTOR_NORMAL*5); }
 
-    alSourcef(oal->sources[channel], AL_PITCH, pitch);
+    // [Nugget] -------------------------------------------------------------/
 
     alSourcei(oal->sources[channel], AL_BUFFER, sfx->buffer);
+    alSourcei(oal->sources[channel], AL_LOOPING, sfx->looping);
+    alSourcef(oal->sources[channel], AL_PITCH, pitch); // [Nugget]
+    alSourcef(oal->sources[channel], AL_SEC_OFFSET, params->offset);
 
     alGetError();
     alSourcePlay(oal->sources[channel]);
@@ -798,6 +877,16 @@ boolean I_OAL_SoundIsPaused(int channel)
     alGetSourcei(oal->sources[channel], AL_SOURCE_STATE, &state);
 
     return (state == AL_PAUSED);
+}
+
+void I_OAL_SetGain(int channel, float gain)
+{
+    if (!oal)
+    {
+        return;
+    }
+
+    alSourcef(oal->sources[channel], AL_GAIN, (ALfloat)gain);
 }
 
 void I_OAL_SetVolume(int channel, int volume)

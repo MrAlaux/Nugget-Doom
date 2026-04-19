@@ -25,16 +25,16 @@ void VX_Init (void);
 void VX_ClearVoxels (void);
 
 struct mobj_s;
-boolean VX_ProjectVoxel (struct mobj_s * thing, byte lightnum); // [Nugget] Lightnum
+boolean VX_ProjectVoxel(struct mobj_s *thing, int lightlevel_override);
 
 struct vissprite_s;
 void VX_DrawVoxel (struct vissprite_s * vis);
 
 extern boolean voxels_rendering, default_voxels_rendering;
 
-void VX_IncreaseMaxDist (void);
+void VX_IncreaseMaxDist (int step_multipler);
 
-void VX_DecreaseMaxDist (void);
+void VX_DecreaseMaxDist (int step_multipler);
 
 void VX_ResetMaxDist (void);
 
@@ -42,7 +42,8 @@ void VX_ResetMaxDist (void);
 
 // Weapon voxels
 boolean VX_ProjectWeaponVoxel(const struct pspdef_s *const psp,
-                              const boolean translucent);
+                              int lightlevel_override,
+                              boolean translucent);
 
 // Voxel rendering mode
 void VX_SetVoxelRenderingMode(void);
