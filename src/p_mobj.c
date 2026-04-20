@@ -1934,8 +1934,6 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 {
   mobj_t *const mobj = Z_Malloc(sizeof(*mobj), PU_LEVEL, NULL);
 
-  static mobjinfo_t info = { .scale = FRACUNIT };
-
   memset(mobj, 0, sizeof(*mobj));
 
   mobj->oldx = mobj->x = x;
@@ -1950,7 +1948,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 
   mobj->type = mobj->tics = -1;
 
-  mobj->info = &info;
+  mobj->info = P_VisualMobjDummyInfo();
 
   mobj->gentranmap_pct = -1;
 
@@ -1976,6 +1974,13 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
   P_AddThinker(&mobj->thinker);
 
   return mobj;
+}
+
+mobjinfo_t *P_VisualMobjDummyInfo(void)
+{
+  static mobjinfo_t info = { .scale = FRACUNIT };
+
+  return &info;
 }
 
 boolean flakes, allow_flakes, faint_flakes;
