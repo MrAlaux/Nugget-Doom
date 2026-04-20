@@ -1290,19 +1290,20 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   fixed_t shadow_tx, shadow_tx_clipped;
 
-  static const fixed_t CLIP_STEP = FRACUNIT;
+  const fixed_t clip_step = FRACUNIT / scale_mult;
 
   #define GET_TX_CLIPPED(angle) \
   { \
-    fixed_t max_tx = 0; \
+    shadow_tx_clipped = 0; \
     const int fineangle = (angle) >> ANGLETOFINESHIFT; \
     \
-    for (fixed_t dist = CLIP_STEP;  dist <= shadow_tx;  dist += CLIP_STEP) \
+    for (fixed_t dist = clip_step;  dist <= shadow_tx;  dist += clip_step) \
     { \
-      max_tx = dist; \
+      shadow_tx_clipped = dist; \
     \
-      const fixed_t x = interpx + FixedMul(dist, finecosine[fineangle]), \
-                    y = interpy + FixedMul(dist,   finesine[fineangle]); \
+      const fixed_t scaled_dist = dist * scale_mult; \
+      const fixed_t x = interpx + FixedMul(scaled_dist, finecosine[fineangle]), \
+                    y = interpy + FixedMul(scaled_dist,   finesine[fineangle]); \
     \
       if (abs(R_PointInSubsector(x,y)->sector->interpfloorheight - floorheight) \
           > 12*FRACUNIT) \
@@ -1310,8 +1311,6 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
         break; \
       } \
     } \
-    \
-    shadow_tx_clipped = MIN(shadow_tx, max_tx); \
   }
 
   shadow_tx = flip ? spritewidth[lump] - spriteoffset[lump] : spriteoffset[lump];
