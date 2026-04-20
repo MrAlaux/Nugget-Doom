@@ -1821,16 +1821,21 @@ static void DrawSolidBackground(void)
             {
                 for (x = 0; x < depth; x++)
                 {
-                    pixel32_t *c = st_backing_screen32 + V_ScaleY(y) * video.pitch
-                                 + V_ScaleX(x);
-                    r += V_RedFromRGB(*c);
-                    g += V_GreenFromRGB(*c);
-                    b += V_BlueFromRGB(*c);
+                    pixel32_t *tc = st_backing_screen32 + V_ScaleY(y) * video.pitch
+                                    + V_ScaleX(x);
 
-                    c += V_ScaleX(width - 2 * x - 1);
-                    r += V_RedFromRGB(*c);
-                    g += V_GreenFromRGB(*c);
-                    b += V_BlueFromRGB(*c);
+                    pixel_t c = V_IndexFromRGB(*tc);
+
+                    r += pal[3 * c + 0];
+                    g += pal[3 * c + 1];
+                    b += pal[3 * c + 2];
+
+                    tc += V_ScaleX(width - 2 * x - 1);
+                    c = V_IndexFromRGB(*tc);
+
+                    r += pal[3 * c + 0];
+                    g += pal[3 * c + 1];
+                    b += pal[3 * c + 2];
                 }
             }
 
@@ -1840,9 +1845,7 @@ static void DrawSolidBackground(void)
 
             col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
 
-            V_FillRectRGB(
-              0, v0, video.unscaledw, v1 - v0, V_ComponentsToRGB(col, r/2, g/2, b/2)
-            );
+            V_FillRect(0, v0, video.unscaledw, v1 - v0, col);
         }
 
         return;
