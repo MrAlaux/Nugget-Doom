@@ -399,10 +399,12 @@ static const char *sbe_names[] =
 };
 
 // [Nugget]
+/*
 static const char *nugget_sbe_names[] =
 {
-    // [sbe_something - sbe_start_nugget] = "something",
+    [sbe_something - sbe_start_nugget] = "something",
 };
+*/
 
 static boolean ParseSbarElem(json_t *json, sbarelem_t *out)
 {
@@ -416,6 +418,7 @@ static boolean ParseSbarElem(json_t *json, sbarelem_t *out)
     }
 
     // [Nugget]
+    /*
     for (sbarelementtype_t type = 0;  type < sbe_max_nugget;  ++type)
     {
         json_t *obj = JS_GetObject(json, nugget_sbe_names[type]);
@@ -424,6 +427,7 @@ static boolean ParseSbarElem(json_t *json, sbarelem_t *out)
             return ParseSbarElemType(obj, type + sbe_start_nugget, out);
         }
     }
+    */
 
     return false;
 }
