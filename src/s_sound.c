@@ -1445,6 +1445,15 @@ static void InitPitchStepTable(void)
 
         steptable[i] = 2.0f - (float)i / NORM_PITCH;
     }
+
+    // [Nugget] Custom pitch range
+    if (pitched_sounds_range != 100)
+    {
+        const float mult = pitched_sounds_range / 100.0f;
+
+        for (int i = 0;  i < arrlen(steptable);  i++)
+        { steptable[i] = 1.0f - (1.0f - steptable[i]) * mult; }
+    }
 }
 
 void S_Init(int sfxVolume, int musicVolume)

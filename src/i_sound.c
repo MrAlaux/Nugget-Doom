@@ -84,6 +84,7 @@ typedef struct
 static channel_info_t channelinfo[MAX_CHANNELS];
 
 // [Nugget]
+int pitched_sounds_range;
 boolean s_clipping_dist_x2;
 boolean force_flip_pan; // Brought over from i_mbfsound.c, global
 
@@ -808,6 +809,12 @@ void I_BindSoundVariables(void)
         "Music volume");
     BIND_BOOL_SFX(pitched_sounds, false,
         "Variable pitch for sound effects");
+
+    // [Nugget]
+    M_BindNum("pitched_sounds_range", &pitched_sounds_range, NULL,
+              100, 10, 200, ss_none, wad_yes,
+              "Percentage of variable sound pitch (100 = Vanilla pitch range)");
+
     BIND_BOOL_SFX(full_sounds, false, "Play sounds in full length (prevent cutoffs)");
 
     // [Nugget]

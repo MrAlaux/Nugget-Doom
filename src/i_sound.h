@@ -28,6 +28,7 @@
 #include "m_fixed.h"
 
 // [Nugget]
+extern int pitched_sounds_range;
 extern boolean s_clipping_dist_x2;
 extern boolean force_flip_pan;
 
