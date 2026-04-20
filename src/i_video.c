@@ -105,7 +105,7 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
-static boolean smooth_palette_tinting;
+static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
 
 boolean I_SmoothPaletteTinting(void)
 {
@@ -131,6 +131,8 @@ void I_DeferredInitPalettes(void)
 static void InitPalettes(void)
 {
   init_palettes_pending = false;
+
+  smooth_palette_tinting = cvar_smooth_palette_tinting;
 
   if (palettes)
   {
@@ -2370,7 +2372,7 @@ void I_BindVideoVariables(void)
 
     // [Nugget] --------------------------------------------------------------
 
-    M_BindBool("smooth_palette_tinting", &smooth_palette_tinting, NULL,
+    M_BindBool("smooth_palette_tinting", &cvar_smooth_palette_tinting, NULL,
                false, ss_display, wad_no,
                "Smooth palette tinting");
 

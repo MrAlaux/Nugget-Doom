@@ -8,5 +8,7 @@
 
 ## Bug Fixes
 
+- **Crash when toggling _Smooth Palette Tinting_ while the screen were tinted**
+- **Damage tint not being reduced when the game were paused if _Smooth Palette Tinting_ were enabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**

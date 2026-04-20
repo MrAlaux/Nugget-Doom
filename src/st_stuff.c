@@ -2177,13 +2177,17 @@ static void DoPaletteStuff(player_t *player)
             // [Nugget] Smooth palette tinting
             if (I_SmoothPaletteTinting())
             {
-              if (damagecount < 16
+              int damagecount2 = damagecount;
+
+              if (menuactive || paused) { damagecount2 /= 2; }
+
+              if (damagecount2 < 16
                   && POWER_RUNOUT(player->powers[pw_ironfeet])
                   && !STRICTMODE(no_radsuit_tint))
               {
-                palette = 97 + damagecount;
+                palette = 97 + damagecount2;
               }
-              else { palette = 0 + MIN(64, damagecount); }
+              else { palette = 0 + MIN(64, damagecount2); }
             }
         }
     }
