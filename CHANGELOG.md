@@ -13,6 +13,7 @@
   - Removed `no_page_ticking` in favor of Woof's `menu_pause_demos`
   - Removed `quick_quitgame` in favor of Woof's `quit_prompt`
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
+- **Optimized initialization of generic tranmaps by caching them in files**
 - **Improved sky stretching**
 
 ## Bug Fixes

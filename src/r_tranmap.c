@@ -57,6 +57,9 @@ const byte *tranmap;      // translucency filter maps 256x256   // phares
 const byte *main_tranmap; // killough 4/11/98
 const byte *main_addimap; // Some things look better with added luminosity :)
 
+// [Nugget]
+static char *gt_playpal_dir = NULL;
+
 //
 // Blending algorthims!
 //
@@ -144,6 +147,9 @@ static void CreateTranMapPaletteDir(void)
     tranmap_dir = NULL;
 
     M_MakeDirectory(playpal_dir);
+
+    // [Nugget]
+    if (!gt_playpal_dir) { gt_playpal_dir = M_StringDuplicate(playpal_dir); }
 }
 
 //
@@ -279,8 +285,39 @@ void R_InitTranMap(void)
 
 // [Nugget] /=================================================================
 
-static byte *R_InitGenericTranMap(const int filter_pct)
+static byte *InitGenericTranMap(const int filter_pct)
 {
+  // Try to load from file
+
+  if (!gt_playpal_dir) { CreateTranMapPaletteDir(); }
+
+  const int length = strlen(gt_playpal_dir) + sizeof("/gentranmap_XYZ.dat");
+  char *const filename = malloc(length);
+
+  M_snprintf(filename, length, "%s/gentranmap_%03d.dat", gt_playpal_dir, filter_pct);
+
+  byte *tmap = NULL;
+
+  if (M_FileExistsNotDir(filename))
+  {
+    const int file_length = M_ReadFile(filename, &tmap);
+
+    if (tmap)
+    {
+      if (file_length == tranmap_lump_length)
+      {
+        free(filename);
+        return tmap;
+      }
+
+      // Invalid file
+      Z_Free(tmap);
+      tmap = NULL;
+    }
+  }
+
+  // Failed to load; generate and save it
+
   I_Printf(VB_DEBUG, "%s: %i%%", __func__, filter_pct);
 
   byte *const playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
@@ -313,7 +350,7 @@ static byte *R_InitGenericTranMap(const int filter_pct)
   }
 
   const long w2 = (1l << TSC) - w1;
-  byte *tmap = Z_Malloc(256*256, PU_STATIC, 0), *tp = tmap;
+  byte *tp = tmap = Z_Malloc(256*256, PU_STATIC, 0);
 
   for (int i = 0;  i < 256;  i++)
   {
@@ -344,6 +381,9 @@ static byte *R_InitGenericTranMap(const int filter_pct)
 
   Z_ChangeTag(playpal, PU_CACHE);
 
+  M_WriteFile(filename, tmap, tranmap_lump_length);
+  free(filename);
+
   return tmap;
 }
 
@@ -354,7 +394,7 @@ const byte *R_GetGenericTranMap(const int filter_pct)
 {
   byte **const tmap = &generic_tranmaps[filter_pct];
 
-  if (!*tmap) { *tmap = R_InitGenericTranMap(filter_pct); }
+  if (!*tmap) { *tmap = InitGenericTranMap(filter_pct); }
 
   return *tmap;
 }
