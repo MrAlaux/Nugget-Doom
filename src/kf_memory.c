@@ -365,8 +365,10 @@ static void ArchivePlayState(keyframe_t *keyframe)
     write32(current_musicnum);
     writex(&musinfo, sizeof(musinfo), 1);
 
-    // [Nugget] Milestones
+    // [Nugget]
     write32(complete_milestones);
+    writex(&custom_skill, sizeof(custom_skill), 1);
+    writex(&initial_loadout, sizeof(initial_loadout), 1);
 }
 
 static void UnArchivePlayState(const keyframe_t *keyframe)
@@ -416,8 +418,10 @@ static void UnArchivePlayState(const keyframe_t *keyframe)
     readx(&musinfo, sizeof(musinfo), 1);
     S_RestartMusic();
 
-    // [Nugget] Milestones
+    // [Nugget]
     complete_milestones = read32();
+    readx(&custom_skill, sizeof(custom_skill), 1);
+    readx(&initial_loadout, sizeof(initial_loadout), 1);
 }
 
 static void ArchiveRNG(void)

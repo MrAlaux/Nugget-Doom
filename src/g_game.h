@@ -197,6 +197,38 @@ extern boolean custom_skill_respawn;
 extern boolean custom_skill_aggressive;
 extern boolean custom_skill_x2monsters;
 
+typedef struct customskill_s
+{
+  int     things;
+  boolean coopspawns;
+  boolean nomonsters;
+  boolean doubleammo;
+  boolean halfplayerdamage;
+  boolean slowbrain;
+  boolean fast;
+  boolean respawn;
+  boolean aggromonsters;
+  boolean x2monsters;
+} customskill_t;
+
+extern customskill_t custom_skill;
+
+typedef struct initialloadout_s
+{
+  int          mohealth;
+  int          health;
+  int          armorpoints;
+  int          armortype;
+  boolean      backpack;
+  weapontype_t readyweapon;
+  weapontype_t lastweapon;
+  boolean      weaponowned[NUMWEAPONS];
+  int          ammo[NUMAMMO];
+  int          maxammo[NUMAMMO];
+} initialloadout_t;
+
+extern initialloadout_t initial_loadout;
+
 void G_SetSkillParms(const skill_t skill);
 void G_SetUserCustomSkill(void);
 void G_RestartWithLoadout(const boolean current);

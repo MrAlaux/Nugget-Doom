@@ -312,18 +312,7 @@ boolean custom_skill_aggressive;
 boolean custom_skill_x2monsters;
 
 // Actual custom-skill settings, set either by menu or savegames
-static struct {
-  int     things;
-  boolean coopspawns;
-  boolean nomonsters;
-  boolean doubleammo;
-  boolean halfplayerdamage;
-  boolean slowbrain;
-  boolean fast;
-  boolean respawn;
-  boolean aggromonsters;
-  boolean x2monsters;
-} customskill;
+customskill_t custom_skill;
 
 int     thingspawns;
 boolean realnomonsters;
@@ -334,34 +323,23 @@ boolean fastmonsters;
 boolean aggromonsters;
 boolean x2monsters;
 
-static struct {
-  int          mohealth;
-  int          health;
-  int          armorpoints;
-  int          armortype;
-  boolean      backpack;
-  weapontype_t readyweapon;
-  weapontype_t lastweapon;
-  boolean      weaponowned[NUMWEAPONS];
-  int          ammo[NUMAMMO];
-  int          maxammo[NUMAMMO];
-} initial_loadout;
+initialloadout_t initial_loadout;
 
 // [Nugget]
 void G_SetSkillParms(const skill_t skill)
 {
   if (skill == sk_custom)
   {
-    thingspawns      = customskill.things;
-    coopspawns       = customskill.coopspawns;
-    realnomonsters   = customskill.nomonsters;
-    doubleammo       = customskill.doubleammo;
-    halfplayerdamage = customskill.halfplayerdamage;
-    slowbrain        = customskill.slowbrain;
-    fastmonsters     = customskill.fast;
-    respawnmonsters  = customskill.respawn;
-    aggromonsters    = customskill.aggromonsters;
-    x2monsters       = customskill.x2monsters;
+    thingspawns      = custom_skill.things;
+    coopspawns       = custom_skill.coopspawns;
+    realnomonsters   = custom_skill.nomonsters;
+    doubleammo       = custom_skill.doubleammo;
+    halfplayerdamage = custom_skill.halfplayerdamage;
+    slowbrain        = custom_skill.slowbrain;
+    fastmonsters     = custom_skill.fast;
+    respawnmonsters  = custom_skill.respawn;
+    aggromonsters    = custom_skill.aggromonsters;
+    x2monsters       = custom_skill.x2monsters;
   }
   else {
     thingspawns = skill;
@@ -383,16 +361,16 @@ void G_SetSkillParms(const skill_t skill)
 
 void G_SetUserCustomSkill(void)
 {
-  customskill.things           = custom_skill_things;
-  customskill.coopspawns       = custom_skill_coopspawns;
-  customskill.nomonsters       = custom_skill_nomonsters;
-  customskill.doubleammo       = custom_skill_doubleammo;
-  customskill.halfplayerdamage = custom_skill_halfdamage;
-  customskill.slowbrain        = custom_skill_slowbrain;
-  customskill.fast             = custom_skill_fast;
-  customskill.respawn          = custom_skill_respawn;
-  customskill.aggromonsters    = custom_skill_aggressive;
-  customskill.x2monsters       = custom_skill_x2monsters;
+  custom_skill.things           = custom_skill_things;
+  custom_skill.coopspawns       = custom_skill_coopspawns;
+  custom_skill.nomonsters       = custom_skill_nomonsters;
+  custom_skill.doubleammo       = custom_skill_doubleammo;
+  custom_skill.halfplayerdamage = custom_skill_halfdamage;
+  custom_skill.slowbrain        = custom_skill_slowbrain;
+  custom_skill.fast             = custom_skill_fast;
+  custom_skill.respawn          = custom_skill_respawn;
+  custom_skill.aggromonsters    = custom_skill_aggressive;
+  custom_skill.x2monsters       = custom_skill_x2monsters;
 }
 
 static void G_UpdateInitialLoadout(void)
@@ -3141,18 +3119,18 @@ static void DoSaveGame(char *name)
 
   // Save custom-skill settings ----------------------------------------------
 
-  saveg_grow(sizeof(customskill));
+  saveg_grow(sizeof(custom_skill));
 
-  saveg_write32(customskill.things);
-  saveg_write32(customskill.coopspawns);
-  saveg_write32(customskill.nomonsters);
-  saveg_write32(customskill.doubleammo);
-  saveg_write32(customskill.halfplayerdamage);
-  saveg_write32(customskill.slowbrain);
-  saveg_write32(customskill.fast);
-  saveg_write32(customskill.respawn);
-  saveg_write32(customskill.aggromonsters);
-  saveg_write32(customskill.x2monsters);
+  saveg_write32(custom_skill.things);
+  saveg_write32(custom_skill.coopspawns);
+  saveg_write32(custom_skill.nomonsters);
+  saveg_write32(custom_skill.doubleammo);
+  saveg_write32(custom_skill.halfplayerdamage);
+  saveg_write32(custom_skill.slowbrain);
+  saveg_write32(custom_skill.fast);
+  saveg_write32(custom_skill.respawn);
+  saveg_write32(custom_skill.aggromonsters);
+  saveg_write32(custom_skill.x2monsters);
 
   saveg_grow(sizeof(initial_loadout));
 
@@ -3445,18 +3423,18 @@ static boolean DoLoadGame(boolean do_load_autosave)
       if (saveg_check_size(sizeof(x))) \
         x = saveg_read32()
 
-    READ(customskill.things);
-    READ(customskill.coopspawns);
-    READ(customskill.nomonsters);
-    READ(customskill.doubleammo);
-    READ(customskill.halfplayerdamage);
-    READ(customskill.slowbrain);
-    READ(customskill.fast);
-    READ(customskill.respawn);
-    READ(customskill.aggromonsters);
+    READ(custom_skill.things);
+    READ(custom_skill.coopspawns);
+    READ(custom_skill.nomonsters);
+    READ(custom_skill.doubleammo);
+    READ(custom_skill.halfplayerdamage);
+    READ(custom_skill.slowbrain);
+    READ(custom_skill.fast);
+    READ(custom_skill.respawn);
+    READ(custom_skill.aggromonsters);
 
     if (saveg_compat > saveg_nugget320)
-    { READ(customskill.x2monsters); }
+    { READ(custom_skill.x2monsters); }
 
     if (gameskill == sk_custom) { G_SetSkillParms(sk_custom); }
 
