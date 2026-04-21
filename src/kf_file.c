@@ -507,11 +507,7 @@ static void read_mobj_t(mobj_t *str, thinker_class_t tc)
 
     str->isvisual = read32();
 
-    if (str->isvisual)
-    {
-        static mobjinfo_t info = { .scale = FRACUNIT };
-        str->info = &info;
-    }
+    if (str->isvisual) { str->info = P_VisualMobjDummyInfo(); }
 
     str->gentranmap_pct = read8();
 
