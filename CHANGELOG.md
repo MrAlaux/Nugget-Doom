@@ -5,6 +5,7 @@
 ## Changes
 
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
+- **Randomized duration of spawn, death, and gib states in _Fancy Cast_**, emulating in-game behavior
 
 ## Bug Fixes
 

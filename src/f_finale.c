@@ -914,6 +914,10 @@ static void F_FancyCastTicker(void)
       else { caststate = &states[state]; }
 
       casttics = caststate->tics;
+
+      if (fc_state == FCSTATE_SPAWN && casttics > 0)
+      { casttics = 1 + (Woof_Random() % casttics); }
+
       castflip = flipcorpses && state == info->deathstate
                  && (info->flags2 & MF2_FLIPPABLE)
                  && (Woof_Random() & 1);
@@ -929,8 +933,6 @@ static void F_FancyCastTicker(void)
         S_StartSound(NULL, F_RandomizeSound(statesound));
       }
     }
-
-    fc_state = FCSTATE_NONE;
   }
   else if (casttics != -1 && !fc_paused)
   {
@@ -969,6 +971,11 @@ static void F_FancyCastTicker(void)
       casttics = caststate->tics;
     }
   }
+
+  if (fc_state == FCSTATE_DEATH || fc_state == FCSTATE_XDEATH)
+  { casttics = MAX(1, casttics - (Woof_Random() & 3)); }
+
+  fc_state = FCSTATE_NONE;
 }
 
 // [Nugget] -----------------------------------------------------------------/
