@@ -2685,7 +2685,7 @@ static void DoPaletteStuff(player_t *player)
                 int damagecount2 = damagecount;
 
                 if (menuactive || paused || STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
-                { damagecount2 /= 2; }
+                { damagecount2 = MAX(1, damagecount2 / 2); }
 
                 if (damagecount2 < 16
                     && POWER_RUNOUT(player->powers[pw_ironfeet])
@@ -2721,7 +2721,7 @@ static void DoPaletteStuff(player_t *player)
             int bonuscount = player->bonuscount;
 
             if (STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
-            { bonuscount /= 2; }
+            { bonuscount = MAX(1, bonuscount / 2); }
 
             if (bonuscount < 16
                 && POWER_RUNOUT(player->powers[pw_ironfeet])
