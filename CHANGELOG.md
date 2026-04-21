@@ -11,6 +11,7 @@
 
 - **Crash when toggling _Smooth Palette Tinting_ while the screen were tinted**
 - **Damage tint not being reduced when the game were paused if _Smooth Palette Tinting_ were enabled**
+- **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**
 - **_Solid [Status Bar] Background Color_ not respecting color settings with true-color rendering**

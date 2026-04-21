@@ -1242,7 +1242,7 @@ static void UpdateStatusBar(player_t *player)
     // [crispy] blinking key or skull in the status bar
     if (keyblinktics)
     {
-        if (!hud_blink_keys || barindex == 2)
+        if (!hud_blink_keys || barindex == array_size(sbardef->statusbars) - 1)
         {
             keyblinktics = 0;
         }
