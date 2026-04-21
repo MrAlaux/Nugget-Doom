@@ -2182,7 +2182,8 @@ static void DoPaletteStuff(player_t *player)
             {
               int damagecount2 = damagecount;
 
-              if (menuactive || paused) { damagecount2 /= 2; }
+              if (menuactive || paused)
+              { damagecount2 = MAX(1, damagecount2 / 2); }
 
               if (damagecount2 < 16
                   && POWER_RUNOUT(player->powers[pw_ironfeet])
