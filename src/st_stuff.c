@@ -1590,7 +1590,7 @@ static void UpdateStatusBar(player_t *player)
     // [crispy] blinking key or skull in the status bar
     if (keyblinktics)
     {
-        if (!hud_blink_keys || barindex == 2)
+        if (!hud_blink_keys || barindex == array_size(sbardef->statusbars) - 1)
         {
             keyblinktics = 0;
         }
@@ -2369,15 +2369,19 @@ static void DrawSolidBackground(void)
                 int line = V_ScaleY(y) * video.width;
                 for (x = 0; x < depth; x++)
                 {
-                    pixel32_t *c = st_backing_screen32 + line + V_ScaleX(x);
-                    r += V_RedFromRGB(*c);
-                    g += V_GreenFromRGB(*c);
-                    b += V_BlueFromRGB(*c);
+                    pixel32_t *tc = st_backing_screen32 + line + V_ScaleX(x);
+                    pixel_t c = V_IndexFromRGB(*tc);
 
-                    c += V_ScaleX(width - 2 * x - 1);
-                    r += V_RedFromRGB(*c);
-                    g += V_GreenFromRGB(*c);
-                    b += V_BlueFromRGB(*c);
+                    r += pal[3 * c + 0];
+                    g += pal[3 * c + 1];
+                    b += pal[3 * c + 2];
+
+                    tc += V_ScaleX(width - 2 * x - 1);
+                    c = V_IndexFromRGB(*tc);
+
+                    r += pal[3 * c + 0];
+                    g += pal[3 * c + 1];
+                    b += pal[3 * c + 2];
                 }
             }
 
@@ -2387,9 +2391,7 @@ static void DrawSolidBackground(void)
 
             col = I_GetNearestColor(pal, r / 2, g / 2, b / 2);
 
-            V_FillRectRGB(
-              0, v0, video.unscaledw, v1 - v0, V_ComponentsToRGB(col, r/2, g/2, b/2)
-            );
+            V_FillRect(0, v0, video.unscaledw, v1 - v0, col);
         }
 
         return;
@@ -2680,13 +2682,18 @@ static void DoPaletteStuff(player_t *player)
             // [Nugget] Smooth palette tinting
             if (I_SmoothPaletteTinting())
             {
-              if (damagecount < 16
-                  && POWER_RUNOUT(player->powers[pw_ironfeet])
-                  && !STRICTMODE(no_radsuit_tint))
-              {
-                palette = 97 + damagecount;
-              }
-              else { palette = 0 + MIN(64, damagecount); }
+                int damagecount2 = damagecount;
+
+                if (menuactive || paused || STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
+                { damagecount2 /= 2; }
+
+                if (damagecount2 < 16
+                    && POWER_RUNOUT(player->powers[pw_ironfeet])
+                    && !STRICTMODE(no_radsuit_tint))
+                {
+                    palette = 97 + damagecount2;
+                }
+                else { palette = 0 + MIN(64, damagecount2); }
             }
         }
     }
@@ -2711,13 +2718,18 @@ static void DoPaletteStuff(player_t *player)
         // [Nugget] Smooth palette tinting
         if (I_SmoothPaletteTinting())
         {
-          if (player->bonuscount < 16
-              && POWER_RUNOUT(player->powers[pw_ironfeet])
-              && !STRICTMODE(no_radsuit_tint))
-          {
-            palette = 112 + player->bonuscount;
-          }
-          else { palette = 64 + MIN(32, player->bonuscount); }
+            int bonuscount = player->bonuscount;
+
+            if (STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
+            { bonuscount /= 2; }
+
+            if (bonuscount < 16
+                && POWER_RUNOUT(player->powers[pw_ironfeet])
+                && !STRICTMODE(no_radsuit_tint))
+            {
+                palette = 112 + bonuscount;
+            }
+            else { palette = 64 + MIN(32, bonuscount); }
         }
     }
     // killough 7/14/98: beta version did not cause green palette

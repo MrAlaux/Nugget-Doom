@@ -2749,9 +2749,10 @@ void A_BrainScream(mobj_t *mo)
   int x1, x2; // [Nugget] Fix lopsided IoS death explosions
 
   if (casual_play && comp_iosdeath)
-  { x1 = x2 = 280; }
-  else
-  { x1 = 196; x2 = 320; }
+  {
+    x1 = x2 = 280;
+  }
+  else { x1 = 196; x2 = 320; }
 
   for (x=mo->x - x1*FRACUNIT ; x< mo->x + x2*FRACUNIT ; x+= FRACUNIT*8)
     {

@@ -523,6 +523,7 @@ void P_ToggleDuplicateSpawns(const boolean state);
 void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum); // Alt. states
 
 mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenum);
+mobjinfo_t *P_VisualMobjDummyInfo(void);
 
 #define FLAKER_DIST (32 * FRACUNIT)
 #define FLAKER_DIST_MASK (FLAKER_DIST - 1)

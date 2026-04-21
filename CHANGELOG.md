@@ -15,13 +15,18 @@
 - **Improved sky stretching**
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
 - **Optimized initialization of generic tranmaps by caching them in files**
+- **Randomized duration of spawn, death, and gib states in _Fancy Cast_**, emulating in-game behavior
 
 ## Bug Fixes
 
+- **Crash when toggling _Smooth Palette Tinting_ while the screen were tinted**
 - **_Pain/Pickup/Powerup Flashes_ setting not disabling invulnerability effect and light-amp flashing**
 - **_Invulnerability Colormap_ setting affecting light-amp flashing and disabling _Night-Vision Visor Effect_**
+- **Damage tint not being reduced when the game were paused if _Smooth Palette Tinting_ were enabled**
+- **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**
+- **_Solid [Status Bar] Background Color_ not respecting gamma and color settings with true-color rendering**
 - **UI/HUD updating before game world when changing gamma and color settings**
 
 [^1]: This will affect existing config files.

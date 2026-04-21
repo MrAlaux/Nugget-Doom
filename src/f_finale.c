@@ -1313,6 +1313,10 @@ static boolean F_FancyCastTicker(void)
       else { caststate = &states[state]; }
 
       casttics = caststate->tics;
+
+      if (fc_state == FCSTATE_SPAWN && casttics > 0)
+      { casttics = 1 + (Woof_Random() % casttics); }
+
       castflip = flipcorpses && state == info->deathstate
                  && (info->flags_extra & MFX_MIRROREDCORPSE)
                  && (Woof_Random() & 1);
@@ -1328,8 +1332,6 @@ static boolean F_FancyCastTicker(void)
         S_StartSound(NULL, F_RandomizeSound(statesound));
       }
     }
-
-    fc_state = FCSTATE_NONE;
   }
   else if (casttics != -1 && !fc_paused)
   {
@@ -1368,6 +1370,11 @@ static boolean F_FancyCastTicker(void)
       casttics = caststate->tics;
     }
   }
+
+  if (fc_state == FCSTATE_DEATH || fc_state == FCSTATE_XDEATH)
+  { casttics = MAX(1, casttics - (Woof_Random() & 3)); }
+
+  fc_state = FCSTATE_NONE;
 
   return false;
 }

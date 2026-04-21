@@ -1304,8 +1304,7 @@ void P_UnArchiveThinkers(void)
         // [Nugget]
         if (mobj->isvisual)
         {
-            static mobjinfo_t info = {0};
-            mobj->info = &info;
+            mobj->info = P_VisualMobjDummyInfo();
         }
         else
             mobj->info = &mobjinfo[mobj->type];
