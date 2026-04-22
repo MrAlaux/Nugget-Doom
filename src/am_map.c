@@ -53,6 +53,7 @@
 
 // [Nugget]
 #include <math.h>
+#include "i_timer.h"
 #include "m_random.h"
 #include "p_map.h"
 #include "s_sound.h"
@@ -1031,20 +1032,22 @@ static void AM_maxOutWindowScale(void)
 // [Nugget] Toggle minimap if the automap button is quickly pressed twice
 static boolean CheckQuickMapButtonDoublePress(void)
 {
-  #define MINIMAP_TOGGLE_TICS (TICRATE/5) // 0.2 seconds
-  static int last_input_map_tic = -MINIMAP_TOGGLE_TICS;
+  const int current_time = I_GetTimeMS();
+
+  #define MINIMAP_TOGGLE_MS 200 // 0.2 seconds
+  static int last_input_map_time = -MINIMAP_TOGGLE_MS;
 
   boolean ret = false;
 
   const boolean minimap_input_set = array_size(M_Input(input_map_mini)) > 0;
 
-  if (gametic - last_input_map_tic < MINIMAP_TOGGLE_TICS && !minimap_input_set)
+  if (current_time - last_input_map_time < MINIMAP_TOGGLE_MS && !minimap_input_set)
   {
     ST_ToggleMinimap();
     ret = true;
   }
 
-  last_input_map_tic = gametic;
+  last_input_map_time = current_time;
   return ret;
 }
 

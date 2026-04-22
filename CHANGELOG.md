@@ -26,6 +26,7 @@
 - **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**
+- **Quick-double-press actions being affected by game speed**
 - **_Solid [Status Bar] Background Color_ not respecting gamma and color settings with true-color rendering**
 - **UI/HUD updating before game world when changing gamma and color settings**
 

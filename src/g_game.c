@@ -3977,7 +3977,8 @@ void G_Ticker(void)
 
         pitch = cmd->pitch << FRACBITS;
 
-        static int strafetic = SHRT_MIN;
+        #define FREELOOK_RESET_MS 300 // 0.3 seconds
+        static int strafetime = -FREELOOK_RESET_MS;
         static boolean strafedown = false;
 
         if (!INPUT(input_strafe))
@@ -3988,12 +3989,14 @@ void G_Ticker(void)
         {
           strafedown = true;
 
-          if (gametic - strafetic < TICRATE * 2/7) // A bit under 0.3 seconds
+          const int current_time = I_GetTimeMS();
+
+          if (current_time - strafetime < FREELOOK_RESET_MS)
           {
             center = true;
           }
 
-          strafetic = gametic;
+          strafetime = current_time;
         }
       }
 
