@@ -4137,12 +4137,16 @@ void MN_DrawDisplay(void)
 
     if (current_page == 1)
     {
-      patch_t *const patch = V_CachePatchName("M_PALETT", PU_CACHE);
+      patch_t *const patch  = V_CachePatchName("NG_PALBG", PU_CACHE);
 
       const int x = (SCREENWIDTH / 2) - (SHORT(patch->width) / 2);
       const int y = 109;
 
       V_DrawPatchSH(x, y, patch);
+
+      patch_t *const patch2 = V_CachePatchName("NG_PALET", PU_CACHE);
+
+      V_DrawPatch(x, y, patch2);
     }
 }
 

@@ -86,12 +86,15 @@ set(BASE_SOURCES
     all-all/dsdgsit.wav
     all-all/m_butt1.png
     all-all/m_butt2.png
-    all-all/m_palett.png # [Nugget]
     all-all/m_vbox.png
     all-all/sbardef.lmp
     all-all/sbhuddef.lmp
     all-all/sbnugdef.lmp # [Nugget]
     all-all/skytran.lmp
+
+    # [Nugget]
+    all-all/ng_palbg.png
+    all-all/ng_palet.lmp
 
     all-all/smbfgg0.png
     all-all/smbfgg1.png
