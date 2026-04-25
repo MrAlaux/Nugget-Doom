@@ -5,11 +5,13 @@
 ## Changes
 
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
+- **Raised upper limits of color _Intensity_ and _Saturation_ settings to 200%**
 - **Randomized duration of spawn, death, and gib states in _Fancy Cast_**, emulating in-game behavior
 
 ## Bug Fixes
 
 - **Crash when toggling _Smooth Palette Tinting_ while the screen were tinted**
+- **Colors being slightly off when _Gamma Correction_ were set to 0**
 - **Damage tint not being reduced when the game were paused if _Smooth Palette Tinting_ were enabled**
 - **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
