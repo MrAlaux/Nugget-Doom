@@ -1262,7 +1262,6 @@ void I_GetPalette(byte *const colors, const byte palette_index)
     // [Nugget] Color settings
 
     const boolean
-        do_gamma      = gamma2 != 9,
         do_red        = red_intensity  != 100,
         do_green      = green_intensity != 100,
         do_blue       = blue_intensity != 100,
@@ -1292,16 +1291,9 @@ void I_GetPalette(byte *const colors, const byte palette_index)
 
     for (int i = 0;  i < 256;  i++)
     {
-        int r = *palette++,
-            g = *palette++,
-            b = *palette++;
-
-        if (do_gamma)
-        {
-            r = gamma[r];
-            g = gamma[g];
-            b = gamma[b];
-        }
+        int r = gamma[*palette++],
+            g = gamma[*palette++],
+            b = gamma[*palette++];
 
         #define INTENSITY_SETTING(component, condition, factor) \
             if (condition) \
