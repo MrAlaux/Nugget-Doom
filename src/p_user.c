@@ -281,8 +281,9 @@ void P_MovePlayer (player_t* player)
   }
 
   // Allow movement if...
-  if (casual_play) {
-    onground |= 
+  if (casual_play)
+  {
+    onground |=
          // ... using noclip or flight cheat
          (player->cheats & (CF_NOCLIP|CF_FLY))
          // ... on top of a mobj
@@ -389,10 +390,7 @@ void P_MovePlayer (player_t* player)
     mo->intflags &= ~MIF_CROUCHING;
   }
 
-  if (mo->intflags & MIF_CROUCHING)
-  { mo->altsprite = ASPR_PLYC; }
-  else
-  { mo->altsprite = -1; }
+  mo->altsprite = (mo->intflags & MIF_CROUCHING) ? ASPR_PLYC : -1;
 
   // Smooth crouching
   if (   ((mo->intflags & MIF_CROUCHING)
@@ -469,7 +467,10 @@ void P_MovePlayer (player_t* player)
                       sidemove    = cmd->sidemove;
                   
           if (mo->intflags & MIF_CROUCHING)
-          { forwardmove /= 2;  sidemove /= 2; }
+          {
+            forwardmove /= 2;
+            sidemove /= 2;
+          }
 
           // [Nugget] -------------------------------------------------------/
 
@@ -542,10 +543,10 @@ void P_DeathThink (player_t* player)
   if (player->crouchoffset)
   {
     int step = player->crouchoffset/4;
-    if (step < FRACUNIT) { step = FRACUNIT; }
+        step = MAX(FRACUNIT, step);
 
     player->crouchoffset -= step;
-    if (player->crouchoffset < 0) { player->crouchoffset = 0; }
+    player->crouchoffset  = MAX(0, player->crouchoffset);
   }
 
   player->deltaviewheight = 0;
@@ -835,9 +836,10 @@ void P_PlayerThink (player_t* player)
       const fixed_t step = MAX(ANG1, abs(player->pitch - target_pitch) / 4);
 
       if (player->pitch < target_pitch)
-      { player->pitch = MIN(target_pitch, player->pitch + step); }
-      else
-      { player->pitch = MAX(target_pitch, player->pitch - step); }
+      {
+        player->pitch = MIN(target_pitch, player->pitch + step);
+      }
+      else { player->pitch = MAX(target_pitch, player->pitch - step); }
 
       if (lock_time) { lock_time--; }
 
@@ -857,8 +859,11 @@ void P_PlayerThink (player_t* player)
   {
     slowMoKeyDown = true;
 
-    if (G_GetSlowMotion()) { S_StartSoundPitchOptional(NULL, sfx_ngslof,         -1, PITCH_NONE); }
-    else                   { S_StartSoundPitchOptional(NULL, sfx_ngslon, sfx_getpow, PITCH_NONE); }
+    if (G_GetSlowMotion())
+    {
+      S_StartSoundPitchOptional(NULL, sfx_ngslof, -1, PITCH_NONE);
+    }
+    else { S_StartSoundPitchOptional(NULL, sfx_ngslon, sfx_getpow, PITCH_NONE); }
 
     G_SetSlowMotion(!G_GetSlowMotion());
   }

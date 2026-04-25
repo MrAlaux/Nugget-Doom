@@ -1368,8 +1368,6 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
 
         if (vga_porch_flash)
         {
-            // "flash" the pillars/letterboxes with palette changes,
-            // emulating VGA "porch" behaviour
             SDL_SetRenderDrawColor(
                 renderer,
                 V_RedFromRGB(palcolors[0]),
