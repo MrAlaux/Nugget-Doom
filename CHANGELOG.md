@@ -1,6 +1,7 @@
 ## New Features
 
 - **DeHackEd thing sprite `Scale` property** support
+- **Weapon Carousel fadeout** setting
 
 ## Changes
 

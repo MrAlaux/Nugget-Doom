@@ -54,6 +54,7 @@
 #include "hu_crosshair.h"
 #include "i_thread.h"
 #include "i_video.h"
+#include "st_stuff.h"
 #include "st_widgets.h"
 
 // [Nugget] /=================================================================
@@ -155,7 +156,7 @@ byte *R_GetGenericTranMap(const int filter_pct)
   return *tmap;
 }
 
-void R_InitMessageFadeoutTranMaps(void)
+void R_InitFadeoutTranMaps(void)
 {
   for (int i = 0;  i < 10;  i++)
   { R_GetGenericTranMap(i * 10); }
@@ -1542,9 +1543,9 @@ void R_InitData(void)
 
   // Sprite shadows are handled in `R_InitDrawFunctions()`
 
-  // Message fadeout
-  if (ST_MessageFadeoutOn())
-  { R_InitMessageFadeoutTranMaps(); }
+  // Message/carousel fadeout
+  if (ST_MessageFadeoutOn() || carousel_fadeout)
+  { R_InitFadeoutTranMaps(); }
 
   // Translucent weapon when invisible
   if (pspr_invis_translucent)

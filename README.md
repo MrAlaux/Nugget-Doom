@@ -164,6 +164,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Weapon Inertia_** settings [by _ceski_]
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
 - **_Translucent [Weapon] When Invisible_** setting
+- **_Force Weapon Carousel_** setting
+- **Weapon Carousel fadeout** setting (CFG-only: `carousel_fadeout`)
 - **_[Weapon] Flash Opacity_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting (CFG-only: `sx_fix`)

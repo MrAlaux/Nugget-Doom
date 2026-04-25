@@ -29,6 +29,7 @@
 #include "v_video.h"
 
 // [Nugget]
+#include "r_data.h"
 #include "r_main.h"
 #include "st_stuff.h"
 
@@ -193,15 +194,30 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     byte *cr = icon.state == wpi_disabled ? cr_dark : NULL;
 
+    // [Nugget] Fadeout /-----------------------------------------------------
+
+    byte *tranmap = NULL;
+
+    if (elem->tranmap)
+    {
+      tranmap = elem->tranmap;
+    }
+    else if (carousel_fadeout && 0 < duration && duration < 10)
+    {
+      tranmap = R_GetGenericTranMap(duration * 10);
+    }
+
+    // [Nugget] -------------------------------------------------------------/
+
     // [Nugget] HUD/menu shadows
 
-    if (cr && elem->tranmap)
+    if (cr && tranmap)
     {
-        V_DrawPatchTRTLSH(x, y, patch, cr, elem->tranmap);
+        V_DrawPatchTRTLSH(x, y, patch, cr, tranmap);
     }
-    else if (elem->tranmap)
+    else if (tranmap)
     {
-        V_DrawPatchTLSH(x, y, patch, elem->tranmap);
+        V_DrawPatchTLSH(x, y, patch, tranmap);
     }
     else
     {

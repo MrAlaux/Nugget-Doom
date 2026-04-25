@@ -41,6 +41,7 @@ extern boolean no_radsuit_tint;
 extern boolean comp_godface;
 extern boolean comp_unusedpals;
 extern int force_carousel;
+extern int carousel_fadeout;
 
 boolean ST_GetLayout(void);
 int ST_GetMessageFontHeight(void);

@@ -2302,7 +2302,7 @@ static setup_menu_t stat_settings4[] = {
 
     // Message fadeout
     {"Message Fadeout", S_ONOFF, H_X, M_SPC, {"message_fadeout"},
-     .action = R_InitMessageFadeoutTranMaps},
+     .action = R_InitFadeoutTranMaps},
 
     // Message flash
     {"Message Flash", S_ONOFF, H_X, M_SPC, {"message_flash"}},
