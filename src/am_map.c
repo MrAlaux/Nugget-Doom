@@ -902,7 +902,12 @@ void AM_Stop (void)
   automapactive = false;
   stopped = true;
 
-  // [Nugget] Tag Finder from PrBoomX
+  // [Nugget] ----------------------------------------------------------------
+
+  // Highlight points of interest
+  highlight_timer = 0;
+
+  // Tag Finder from PrBoomX
   findtag = false;
   magic_sector = NULL;
   magic_tag = -1;
