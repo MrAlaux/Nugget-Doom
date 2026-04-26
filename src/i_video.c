@@ -105,6 +105,7 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
+static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
 
 boolean I_SmoothPaletteTinting(void)
@@ -1262,6 +1263,7 @@ void I_GetPalette(byte *const colors, const byte palette_index)
     // [Nugget] Color settings
 
     const boolean
+        do_gamma      = !gamma_off_fix || gamma2 != 9,
         do_red        = red_intensity  != 100,
         do_green      = green_intensity != 100,
         do_blue       = blue_intensity != 100,
@@ -1291,9 +1293,16 @@ void I_GetPalette(byte *const colors, const byte palette_index)
 
     for (int i = 0;  i < 256;  i++)
     {
-        int r = gamma[*palette++],
-            g = gamma[*palette++],
-            b = gamma[*palette++];
+        int r = *palette++,
+            g = *palette++,
+            b = *palette++;
+
+        if (do_gamma)
+        {
+            r = gamma[r];
+            g = gamma[g];
+            b = gamma[b];
+        }
 
         #define INTENSITY_SETTING(component, condition, factor) \
             if (condition) \
@@ -2391,6 +2400,12 @@ void I_BindVideoVariables(void)
     M_BindNum("fov", &custom_fov, NULL, FOV_DEFAULT, FOV_MIN, FOV_MAX, ss_gen,
               wad_no, "Field of view in degrees");
     BIND_NUM_GENERAL(gamma2, 9, 0, 17, "Custom gamma level (0 = -4; 9 = 0; 17 = 4)");
+
+    // [Nugget]
+    M_BindBool("gamma_off_fix", &gamma_off_fix, NULL,
+               false, ss_none, wad_yes,
+               "Use palette colors exactly when gamma correction is disabled");
+
     BIND_BOOL_GENERAL(smooth_scaling, true, "Smooth pixel scaling");
 
     BIND_BOOL(vga_porch_flash, false, "Emulate VGA \"porch\" behaviour");

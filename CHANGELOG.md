@@ -2,6 +2,7 @@
 
 - **DeHackEd thing sprite `Scale` property** support
 - **Weapon Carousel fadeout** setting
+- Toggle to **use palette colors exactly when gamma correction is disabled**
 
 ## Changes
 
