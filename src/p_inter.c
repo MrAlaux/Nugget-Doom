@@ -20,10 +20,11 @@
 #include "p_inter.h"
 
 #include "am_map.h"
-#include "d_deh.h" // Ty 03/22/98 - externalized strings
+#include "deh_strings.h"
 #include "d_items.h"
 #include "d_player.h"
 #include "d_think.h"
+#include "deh_misc.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "i_system.h"
@@ -37,6 +38,7 @@
 #include "r_main.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "st_widgets.h"
 #include "tables.h"
 
 // [Nugget]
@@ -47,32 +49,6 @@
 #include "v_video.h"
 
 #define BONUSADD        6
-
-// Ty 03/07/98 - add deh externals
-// Maximums and such were hardcoded values.  Need to externalize those for
-// dehacked support (and future flexibility).  Most var names came from the key
-// strings used in dehacked.
-
-int initial_health = 100;
-int initial_bullets = 50;
-int maxhealth = 100; // was MAXHEALTH as a #define, used only in this module
-int maxhealthbonus = 200;
-int max_armor = 200;
-int green_armor_class = 1;  // these are involved with armortype below
-int blue_armor_class = 2;
-int max_soul = 200;
-int soul_health = 100;
-int mega_health = 200;
-int god_health = 100;   // these are used in cheats (see st_stuff.c)
-int idfa_armor = 200;
-int idfa_armor_class = 2;
-// not actually used due to pairing of cheat_k and cheat_fa
-int idkfa_armor = 200;
-int idkfa_armor_class = 2;
-
-int bfgcells = 40;      // used in p_pspr.c
-int deh_species_infighting = 0;
-// Ty 03/07/98 - end deh externals
 
 // a weapon is found with two clip loads,
 // a big item has five clip loads
@@ -139,7 +115,7 @@ boolean P_GiveAmmo(player_t *player, ammotype_t ammo, int num)
     return false;
 
   if ((unsigned) ammo > NUMAMMO)
-    I_Error ("P_GiveAmmo: bad type %i", ammo);
+    I_Error ("bad type %i", ammo);
 
   if ( player->ammo[ammo] == player->maxammo[ammo]  )
     return false;
@@ -150,7 +126,7 @@ boolean P_GiveAmmo(player_t *player, ammotype_t ammo, int num)
     num = clipammo[ammo]/2;
 
   // give double ammo in trainer mode, you'll need in nightmare
-  if (doubleammo) // [Nugget]
+  if (gameskill == sk_baby || gameskill == sk_nightmare || doubleammo)
     num <<= 1;
 
   oldammo = player->ammo[ammo];
@@ -249,11 +225,11 @@ boolean P_GiveWeapon(player_t *player, weapontype_t weapon, boolean dropped)
 
 boolean P_GiveBody(player_t *player, int num)
 {
-  if (player->health >= maxhealth)
-    return false; // Ty 03/09/98 externalized MAXHEALTH to maxhealth
+  if (player->health >= deh_max_health)
+    return false;
   player->health += num;
-  if (player->health > maxhealth)
-    player->health = maxhealth;
+  if (player->health > deh_max_health)
+    player->health = deh_max_health;
   player->mo->health = player->health;
   return true;
 }
@@ -357,21 +333,21 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
   {
     if (special->altsprite == ASPR_NGCH)
     {
-      player->mo->health = player->health = MIN(maxhealthbonus, player->health + 1);
+      player->mo->health = player->health = MIN(deh_max_health_bonus, player->health + 1);
 
       static const char s[] = {
         0120, 0151, 0143, 0153, 0145, 0144, 040, 0165, 0160, 040,
         0141, 040, 0143, 0150, 0145, 0145, 0163, 0145, 056, 0
       };
 
-      pickupmsg(player, "%s", s);
+      pickupmsg(player, s);
       goto picked_up;
     }
     else if (special->altsprite == ASPR_NGCL)
     {
-      player->armorpoints = MIN(max_armor, player->armorpoints + 1);
+      player->armorpoints = MIN(deh_max_armor, player->armorpoints + 1);
 
-      if (!player->armortype) { player->armortype = green_armor_class; }
+      if (!player->armortype) { player->armortype = deh_green_armor_class; }
 
       static const char s[] = {
         0120, 0151, 0143, 0153, 0145, 0144, 040, 0165, 0160, 040,
@@ -379,7 +355,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         0141, 0156, 0164, 0145, 0162, 0156, 056, 0
       };
 
-      pickupmsg(player, "%s", s);
+      pickupmsg(player, s);
       goto picked_up;
     }
   }
@@ -389,15 +365,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
     {
       // armor
     case SPR_ARM1:
-      if (!P_GiveArmor (player, green_armor_class))
+      if (!P_GiveArmor (player, deh_green_armor_class))
         return;
-      pickupmsg(player, "%s", s_GOTARMOR); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTARMOR));
       break;
 
     case SPR_ARM2:
-      if (!P_GiveArmor (player, blue_armor_class))
+      if (!P_GiveArmor (player, deh_blue_armor_class))
         return;
-      pickupmsg(player, "%s", s_GOTMEGA); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTMEGA));
       break;
 
       // bonus items
@@ -410,10 +386,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 	}
 
       player->health++;               // can go over 100%
-      if (player->health > maxhealthbonus)
-        player->health = maxhealthbonus;
+      if (player->health > deh_max_health_bonus)
+        player->health = deh_max_health_bonus;
       player->mo->health = player->health;
-      pickupmsg(player, "%s", s_GOTHTHBONUS); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTHTHBONUS));
       break;
 
     case SPR_BON2:
@@ -425,37 +401,37 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 	}
 
       player->armorpoints++;          // can go over 100%
-      if (player->armorpoints > max_armor)
-        player->armorpoints = max_armor;
+      if (player->armorpoints > deh_max_armor)
+        player->armorpoints = deh_max_armor;
       if (!player->armortype)
-        player->armortype = green_armor_class;
-      pickupmsg(player, "%s", s_GOTARMBONUS); // Ty 03/22/98 - externalized
+        player->armortype = deh_green_armor_class;
+      pickupmsg(player, DEH_String(GOTARMBONUS));
       break;
 
     case SPR_BON3:      // killough 7/11/98: evil sceptre from beta version
-      pickupmsg(player, "%s", s_BETA_BONUS3);
+      pickupmsg(player, DEH_String(BETA_BONUS3));
       break;
 
     case SPR_BON4:      // killough 7/11/98: unholy bible from beta version
-      pickupmsg(player, "%s", s_BETA_BONUS4);
+      pickupmsg(player, DEH_String(BETA_BONUS4));
       break;
 
     case SPR_SOUL:
-      player->health += soul_health;
-      if (player->health > max_soul)
-        player->health = max_soul;
+      player->health += deh_soulsphere_health;
+      if (player->health > deh_max_soulsphere)
+        player->health = deh_max_soulsphere;
       player->mo->health = player->health;
-      pickupmsg(player, "%s", s_GOTSUPER); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSUPER));
       sound = sfx_getpow;
       break;
 
     case SPR_MEGA:
       if (gamemode != commercial)
         return;
-      player->health = mega_health;
+      player->health = deh_megasphere_health;
       player->mo->health = player->health;
-      P_GiveArmor (player,blue_armor_class);
-      pickupmsg(player, "%s", s_GOTMSPHERE); // Ty 03/22/98 - externalized
+      P_GiveArmor (player,deh_blue_armor_class);
+      pickupmsg(player, DEH_String(GOTMSPHERE));
       sound = sfx_getpow;
       break;
 
@@ -463,7 +439,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         // leave cards for everyone
     case SPR_BKEY:
       if (!player->cards[it_bluecard])
-        pickupmsg(player, "%s", s_GOTBLUECARD); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_StringColorized(GOTBLUECARD));
       P_GiveCard (player, it_bluecard);
       sound = sfx_keyup; // [Nugget]: [NS] Optional key pickup sound.
       if (!netgame)
@@ -472,7 +448,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
     case SPR_YKEY:
       if (!player->cards[it_yellowcard])
-        pickupmsg(player, "%s", s_GOTYELWCARD); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_StringColorized(GOTYELWCARD));
       P_GiveCard (player, it_yellowcard);
       sound = sfx_keyup; // [Nugget]: [NS] Optional key pickup sound.
       if (!netgame)
@@ -481,7 +457,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
     case SPR_RKEY:
       if (!player->cards[it_redcard])
-        pickupmsg(player, "%s", s_GOTREDCARD); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_StringColorized(GOTREDCARD));
       P_GiveCard (player, it_redcard);
       sound = sfx_keyup; // [Nugget]: [NS] Optional key pickup sound.
       if (!netgame)
@@ -490,7 +466,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
     case SPR_BSKU:
       if (!player->cards[it_blueskull])
-        pickupmsg(player, "%s", s_GOTBLUESKUL); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_StringColorized(GOTBLUESKUL));
       P_GiveCard (player, it_blueskull);
       sound = sfx_keyup; // [Nugget]: [NS] Optional key pickup sound.
       if (!netgame)
@@ -499,7 +475,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
     case SPR_YSKU:
       if (!player->cards[it_yellowskull])
-        pickupmsg(player, "%s", s_GOTYELWSKUL); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_StringColorized(GOTYELWSKUL));
       P_GiveCard (player, it_yellowskull);
       sound = sfx_keyup; // [Nugget]: [NS] Optional key pickup sound.
       if (!netgame)
@@ -508,7 +484,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
     case SPR_RSKU:
       if (!player->cards[it_redskull])
-        pickupmsg(player, "%s", s_GOTREDSKULL); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_StringColorized(GOTREDSKULL));
       P_GiveCard (player, it_redskull);
       sound = sfx_keyup; // [Nugget]: [NS] Optional key pickup sound.
       if (!netgame)
@@ -519,7 +495,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
     case SPR_STIM:
       if (!P_GiveBody (player, 10))
         return;
-      pickupmsg(player, "%s", s_GOTSTIM); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSTIM));
       break;
 
     case SPR_MEDI:
@@ -528,9 +504,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
       // [FG] show "Picked up a Medikit that you really need" message as intended
       if (player->health < 50)
-        pickupmsg(player, "%s", s_GOTMEDINEED); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_String(GOTMEDINEED));
       else
-        pickupmsg(player, "%s", s_GOTMEDIKIT); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_String(GOTMEDIKIT));
       break;
 
 
@@ -538,14 +514,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
     case SPR_PINV:
       if (!P_GivePower (player, pw_invulnerability))
         return;
-      pickupmsg(player, "%s", s_GOTINVUL); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTINVUL));
       sound = sfx_getpow;
       break;
 
     case SPR_PSTR:
       if (!P_GivePower (player, pw_strength))
         return;
-      pickupmsg(player, "%s", s_GOTBERSERK); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTBERSERK));
       if (player->readyweapon != wp_fist)
 	if ((!beta_emulation // killough 10/98: don't switch as much in -beta
 	     || player->readyweapon == wp_pistol)
@@ -557,7 +533,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
     case SPR_PINS:
       if (!P_GivePower (player, pw_invisibility))
         return;
-      pickupmsg(player, "%s", s_GOTINVIS); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTINVIS));
       sound = sfx_getpow;
       break;
 
@@ -568,14 +544,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       if (beta_emulation)  // killough 7/19/98: beta rad suit did not wear off
 	player->powers[pw_ironfeet] = -1;
 
-      pickupmsg(player, "%s", s_GOTSUIT); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSUIT));
       sound = sfx_getpow;
       break;
 
     case SPR_PMAP:
       if (!P_GivePower (player, pw_allmap))
         return;
-      pickupmsg(player, "%s", s_GOTMAP); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTMAP));
       sound = sfx_getpow;
       break;
 
@@ -589,7 +565,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 	player->powers[pw_infrared] = -1;
 
       sound = sfx_getpow;
-      pickupmsg(player, "%s", s_GOTVISOR); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTVISOR));
       break;
 
       // ammo
@@ -604,49 +580,49 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
           if (!P_GiveAmmo (player,am_clip,1))
             return;
         }
-      pickupmsg(player, "%s", s_GOTCLIP); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTCLIP));
       break;
 
     case SPR_AMMO:
       if (!P_GiveAmmo (player, am_clip,5))
         return;
-      pickupmsg(player, "%s", s_GOTCLIPBOX); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTCLIPBOX));
       break;
 
     case SPR_ROCK:
       if (!P_GiveAmmo (player, am_misl,1))
         return;
-      pickupmsg(player, "%s", s_GOTROCKET); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTROCKET));
       break;
 
     case SPR_BROK:
       if (!P_GiveAmmo (player, am_misl,5))
         return;
-      pickupmsg(player, "%s", s_GOTROCKBOX); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTROCKBOX));
       break;
 
     case SPR_CELL:
       if (!P_GiveAmmo (player, am_cell,1))
         return;
-      pickupmsg(player, "%s", s_GOTCELL); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTCELL));
       break;
 
     case SPR_CELP:
       if (!P_GiveAmmo (player, am_cell,5))
         return;
-      pickupmsg(player, "%s", s_GOTCELLBOX); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTCELLBOX));
       break;
 
     case SPR_SHEL:
       if (!P_GiveAmmo (player, am_shell,1))
         return;
-      pickupmsg(player, "%s", s_GOTSHELLS); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSHELLS));
       break;
 
     case SPR_SBOX:
       if (!P_GiveAmmo (player, am_shell,5))
         return;
-      pickupmsg(player, "%s", s_GOTSHELLBOX); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSHELLBOX));
       break;
 
     case SPR_BPAK:
@@ -658,7 +634,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         }
       for (i=0 ; i<NUMAMMO ; i++)
         P_GiveAmmo (player, i, 1);
-      pickupmsg(player, "%s", s_GOTBACKPACK); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTBACKPACK));
       break;
 
         // weapons
@@ -668,54 +644,54 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       if (STRICTMODE(classic_bfg) || beta_emulation)
         pickupmsg(player, "You got the BFG2704!  Oh, yes."); // killough 8/9/98: beta BFG
       else
-        pickupmsg(player, "%s", s_GOTBFG9000); // Ty 03/22/98 - externalized
+        pickupmsg(player, DEH_String(GOTBFG9000));
       sound = sfx_wpnup;
       break;
 
     case SPR_MGUN:
       if (!P_GiveWeapon (player, wp_chaingun, special->flags & MF_DROPPED))
         return;
-      pickupmsg(player, "%s", s_GOTCHAINGUN); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTCHAINGUN));
       sound = sfx_wpnup;
       break;
 
     case SPR_CSAW:
       if (!P_GiveWeapon(player, wp_chainsaw, false))
         return;
-      pickupmsg(player, "%s", s_GOTCHAINSAW); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTCHAINSAW));
       sound = sfx_wpnup;
       break;
 
     case SPR_LAUN:
       if (!P_GiveWeapon (player, wp_missile, false) )
         return;
-      pickupmsg(player, "%s", s_GOTLAUNCHER); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTLAUNCHER));
       sound = sfx_wpnup;
       break;
 
     case SPR_PLAS:
       if (!P_GiveWeapon(player, wp_plasma, false))
         return;
-      pickupmsg(player, "%s", s_GOTPLASMA); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTPLASMA));
       sound = sfx_wpnup;
       break;
 
     case SPR_SHOT:
       if (!P_GiveWeapon(player, wp_shotgun, special->flags & MF_DROPPED))
         return;
-      pickupmsg(player, "%s", s_GOTSHOTGUN); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSHOTGUN));
       sound = sfx_wpnup;
       break;
 
     case SPR_SGN2:
       if (!P_GiveWeapon(player, wp_supershotgun, special->flags & MF_DROPPED))
         return;
-      pickupmsg(player, "%s", s_GOTSHOTGUN2); // Ty 03/22/98 - externalized
+      pickupmsg(player, DEH_String(GOTSHOTGUN2));
       sound = sfx_wpnup;
       break;
 
     default:
-      // I_Error("P_SpecialThing: Unknown gettable thing");
+      // I_Error("Unknown gettable thing");
       return;      // killough 12/98: suppress error message
     }
 
@@ -902,7 +878,7 @@ void P_NuggetGib(const mobj_t *const mo, const boolean crushed)
 
     if (mo->info->bloodcolor || idgaf)
     {
-      splat->flags2 |= MF2_COLOREDBLOOD;
+      splat->flags_extra |= MFX_COLOREDBLOOD;
       splat->bloodcolor = V_BloodColor(mo->info->bloodcolor);
     }
 
@@ -947,8 +923,7 @@ static void WatchKill(player_t* player, mobj_t* target)
 
 boolean tossdrop; // [Nugget]
 
-static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
-                       mobj_t *inflictor) // [Nugget] Receive inflictor
+static void P_KillMobj(mobj_t *source, mobj_t *inflictor, mobj_t *target, method_t mod)
 {
   mobjtype_t item;
   mobj_t     *mo;
@@ -967,8 +942,10 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
   if (source && source->player)
     {
       // count for intermission
+#ifdef MBF_STRICT
       // killough 7/20/98: don't count friends
       if (!(target->flags & MF_FRIEND))
+#endif
 	if (target->flags & MF_COUNTKILL)
 	  WatchKill(source->player, target);
       if (target->player)
@@ -979,8 +956,10 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
         {
           // count all monster deaths,
           // even those caused by other monsters
+#ifdef MBF_STRICT
 	  // killough 7/20/98: don't count friends
 	  if (!(target->flags & MF_FRIEND))
+#endif
 	    WatchKill(players, target);
         }
 #ifndef MBF_STRICT
@@ -1054,7 +1033,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
 	if (!demoplayback) // killough 11/98: don't switch out in demos, though
 	  AM_Stop();    // don't die in auto map; switch view prior to dying
 
-      HU_Obituary(target, source, mod);
+      HU_Obituary(target, inflictor, source, mod);
     }
 
   if (target->info->xdeathstate
@@ -1073,7 +1052,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target, method_t mod,
   target->tics -= P_Random(pr_killtics)&3;
 
   // [crispy] randomly flip corpse, blood and death animation sprites
-  if (target->flags2 & MF2_FLIPPABLE)
+  if (target->flags_extra & MFX_MIRROREDCORPSE)
   {
     if (Woof_Random() & 1)
       target->intflags |= MIF_FLIP;
@@ -1148,7 +1127,7 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
     target->momx = target->momy = target->momz = 0;
 
   player = target->player;
-  if (player && halfdamage) // [Nugget]
+  if (player && (gameskill == sk_baby || halfplayerdamage))
     damage >>= 1;   // take half damage in trainer mode
 
   // Some close combat weapons should not
@@ -1275,7 +1254,7 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
   else
   if (target->health <= 0)
     {
-      P_KillMobj(source, target, mod, inflictor); // [Nugget] Pass inflictor
+      P_KillMobj(source, inflictor, target, mod);
       return;
     }
 

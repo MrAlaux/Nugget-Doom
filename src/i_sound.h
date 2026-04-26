@@ -28,6 +28,7 @@
 #include "m_fixed.h"
 
 // [Nugget]
+extern int pitched_sounds_range;
 extern boolean s_clipping_dist_x2;
 extern boolean force_flip_pan;
 
@@ -53,7 +54,7 @@ extern int S_ATTENUATOR;
 // [FG] moved here from i_sound.c
 #define MAX_CHANNELS    32
 // [FG] moved here from s_sound.c
-#define NORM_PITCH      128
+#define NORM_PITCH      127
 #define NORM_PRIORITY   64
 #define NORM_SEP        128
 #define S_STEREO_SWING  96
@@ -74,6 +75,11 @@ struct mobj_s;
 struct sfxinfo_s;
 struct sfxparams_s;
 
+extern boolean snd_ambient, default_snd_ambient;
+extern boolean snd_limiter;
+extern int snd_channels_per_sfx;
+extern int snd_volume_per_sfx;
+
 typedef struct sound_module_s
 {
     boolean (*InitSound)(void);
@@ -85,7 +91,10 @@ typedef struct sound_module_s
                                  struct sfxparams_s *params);
     void (*UpdateSoundParams)(int channel, const struct sfxparams_s *params);
     void (*UpdateListenerParams)(const struct mobj_s *listener);
-    boolean (*StartSound)(int channel, struct sfxinfo_s *sfx, float pitch);
+    void (*SetGain)(int channel, float gain);
+    float (*GetOffset)(int channel);
+    boolean (*StartSound)(int channel, struct sfxinfo_s *sfx,
+                          const struct sfxparams_s *params);
     void (*StopSound)(int channel);
     void (*PauseSound)(int channel);
     void (*ResumeSound)(int channel);
@@ -122,8 +131,7 @@ void I_SetChannels(void);
 int I_GetSfxLumpNum(struct sfxinfo_s *sfxinfo);
 
 // Starts a sound in a particular sound channel.
-int I_StartSound(struct sfxinfo_s *sound, const struct sfxparams_s *params,
-                 int pitch);
+int I_StartSound(struct sfxinfo_s *sound, const struct sfxparams_s *params);
 
 // Stops a sound channel.
 void I_StopSound(int handle);
@@ -149,6 +157,8 @@ void I_UpdateSoundParams(int handle, const struct sfxparams_s *params);
 void I_UpdateListenerParams(const struct mobj_s *listener);
 void I_DeferSoundUpdates(void);
 void I_ProcessSoundUpdates(void);
+void I_SetGain(int handle, float gain);
+float I_GetSoundOffset(int handle);
 
 //
 //  MUSIC I/O

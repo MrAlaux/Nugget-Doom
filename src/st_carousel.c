@@ -22,15 +22,15 @@
 #include "i_timer.h"
 #include "m_array.h"
 #include "m_misc.h"
+#include "m_swap.h"
 #include "r_defs.h"
-#include "r_draw.h"
 #include "st_sbardef.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 
 // [Nugget]
-#include "r_data.h"
 #include "r_main.h"
+#include "r_tranmap.h"
 #include "st_stuff.h"
 
 static const char *names[] = {
@@ -152,7 +152,7 @@ void ST_UpdateCarousel(player_t *player)
     }
 
     if (automap_on || menuactive || paused || player->playerstate == PST_DEAD
-        || consoleplayer != displayplayer)
+        || player->health <= 0 || consoleplayer != displayplayer)
     {
         ST_ResetCarousel();
         return;
@@ -169,7 +169,7 @@ void ST_UpdateCarousel(player_t *player)
     if (last_index != selected_index)
     {
         distance = selected_index - last_index;
-        distance = 64 * BETWEEN(-2, 2, distance);
+        distance = 64 * CLAMP(distance, -2, 2);
         last_index = selected_index;
         last_time = I_GetTimeMS();
     }
@@ -194,9 +194,12 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     byte *cr = icon.state == wpi_disabled ? cr_dark : NULL;
 
+    int xoffset = SHORT(patch->leftoffset);
+    int yoffset = SHORT(patch->topoffset);
+
     // [Nugget] Fadeout /-----------------------------------------------------
 
-    byte *tranmap = NULL;
+    const byte *tranmap = NULL;
 
     if (elem->tranmap)
     {
@@ -209,20 +212,7 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     // [Nugget] -------------------------------------------------------------/
 
-    // [Nugget] HUD/menu shadows
-
-    if (cr && tranmap)
-    {
-        V_DrawPatchTRTLSH(x, y, patch, cr, tranmap);
-    }
-    else if (tranmap)
-    {
-        V_DrawPatchTLSH(x, y, patch, tranmap);
-    }
-    else
-    {
-        V_DrawPatchTranslatedSH(x, y, patch, cr);
-    }
+    V_DrawPatchGeneralSH(x, y, xoffset, yoffset, tranmap, cr, patch, zero_crop); // [Nugget] HUD/menu shadows
 }
 
 static int CalcOffset(void)
@@ -241,22 +231,6 @@ static int CalcOffset(void)
     }
 
     return 0;
-}
-
-void ST_EraseCarousel(int y)
-{
-    static boolean erase;
-
-    if (duration > 0)
-    {
-        R_VideoErase(0, y - 16, video.unscaledw, 32);
-        erase = true;
-    }
-    else if (erase)
-    {
-        R_VideoErase(0, y - 16, video.unscaledw, 32);
-        erase = false;
-    }
 }
 
 void ST_DrawCarousel(int x, int y, sbarelem_t *elem)

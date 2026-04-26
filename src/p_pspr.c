@@ -21,10 +21,12 @@
 #include "d_event.h"
 #include "d_items.h"
 #include "d_player.h"
+#include "deh_misc.h"
 #include "doomstat.h"
 #include "g_nextweapon.h"
 #include "i_printf.h"
 #include "i_video.h" // uncapped
+#include "m_fixed.h"
 #include "m_random.h"
 #include "p_action.h"
 #include "p_enemy.h"
@@ -45,7 +47,7 @@
 #include "m_swap.h"
 #include "p_maputl.h"
 #include "r_things.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 
 // [Nugget] /=================================================================
 
@@ -84,8 +86,6 @@ static void ApplyRecoil(player_t *const player, int recoil)
 #define RAISESPEED   (FRACUNIT*6)
 #define WEAPONBOTTOM (FRACUNIT*128)
 #define WEAPONTOP    (FRACUNIT*32)
-
-#define BFGCELLS bfgcells        /* Ty 03/09/98 externalized in p_inter.c */
 
 // The following array holds the recoil values         // phares
 static struct
@@ -165,8 +165,7 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
           psp->sx2 = psp->sx;
           psp->sy2 = psp->sy;
 
-          // [Nugget] --------------------------------------------------------
-
+          // [Nugget]
           if (STRICTMODE(sx_fix))
           {
             // Subtract 1 pixel for consistency
@@ -232,9 +231,10 @@ static void P_BringUpWeapon(player_t *player)
     psp->sy2 = psp->oldsy2 = psp->sy;
   }
 
+  psp->sxf = psp->syf = 0;
+
   // [Nugget]
   psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
-  psp->syf = 0;
   psp->dy = 0; // [crispy] squat down weapon sprite
   psp->wix = psp->wiy = 0; // Reset offsets for weapon inertia
 
@@ -334,7 +334,7 @@ int P_SwitchWeapon(player_t *player)
   int newweapon = currentweapon;
   int i = NUMWEAPONS+1;   // killough 5/2/98
 
-  G_NextWeaponReset();
+  G_NextWeaponReset(currentweapon);
 
   // [XA] use fixed behavior for mbf21. no need
   // for a discrete compat option for this, as
@@ -431,7 +431,7 @@ boolean P_CheckAmmo(player_t *player)
     count = weaponinfo[player->readyweapon].ammopershot;
   else
   if (player->readyweapon == wp_bfg)  // Minimal amount for one shot varies.
-    count = BFGCELLS;
+      count = deh_bfg_cells_per_shot;
   else
     if (player->readyweapon == wp_supershotgun)        // Double barrel.
       count = 2;
@@ -696,9 +696,9 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
   else
     player->attackdown = false;
 
-  // [Nugget]
-  psp->sxf = STRICTMODE(sx_fix) ? -(1<<FRACBITS) : 0;
-  psp->syf = 0;
+  psp->sxf = psp->syf = 0;
+
+  if (STRICTMODE(sx_fix)) { psp->sxf = -(1<<FRACBITS); } // [Nugget]
 
   P_ApplyBobbing(&psp->sx, &psp->sy, player->bob);
 
@@ -990,7 +990,7 @@ void A_Saw(player_t *player, pspdef_t *psp)
   // killough 5/5/98: remove dependence on order of evaluation:
   int t = P_Random(pr_saw);
 
-  angle += (t - P_Random(pr_saw))<<18;
+  angle += shiftleft32(t - P_Random(pr_saw), 18);
 
   // Use meleerange + 1 so that the puff doesn't skip the flash
   range = (mbf21 ? player->mo->info->meleerange : MELEERANGE) + 1;
@@ -1065,7 +1065,7 @@ void A_FireMissile(player_t *player, pspdef_t *psp)
 
 void A_FireBFG(player_t *player, pspdef_t *psp)
 {
-  P_SubtractAmmo(player, BFGCELLS);
+  P_SubtractAmmo(player, deh_bfg_cells_per_shot);
   P_SpawnPlayerMissile(player->mo, MT_BFG);
 }
 
@@ -1225,7 +1225,7 @@ void P_GunShot(mobj_t *mo, boolean accurate)
   if (!accurate)
     {  // killough 5/5/98: remove dependence on order of evaluation:
       int t = P_Random(pr_misfire);
-      angle += (t - P_Random(pr_misfire))<<18;
+      angle += shiftleft32(t - P_Random(pr_misfire), 18);
     }
 
   // [Nugget] Explosive-hitscan cheat
@@ -1296,14 +1296,14 @@ void A_FireShotgun2(player_t *player, pspdef_t *psp)
       angle_t angle = player->mo->angle;
       // killough 5/5/98: remove dependence on order of evaluation:
       int t = P_Random(pr_shotgun);
-      angle += (t - P_Random(pr_shotgun))<<19;
+      angle += shiftleft32(t - P_Random(pr_shotgun), 19);
       t = P_Random(pr_shotgun);
 
       // [Nugget] Explosive-hitscan cheat
       if (player->cheats & CF_BOOMCAN) { P_SetIsBoomShot(true); }
 
       P_LineAttack(player->mo, angle, MISSILERANGE, bulletslope +
-                   ((t - P_Random(pr_shotgun))<<5), damage);
+                   shiftleft32(t - P_Random(pr_shotgun), 5), damage);
     }
 }
 
@@ -1603,7 +1603,7 @@ static void P_NuggetWeaponInertia(
 
     WeaponInertiaHorizontal(player, psp, scale);
 
-    if (mouselook || padlook || player->pitch || psp->wiy)
+    if (freelook || player->pitch || psp->wiy)
       WeaponInertiaVertical(player, psp, scale);
   }
 }
@@ -1633,6 +1633,8 @@ void P_NuggetResetWeaponInertia(void)
 //
 
 // [Nugget] Moved weapon-alignment macros above
+
+boolean psp_interp;
 
 void P_MovePsprites(player_t *player)
 {
@@ -1692,8 +1694,14 @@ void P_MovePsprites(player_t *player)
     else if (center_weapon_strict) // [Nugget] Removed `uncapped` check
     {
       // [FG] don't center during lowering and raising states
-      if (psp->state->misc1 || player->switching)
+      if ((psp->state->misc1 && center_weapon_strict != WEAPON_BOBBING) ||
+          player->switching)
       {
+      }
+      // [FG] not attacking means idle
+      else if (!player->attackdown || center_weapon_strict == WEAPON_BOBBING)
+      {
+        // [Nugget] Do nothing; `P_NuggetBobbing()` handled this already
       }
       // [FG] center the weapon sprite horizontally and push up vertically
       else if (player->attackdown && center_weapon_strict & WEAPON_CENTERED) // [Nugget] Horizontal weapon centering
@@ -1704,6 +1712,27 @@ void P_MovePsprites(player_t *player)
       }
     }
   }
+
+  static spritenum_t oldsprite = -1;
+  static int oldframe = -1;
+  static fixed_t oldsxf = -1, oldsyf = -1;
+
+  spritenum_t sprite = -1;
+  int frame = -1;
+
+  if (psp->state)
+  {
+    sprite = psp->state->sprite;
+    frame = psp->state->frame & FF_FRAMEMASK;
+  }
+
+  psp_interp = !((oldsprite != sprite || oldframe != frame) &&
+                 (oldsxf != psp->sxf || oldsyf != psp->syf));
+
+  oldsprite = sprite;
+  oldframe = frame;
+  oldsxf = psp->sxf;
+  oldsyf = psp->syf;
 
   // [Nugget]: [crispy] squat down weapon sprite a bit after hitting the ground
   if (psp->dy)
@@ -1720,10 +1749,10 @@ void P_MovePsprites(player_t *player)
   player->psprites[ps_flash].sy2 = player->psprites[ps_weapon].sy2;
   player->psprites[ps_flash].oldsx2 = player->psprites[ps_weapon].oldsx2;
   player->psprites[ps_flash].oldsy2 = player->psprites[ps_weapon].oldsy2;
+  player->psprites[ps_flash].sxf = player->psprites[ps_weapon].sxf;
+  player->psprites[ps_flash].syf = player->psprites[ps_weapon].syf;
 
   // [Nugget]
-  player->psprites[ps_flash].sxf    = player->psprites[ps_weapon].sxf;
-  player->psprites[ps_flash].syf    = player->psprites[ps_weapon].syf;
   player->psprites[ps_flash].dy     = player->psprites[ps_weapon].dy;
   player->psprites[ps_flash].wix    = player->psprites[ps_weapon].wix;
   player->psprites[ps_flash].oldwix = player->psprites[ps_weapon].oldwix;

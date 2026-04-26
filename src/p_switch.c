@@ -24,8 +24,8 @@
 #include "doomtype.h"
 #include "g_game.h"
 #include "i_printf.h"
-#include "i_system.h"
 #include "m_swap.h"
+#include "p_dirty.h"
 #include "p_mobj.h"
 #include "p_spec.h"
 #include "r_data.h"
@@ -152,8 +152,8 @@ void P_StartButton
                                : (mobj_t *)&line->frontsector->soundorg;
       return;
     }
-
-  I_Error("P_StartButton: no button slots left!");
+    
+  I_Printf(VB_WARNING, "no button slots left!");
 }
 
 //
@@ -177,7 +177,7 @@ void P_ChangeSwitchTexture
   int     sound;
 
   if (!useAgain)
-    line->special = 0;
+    dirty_line(line)->special = 0;
 
   texTop = sides[line->sidenum[0]].toptexture;
   texMid = sides[line->sidenum[0]].midtexture;
@@ -194,10 +194,12 @@ void P_ChangeSwitchTexture
     if (switchlist[i] == texTop)     // if an upper texture
     {
       // [Nugget]: [crispy] corrected sound source
-      S_StartSound(STRICTMODE(comp_switchsource)
-                   ? (mobj_t *)&line->soundorg
-                   : buttonlist->soundorg, sound);     // switch activation sound
-      sides[line->sidenum[0]].toptexture = switchlist[i^1];       //chg texture
+      mobj_t *const soundorg = STRICTMODE(comp_switchsource)
+                             ? (mobj_t *) &line->soundorg
+                             : buttonlist->soundorg;
+
+      S_StartSound(soundorg,sound);     // switch activation sound
+      dirty_side(&sides[line->sidenum[0]])->toptexture = switchlist[i^1];       //chg texture
 
       if (useAgain)
         P_StartButton(line,top,switchlist[i],BUTTONTIME);         //start timer
@@ -209,10 +211,12 @@ void P_ChangeSwitchTexture
       if (switchlist[i] == texMid)   // if a normal texture
       {
         // [Nugget]: [crispy] corrected sound source
-        S_StartSound(STRICTMODE(comp_switchsource)
-                     ? (mobj_t *)&line->soundorg
-                     : buttonlist->soundorg, sound);   // switch activation sound
-        sides[line->sidenum[0]].midtexture = switchlist[i^1];     //chg texture
+        mobj_t *const soundorg = STRICTMODE(comp_switchsource)
+                               ? (mobj_t *) &line->soundorg
+                               : buttonlist->soundorg;
+
+        S_StartSound(soundorg,sound);   // switch activation sound
+        dirty_side(&sides[line->sidenum[0]])->midtexture = switchlist[i^1];     //chg texture
 
         if (useAgain)
           P_StartButton(line, middle,switchlist[i],BUTTONTIME);   //start timer
@@ -224,10 +228,12 @@ void P_ChangeSwitchTexture
         if (switchlist[i] == texBot) // if a lower texture
         {
           // [Nugget]: [crispy] corrected sound source
-          S_StartSound(STRICTMODE(comp_switchsource)
-                       ? (mobj_t *)&line->soundorg
-                       : buttonlist->soundorg, sound); // switch activation sound
-          sides[line->sidenum[0]].bottomtexture = switchlist[i^1];//chg texture
+          mobj_t *const soundorg = STRICTMODE(comp_switchsource)
+                                 ? (mobj_t *) &line->soundorg
+                                 : buttonlist->soundorg;
+
+          S_StartSound(soundorg,sound); // switch activation sound
+          dirty_side(&sides[line->sidenum[0]])->bottomtexture = switchlist[i^1];//chg texture
 
           if (useAgain)
             P_StartButton(line, bottom,switchlist[i],BUTTONTIME); //start timer
@@ -275,7 +281,7 @@ P_UseSpecialLine
       if (!thing->player && !bossaction)
         if ((line->special & FloorChange) || !(line->special & FloorModel))
           return false; // FloorModel is "Allow Monsters" if FloorChange is 0
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenFloor;
     }
@@ -284,7 +290,7 @@ P_UseSpecialLine
       if (!thing->player && !bossaction)
         if ((line->special & CeilingChange) || !(line->special & CeilingModel))
           return false;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenCeiling;
     }
@@ -297,7 +303,7 @@ P_UseSpecialLine
         if (line->flags & ML_SECRET) // they can't open secret doors either
           return false;
       }
-      if (!line->tag && ((line->special&6)!=6)) //jff 3/2/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 3/2/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenDoor;
     }
@@ -307,7 +313,7 @@ P_UseSpecialLine
         return false;   // monsters disallowed from unlocking doors
       if (!P_CanUnlockGenDoor(line,thing->player))
         return false;
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
 
       linefunc = EV_DoGenLockedDoor;
@@ -317,7 +323,7 @@ P_UseSpecialLine
       if (!thing->player && !bossaction)
         if (!(line->special & LiftMonster))
           return false; // monsters disallowed
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenLift;
     }
@@ -326,7 +332,7 @@ P_UseSpecialLine
       if (!thing->player && !bossaction)
         if (!(line->special & StairMonster))
           return false; // monsters disallowed
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenStairs;
     }
@@ -335,7 +341,7 @@ P_UseSpecialLine
       if (!thing->player && !bossaction)
         if (!(line->special & CrusherMonster))
           return false; // monsters disallowed
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!line->args[0] && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenCrusher;
     }
@@ -346,7 +352,7 @@ P_UseSpecialLine
         case PushOnce:
           if (!side)
             if (linefunc(line))
-              line->special = 0;
+              dirty_line(line)->special = 0;
           return true;
         case PushMany:
           if (!side)
@@ -455,6 +461,13 @@ P_UseSpecialLine
         P_ChangeSwitchTexture(line,0);
       return true;
 
+    // S1 - Exit to the next map and reset inventory.
+    case 2070:
+      if (demo_version < DV_ID24)
+        return false;
+      reset_inventory = true;
+      // fallthrough
+
     case 11:
       // Exit level
 
@@ -534,6 +547,13 @@ P_UseSpecialLine
       if (EV_DoDoor(line,doorClose))
         P_ChangeSwitchTexture(line,0);
       return true;
+
+    // SR - Exit to the secret map and reset inventory.
+    case 2073:
+      if (demo_version < DV_ID24)
+        return false;
+      reset_inventory = true;
+      // fallthrough
 
     case 51:
       // Secret EXIT
@@ -624,6 +644,33 @@ P_UseSpecialLine
       if (EV_DoFloor(line,raiseFloor512))
         P_ChangeSwitchTexture(line,0);
       return true;
+
+    // ID24 Music Changers
+    case 2059: case 2065: case 2089: case 2095:
+      P_ChangeSwitchTexture(line,0);
+      EV_ChangeMusic(line, side);
+      return true;
+
+    case 2060: case 2066: case 2090: case 2096:
+      P_ChangeSwitchTexture(line,1);
+      EV_ChangeMusic(line, side);
+      return true;
+
+    case 2078:
+    case 2079:
+    {
+      if (line->special == 2078)
+        P_ChangeSwitchTexture(line,0);
+      else
+        P_ChangeSwitchTexture(line,1);
+
+      int colormap_index = side ? line->backtint : line->fronttint;
+      for (int s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
+      {
+        sectors[s].tint = colormap_index;
+      }
+      break;
+    }
 
       // killough 1/31/98: factored out compatibility check;
       // added inner switch, relaxed check to demo_compatibility

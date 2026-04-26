@@ -16,6 +16,7 @@
 
 #include "doomdef.h"
 #include "doomtype.h"
+#include "doomstat.h"
 #include "r_defs.h"
 #include "v_video.h"
 
@@ -44,19 +45,55 @@ typedef enum
     sbc_itemnotowned,
     sbc_featurelevelgreaterequal,
     sbc_featurelevelless,
-    sbc_sessiontypeeequal,
+    sbc_sessiontypeequal,
     sbc_sessiontypenotequal,
     sbc_modeeequal,
     sbc_modenotequal,
     sbc_hudmodeequal,
 
     // Woof!
-    sbc_widgetmode,
+    sbc_automapmode,
     sbc_widgetenabled,
     sbc_widgetdisabled,
-
-    // [Nugget]
     sbc_weaponnotowned,
+    sbc_healthgreaterequal,
+    sbc_healthless,
+    sbc_healthgreaterequalpct,
+    sbc_healthlesspct,
+    sbc_armorgreaterequal,
+    sbc_armorless,
+    sbc_armorgreaterequalpct,
+    sbc_armorlesspct,
+    sbc_ammogreaterequal,
+    sbc_ammoless,
+    sbc_ammogreaterequalpct,
+    sbc_ammolesspct,
+    sbc_ammotypegreaterequal,
+    sbc_ammotypeless,
+    sbc_ammotypegreaterequalpct,
+    sbc_ammotypelesspct,
+    sbc_widescreenequal,
+    sbc_episodeequal,
+    sbc_levelgreaterequal,
+    sbc_levelless,
+    sbc_patchempty,
+    sbc_patchnotempty,
+    sbc_killsless,
+    sbc_killsgreaterequal,
+    sbc_itemsless,
+    sbc_itemsgreaterequal,
+    sbc_secretsless,
+    sbc_secretsgreaterequal,
+    sbc_killslesspct,
+    sbc_killsgreaterequalpct,
+    sbc_itemslesspct,
+    sbc_itemsgreaterequalpct,
+    sbc_secretslesspct,
+    sbc_secretsgreaterequalpct,
+    sbc_powerless,
+    sbc_powergreaterequal,
+    sbc_powerlesspct,
+    sbc_powergreaterequalpct,
 
     sbc_max,
 } sbarconditiontype_t;
@@ -65,6 +102,8 @@ typedef struct
 {
     sbarconditiontype_t condition;
     int param;
+    int param2;
+    const char *param_string;
 } sbarcondition_t;
 
 typedef enum
@@ -87,6 +126,18 @@ typedef enum
     sbn_weaponammo,
     sbn_weaponmaxammo,
 
+    // Woof!
+    sbn_kills,
+    sbn_items,
+    sbn_secrets,
+    sbn_killspct,
+    sbn_itemspct,
+    sbn_secretspct,
+    sbn_totalkills,
+    sbn_totalitems,
+    sbn_totalsecrets,
+    sbn_power,
+
     sbn_max,
 } sbarnumbertype_t;
 
@@ -104,14 +155,17 @@ typedef enum
     // Woof!
     sbe_widget,
     sbe_carousel,
+    sbe_list,
+    sbe_string,
+    sbe_minimap,
 
     // [Nugget] /-------------------------------------------------------------
 
     sbe_max_woof,
 
     sbe_start_nugget = 32,
-    sbe_minimap = 32,
-    sbe_end_nugget,
+    //sbe_something = 32,
+    sbe_end_nugget = 32,
 
     sbe_max_nugget = sbe_end_nugget - sbe_start_nugget,
 
@@ -122,6 +176,7 @@ typedef enum
 
 typedef enum
 {
+    sbw_none = -1,
     sbw_monsec,
     sbw_time,
     sbw_coord,
@@ -150,6 +205,18 @@ typedef enum
 
 typedef enum
 {
+    sbstr_none = -1,
+    sbstr_data,
+    sbstr_maptitle,
+    sbstr_label,
+    sbstr_author
+} sbstringtype_t;
+
+extern const char *sbw_names[];
+extern int sbw_names_len;
+
+typedef enum
+{
     sbe_h_left = 0x00,
     sbe_h_middle = 0x01,
     sbe_h_right = 0x02,
@@ -162,11 +229,14 @@ typedef enum
 
     sbe_v_mask = 0x0C,
 
-    // Woof!
-    sbe_wide_left = 0x10,
-    sbe_wide_right = 0x20,
+    sbe_ignore_xoffset = 0x10,
+    sbe_ignore_yoffset = 0x20,
 
-    sbe_wide_force = 0x40, // [Nugget] NUGHUD
+    // Woof!
+    sbe_wide_left = 0x40,
+    sbe_wide_right = 0x80,
+
+    sbe_wide_force = 0x100, // [Nugget] NUGHUD
 } sbaralignment_t;
 
 typedef struct
@@ -184,6 +254,9 @@ typedef struct
 {
     const char *patch_name;
     patch_t *patch;
+
+    // Woof!
+    crop_t crop;
 } sbe_graphic_t;
 
 typedef struct
@@ -202,6 +275,8 @@ typedef struct
     int value;
     int numvalues;
     int xoffset;
+
+    int oldvalue; // [Nugget] Animated health/armor count
 } sbe_number_t;
 
 typedef struct
@@ -212,7 +287,16 @@ typedef struct
 
     // used for evil grin
     boolean oldweaponsowned[NUMWEAPONS];
+
+    // Woof!
+    crop_t crop;
 } sbe_face_t;
+
+typedef struct
+{
+    // Woof!
+    crop_t crop;
+} sbe_facebackground_t;
 
 typedef struct
 {
@@ -223,14 +307,14 @@ typedef struct
     // [Nugget]
     int tran_pct; // Message fadeout
     boolean flash; // Message flash
-} widgetline_t;
+} stringline_t;
 
 typedef struct sbe_widget_s
 {
     sbarwidgettype_t type;
     hudfont_t *default_font;
     hudfont_t *font;
-    widgetline_t *lines;
+    stringline_t *lines;
 
     int height;
 
@@ -243,12 +327,33 @@ typedef struct sbe_widget_s
     boolean under_messages;
 } sbe_widget_t;
 
-// [Nugget]
-typedef struct sbe_minimap_s
+typedef struct
+{
+    boolean horizontal;
+    int spacing;
+} sbe_list_t;
+
+typedef struct
+{
+    sbstringtype_t type;
+    stringline_t line;
+    hudfont_t *font;
+    const char *data;
+} sbe_string_t;
+
+typedef enum
+{
+    sbmm_background_off,
+    sbmm_background_dark,
+    sbmm_background_black
+} sbmm_backgound_t;
+
+typedef struct
 {
     int width;
     int height;
-    boolean under_messages;
+    fixed_t scale;
+    sbmm_backgound_t background;
 } sbe_minimap_t;
 
 struct sbarelem_s
@@ -260,7 +365,11 @@ struct sbarelem_s
     sbarcondition_t *conditions;
     sbarelem_t *children;
 
-    byte *tranmap;
+    boolean enabled;
+    int width;
+    int height;
+
+    const byte *tranmap;
     crange_idx_e cr;
     crange_idx_e crboom;
 
@@ -270,11 +379,12 @@ struct sbarelem_s
         sbe_animation_t *animation;
         sbe_number_t *number;
         sbe_face_t *face;
+        sbe_facebackground_t *facebackground;
 
         // Woof!
         sbe_widget_t *widget;
-
-        // [Nugget]
+        sbe_list_t *list;
+        sbe_string_t *string;
         sbe_minimap_t *minimap;
     } subtype;
 };
@@ -285,6 +395,9 @@ typedef struct
     boolean fullscreenrender;
     const char *fillflat;
     sbarelem_t *children;
+
+    // Woof!
+    const char *name;
 } statusbar_t;
 
 struct numberfont_s

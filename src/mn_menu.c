@@ -28,16 +28,16 @@
 #include <string.h>
 
 #include "config.h"
-#include "d_deh.h"
 #include "d_event.h"
 #include "d_main.h"
+#include "deh_strings.h"
 #include "doomdef.h"
 #include "doomkeys.h"
 #include "doomstat.h"
 #include "doomtype.h"
-#include "dstrings.h"
 #include "g_game.h"
 #include "g_umapinfo.h"
+#include "i_exit.h"
 #include "i_input.h"
 #include "i_printf.h"
 #include "i_system.h"
@@ -48,8 +48,8 @@
 #include "m_misc.h"
 #include "m_swap.h"
 #include "mn_font.h"
-#include "mn_menu.h"
 #include "mn_internal.h"
+#include "mn_menu.h"
 #include "mn_snapshot.h"
 #include "p_saveg.h"
 #include "r_defs.h"
@@ -60,9 +60,10 @@
 #include "st_sbardef.h"
 #include "st_stuff.h"
 #include "st_widgets.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "w_wad.h"
+#include "wi_stuff.h"
 #include "z_zone.h"
 
 // [Nugget]
@@ -88,7 +89,7 @@ static int quickSaveSlot; // -1 = no quicksave slot picked!
 
 static int messageToPrint; // 1 = message to be printed
 
-static char *messageString; // ...and here is the message string!
+static const char *messageString; // ...and here is the message string!
 
 static int messageLastMenuActive;
 
@@ -109,7 +110,9 @@ static char saveOldString[SAVESTRINGSIZE];
 boolean menuactive; // The menus are up
 static boolean mouse_active_thermo;
 static boolean options_active;
+static boolean customskill_active;
 
+boolean menu_pause_demos;
 backdrop_t menu_backdrop;
 
 int bigfont_priority = -1;
@@ -147,8 +150,7 @@ typedef enum
     MF_THRM     = 0x00000002,
     MF_THRM_STR = 0x00000004,
     MF_PAGE     = 0x00000008,
-
-    MF_OPTLUMP  = 0x00000010, // [Nugget] Optional graphic lump
+    MF_OPTLUMP  = 0x00000010,
 } mflags_t;
 
 typedef enum
@@ -216,7 +218,6 @@ static menu_t *currentMenu; // current menudef
 //
 static void M_NewGame(int choice);
 static void M_Episode(int choice);
-static void M_ChooseSkill(int choice);
 static void M_LoadGame(int choice);
 static void M_SaveGame(int choice);
 static void M_EndGame(int choice);
@@ -230,7 +231,6 @@ static void M_MusicVol(int choice);
 /* void M_ChangeDetail(int choice);  unused -- killough */
 
 static void M_FinishReadThis(int choice);
-static void M_FinishHelp(int choice); // killough 10/98
 static void M_LoadAutoSaveSelect(int choice);
 static void M_LoadSelect(int choice);
 static void M_SaveSelect(int choice);
@@ -247,12 +247,11 @@ static void M_DrawSound(void);
 static void M_DrawLoad(void);
 static void M_DrawSave(void);
 static void M_DrawSetup(void); // phares 3/21/98
-static void M_DrawHelp(void);  // phares 5/04/98
 
 static void M_DrawSaveLoadBorder(int x, int y, byte *cr);
 static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr);
 static void WriteText(int x, int y, const char *string);
-static void M_StartMessage(char *string, void (*routine)(int), boolean input);
+static void M_StartMessage(const char *string, void (*routine)(int), boolean input);
 
 // phares 3/30/98
 // prototypes added to support Setup Menus and Extended HELP screens
@@ -263,6 +262,8 @@ static void M_InitExtendedHelp(void);
 static void M_ExtHelpNextScreen(int choice);
 static void M_ExtHelp(int choice);
 static void M_DrawExtHelp(void);
+
+static void M_CustomSkill(int choice);
 
 static void M_PauseSound(void)
 {
@@ -397,10 +398,6 @@ static menuitem_t ReadMenu2[] = {
     {1, "", M_FinishReadThis, 0}
 };
 
-static menuitem_t HelpMenu[] = { // killough 10/98
-    {1, "", M_FinishHelp, 0}
-};
-
 static menu_t ReadDef1 = {
     read1_end,
     &MainDef,
@@ -416,15 +413,6 @@ static menu_t ReadDef2 = {
     &ReadDef1,
     ReadMenu2,
     M_DrawReadThis2,
-    330, 175,
-    0
-};
-
-static menu_t HelpDef = { // killough 10/98
-    help_end,
-    &HelpDef,
-    HelpMenu,
-    M_DrawHelp,
     330, 175,
     0
 };
@@ -448,11 +436,6 @@ static void M_FinishReadThis(int choice)
     SetNextMenu(&MainDef);
 }
 
-static void M_FinishHelp(int choice) // killough 10/98
-{
-    SetNextMenu(&MainDef);
-}
-
 //
 // Read This Menus
 // Had a "quick hack to fix romero bug"
@@ -472,11 +455,18 @@ static void M_DrawReadThis1(void)
 
 static void M_DrawReadThis2(void)
 {
-    // We only ever draw the second page if this is
-    // gameversion == exe_doom_1_9 and gamemode == registered
+    // Display help screen from PWAD
+    int helplump;
+    if (gamemode == commercial)
+    {
+        helplump = W_CheckNumForName(W_CheckWidescreenPatch("HELP"));
+    }
+    else
+    {
+        helplump = W_CheckNumForName(W_CheckWidescreenPatch("HELP1"));
+    }
 
-    V_DrawPatchFullScreen(
-        V_CachePatchName(W_CheckWidescreenPatch("HELP1"), PU_CACHE));
+    V_DrawPatchFullScreen(V_CachePatchNum(helplump, PU_CACHE));
 }
 
 static void M_DrawReadThisCommercial(void)
@@ -608,7 +598,7 @@ static void M_Episode(int choice)
     {
         if ((gamemode == shareware) && choice)
         {
-            M_StartMessage(s_SWSTRING, NULL, false); // Ty 03/27/98 - externalized
+            M_StartMessage(DEH_String(SWSTRING), NULL, false);
             SetNextMenu(&ReadDef1);
             return;
         }
@@ -638,10 +628,9 @@ enum
     violence,
     nightmare,
 
-    // [Nugget]
-    newg_stub,
-    newg_custom,
+    newg_stub, // [Nugget]
 
+    customskill,
     newg_end
 } newgame_e;
 
@@ -653,29 +642,6 @@ enum
     {0, M_Y_NEWGAME + (n) * LINEHEIGHT, SCREENWIDTH, LINEHEIGHT}
 
 // [Nugget] Custom Skill menu /-----------------------------------------------
-
-static void M_CustomSkill(int choice)
-{
-  if (demorecording || netgame)
-  {
-      M_StartMessage("Custom skill is disallowed\n"
-                     "during non-casual play.\n\n" PRESSKEY,
-                     NULL, false);
-
-      return;
-  }
-
-  if (default_strictmode || force_strictmode)
-  {
-      M_StartMessage("Custom skill is disallowed\n"
-                     "in strict mode.\n\n" PRESSKEY,
-                     NULL, false);
-
-      return;
-  }
-
-  MN_CustomSkill();
-}
 
 void M_StartCustomSkill(const int mode)
 {
@@ -718,9 +684,9 @@ static menuitem_t NewGameMenu[] = {
     {1, "M_ULTRA", M_ChooseSkill, 'u', "Ultra-Violence.",       NEW_GAME_RECT(3)},
     {1, "M_NMARE", M_ChooseSkill, 'n', "Nightmare!",            NEW_GAME_RECT(4)},
 
-    // [Nugget]
-    {-1},
-    {1, "M_CSTSKL", M_CustomSkill, 'c', "Custom Skill...", NEW_GAME_RECT(6), MF_OPTLUMP},
+    {-1}, // [Nugget] Space between custom and vanilla skills
+
+    {1, "M_CSTSKL", M_CustomSkill, 'c', "Custom Skill...",      NEW_GAME_RECT(6), MF_OPTLUMP}
 };
 
 static menu_t NewDef = {
@@ -738,6 +704,7 @@ static menu_t NewDef = {
 
 static void M_DrawNewGame(void)
 {
+    customskill_active = false;
     MN_DrawTitle(96, 14, "M_NEWG", "NEW GAME");
     MN_DrawTitle(54, 38, "M_SKILL", "Choose Skill Level:");
 }
@@ -746,7 +713,7 @@ static void M_NewGame(int choice)
 {
     if (netgame && !demoplayback)
     {
-        M_StartMessage(s_NEWGAME, NULL, false); // Ty 03/27/98 - externalized
+        M_StartMessage(DEH_String(NEWGAME), NULL, false);
         return;
     }
 
@@ -776,6 +743,10 @@ static void M_VerifyNightmare(int ch)
         return;
     }
 
+    //jff 3/24/98 remember last skill selected
+    // killough 10/98 moved to here
+    default_skill = nightmare + 1;
+
     if (!EpiCustom)
     {
         G_DeferedInitNew(nightmare, epiChoice + 1, 1);
@@ -789,13 +760,17 @@ static void M_VerifyNightmare(int ch)
     MN_ClearMenus();
 }
 
-static void M_ChooseSkill(int choice)
+void M_ChooseSkill(int choice)
 {
     if (choice == nightmare)
-    { // Ty 03/27/98 - externalized
-        M_StartMessage(s_NIGHTMARE, M_VerifyNightmare, true);
+    {
+        M_StartMessage(DEH_String(NIGHTMARE), M_VerifyNightmare, true);
         return;
     }
+
+    //jff 3/24/98 remember last skill selected
+    // killough 10/98 moved to here
+    default_skill = choice + 1;
 
     if (!EpiCustom)
     {
@@ -807,6 +782,34 @@ static void M_ChooseSkill(int choice)
     }
 
     MN_ClearMenus();
+}
+
+static void M_CustomSkill(int choice)
+{
+    // [Nugget] Warnings /----------------------------------------------------
+
+    if (demorecording || netgame)
+    {
+        M_StartMessage("Custom skill is disallowed\n"
+                       "during non-casual play.\n\n" PRESSKEY,
+                       NULL, false);
+
+        return;
+    }
+
+    if (strictmode)
+    {
+        M_StartMessage("Custom skill is disallowed\n"
+                       "in strict mode.\n\n" PRESSKEY,
+                       NULL, false);
+
+        return;
+    }
+
+    // [Nugget] -------------------------------------------------------------/
+
+    customskill_active = true;
+    MN_CustomSkill();
 }
 
 /////////////////////////////
@@ -1122,7 +1125,7 @@ static void M_LoadSelect(int choice)
     name = G_SaveGameName(slot);
     saveg_compat = saveg_woof510;
 
-    if (M_access(name, F_OK) != 0)
+    if (!M_FileExistsNotDir(name))
     {
         if (name)
         {
@@ -1154,7 +1157,6 @@ static void M_VerifyForcedLoadAutoSave(int ch)
     {
         G_ForcedLoadAutoSave();
     }
-    free(messageString);
     MN_ClearMenus();
 }
 
@@ -1164,7 +1166,6 @@ static void M_VerifyForcedLoadGame(int ch)
     {
         G_ForcedLoadGame();
     }
-    free(messageString); // free the message strdup()'ed below
     MN_ClearMenus();
 }
 
@@ -1188,7 +1189,7 @@ static void M_LoadGame(int choice)
 
     if (netgame && !demoplayback) // killough 5/26/98: add !demoplayback
     {
-        M_StartMessage(s_LOADNET, NULL, false); // Ty 03/27/98 - externalized
+        M_StartMessage(DEH_String(LOADNET), NULL, false); // Ty 03/27/98 - externalized
         return;
     }
 
@@ -1268,16 +1269,16 @@ static void EmptySaveString(char *name, boolean is_autosave)
         // [Nugget] Periodic auto save
         if (savepage != 0)
         {
-          M_snprintf(name, SAVESTRINGSIZE, "%s (P.Auto)", s_EMPTYSTRING);
+            M_snprintf(name, SAVESTRINGSIZE, "%s (P.Auto)", DEH_String(EMPTYSTRING));
         }
         else
         {
-          M_snprintf(name, SAVESTRINGSIZE, "%s (Auto)", s_EMPTYSTRING);
+            M_snprintf(name, SAVESTRINGSIZE, "%s (Auto)", DEH_String(EMPTYSTRING));
         }
     }
     else
     {
-        M_snprintf(name, SAVESTRINGSIZE, "%s", s_EMPTYSTRING);
+        M_snprintf(name, SAVESTRINGSIZE, "%s", DEH_String(EMPTYSTRING));
     }
 }
 
@@ -1294,7 +1295,6 @@ static void M_ReadSaveString(char *name, int menu_slot, int save_slot,
     {
         if (!is_autosave)
         {
-            // Ty 03/27/98 - externalized:
             name = G_MBFSaveGameName(save_slot);
             fp = M_fopen(name, "rb");
             free(name);
@@ -1316,6 +1316,9 @@ static void M_ReadSaveString(char *name, int menu_slot, int save_slot,
         SetLoadSlotStatus(menu_slot, 0);
         return;
     }
+
+    // Ensure that string is terminated
+    savegamestrings[menu_slot][SAVESTRINGSIZE - 1] = '\0';
 
     if (!MN_ReadSnapshot(menu_slot, fp))
     {
@@ -1531,7 +1534,7 @@ static void M_SaveSelect(int choice)
     saveSlot = choice;
     strcpy(saveOldString, savegamestrings[choice]);
     // [FG] override savegame name if it already starts with a map identifier
-    if (!strcmp(savegamestrings[choice], s_EMPTYSTRING) // Ty 03/27/98 - externalized
+    if (!strcmp(savegamestrings[choice], DEH_String(EMPTYSTRING))
         || MN_StartsWithMapIdentifier(savegamestrings[choice]))
     {
         savegamestrings[choice][0] = 0;
@@ -1555,7 +1558,7 @@ static void M_SaveGame(int choice)
     // killough 10/6/98: allow savegames during single-player demo playback
     if (!usergame && (!demoplayback || netgame))
     {
-        M_StartMessage(s_SAVEDEAD, NULL, false); // Ty 03/27/98 - externalized
+        M_StartMessage(DEH_String(SAVEDEAD), NULL, false);
         return;
     }
 
@@ -1584,7 +1587,7 @@ static void M_QuitResponse(int ch)
     {
         return;
     }
-    if (D_AllowQuitSound() &&
+    if (quit_sound &&
         (!netgame || demoplayback) && // killough 12/98
         !nosfxparm)                   // avoid delay if no sound card
     {
@@ -1601,28 +1604,23 @@ static void M_QuitResponse(int ch)
     I_SafeExit(0); // killough
 }
 
-boolean quick_quitgame;
-
 static void M_QuitDOOM(int choice)
 {
-    if (quick_quitgame) { I_SafeExit(0); } // [Nugget]
-
     static char endstring[160];
 
-    // We pick index 0 which is language sensitive,
-    // or one at random, between 1 and maximum number.
-    // Ty 03/27/98 - externalized DOSY as a string s_DOSY that's in the sprintf
-    if (language != english)
-    {
-        sprintf(endstring, "%s\n\n%s", s_DOSY, *endmsg[0]);
-    }
-    else // killough 1/18/98: fix endgame message calculation:
-    {
-        sprintf(endstring, "%s\n\n%s",
-                *endmsg[gametic % (NUM_QUITMESSAGES - 1) + 1], s_DOSY);
-    }
+    // killough 1/18/98: fix endgame message calculation:
+    M_snprintf(endstring, sizeof(endstring), "%s\n\n%s",
+                DEH_String(strings_quit_messages[gametic % num_quit_mnemonics]),
+                DEH_String(DOSY));
 
-    M_StartMessage(endstring, M_QuitResponse, true);
+    if (quit_prompt)
+    {
+        M_StartMessage(endstring, M_QuitResponse, true);
+    }
+    else
+    {
+        M_QuitResponse('y');
+    }
 }
 
 /////////////////////////////
@@ -1827,7 +1825,7 @@ static void M_QuickLoad(void)
     if (netgame && !demoplayback) // killough 5/26/98: add !demoplayback
     {
         M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
-        M_StartMessage(s_QLOADNET, NULL, false); // Ty 03/27/98 - externalized
+        M_StartMessage(DEH_String(QLOADNET), NULL, false);
         return;
     }
 
@@ -1884,7 +1882,7 @@ static void M_EndGameResponse(int ch)
     quickSaveSlot = -1;
 
     currentMenu->lastOn = itemOn;
-    S_StopChannels();
+    S_EvictChannels();
     MN_ClearMenus();
     D_StartTitle();
 }
@@ -1893,11 +1891,10 @@ static void M_EndGame(int choice)
 {
     if (netgame)
     {
-        M_StartMessage(s_NETEND, NULL, false); // Ty 03/27/98 - externalized
+        M_StartMessage(DEH_String(NETEND), NULL, false);
         return;
     }
-    M_StartMessage(s_ENDGAME, M_EndGameResponse,
-                   true); // Ty 03/27/98 - externalized
+    M_StartMessage(DEH_String(ENDGAME), M_EndGameResponse, true);
 }
 
 /////////////////////////////
@@ -1911,11 +1908,11 @@ static void M_ChangeMessages(int choice)
 
     if (!show_messages)
     {
-        displaymsg("%s", s_MSGOFF); // Ty 03/27/98 - externalized
+        displaymsg("%s", DEH_String(MSGOFF));
     }
     else
     {
-        displaymsg("%s", s_MSGON); // Ty 03/27/98 - externalized
+        displaymsg("%s", DEH_String(MSGON));
     }
 }
 
@@ -1930,19 +1927,20 @@ static void M_ChangeMessages(int choice)
 
 static void M_SizeDisplay(int choice)
 {
-    switch (choice)
+    if (choice == 0 && screenblocks > 3)
     {
-        case 0:
-            screenblocks--;
-            break;
-        case 1:
-            screenblocks++;
-            break;
-        default:
-            break;
+        screenblocks--;
     }
-    screenblocks = BETWEEN(3, maxscreenblocks, screenblocks);
+    else if (choice == 1 && screenblocks < maxscreenblocks)
+    {
+        screenblocks++;
+    }
+    else
+    {
+        return;
+    }
     R_SetViewSize(screenblocks /*, detailLevel obsolete -- killough */);
+    M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
 
     MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
@@ -2016,13 +2014,8 @@ static void M_InitExtendedHelp(void)
             {
                 // Restore extended help functionality
                 // for all game versions
-                ExtHelpDef.prevMenu = &HelpDef; // previous menu
-                HelpMenu[0].routine = M_ExtHelp;
-
-                if (gamemode != commercial)
-                {
-                    ReadMenu2[0].routine = M_ExtHelp;
-                }
+                ExtHelpDef.prevMenu = &ReadDef2; // previous menu
+                ReadMenu2[0].routine = M_ExtHelp;
             }
             return;
         }
@@ -2046,27 +2039,6 @@ static void M_DrawExtHelp(void)
     namebfr[4] = extended_help_index / 10 + 0x30;
     namebfr[5] = extended_help_index % 10 + 0x30;
     V_DrawPatchFullScreen(V_CachePatchName(namebfr, PU_CACHE));
-}
-
-//
-// M_DrawHelp
-//
-// This displays the help screen
-
-static void M_DrawHelp(void)
-{
-    // Display help screen from PWAD
-    int helplump;
-    if (gamemode == commercial)
-    {
-        helplump = W_CheckNumForName(W_CheckWidescreenPatch("HELP"));
-    }
-    else
-    {
-        helplump = W_CheckNumForName(W_CheckWidescreenPatch("HELP1"));
-    }
-
-    V_DrawPatchFullScreen(V_CachePatchNum(helplump, PU_CACHE));
 }
 
 //
@@ -2259,6 +2231,14 @@ static menu_t GyroDef = {
     34, 5,              // x, y (skull drawn here)
 };
 
+static menu_t CustomSkillDef = {
+    generic_setup_end,  // numitems
+    &NewDef,            // prevMenu
+    Generic_Setup,      // menuitems
+    MN_DrawCustomSkill, // routine
+    34, 5,              // x, y (skull drawn here)
+};
+
 // [Nugget] /-----------------------------------------------------------------
 
 static menu_t ViewDef = {
@@ -2275,15 +2255,6 @@ static menu_t DisplayDef = {
     &SetupDef,
     Generic_Setup,
     MN_DrawDisplay,
-    34, 5,
-    0
-};
-
-static menu_t MiscDef = {
-    generic_setup_end,
-    &SetupDef,
-    Generic_Setup,
-    MN_DrawMisc,
     34, 5,
     0
 };
@@ -2315,15 +2286,6 @@ static menu_t CheatKeysDef = {
     0
 };
 
-static menu_t CustomSkillDef = { // Custom Skill menu
-    generic_setup_end,
-    &NewDef,
-    Generic_Setup,
-    MN_DrawCustomSkill,
-    34, 5,
-    0
-};
-
 // [Nugget] -----------------------------------------------------------------/
 
 void MN_SetNextMenuAlt(ss_types type)
@@ -2332,15 +2294,14 @@ void MN_SetNextMenuAlt(ss_types type)
         &KeybndDef, &WeaponDef,    &StatusHUDDef, &AutoMapDef,
         &EnemyDef,  &GeneralDef,   &CompatDef,    &SfxDef,
         &MidiDef,   &EqualizerDef, &PadAdvDef,    &GyroDef,
+        &CustomSkillDef,
 
         // [Nugget]
         &ViewDef,
         &DisplayDef,
-        &MiscDef,
         &HUDColDef,
         &MapKeysDef,
         &CheatKeysDef,
-        &CustomSkillDef // Custom Skill menu
     };
 
     SetNextMenu(setup_defs[type]);
@@ -2453,6 +2414,36 @@ void M_ResetAutoSave(void)
 // M_Init
 //
 
+#define MAX_STRLEN 42
+
+static void AddLineBreaks(char *string)
+{
+    char *start = string;
+    char *p = start;
+
+    while (strlen(p) > MAX_STRLEN)
+    {
+        start = p;
+        p += MAX_STRLEN;
+
+        do
+        {
+            if (*p == ' ')
+            {
+                *p++ = '\n';
+                break;
+            }
+        } while (--p > start);
+
+        if (p == start)
+        {
+            break;
+        }
+    }
+}
+
+#undef MAX_STRLEN
+
 void M_Init(void)
 {
     MN_InitDefaults(); // killough 11/98
@@ -2506,8 +2497,18 @@ void M_Init(void)
         ReadDef1.routine = M_DrawReadThisCommercial;
         ReadDef1.x = 330;
         ReadDef1.y = 165;
-        HelpDef.y = 165;
         ReadMenu1[0].routine = M_FinishReadThis;
+    }
+
+    if (pwad_help2)
+    {
+        MainMenu[readthis].routine = M_ReadThis;
+        ReadDef2.prevMenu = &ReadDef1;
+    }
+    else if (gamemode == retail)
+    {
+        MainMenu[readthis].routine = M_ReadThis2;
+        ReadDef2.prevMenu = NULL;
     }
 
     // Versions of doom.exe before the Ultimate Doom release only had
@@ -2525,38 +2526,55 @@ void M_Init(void)
     // [crispy] remove DOS reference from the game quit confirmation dialogs
     {
         const char *platform = I_GetPlatform();
-        char *string;
+        const char *string;
         char *replace;
 
-        string = *endmsg[3];
-        replace = M_StringReplace(string, "dos", platform);
-        *endmsg[3] = replace;
+        // [crispy] "i wouldn't leave if i were you.\ndos is much worse."
+        string = strings_quit_messages[3];
+        if (!DEH_HasStringReplacement(string))
+        {
+            replace = M_StringReplace(string, "dos", platform);
+            DEH_AddStringReplacement(string, replace);
+            free(replace);
+        }
 
-        string = *endmsg[4];
-        replace = M_StringReplace(string, "dos", platform);
-        *endmsg[4] = replace;
+        // [crispy] "you're trying to say you like dos\nbetter than me, right?"
+        string = strings_quit_messages[4];
+        if (!DEH_HasStringReplacement(string))
+        {
+            replace = M_StringReplace(string, "dos", platform);
+            DEH_AddStringReplacement(string, replace);
+            free(replace);
+        }
 
-        string = *endmsg[9];
-        replace = M_StringReplace(string, "dos", platform);
-
+        // [crispy] "don't go now, there's a \ndimensional shambler waiting\nat the dos prompt!"
+        string = strings_quit_messages[9];
+        if (!DEH_HasStringReplacement(string))
+        {
+            char *replace2 = NULL;
+            replace = M_StringReplace(string, "dos", platform);
 #if defined(_WIN32)
-#  if defined(WIN_LAUNCHER)
-        string = M_StringReplace(replace, "prompt", "console");
-#  else
-        string = M_StringReplace(replace, "prompt", "desktop");
-#  endif
+            replace2 = M_StringReplace(replace, "prompt", "desktop");
 #else
-        if (isatty(STDOUT_FILENO))
-        {
-            string = M_StringReplace(replace, "prompt", "shell");
-        }
-        else
-        {
-            string = M_StringReplace(replace, "prompt", "desktop");
-        }
+            replace2 = isatty(STDOUT_FILENO)
+                    ? M_StringReplace(replace, "prompt", "shell")
+                    : M_StringReplace(replace, "prompt", "desktop");
 #endif
-        free(replace);
-        *endmsg[9] = string;
+            DEH_AddStringReplacement(string, replace2);
+            free(replace2);
+            free(replace);
+        }
+
+        for (int i = 0; i < num_quit_mnemonics; i++)
+        {
+            replace = M_StringDuplicate(DEH_String(strings_quit_messages[i]));
+            if (strchr(replace, '\n') == NULL)
+            {
+                AddLineBreaks(replace);
+            }
+            DEH_AddStringReplacement(strings_quit_messages[i], replace);
+            free(replace);
+        }
     }
 }
 
@@ -2591,6 +2609,15 @@ boolean M_ShortcutResponder(const event_t *ev)
         return false;
     }
 
+    if (M_InputActivated(input_netgame_stats))
+    {
+        if (gamestate == GS_LEVEL && (netgame || deathmatch))
+        {
+            wi_overlay = !wi_overlay;
+            return true;
+        }
+    }
+
     if (M_InputActivated(input_autorun)) // Autorun
     {
         autorun = !autorun;
@@ -2607,27 +2634,16 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_freelook))
     {
-        if (ev->type == ev_joyb_down)
-        {
-            // Gamepad free look toggle only affects gamepad.
-            padlook = !padlook;
-            togglemsg("Gamepad Free Look %s", padlook ? "On" : "Off");
-            MN_UpdatePadLook();
-        }
-        else
-        {
-            // Keyboard or mouse free look toggle only affects mouse.
-            mouselook = !mouselook;
-            togglemsg("Free Look %s", mouselook ? "On" : "Off");
-            MN_UpdateMouseLook();
-        }
+        freelook = !freelook;
+        togglemsg("Free Look %s", freelook ? "On" : "Off");
+        MN_UpdateFreeLook();
         // return true; // [FG] don't let toggles eat keys
     }
 
     if (M_InputActivated(input_speed_up) && !D_CheckNetConnect() && !strictmode)
     {
         realtic_clock_rate += 10;
-        realtic_clock_rate = BETWEEN(10, 1000, realtic_clock_rate);
+        realtic_clock_rate = CLAMP(realtic_clock_rate, 10, 1000);
         displaymsg("Game Speed: %d", realtic_clock_rate);
         G_SetTimeScale();
         setrefreshneeded = true;
@@ -2637,7 +2653,7 @@ boolean M_ShortcutResponder(const event_t *ev)
         && !strictmode)
     {
         realtic_clock_rate -= 10;
-        realtic_clock_rate = BETWEEN(10, 1000, realtic_clock_rate);
+        realtic_clock_rate = CLAMP(realtic_clock_rate, 10, 1000);
         displaymsg("Game Speed: %d", realtic_clock_rate);
         G_SetTimeScale();
         setrefreshneeded = true;
@@ -2654,8 +2670,9 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_help)) // Help key
     {
+        boolean help2 = (gamemode < commercial || pwad_help2);
         MN_StartControlPanel();
-        currentMenu = &HelpDef; // killough 10/98: new help screen
+        currentMenu = help2 ? &ReadDef1 : &ReadDef2; // killough 10/98: new help screen
         currentMenu->prevMenu = NULL;
         itemOn = 0;
         return true;
@@ -2712,8 +2729,11 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_quit)) // Quit DOOM
     {
-        M_PauseSound();
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        if (quit_prompt)
+        {
+            M_PauseSound();
+            M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        }
         M_QuitDOOM(0);
         return true;
     }
@@ -2737,7 +2757,6 @@ boolean M_ShortcutResponder(const event_t *ev)
             return false;
         }
         M_SizeDisplay(0);
-        M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -2748,7 +2767,6 @@ boolean M_ShortcutResponder(const event_t *ev)
             return false;
         }
         M_SizeDisplay(1);
-        M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
         return true;
     }
 
@@ -2779,7 +2797,7 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_hud_timestats))
     {
-        if (automapactive == AM_FULL)
+        if (automapactive)
         {
             if ((hud_level_stats | hud_level_time) & HUD_WIDGET_AUTOMAP)
             {
@@ -2827,6 +2845,18 @@ boolean M_ShortcutResponder(const event_t *ev)
         }
     }
 
+    if (M_InputActivated(input_menu_prevlevel))
+    {
+        if (demoplayback && singledemo && !PLAYBACK_SKIP)
+        {
+            return false;
+        }
+        else if (G_GotoPrevLevel())
+        {
+            return true;
+        }
+    }
+
     if (M_InputActivated(input_demo_fforward))
     {
         if (demoplayback && !PLAYBACK_SKIP && !fastdemo && !D_CheckNetConnect())
@@ -2835,6 +2865,12 @@ boolean M_ShortcutResponder(const event_t *ev)
             I_SetFastdemoTimer(fastdemo_timer);
             return true;
         }
+    }
+
+    if (M_InputActivated(input_rewind))
+    {
+        G_Rewind();
+        return true;
     }
 
     // [Nugget] /-------------------------------------------------------------
@@ -2869,12 +2905,6 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (STRICTMODE(M_InputActivated(input_freecam)))
     {
         R_SetFreecamOn(!R_FreecamOn());
-    }
-
-    if (STRICTMODE(M_InputActivated(input_rewind)))
-    {
-        G_Rewind();
-        return true;
     }
 
     // [Nugget] -------------------------------------------------------------/
@@ -3108,7 +3138,7 @@ static boolean MouseResponder(void)
         int dot = mouse_state_x - (rect->x + M_THRM_STEP + video.deltaw);
         int step = M_MAX_VOL * FRACUNIT / (rect->w - M_THRM_STEP * 3);
         int value = dot * step / FRACUNIT;
-        value = BETWEEN(0, M_MAX_VOL, value);
+        value = CLAMP(value, 0, M_MAX_VOL);
 
         current_item--;
         if (current_item->routine)
@@ -3209,8 +3239,8 @@ boolean M_Responder(event_t *ev)
                 return true;
             }
             menu_input = mouse_mode;
-            mouse_state_x = ev->data2.i;
-            mouse_state_y = ev->data3.i;
+            mouse_state_x = (int)ev->data2.f;
+            mouse_state_y = (int)ev->data3.f;
             CursorPosition();
             MouseResponder();
             return true;
@@ -3640,7 +3670,8 @@ void MN_StartControlPanel(void)
 
 boolean MN_MenuIsShaded(void)
 {
-    return (options_active || (menuactive && menu_background_all)) // [Nugget]
+    return (options_active || customskill_active
+            || (menuactive && menu_background_all)) // [Nugget]
            && menu_backdrop == MENU_BG_DARK;
 }
 
@@ -3715,7 +3746,7 @@ void M_Drawer(void)
     {
         for (int i = 0; i < max; i++)
         {
-            const char *name = currentMenu->menuitems[i].name;
+            char *name = currentMenu->menuitems[i].name;
             int patch_lump = -1;
             int patch_priority = -1;
 
@@ -3726,11 +3757,15 @@ void M_Drawer(void)
                 {
                     patch_priority = lumpinfo[patch_lump].handle.priority;
                 }
+                else
+                {
+                    name[0] = '\0';
+                }
             }
 
             if ((patch_lump < 0 || patch_priority < bigfont_priority)
                 && currentMenu->menuitems[i].alttext
-                && !(currentMenu->menuitems[i].flags & MF_OPTLUMP)) // [Nugget]
+                && !(currentMenu->menuitems[i].flags & MF_OPTLUMP))
             {
                 currentMenu->lumps_missing++;
                 break;
@@ -3781,8 +3816,8 @@ void M_Drawer(void)
         // [FG] at least one menu graphics lump is missing, draw alternative
         // text
         if (currentMenu->lumps_missing > 0
-            // [Nugget]
-            || ((item->flags & MF_OPTLUMP)
+            // [Nugget] Use big font if loaded after patch
+            || (/*!name[0] &&*/ item->flags & MF_OPTLUMP
                 && (patch_lump < 0 || patch_priority < bigfont_priority)))
         {
             if (alttext)
@@ -3823,7 +3858,7 @@ void M_Drawer(void)
 // Message Routines
 //
 
-static void M_StartMessage(char *string, void (*routine)(int), boolean input)
+static void M_StartMessage(const char *string, void (*routine)(int), boolean input)
 {
     messageLastMenuActive = menuactive;
     messageToPrint = 1;
@@ -3853,20 +3888,24 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
     V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERML", PU_CACHE), cr); // [Nugget] HUD/menu shadows
     xx += 8;
 
-    { // [Nugget] HUD/menu shadows
-      const patch_t *const patch = V_CachePatchName("M_THERMM", PU_CACHE);
-      V_SetPatchCrop(0, SHORT(patch->width) - M_THRM_STEP, 0, 0, true);
-    }
+    // [Nugget]
+    patch_t *const patch = V_CachePatchName("M_THERMM", PU_CACHE);
 
     for (i = 0; i < thermWidth; i++)
     {
-        V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMM", PU_CACHE), cr); // [Nugget] HUD/menu shadows
+        // [Nugget] HUD/menu shadows
+        const int w = SHORT(patch->width);
+        V_DrawPatchShadow(
+            xx, y,
+            (crop_t) { .width = w - MAX(0, w - M_THRM_STEP) },
+            patch, false
+        );
+
+        V_DrawPatchTranslated(xx, y, patch, cr);
         xx += 8;
     }
 
-    V_ClearPatchCrop(); // [Nugget] HUD/menu shadows
-
-    V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr); // [Nugget] HUD/menu shadows
+    V_DrawPatchTranslatedSH(xx, y, V_CachePatchName("M_THERMR", PU_CACHE), cr);
 
     // [FG] write numerical values next to thermometer
     M_snprintf(num, 4, "%3d", thermDot);

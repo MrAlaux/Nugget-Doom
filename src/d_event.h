@@ -77,9 +77,7 @@ typedef enum
   ga_reloadlevel,
   ga_loadautosave,
   ga_saveautosave,
-
-  // [Nugget]
-  ga_rewind, // Rewind
+  ga_rewind,
 } gameaction_t;
 
 

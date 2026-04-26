@@ -20,7 +20,10 @@
 //
 //-----------------------------------------------------------------------------
 
+#if defined(_WIN32)
 #include <ctype.h>
+#endif
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,36 +34,38 @@
 
 #include "am_map.h"
 #include "config.h"
-#include "d_deh.h"  // Ty 04/08/98 - Externalizations
 #include "d_demoloop.h"
 #include "d_event.h"
 #include "d_iwad.h"
 #include "d_loop.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_quit.h"
 #include "d_ticcmd.h"
+#include "decl_main.h"
+#include "deh_main.h"
+#include "deh_strings.h"
+#include "deh_thing.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "dsdhacked.h"
-#include "dstrings.h"
+#include "doomtype.h"
+#include "dsdh_main.h"
 #include "f_finale.h"
 #include "f_wipe.h"
 #include "g_compatibility.h"
 #include "g_game.h"
 #include "i_endoom.h"
+#include "i_exit.h"
 #include "i_glob.h"
 #include "i_input.h"
 #include "i_printf.h"
+#include "i_richpresence.h"
 #include "i_sound.h"
-#include "i_system.h"
 #include "i_timer.h"
 #include "i_video.h"
 #include "info.h"
 #include "m_argv.h"
 #include "m_array.h"
 #include "m_config.h"
-#include "m_fixed.h"
 #include "m_input.h"
 #include "m_io.h"
 #include "mn_menu.h"
@@ -68,24 +73,21 @@
 #include "m_swap.h"
 #include "net_client.h"
 #include "net_dedicated.h"
-#include "p_inter.h" // maxhealthbonus
-#include "p_map.h"   // MELEERANGE
-#include "p_mobj.h"
+#include "deh_misc.h" // deh_max_health_bonus
+#include "p_ambient.h"
 #include "p_setup.h"
-#include "r_bmaps.h"
 #include "r_defs.h"
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "r_voxel.h"
 #include "s_sound.h"
-#include "sounds.h"
 #include "s_trakinfo.h"
 #include "st_stuff.h"
 #include "st_widgets.h"
 #include "statdump.h"
 #include "g_umapinfo.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "wi_stuff.h"
@@ -95,49 +97,9 @@
 // [Nugget]
 #include "i_thread.h"
 #include "m_nughud.h"
+#include "p_mobj.h"
 #include "r_data.h"
-
-// DEHacked support - Ty 03/09/97
-// killough 10/98:
-// Add lump number as third argument, for use when filename==NULL
-void ProcessDehFile(const char *filename, char *outfilename, int lump);
-
-// mbf21
-void PostProcessDeh(void);
-
-// killough 10/98: support -dehout filename
-static char *D_dehout(void)
-{
-  static char *s;      // cache results over multiple calls
-  if (!s)
-    {
-      //!
-      // @category mod
-      // @arg <filename>
-      //
-      // Enables verbose dehacked parser logging.
-      //
-
-      int p = M_CheckParm("-dehout");
-      if (!p)
-
-        //!
-        // @category mod
-        // @arg <filename>
-        //
-        // Alias to -dehout.
-        //
-
-        p = M_CheckParm("-bexout");
-      s = p && ++p < myargc ? myargv[p] : "";
-    }
-  return s;
-}
-
-static void ProcessDehLump(int lumpnum)
-{
-  ProcessDehFile(NULL, D_dehout(), lumpnum);
-}
+#include "sounds.h"
 
 boolean devparm;        // started game with -devparm
 
@@ -145,14 +107,19 @@ boolean devparm;        // started game with -devparm
 boolean clnomonsters;   // checkparm of -nomonsters
 boolean clrespawnparm;  // checkparm of -respawn
 boolean clfastparm;     // checkparm of -fast
+boolean clpistolstart;  // checkparm of -pistolstart
+boolean clcoopspawns;   // checkparm of -coop_spawns
 // jff 1/24/98 end definition of command line version of play mode switches
+
+// [Nugget] Custom skill: moved settings elsewhere
 
 boolean nomonsters;     // working -nomonsters
 boolean respawnparm;    // working -respawn
 boolean fastparm;       // working -fast
+boolean pistolstart;    // working -pistolstart
+boolean coopspawns;     // working -coop_spawns
 
-// [Nugget]
-boolean coopspawnsparm = false;
+// [Nugget] Custom skill: moved settings elsewhere
 
 boolean singletics = false; // debug flag to cancel adaptiveness
 
@@ -171,14 +138,13 @@ boolean advancedemo;
 char    *basedefault = NULL;   // default file
 char    *basesavegame = NULL;  // killough 2/16/98: savegame directory
 char    *screenshotdir = NULL; // [FG] screenshot directory
+char    *savegamename = NULL;
 
 int organize_savefiles;
 
 // [Nugget]
 const char *savegame_dir = NULL;
 const char *screenshot_dir = NULL;
-
-boolean coop_spawns = false;
 
 static boolean demobar;
 
@@ -318,6 +284,12 @@ void D_Display (void)
         I_DynamicResolution();
     }
 
+  // [Nugget] True color: brought from below
+  // clean up border stuff
+  if ((gamestate != oldgamestate && gamestate != GS_LEVEL)
+      || I_ResetPalettePending())
+    I_SetPalette (0); // [Nugget] Pass index
+
   // [Nugget] True color
   if (R_InitColormapsPending())
   { R_InitColormaps(); }
@@ -339,11 +311,6 @@ void D_Display (void)
 
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
-
-  // [Nugget] True color: brought from below
-  // clean up border stuff
-  if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-    I_SetPalette (0); // [Nugget] Pass index
 
   switch (gamestate)                // do buffered drawing
     {
@@ -407,6 +374,9 @@ void D_Display (void)
     if (gametic) { ST_Drawer(); }
   }
 
+  if (wi_overlay)
+    WI_drawOverlayStats();
+
   // draw pause pic
   if (paused)
     {
@@ -416,7 +386,7 @@ void D_Display (void)
 
       x += (scaledviewwidth - SHORT(patch->width)) / 2 - video.deltaw;
 
-      if (automapactive != AM_FULL)
+      if (!automapactive)
         y += scaledviewy;
 
       V_DrawPatchSH(x, y, patch); // [Nugget] HUD/menu shadows
@@ -466,21 +436,20 @@ static int pagetic;
 static const char *pagename;
 static demoloop_t demoloop_point;
 
-static int no_page_ticking; // [Nugget]
-
 //
 // D_PageTicker
 // Handles timing for warped projection
 //
 void D_PageTicker(void)
 {
-  // killough 12/98: don't advance internal demos if a single one is
+  if (menuactive && !netgame && menu_pause_demos)
+  {
+    return;
+  }
+
+  // killough 12/98: don't advance internal demos if a single one is 
   // being played. The only time this matters is when using -loadgame with
   // -fastdemo, -playdemo, or -timedemo, and a consistency error occurs.
-
-  // [Nugget]
-  if (!no_page_ticking || (no_page_ticking == 1 && !menuactive))
-    --pagetic;
 
   if (!singledemo && pagetic < 0)
     D_AdvanceDemo();
@@ -517,6 +486,8 @@ void D_AdvanceDemoLoop(void)
 
 void D_DoAdvanceDemo(void)
 {
+    S_StopAmbientSounds();
+
     players[consoleplayer].playerstate = PST_LIVE; // not reborn
     advancedemo = false;
     usergame = false; // no save / end game here
@@ -560,6 +531,7 @@ void D_StartTitle (void)
 {
   gameaction = ga_nothing;
   demosequence = -1;
+  demoplayback = false;
   D_AdvanceDemo();
 }
 
@@ -578,7 +550,7 @@ void D_AddFile(const char *file)
 
   if (!W_AddPath(path))
   {
-    I_Error("Error: Failed to load %s", file);
+    I_Error("Failed to load %s", file);
   }
 }
 
@@ -591,30 +563,27 @@ const char *D_DoomExeName(void)
 // Calculate the path to the directory for autoloaded WADs/DEHs.
 // Creates the directory as necessary.
 
-typedef struct {
-    const char *dir;
-    char *(*func)(void);
-    boolean createdir;
-} basedir_t;
-
-static basedir_t basedirs[] = {
+static constructed_dir_t basedirs[] = {
 #if !defined(_WIN32)
-    {"../share/" PROJECT_SHORTNAME, D_DoomExeDir, false},
+    {D_DoomExeDir, "../share/" PROJECT_SHORTNAME},
 #endif
-    {NULL, D_DoomPrefDir, true},
-#if !defined(_WIN32) || defined(_WIN32_WCE)
-    {NULL, D_DoomExeDir, false},
-#endif
+    {D_DoomPrefDir, NULL, NULL, true},
+    {D_DoomExeDir, NULL, D_DoomPrefDir},
 };
 
 static void LoadBaseFile(void)
 {
     for (int i = 0; i < arrlen(basedirs); ++i)
     {
-        basedir_t d = basedirs[i];
+        constructed_dir_t d = basedirs[i];
         boolean result = false;
 
-        if (d.dir && d.func)
+        if (d.check_func && d.func && d.check_func() == d.func())
+        {
+            continue;
+        }
+
+        if (d.func && d.dir)
         {
             char *s = M_StringJoin(d.func(), DIR_SEPARATOR_S, d.dir);
             result = W_InitBaseFile(s);
@@ -673,9 +642,14 @@ static void PrepareAutoloadPaths(void)
 
     for (int i = 0; i < arrlen(basedirs); i++)
     {
-        basedir_t d = basedirs[i];
+        constructed_dir_t d = basedirs[i];
 
-        if (d.dir && d.func)
+        if (d.check_func && d.func && d.check_func() == d.func())
+        {
+            continue;
+        }
+
+        if (d.func && d.dir)
         {
             array_push(autoload_paths,
                        M_StringJoin(d.func(), DIR_SEPARATOR_S, d.dir,
@@ -692,7 +666,7 @@ static void PrepareAutoloadPaths(void)
                                                     "autoload"));
         }
 
-        if (d.createdir)
+        if (d.makedir)
         {
             M_MakeDirectory(autoload_paths[i]);
         }
@@ -816,7 +790,7 @@ static boolean FileContainsMaps(const char *filename)
 
 const char *gamedescription = NULL;
 
-void IdentifyVersion(void)
+static void IdentifyVersion(void)
 {
     // get config file from same directory as executable
     // killough 10/98
@@ -1130,6 +1104,7 @@ static int GuessFileType(const char *name)
         iwad_found = true;
     }
     else if (M_StringEndsWith(lower, ".wad") ||
+             M_StringEndsWith(lower, ".pk3") ||
              M_StringEndsWith(lower, ".zip"))
     {
         ret = FILETYPE_PWAD;
@@ -1271,74 +1246,6 @@ static void M_AddLooseFiles(void)
     myargv = newargv;
 }
 
-// killough 10/98: moved code to separate function
-
-static void D_ProcessDehCommandLine(void)
-{
-  // ty 03/09/98 do dehacked stuff
-  // Note: do this before any other since it is expected by
-  // the deh patch author that this is actually part of the EXE itself
-  // Using -deh in BOOM, others use -dehacked.
-  // Ty 03/18/98 also allow .bex extension.  .bex overrides if both exist.
-  // killough 11/98: also allow -bex
-
-  //!
-  // @arg <files>
-  // @category mod
-  // @help
-  //
-  // Load the given dehacked/bex patch(es).
-  //
-
-  int p = M_CheckParm ("-deh");
-
-  //!
-  // @arg <files>
-  // @category mod
-  //
-  // Alias to -deh.
-  //
-
-  if (p || (p = M_CheckParm("-bex")))
-    {
-      // the parms after p are deh/bex file names,
-      // until end of parms or another - preceded parm
-      // Ty 04/11/98 - Allow multiple -deh files in a row
-      // killough 11/98: allow multiple -deh parameters
-
-      boolean deh = true;
-      while (++p < myargc)
-        if (*myargv[p] == '-')
-          deh = !strcasecmp(myargv[p],"-deh") || !strcasecmp(myargv[p],"-bex");
-        else
-          if (deh)
-            {
-              char *probe;
-              char *file = AddDefaultExtension(myargv[p], ".bex");
-              probe = D_TryFindWADByName(file);
-              free(file);
-              if (M_access(probe, F_OK))  // nope
-                {
-                  free(probe);
-                  file = AddDefaultExtension(myargv[p], ".deh");
-                  probe = D_TryFindWADByName(file);
-                  free(file);
-                  if (M_access(probe, F_OK))  // still nope
-                  {
-                    free(probe);
-                    I_Error("Cannot find .deh or .bex file named %s",
-                            myargv[p]);
-                  }
-                }
-              // during the beta we have debug output to dehout.txt
-              // (apparently, this was never removed after Boom beta-killough)
-              ProcessDehFile(probe, D_dehout(), 0);  // killough 10/98
-              free(probe);
-            }
-    }
-  // ty 03/09/98 end of do dehacked stuff
-}
-
 // Load all WAD files from the given directory.
 
 static void AutoLoadWADs(const char *path)
@@ -1355,7 +1262,7 @@ static void AutoLoadWADs(const char *path)
 
         if (!W_AddPath(filename))
         {
-            I_Error("Error: Failed to load %s", filename);
+            I_Error("Failed to load %s", filename);
         }
     }
     I_EndGlob(glob);
@@ -1365,14 +1272,21 @@ static void AutoLoadWADs(const char *path)
 
 static void LoadIWadBase(void)
 {
-    GameMission_t local_gamemission =
-        D_GetGameMissionByIWADName(M_BaseName(wadfiles[0]));
+    GameMode_t local_gamemode;
+    GameMission_t local_gamemission;
+    D_GetModeAndMissionByIWADName(M_BaseName(wadfiles[0]), &local_gamemode,
+                                  &local_gamemission);
+
+    if (local_gamemission == none || local_gamemode == indetermined)
+    {
+        return;
+    }
 
     if (local_gamemission < pack_chex)
     {
         W_AddBaseDir("doom-all");
     }
-    else if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
+    if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
     {
         W_AddBaseDir("chex-all");
     }
@@ -1380,22 +1294,39 @@ static void LoadIWadBase(void)
     {
         W_AddBaseDir("doom1-all");
     }
-    else if (local_gamemission >= doom2
-             && local_gamemission <= pack_plut)
+    else if (local_gamemission >= doom2 && local_gamemission <= pack_plut)
     {
         W_AddBaseDir("doom2-all");
     }
+    else if (local_gamemission == pack_freedoom)
+    {
+        W_AddBaseDir("freedoom-all");
+        if (local_gamemode == commercial)
+        {
+            W_AddBaseDir("freedoom2-all");
+        }
+        else
+        {
+            W_AddBaseDir("freedoom1-all");
+        }
+    }
+    else if (local_gamemission == pack_rekkr)
+    {
+        W_AddBaseDir("rekkr-all");
+    }
+
     W_AddBaseDir(M_BaseName(wadfiles[0]));
 }
 
 static void AutoloadIWadDir(void (*AutoLoadFunc)(const char *path))
 {
-    GameMission_t local_gamemission =
-        D_GetGameMissionByIWADName(M_BaseName(wadfiles[0]));
+    GameMode_t local_gamemode;
+    GameMission_t local_gamemission;
+    D_GetModeAndMissionByIWADName(M_BaseName(wadfiles[0]), &local_gamemode, &local_gamemission);
 
-    for (int i = 0; i < array_size(autoload_paths); ++i)
+    for (int j = 0; j < array_size(autoload_paths); ++j)
     {
-        char *dir = GetAutoloadDir(autoload_paths[i], "all-all", true);
+        char *dir = GetAutoloadDir(autoload_paths[j], "all-all", true);
         AutoLoadFunc(dir);
         free(dir);
 
@@ -1404,34 +1335,58 @@ static void AutoloadIWadDir(void (*AutoLoadFunc)(const char *path))
         {
             if (local_gamemission < pack_chex)
             {
-                dir = GetAutoloadDir(autoload_paths[i], "doom-all", true);
+                dir = GetAutoloadDir(autoload_paths[j], "doom-all", true);
                 AutoLoadFunc(dir);
                 free(dir);
             }
             else if (local_gamemission == pack_chex || local_gamemission == pack_chex3v)
             {
-                dir = GetAutoloadDir(autoload_paths[i], "chex-all", true);
+                dir = GetAutoloadDir(autoload_paths[j], "chex-all", true);
                 AutoLoadFunc(dir);
                 free(dir);
             }
 
             if (local_gamemission == doom)
             {
-                dir = GetAutoloadDir(autoload_paths[i], "doom1-all", true);
+                dir = GetAutoloadDir(autoload_paths[j], "doom1-all", true);
                 AutoLoadFunc(dir);
                 free(dir);
             }
             else if (local_gamemission >= doom2
                      && local_gamemission <= pack_plut)
             {
-                dir = GetAutoloadDir(autoload_paths[i], "doom2-all", true);
+                dir = GetAutoloadDir(autoload_paths[j], "doom2-all", true);
+                AutoLoadFunc(dir);
+                free(dir);
+            }
+            else if (local_gamemission == pack_freedoom)
+            {
+                dir = GetAutoloadDir(autoload_paths[j], "freedoom-all", true);
+                AutoLoadFunc(dir);
+                free(dir);
+                if (local_gamemode == commercial)
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "freedoom2-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                }
+                else
+                {
+                    dir = GetAutoloadDir(autoload_paths[j], "freedoom1-all", true);
+                    AutoLoadFunc(dir);
+                    free(dir);
+                }
+            }
+            else if (local_gamemission == pack_rekkr)
+            {
+                dir = GetAutoloadDir(autoload_paths[j], "rekkr-all", true);
                 AutoLoadFunc(dir);
                 free(dir);
             }
         }
 
         // auto-loaded files per IWAD
-        dir = GetAutoloadDir(autoload_paths[i], M_BaseName(wadfiles[0]), true);
+        dir = GetAutoloadDir(autoload_paths[j], M_BaseName(wadfiles[0]), true);
         AutoLoadFunc(dir);
         free(dir);
     }
@@ -1459,114 +1414,17 @@ static void AutoloadPWadDir(void (*AutoLoadFunc)(const char *path))
     }
 }
 
-// Load all dehacked patches from the given directory.
-
-static void AutoLoadPatches(const char *path)
-{
-    const char *filename;
-    glob_t *glob;
-
-    glob = I_StartMultiGlob(path, GLOB_FLAG_NOCASE|GLOB_FLAG_SORTED,
-                            "*.deh", "*.bex");
-    for (;;)
-    {
-        filename = I_NextGlob(glob);
-        if (filename == NULL)
-        {
-            break;
-        }
-        ProcessDehFile(filename, D_dehout(), 0);
-    }
-
-    I_EndGlob(glob);
-}
-
-// mbf21: don't want to reorganize info.c structure for a few tweaks...
-
-static void D_InitTables(void)
-{
-  int i;
-  for (i = 0; i < num_mobj_types; ++i)
-  {
-    mobjinfo[i].flags2           = 0;
-    mobjinfo[i].infighting_group = IG_DEFAULT;
-    mobjinfo[i].projectile_group = PG_DEFAULT;
-    mobjinfo[i].splash_group     = SG_DEFAULT;
-    mobjinfo[i].ripsound         = sfx_None;
-    mobjinfo[i].altspeed         = NO_ALTSPEED;
-    mobjinfo[i].meleerange       = MELEERANGE;
-    // [Woof!]
-    mobjinfo[i].bloodcolor       = 0; // Normal
-    // DEHEXTRA
-    mobjinfo[i].droppeditem      = MT_NULL;
-
-    // [Nugget] Sprite scaling
-    mobjinfo[i].scale = FRACUNIT;
-  }
-
-  mobjinfo[MT_VILE].flags2    = MF2_SHORTMRANGE | MF2_DMGIGNORED | MF2_NOTHRESHOLD;
-  mobjinfo[MT_CYBORG].flags2  = MF2_NORADIUSDMG | MF2_HIGHERMPROB | MF2_RANGEHALF |
-                                MF2_FULLVOLSOUNDS | MF2_E2M8BOSS | MF2_E4M6BOSS;
-  mobjinfo[MT_SPIDER].flags2  = MF2_NORADIUSDMG | MF2_RANGEHALF | MF2_FULLVOLSOUNDS |
-                                MF2_E3M8BOSS | MF2_E4M8BOSS;
-  mobjinfo[MT_SKULL].flags2   = MF2_RANGEHALF;
-  mobjinfo[MT_FATSO].flags2   = MF2_MAP07BOSS1;
-  mobjinfo[MT_BABY].flags2    = MF2_MAP07BOSS2;
-  mobjinfo[MT_BRUISER].flags2 = MF2_E1M8BOSS;
-  mobjinfo[MT_UNDEAD].flags2  = MF2_LONGMELEE | MF2_RANGEHALF;
-
-  mobjinfo[MT_BRUISER].projectile_group = PG_BARON;
-  mobjinfo[MT_KNIGHT].projectile_group = PG_BARON;
-
-  mobjinfo[MT_BRUISERSHOT].altspeed = 20 * FRACUNIT;
-  mobjinfo[MT_HEADSHOT].altspeed = 20 * FRACUNIT;
-  mobjinfo[MT_TROOPSHOT].altspeed = 20 * FRACUNIT;
-
-  // DEHEXTRA
-  mobjinfo[MT_WOLFSS].droppeditem = MT_CLIP;
-  mobjinfo[MT_POSSESSED].droppeditem = MT_CLIP;
-  mobjinfo[MT_SHOTGUY].droppeditem = MT_SHOTGUN;
-  mobjinfo[MT_CHAINGUY].droppeditem = MT_CHAINGUN;
-
-  // [crispy] randomly mirrored death animations
-  for (i = MT_PLAYER; i <= MT_KEEN; ++i)
-  {
-    switch (i)
-    {
-      case MT_FIRE:
-      case MT_TRACER:
-      case MT_SMOKE:
-      case MT_FATSHOT:
-      case MT_BRUISERSHOT:
-      case MT_CYBORG:
-        continue;
-    }
-    mobjinfo[i].flags2 |= MF2_FLIPPABLE;
-  }
-
-  mobjinfo[MT_PUFF].flags2 |= MF2_FLIPPABLE;
-  mobjinfo[MT_BLOOD].flags2 |= MF2_FLIPPABLE;
-
-  for (i = MT_MISC61; i <= MT_MISC69; ++i)
-     mobjinfo[i].flags2 |= MF2_FLIPPABLE;
-
-  mobjinfo[MT_DOGS].flags2 |= MF2_FLIPPABLE;
-
-  for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; ++i)
-    states[i].flags |= STATEF_SKILL5FAST;
-}
-
 void D_SetMaxHealth(void)
 {
   if (demo_compatibility)
   {
-    maxhealth = 100;
-    maxhealthbonus = deh_set_maxhealth ? deh_maxhealth : 200;
+    deh_max_health = 100;
+    deh_max_health_bonus = deh_set_maxhealth ? deh_max_health : 200;
   }
   else
   {
-    maxhealth = deh_set_maxhealth ? deh_maxhealth : 100;
-    maxhealthbonus = maxhealth * 2;
+    deh_max_health = deh_set_maxhealth ? deh_max_health : 100;
+    deh_max_health_bonus = deh_max_health * 2;
   }
 }
 
@@ -1593,20 +1451,14 @@ void D_SetBloodColor(void)
 // killough 8/1/98: change back to ENDOOM
 
 typedef enum {
-  EXIT_SEQUENCE_OFF,          // Skip sound, skip ENDOOM.
-  EXIT_SEQUENCE_SOUND_ONLY,   // Play sound, skip ENDOOM.
-  EXIT_SEQUENCE_ENDOOM_ONLY,  // Skip sound, show ENDOOM.
-  EXIT_SEQUENCE_FULL          // Play sound, show ENDOOM.
-} exit_sequence_t;
+  ENDOOM_OFF,
+  ENDOOM_PWAD_ONLY,
+  ENDOOM_ALWAYS
+} endoom_t;
 
-static exit_sequence_t exit_sequence;
-static boolean endoom_pwad_only;
-
-boolean D_AllowQuitSound(void)
-{
-  return (exit_sequence == EXIT_SEQUENCE_FULL
-          || exit_sequence == EXIT_SEQUENCE_SOUND_ONLY);
-}
+boolean quit_prompt;
+boolean quit_sound;
+static endoom_t show_endoom;
 
 static void D_ShowEndDoom(void)
 {
@@ -1616,33 +1468,35 @@ static void D_ShowEndDoom(void)
   I_Endoom(endoom);
 }
 
-boolean disable_endoom = false;
+boolean fast_exit = false;
 
 boolean D_AllowEndDoom(void)
 {
-  return (!disable_endoom
-          && (exit_sequence == EXIT_SEQUENCE_FULL
-          || exit_sequence == EXIT_SEQUENCE_ENDOOM_ONLY));
+  if (fast_exit)
+  {
+    return false; // Alt-F4 or pressed the close button.
+  }
+
+  if (show_endoom == ENDOOM_OFF)
+  {
+    return false; // ENDOOM disabled.
+  }
+
+  if (W_IsIWADLump(W_CheckNumForName("ENDOOM"))
+      && show_endoom == ENDOOM_PWAD_ONLY)
+  {
+    return false; // User prefers PWAD ENDOOM only.
+  }
+
+  return true;
 }
 
 static void D_EndDoom(void)
 {
-  // Do we even want to show an ENDOOM?
-  if (!D_AllowEndDoom())
+  if (D_AllowEndDoom())
   {
-    return;
+    D_ShowEndDoom();
   }
-
-  // If so, is it from the IWAD?
-  bool iwad_endoom = W_IsIWADLump(W_CheckNumForName("ENDOOM"));
-
-  // Does the user want to see it, in that case?
-  if (iwad_endoom && endoom_pwad_only)
-  {
-    return;
-  }
-
-  D_ShowEndDoom();
 }
 
 // [FG] fast-forward demo to the desired map
@@ -1844,11 +1698,18 @@ void D_DoomMain(void)
 
   setbuf(stdout,NULL);
 
-  I_AtExitPrio(I_QuitFirst, true,  "I_QuitFirst", exit_priority_first);
-  I_AtExitPrio(I_QuitLast,  false, "I_QuitLast",  exit_priority_last);
-  I_AtExitPrio(I_Quit,      true,  "I_Quit",      exit_priority_last);
+  I_AtSignal(G_CheckDemoRecordingStatus);
 
-  I_AtExitPrio(I_ErrorMsg,  true,  "I_ErrorMsg",  exit_priority_verylast);
+  I_AtExitPrio(G_CheckDemoRecordingStatus,
+               true, "G_CheckDemoRecordingStatus", exit_priority_first);
+  I_AtExitPrio(M_SaveDefaults,
+               false, "M_SaveDefaults", exit_priority_last);
+  I_AtExitPrio(I_QuitVideo,
+               true, "I_QuitVideo", exit_priority_last);
+  I_AtExitPrio(W_Close,
+               true, "W_Close", exit_priority_last);
+  I_AtExitPrio(I_ErrorMsg,
+               true, "I_ErrorMsg", exit_priority_verylast);
 
   I_UpdatePriority(true);
 
@@ -1907,55 +1768,12 @@ void D_DoomMain(void)
 
   IdentifyVersion();
 
-  //!
-  // @category mod
-  //
-  // Disable auto-loading of extars.wad file.
-  //
-
-  if (gamemission < pack_chex && !M_ParmExists("-noextras"))
-  {
-      char *path = D_FindWADByName("extras.wad");
-      if (path)
-      {
-          D_AddFile(path);
-      }
-  }
-
   // [FG] emulate a specific version of Doom
   InitGameVersion();
 
-  dsdh_InitTables();
-
-  D_InitTables();
+  DSDH_Init();
 
   modifiedgame = false;
-
-  // killough 7/19/98: beta emulation option
-
-  //!
-  // @category game
-  //
-  // Press beta emulation mode (complevel mbf only).
-  //
-
-  beta_emulation = !!M_CheckParm("-beta");
-
-  if (beta_emulation)
-    { // killough 10/98: beta lost soul has different behavior frames
-      mobjinfo[MT_SKULL].spawnstate   = S_BSKUL_STND;
-      mobjinfo[MT_SKULL].seestate     = S_BSKUL_RUN1;
-      mobjinfo[MT_SKULL].painstate    = S_BSKUL_PAIN1;
-      mobjinfo[MT_SKULL].missilestate = S_BSKUL_ATK1;
-      mobjinfo[MT_SKULL].deathstate   = S_BSKUL_DIE1;
-      mobjinfo[MT_SKULL].damage       = 1;
-    }
-#ifdef MBF_STRICT
-  // This code causes MT_SCEPTRE and MT_BIBLE to not spawn on the map,
-  // which causes desync in Eviternity.wad demos.
-  else
-    mobjinfo[MT_SCEPTRE].doomednum = mobjinfo[MT_BIBLE].doomednum = -1;
-#endif
 
   // jff 1/24/98 set both working and command line value of play parms
 
@@ -2002,6 +1820,23 @@ void D_DoomMain(void)
   // jff 1/24/98 end of set to both working and command line value
 
   //!
+  // @category game
+  // @help
+  //
+  // Enables automatic pistol starts on each level.
+  //
+
+  pistolstart = clpistolstart = M_CheckParm("-pistolstart");
+
+  //!
+  // @category game
+  //
+  // Start single player game with items spawns as in cooperative netgame.
+  //
+
+  coopspawns = clcoopspawns = M_CheckParm("-coop_spawns");
+
+  //!
   // @vanilla
   //
   // Developer mode.
@@ -2042,7 +1877,7 @@ void D_DoomMain(void)
     deathmatch = 3;
 
   if (devparm)
-    I_Printf(VB_INFO, "%s", D_DEVSTR);
+    I_Printf(VB_INFO, DEH_String(D_DEVSTR));
 
 // [Nugget] Restored `-cdrom` parm
 #ifdef _WIN32
@@ -2365,47 +2200,65 @@ void D_DoomMain(void)
 
   W_InitMultipleFiles();
 
-  // Always process chex.deh first
-  if (gamemission == pack_chex)
-  {
-    ProcessDehLump(W_GetNumForName("chexdeh"));
-  }
-
   // Check for wolf levels
   haswolflevels = (W_CheckNumForName("map31") >= 0);
 
-  // process deh in IWAD
+  //
+  // Start DeHackEd Loading
+  //
+  // Load order:
+  //  1. Built-in lumps for emulating specific executables, i.e. Chex Quest EXE
+  //  2. IWAD DEHACKED lumps
+  //  3. IWAD autoload .deh files
+  //  4. PWADs DEHACKED lumps
+  //  5. PWADs autoload .deh files
+  //  6. CLI parameter files
+  //  7. Finalize with post-processing, i.e. code pointer validation
+  //
+  // Notes:
+  //  * The above load order matches DSDA-Doom. Both Original MBF and
+  //    Chocolate Doom load the CLI parameter files between IWAD and PWADs.
+  //  * Avoid loading .deh files from autoload directories with the
+  //    "-noautoload" parameter, the "-nodeh" parameter is only to avoid
+  //    loading DEHACKED lumps.
+  //
+
+  if (gamemission == pack_chex)
+  {
+    DEH_LoadLumpByName("CHEXDEH");
+  }
 
   //!
   // @category mod
   //
   // Avoid loading DEHACKED lumps embedded into WAD files.
   //
+  if (!M_ParmExists("-nodeh"))
+  {
+    W_ProcessInWads("DEHACKED", DEH_LoadLump, PROCESS_IWAD);
+  }
+  AutoloadIWadDir(DEH_AutoLoadPatches);
 
   if (!M_ParmExists("-nodeh"))
   {
-    W_ProcessInWads("DEHACKED", ProcessDehLump, PROCESS_IWAD);
+    W_ProcessInWads("DEHACKED", DEH_LoadLump, PROCESS_PWAD);
   }
+  AutoloadPWadDir(DEH_AutoLoadPatches);
 
-  // process .deh files specified on the command line with -deh or -bex.
-  D_ProcessDehCommandLine();
+  DEH_ParseCommandLine();
 
-  // process deh in wads and .deh files from autoload directory
-  // before deh in wads from -file parameter
-  AutoloadIWadDir(AutoLoadPatches);
+  DEH_PostProcess();
 
-  // killough 10/98: now process all deh in wads
-  if (!M_ParmExists("-nodeh"))
-  {
-    W_ProcessInWads("DEHACKED", ProcessDehLump, PROCESS_PWAD);
-  }
+  //
+  // End DeHackEd Loading
+  //
 
-  // process .deh files from PWADs autoload directories
-  AutoloadPWadDir(AutoLoadPatches);
+  W_ProcessInWads("DECLARE", DECL_Parse, PROCESS_IWAD | PROCESS_PWAD);
 
-  PostProcessDeh();
+  DECL_Install();
 
-  W_ProcessInWads("BRGHTMPS", R_ParseBrightmaps, PROCESS_PWAD);
+  // Ambient
+  P_InitAmbientSoundMobjInfo();
 
   M_NughudLoadOptions(); // [Nugget]
 
@@ -2457,11 +2310,11 @@ void D_DoomMain(void)
 
   // Ty 04/08/98 - Add 5 lines of misc. data, only if nonblank
   // The expectation is that these will be set in a .bex file
-  if (*startup1) I_Printf(VB_INFO, "%s", startup1);
-  if (*startup2) I_Printf(VB_INFO, "%s", startup2);
-  if (*startup3) I_Printf(VB_INFO, "%s", startup3);
-  if (*startup4) I_Printf(VB_INFO, "%s", startup4);
-  if (*startup5) I_Printf(VB_INFO, "%s", startup5);
+  if (DEH_HasStringReplacement(STARTUP1)) I_Printf(VB_INFO, DEH_String(STARTUP1));
+  if (DEH_HasStringReplacement(STARTUP2)) I_Printf(VB_INFO, DEH_String(STARTUP2));
+  if (DEH_HasStringReplacement(STARTUP3)) I_Printf(VB_INFO, DEH_String(STARTUP3));
+  if (DEH_HasStringReplacement(STARTUP4)) I_Printf(VB_INFO, DEH_String(STARTUP4));
+  if (DEH_HasStringReplacement(STARTUP5)) I_Printf(VB_INFO, DEH_String(STARTUP5));
   // End new startup strings
 
   //!
@@ -2483,19 +2336,23 @@ void D_DoomMain(void)
     startloadgame = -1;
   }
 
+  // Allows PWAD HELP2 screen for DOOM 1 wads (using Ultimate Doom IWAD).
+  pwad_help2 = gamemode == retail && W_IsWADLump(W_CheckNumForName("HELP2"));
+
   W_ProcessInWads("TRAKINFO", S_ParseTrakInfo, PROCESS_IWAD | PROCESS_PWAD);
   D_SetupDemoLoop();
 
   I_Printf(VB_INFO, "M_Init: Init miscellaneous info.");
   M_Init();
 
-  I_Printf(VB_INFO, "R_Init: Init DOOM refresh daemon - ");
+  I_Printf(VB_INFO, "R_Init: Init DOOM refresh daemon.");
   R_Init();
 
   I_Printf(VB_INFO, "P_Init: Init Playloop state.");
   P_Init();
 
   I_Printf(VB_INFO, "I_Init: Setting up machine state.");
+  I_SetMetadata(PROJECT_NAME, PROJECT_VERSION, PROJECT_APPID);
   I_InitTimer();
   I_InitGamepad();
   I_InitSound();
@@ -2551,17 +2408,6 @@ void D_DoomMain(void)
   // [FG] check for SSG assets
   have_ssg = CheckHaveSSG();
   MN_UpdateDoom1SSGItem();
-
-  //!
-  // @category game
-  //
-  // Start single player game with items spawns as in cooperative netgame.
-  //
-
-  if (M_ParmExists("-coop_spawns"))
-    {
-      coopspawnsparm = true;
-    }
 
   //!
   // @arg <min:sec>
@@ -2712,9 +2558,11 @@ void D_DoomMain(void)
 
   // [FG] init graphics (video.widedelta) before HUD widgets
   I_InitGraphics();
+  I_UpdateDiscordPresence("Playing", gamedescription);
   I_InitKeyboard();
 
   MN_InitMenuStrings();
+  MN_InitFreeLook();
 
   // Auto save slot is 255 for -loadgame command.
   if (startloadgame == 255 && !demorecording && gameaction != ga_playdemo
@@ -2795,10 +2643,11 @@ void D_DoomMain(void)
 
 void D_BindMiscVariables(void)
 {
-  BIND_NUM_GENERAL(exit_sequence, 0, 0, EXIT_SEQUENCE_FULL,
-    "Exit sequence (0 = Off; 1 = Sound Only; 2 = ENDOOM Only; 3 = Full)");
-  BIND_BOOL_GENERAL(endoom_pwad_only, false, "Show only ENDOOM from PWAD");
-  BIND_BOOL_GENERAL(demobar, false, "Show demo progress bar");
+  BIND_BOOL_GENERAL(quit_prompt, true, "Show quit prompt");
+  BIND_BOOL_GENERAL(quit_sound, false, "Play quit sound");
+  BIND_NUM_GENERAL(show_endoom, ENDOOM_OFF, ENDOOM_OFF, ENDOOM_ALWAYS,
+    "Show ENDOOM screen (0 = Off; 1 = PWAD Only; 2 = Always)");
+  BIND_BOOL_GENERAL(demobar, true, "Show demo progress bar");
 
   // [Nugget] More wipes
   BIND_NUM_GENERAL(screen_melt, wipe_Melt, wipe_None, wipe_BlackFade,
@@ -2824,13 +2673,10 @@ void D_BindMiscVariables(void)
              false, ss_none, wad_yes,
              "Increase the duration of the \"Entering\" screen in Doom 2's intermission screen");
 
-  M_BindNum("no_page_ticking", &no_page_ticking, NULL,
-            0, 0, 2, ss_misc, wad_no,
-            "Play internal demos (0 = Always; 1 = Not in menus; 2 = Never)");
-
   // [Nugget] ---------------------------------------------------------------/
 
-  BIND_BOOL_GENERAL(palette_changes, true, "Palette changes when taking damage or picking up items");
+  BIND_NUM_GENERAL(palette_changes, PAL_CHANGE_ON, PAL_CHANGE_OFF, PAL_CHANGE_REDUCED,
+    "Palette changes when taking damage or picking up items (0 = Off; 1 = On; 2 = Reduced)");
   BIND_NUM_GENERAL(organize_savefiles, -1, -1, 1,
     "Organize save files");
   M_BindStr("net_player_name", &net_player_name, DEFAULT_PLAYER_NAME, wad_no,

@@ -22,6 +22,34 @@
 #ifndef __DOOMDATA__
 #define __DOOMDATA__
 
+#include "doomtype.h"
+#include "m_fixed.h"
+
+typedef enum bmap_format_e
+{
+  BMAP_DoomBlockmap,
+  BMAP_XBM1,
+  BMAP_BoomBuilder,
+} bmap_format_t;
+
+
+typedef struct mapformat_s
+{
+    enum
+    {
+        MAP_Invalid,
+        MAP_Doom,
+        MAP_Hexen,
+        MAP_UDMF,
+    } format;
+    boolean built;
+} mapformat_t;
+
+extern mapformat_t mapformat;
+
+// Appended to node_format_names, hence the plus sign
+extern const char *bmap_format_names[];
+
 //
 // Map level types.
 // The following data structures define the persistent format
@@ -41,7 +69,22 @@ enum {
   ML_NODES,             // BSP nodes
   ML_SECTORS,           // Sectors, from editing
   ML_REJECT,            // LUT, sector-sector visibility
-  ML_BLOCKMAP           // LUT, motion clipping, walls/grid element
+  ML_BLOCKMAP,          // LUT, motion clipping, walls/grid element
+  ML_BEHAVIOR,          // Hexen-format, ACS byte code. Unsupported
+
+  ML_TEXTMAP = ML_LABEL + 1, // UDMF map data
+};
+
+// Support uncompiled maps by building with NanoBSP
+// Same semantics as above
+enum {
+  MLX_LABEL,
+  MLX_THINGS,
+  MLX_LINEDEFS,
+  MLX_SIDEDEFS,
+  MLX_VERTEXES,
+  MLX_SECTORS,
+  MLX_BEHAVIOR,
 };
 
 // A single Vertex.
@@ -60,6 +103,21 @@ typedef struct {
   short sector;  // Front sector, towards viewer.
 } mapsidedef_t;
 
+// Not supported in binary format maps, but needed for UDMF
+
+typedef enum sidedef_flags_e
+{
+  SF_NONE             = (0),
+  SF_ABS_LIGHT        = (1u << 0),
+  SF_ABS_LIGHT_TOP    = (1u << 1),
+  SF_ABS_LIGHT_MID    = (1u << 2),
+  SF_ABS_LIGHT_BOTTOM = (1u << 3),
+  SF_NO_FAKE_CONTRAST = (1u << 4),
+  SF_SMOOTH_CONTRAST  = (1u << 5),
+  SF_CLIP_MIDTEX      = (1u << 6),
+  SF_WRAP_MIDTEX      = (1u << 7),
+} sidedef_flags_t;
+
 // A LineDef, as used for editing, and as input to the BSP builder.
 
 typedef struct {
@@ -76,14 +134,7 @@ typedef struct {
 // LineDef attributes.
 //
 
-// Solid, is an obstacle.
-#define ML_BLOCKING             1
-
-// Blocks monsters only.
-#define ML_BLOCKMONSTERS        2
-
-// Backside will not be drawn if not two sided.
-#define ML_TWOSIDED             4
+// Texture pegging:
 
 // If a texture is pegged, the texture will have
 // the end exposed to air held constant at the
@@ -94,31 +145,7 @@ typedef struct {
 // the texture at the top pixel of the line for both
 // top and bottom textures (use next to windows).
 
-// upper texture unpegged
-#define ML_DONTPEGTOP           8
-
-// lower texture unpegged
-#define ML_DONTPEGBOTTOM        16
-
-// In AutoMap: don't map as two sided: IT'S A SECRET!
-#define ML_SECRET               32
-
-// Sound rendering: don't let sound cross two of these.
-#define ML_SOUNDBLOCK           64
-
-// Don't draw on the automap at all.
-#define ML_DONTDRAW             128
-
-// Set if already seen, thus drawn in automap.
-#define ML_MAPPED               256
-
-//jff 3/21/98 Set if line absorbs use by player
-//allow multiple push/switch triggers to be used on one push
-#define ML_PASSUSE      512
-
-// Reserved by EE
-// SoM 9/02/02: 3D Middletexture flag!
-#define ML_3DMIDTEX             1024
+// Reseved flag:
 
 // haleyjd 05/02/06: Although it was believed until now that a reserved line
 // flag was unnecessary, a problem with Ultimate DOOM E2M7 has disproven this
@@ -126,11 +153,25 @@ typedef struct {
 // making the next line flag reserved and using it to toggle off ALL extended
 // flags will preserve compatibility for such maps. I have been told this map
 // is one of the first ever created, so it may have something to do with that.
-#define ML_RESERVED             2048
 
-// mbf21
-#define ML_BLOCKLANDMONSTERS    4096
-#define ML_BLOCKPLAYERS         8192
+typedef enum linedef_flags_e
+{
+  ML_BLOCKING          = (1u << 0),  // Solid, is an obstacle.
+  ML_BLOCKMONSTERS     = (1u << 1),  // Blocks monsters only.
+  ML_TWOSIDED          = (1u << 2),  // Backside will not be drawn if not two sided.
+  ML_DONTPEGTOP        = (1u << 3),  // upper texture unpegged
+  ML_DONTPEGBOTTOM     = (1u << 4),  // lower texture unpegged
+  ML_SECRET            = (1u << 5),  // In AutoMap: don't map as two sided: IT'S A SECRET!
+  ML_SOUNDBLOCK        = (1u << 6),  // Sound rendering: don't let sound cross two of these.
+  ML_DONTDRAW          = (1u << 7),  // Don't draw on the automap at all.
+  ML_MAPPED            = (1u << 8),  // Set if already seen, thus drawn in automap.
+  ML_PASSUSE           = (1u << 9),  // jff 3/21/98 Set if line absorbs use by player
+                                     // allow multiple push/switch triggers to be used on one push
+  ML_3DMIDTEX          = (1u << 10), // SoM 9/02/02: 3D Middletexture flag!
+  ML_RESERVED          = (1u << 11),
+  ML_BLOCKLANDMONSTERS = (1u << 12), // mbf21
+  ML_BLOCKPLAYERS      = (1u << 13), // mbf21
+} linedef_flags_t;
 
 // Sector definition, from editing.
 typedef struct {
@@ -143,43 +184,31 @@ typedef struct {
   short tag;
 } mapsector_t;
 
-// SubSector, as generated by BSP.
-typedef struct {
-  // [FG] extended nodes
-  unsigned short numsegs;
-  unsigned short firstseg;    // Index of first one; segs are stored sequentially.
-} mapsubsector_t;
+// haleyjd 12/28/08: sector flags
 
-// LineSeg, generated by splitting LineDefs
-// using partition lines selected by BSP builder.
-typedef struct {
-  // [FG] extended nodes
-  unsigned short v1;
-  unsigned short v2;
-  short angle;
-  unsigned short linedef;
-  short side;
-  short offset;
-} mapseg_t;
-
-// BSP node structure.
+typedef enum sector_flags_e
+{
+  // TODO: convert from binary format, Eternity-style
+  SECF_SECRET          = (1u << 0),
+  SECF_FRICTION        = (1u << 1),
+  SECF_PUSH            = (1u << 2),
+  SECF_KILL_SOUND      = (1u << 3),
+  SECF_KILL_SOUND_MOVE = (1u << 4),
+  SECF_KILL_PLAYER     = (1u << 5),
+  SECF_KILL_MONSTERS   = (1u << 6),
+  SECF_RESERVED1       = (1u << 7),
+  SECF_RESERVED2       = (1u << 8),
+  // UDMF
+  SECF_ABS_LIGHT_FLOOR = (1u << 9),
+  SECF_ABS_LIGHT_CEIL  = (1u << 10),
+} sector_flags_t;
 
 // Indicate a leaf.
-#define NF_SUBSECTOR_VANILLA 0x8000
 #define NF_SUBSECTOR    0x80000000
  // [FG] extended nodes
-#define NO_INDEX        ((unsigned short)-1)
-
-typedef struct {
-  short x;  // Partition line from (x,y) to x+dx,y+dy)
-  short y;
-  short dx;
-  short dy;
-  // Bounding box for each child, clip against view frustum.
-  short bbox[2][4];
-  // If NF_SUBSECTOR its a subsector, else it's a node of another subtree.
-  unsigned short children[2];
-} mapnode_t;
+#define NO_INDEX_SHORT  ((unsigned short)-1)
+#define NO_INDEX        ((unsigned int)-1)
+#define FIX_NO_INDEX(x) if (x == NO_INDEX_SHORT) { x = NO_INDEX; }
 
 // Thing definition, position, orientation and type,
 // plus skill/visibility flags and attributes.
@@ -189,6 +218,21 @@ typedef struct {
   short angle;
   short type;
   short options;
+} mapthing_doom_t;
+
+typedef struct {
+  fixed_t x;
+  fixed_t y;
+  fixed_t height;
+  int32_t id;
+  int32_t special;
+  int32_t args[5];
+  int16_t angle;
+  int16_t type;
+  int32_t options;
+  fixed_t health;
+  int32_t tint;
+  byte *tranmap;
 } mapthing_t;
 
 #endif // __DOOMDATA__

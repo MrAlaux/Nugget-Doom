@@ -22,6 +22,7 @@
 
 // Some more or less basic data types
 // we depend on.
+#include "doomdata.h"
 #include "m_fixed.h"
 #include "tables.h"
 
@@ -42,6 +43,7 @@ struct mobj_s;
 #define MAXDRAWSEGS   256
 
 #define NO_TEXTURE (-1)
+#define FLATSIZE (64 * 64)
 
 //
 // INTERNAL MAP TYPES
@@ -91,6 +93,9 @@ typedef struct sector_s
   int validcount;        // if == validcount, already checked
   struct mobj_s *thinglist; // list of mobjs in sector
 
+  // TODO: convert from special, Eternity-style
+  int32_t flags;
+
   // killough 8/28/98: friction is a sector property, not an mobj property.
   // these fields used to be in mobj_t, but presented performance problems
   // when processed as mobj properties. Fix is to make them sector properties.
@@ -110,13 +115,28 @@ typedef struct sector_s
   fixed_t   floor_xoffs,   floor_yoffs;
   fixed_t ceiling_xoffs, ceiling_yoffs;
 
+  // rotated plane rendering
+  angle_t floor_rotation, ceiling_rotation;
+
   // killough 3/7/98: support flat heights drawn at another sector's heights
   int heightsec;    // other sector, or -1 if no other sector
 
   // killough 4/11/98: support for lightlevels coming from another sector
   int floorlightsec, ceilinglightsec;
 
-  int bottommap, midmap, topmap; // killough 4/4/98: dynamic colormaps
+  // support sector-independent light levels for each plane
+  int16_t lightfloor, lightceiling;
+
+  // killough 4/4/98: dynamic colormaps
+  // * depend on playerview position within the sector
+  // * `colormap` takes priority over the latter three
+  // * the latter three rely on the 242 heightsec transfer special
+  int32_t colormap, bottommap, midmap, topmap;
+
+  // sector tinting, uses colormap lumps as well
+  // * independent of player view
+  // * specific take priority over broad
+  int32_t tint, tintfloor, tintceiling;
 
   // killough 10/98: support skies coming from sidedefs. Allows scrolling
   // skies and other effects. No "level info" kind of lump is needed,
@@ -125,7 +145,7 @@ typedef struct sector_s
   // or ceilingpic, because the rest of Doom needs to know which is sky
   // and which isn't, etc.
 
- int sky;
+ int floorsky, ceilingsky;
 
   // list of mobjs that are at least partially in the sector
   // thinglist is a subset of touching_thinglist
@@ -159,12 +179,12 @@ typedef struct sector_s
   fixed_t	interpfloorheight;
   fixed_t	interpceilingheight;
 
-  fixed_t base_floor_xoffs;
-  fixed_t base_floor_yoffs;
+  fixed_t interp_floor_xoffs;
+  fixed_t interp_floor_yoffs;
   fixed_t old_floor_xoffs;
   fixed_t old_floor_yoffs;
-  fixed_t base_ceiling_xoffs;
-  fixed_t base_ceiling_yoffs;
+  fixed_t interp_ceiling_xoffs;
+  fixed_t interp_ceiling_yoffs;
   fixed_t old_ceiling_xoffs;
   fixed_t old_ceiling_yoffs;
 } sector_t;
@@ -177,10 +197,21 @@ typedef struct side_s
 {
   fixed_t textureoffset; // add this to the calculated texture column
   fixed_t rowoffset;     // add this to the calculated texture top
-  short toptexture;      // Texture indices. We do not maintain names here.
+
+  // UDMF
+  fixed_t offsetx_top;
+  fixed_t offsety_top;
+  fixed_t offsetx_mid;
+  fixed_t offsety_mid;
+  fixed_t offsetx_bottom;
+  fixed_t offsety_bottom;
+
+  short toptexture;      // Texture indices. We do not maintain names here. 
   short bottomtexture;
   short midtexture;
   sector_t* sector;      // Sector the SideDef is facing.
+  int32_t tint;          // colormap-based tinting
+  sidedef_flags_t flags;
 
   // killough 4/4/98, 4/11/98: highest referencing special linedef's type,
   // or lump number of special effect. Allows texture names to be overloaded
@@ -191,9 +222,17 @@ typedef struct side_s
   // [crispy] smooth texture scrolling
   fixed_t oldtextureoffset;
   fixed_t oldrowoffset;
-  fixed_t basetextureoffset;
-  fixed_t baserowoffset;
+  fixed_t interptextureoffset;
+  fixed_t interprowoffset;
   int oldgametic;
+
+  boolean dirty;
+
+  // UDMF
+  int32_t light;
+  int32_t light_top;
+  int32_t light_mid;
+  int32_t light_bottom;
 } side_t;
 
 //
@@ -212,21 +251,31 @@ typedef struct line_s
   vertex_t *v1, *v2;     // Vertices, from v1 to v2.
   fixed_t dx, dy;        // Precalculated v2 - v1 for side checking.
   // [FG] extended nodes
-  unsigned short flags;           // Animation related.
-  short special;
-  short tag;
-  // [FG] extended nodes
-  unsigned short sidenum[2];      // Visual appearance: SideDefs.
+  uint16_t flags;        // Animation related.
+  int16_t special;       // Special action
+  int16_t id;            // Tag -> id/arg0 split
+  int32_t args[5];       // Hexen-style parameterized actions
+  int32_t sidenum[2];    // Visual appearance: SideDefs.
   fixed_t bbox[4];       // A bounding box, for the linedef's extent
   slopetype_t slopetype; // To aid move clipping.
   sector_t *frontsector; // Front and back sector.
   sector_t *backsector;
   int validcount;        // if == validcount, already checked
   void *specialdata;     // thinker_t for reversable actions
-  int tranlump;          // killough 4/11/98: translucency filter, -1 == none
+  const byte *tranmap;   // better translucency handling
   int firsttag,nexttag;  // killough 4/17/98: improves searches for tags.
+
+  // ID24 line specials
+  angle_t angle;
+  int frontmusic; // Front upper texture -- activated from the front side
+  int backmusic; // Front lower texture -- activated from the back side
+  int fronttint; // Front upper texture -- activated from the front side
+  int backtint; // Front lower texture -- activated from the back side
+
+  boolean dirty;
+
   // [Nugget]: [crispy] calculate sound origin of line to be its midpoint
-  degenmobj_t	soundorg;
+  degenmobj_t soundorg;
 } line_t;
 
 //
@@ -369,6 +418,8 @@ typedef enum visspriteflag_s
   VSF_FLIPPED    = 0x00000002,
   VSF_SHADOW     = 0x00000004,
   VSF_SCALED     = 0x00000008,
+  VSF_NO_PERC    = 0x00000010,
+  VSF_OWN_TINT   = 0x00000020,
 } visspriteflag_t;
 
 typedef struct vissprite_s
@@ -383,16 +434,20 @@ typedef struct vissprite_s
   int patch;
   int mobjflags;
   int mobjflags2;
+  int mobjflags_extra; // Woof!
 
   // for color translation and shadow draw, maxbright frames as well
-  cmapoffset_t colormap[2];
-
+  int colormap[2];
+   
   // killough 3/27/98: height sector for underwater/fake ceiling support
   int heightsec;
 
   // [FG] colored blood and gibs
   int color;
   const byte *brightmap;
+
+  // ID24
+  const byte *tranmap;
 
   // andrewj: voxel support
   int voxel_index;
@@ -404,8 +459,8 @@ typedef struct vissprite_s
   fixed_t yiscale, yscale;
 
   visspriteflag_t flags;
-  byte *tranmap;
   byte lightnum;
+  int tint;
 } vissprite_t;
 
 //
@@ -462,7 +517,9 @@ typedef struct visplane_s
   int picnum, lightlevel, minx, maxx;
   fixed_t height;
   fixed_t xoffs, yoffs;         // killough 2/28/98: Support scrolling flats
+  angle_t rotation;
   unsigned short *bottom;
+  int tint; // ID24 per-sector colormap
   unsigned short pad1;          // leave pads for [minx-1]/[maxx+1]
   unsigned short top[3];
 } visplane_t;

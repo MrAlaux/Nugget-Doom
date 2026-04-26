@@ -22,8 +22,10 @@
 #include <string.h>
 
 #include "d_player.h"
+#include "deh_strings.h"
 #include "doomdef.h"
 #include "doomstat.h"
+#include "doomtype.h"
 #include "hu_crosshair.h" // [Alaux] Lock crosshair on target
 #include "i_printf.h"
 #include "i_system.h"
@@ -34,15 +36,15 @@
 #include "p_pspr.h"
 #include "r_bmaps.h" // [crispy] R_BrightmapForTexName()
 #include "r_bsp.h"
-#include "r_data.h"
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_segs.h"
 #include "r_state.h"
 #include "r_things.h"
+#include "r_tranmap.h"
 #include "r_voxel.h"
 #include "tables.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -56,7 +58,7 @@
 // [Nugget] /=================================================================
 
 // Thing lighting
-int R_CalculateHitboxLightNum(
+int R_CalculateHitboxLightLevel(
   const fixed_t x,
   const fixed_t y,
   const fixed_t radius,
@@ -80,15 +82,18 @@ int R_CalculateHitboxLightNum(
       gy = y;
     }
 
-    lightlevel += R_GetLightLevelInPoint(gx, gy, force_mbf);
+    int temp;
+    R_GetLightLevelAndTintInPoint(gx, gy, force_mbf, &temp, NULL);
+
+    lightlevel += temp;
   }
 
-  return (lightlevel / 9) >> LIGHTSEGSHIFT;
+  return lightlevel / 9;
 }
 
 static void ApplyFlipPostProcess(void)
 {
-  const int pitch = video.pitch,
+  const int pitch = video.width,
             width = viewwidth - 1;
 
   pixel_t *                 row = I_VideoBuffer + (viewwindowy * pitch + viewwindowx);
@@ -135,7 +140,7 @@ static void ApplyFlipPostProcess(void)
 
 static void ApplyFlipPostProcess32(void)
 {
-  const int pitch = video.pitch,
+  const int pitch = video.width,
             width = viewwidth - 1;
 
   pixel32_t *                 row = I_VideoBuffer32 + (viewwindowy * pitch + viewwindowx);
@@ -205,7 +210,7 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 
-cmapoffset_t *spritelights;        // killough 1/25/98 made static
+lighttable_t *spritelights;        // killough 1/25/98 made static
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c
@@ -279,7 +284,7 @@ static void R_InstallSpriteLump(int lump, unsigned frame,
   }
 
   if (frame >= MAX_SPRITE_FRAMES || rotation > 8)
-    I_Error("R_InstallSpriteLump: Bad frame characters in lump %i", lump);
+    I_Error("Bad frame characters in lump %i", lump);
 
   if ((int) frame > maxframe)
     maxframe = frame;
@@ -365,7 +370,7 @@ void R_InitSpriteDefs(char **namelist)
 
   for (i=0 ; i<num_sprites + NUMALTSPRITES ; i++) // [Nugget] Alt. sprites
     {
-      const char *spritename = namelist[i];
+      const char *spritename = namelist[i] ? DEH_String(namelist[i]) : namelist[i];
       int j;
 
       if (!spritename)
@@ -426,8 +431,7 @@ void R_InitSpriteDefs(char **namelist)
                       int rotation;
                       for (rotation=0 ; rotation<8 ; rotation++)
                         if (sprtemp[frame].lump[rotation] == -1)
-                          I_Error ("R_InitSprites: Sprite %.8s frame %c "
-                                   "is missing rotations",
+                          I_Error ("Sprite %.8s frame %c is missing rotations",
                                    namelist[i], frame+'A');
                       break;
                     }
@@ -664,8 +668,14 @@ static void DrawVisSpriteLoop8(
   column_t *column;
   int texturecolumn;
 
-  dc_colormap[0] = V_ColormapRowByIndex(vis->colormap[0]);
-  dc_colormap[1] = V_ColormapRowByIndex(vis->colormap[1]);
+  const lighttable_t *thiscolormap =
+    (vis->tint >= 0) ? colormaps[vis->tint] : fullcolormap;
+
+  // [Nugget] Thing lighting
+  const boolean own_tint = vis->flags & VSF_OWN_TINT;
+
+  dc_colormap[0] = thiscolormap + vis->colormap[0];
+  dc_colormap[1] = thiscolormap + vis->colormap[1];
 
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
@@ -684,7 +694,10 @@ static void DrawVisSpriteLoop8(
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
         if (!percolumn_lighting)
-        { dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]); }
+        {
+          dc_colormap[0] =
+            thiscolormap + (scalelightoffset + MAXLIGHTSCALE * vis->lightnum)[lightindex];
+        }
       }
 
       // Thing lighting
@@ -697,12 +710,23 @@ static void DrawVisSpriteLoop8(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
+        int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
-        dc_colormap[0] = V_ColormapRowByIndex(
-          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
-        );
+        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
+
+        lightnum = (vis->flags & VSF_FULLBRIGHT)
+                 ? LIGHTLEVELS-1
+                 : (lightnum >> LIGHTSEGSHIFT) + extralight;
+
+        if (!own_tint)
+        { thiscolormap = (tint >= 0) ? colormaps[tint] : fullcolormap; }
+
+        dc_colormap[0] = thiscolormap
+                       + (scalelightoffset + MAXLIGHTSCALE * CLAMP(lightnum, 0, LIGHTLEVELS-1))
+                         [lightindex];
+
+        dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                         ? thiscolormap : dc_colormap[0];
       }
 
       // [Nugget] ===========================================================/
@@ -728,8 +752,14 @@ static void DrawVisSpriteLoop32(
   column_t *column;
   int texturecolumn;
 
-  dc_colormap32[0] = V_ColormapRowByIndex32(vis->colormap[0]);
-  dc_colormap32[1] = V_ColormapRowByIndex32(vis->colormap[1]);
+  const lighttable32_t *thiscolormap =
+    (vis->tint >= 0) ? colormaps32[vis->tint] : fullcolormap32;
+
+  // [Nugget] Thing lighting
+  const boolean own_tint = vis->flags & VSF_OWN_TINT;
+
+  dc_colormap32[0] = thiscolormap + vis->colormap[0];
+  dc_colormap32[1] = thiscolormap + vis->colormap[1];
 
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
@@ -748,7 +778,10 @@ static void DrawVisSpriteLoop32(
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
         if (!percolumn_lighting)
-        { dc_colormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex]); }
+        {
+          dc_colormap32[0] =
+            thiscolormap + (scalelightoffset + MAXLIGHTSCALE * vis->lightnum)[lightindex];
+        }
       }
 
       // Thing lighting
@@ -761,12 +794,23 @@ static void DrawVisSpriteLoop32(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
+        int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
-        dc_colormap32[0] = V_ColormapRowByIndex32(
-          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
-        );
+        R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
+
+        lightnum = (vis->flags & VSF_FULLBRIGHT)
+                 ? LIGHTLEVELS-1
+                 : (lightnum >> LIGHTSEGSHIFT) + extralight;
+
+        if (!own_tint)
+        { thiscolormap = (tint >= 0) ? colormaps32[tint] : fullcolormap32; }
+
+        dc_colormap32[0] = thiscolormap
+                         + (scalelightoffset + MAXLIGHTSCALE * CLAMP(lightnum, 0, LIGHTLEVELS-1))
+                           [lightindex];
+
+        dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                           ? thiscolormap : dc_colormap32[0];
       }
 
       // [Nugget] ===========================================================/
@@ -798,7 +842,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
     colfunc = R_DrawFuzzColumn;    // killough 3/14/98
   else
     // [FG] colored blood and gibs
-    if (vis->mobjflags2 & MF2_COLOREDBLOOD)
+    if (vis->mobjflags_extra & MFX_COLOREDBLOOD)
       {
         colfunc = R_DrawTranslatedColumn;
         dc_translation = red2col[vis->color];
@@ -810,20 +854,12 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
         dc_translation = translationtables - 256 +
           ((vis->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
       }
-
-    // [Nugget]
-    else if (STRICTMODE(vis->tranmap))
-    {
-      colfunc = R_DrawTLColumn;
-      tranmap = vis->tranmap;
-    }
-
     else
       if (translucency && !(strictmode && demo_compatibility)
-          && vis->mobjflags & MF_TRANSLUCENT) // phares
+          && vis->tranmap) // phares // ID24
         {
-          colfunc = R_DrawTLColumn;
-          tranmap = main_tranmap;       // killough 4/11/98
+          colfunc = R_DrawTLColumn; // killough 4/11/98
+          tranmap = vis->tranmap;   // ID24
         }
       else
         colfunc = R_DrawColumn;         // killough 3/14/98, 4/11/98
@@ -853,9 +889,9 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   fixed_t pcl_offset = 0;
   fixed_t pcl_cosine = 0, pcl_sine = 0;
 
-  if (!(vis->flags & VSF_FULLBRIGHT) && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapoffset)
+  if (!(vis->flags & VSF_NO_PERC) && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapindex)
   {
-    do_sprite_radial_fog = do_radial_fog;
+    do_sprite_radial_fog = do_radial_fog && !(vis->flags & VSF_FULLBRIGHT);
 
     if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
     {
@@ -869,9 +905,8 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
       pcl_sine   =   finesine[angle];
 
       if (diminishing_lighting && !do_sprite_radial_fog)
-      { lightindex = R_GetLightIndex(vis->scale, 0); }
+      { lightindex = R_GetLightIndexVanilla(vis->scale, 0); }
     }
-    else { spritelights = scalelight[vis->lightnum]; }
   }
 
   // [Nugget] ===============================================================/
@@ -892,6 +927,14 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   colfunc = R_DrawColumn;         // killough 3/14/98
 }
 
+inline const int GetThingTint(const mobj_t *const mo, const sector_t *const s)
+{
+  const int32_t tint = (mo->tint >= 0)         ? mo->tint
+                     : (s->floorlightsec >= 0) ? sectors[s->floorlightsec].tint
+                                               : s->tint;
+  return tint;
+}
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing if it might be visible.
@@ -899,7 +942,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
 boolean flipcorpses = false;
 
-static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
+static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 {
   fixed_t   gzt;               // killough 3/27/98
   fixed_t   tx, txc;
@@ -925,7 +968,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   if (thing == R_GetFreecamMobj() && !R_ChasecamOn()) { return; }
 
   // andrewj: voxel support
-  if (VX_ProjectVoxel (thing, lightnum)) // [Nugget] Pass lightnum
+  if (VX_ProjectVoxel(thing, lightlevel_override))
       return;
 
   // [AM] Interpolate between current and last position,
@@ -990,7 +1033,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
     have_scale = true;
 
-    scale_mult = FIXED2DOUBLE(thing->info->scale);
+    scale_mult = FixedToDouble(thing->info->scale);
     xscale *= scale_mult;
   }
 
@@ -998,12 +1041,12 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
     // decide which patch to use for sprite relative to player
   if ((unsigned) thing->sprite >= num_sprites)
-    I_Error ("R_ProjectSprite: invalid sprite number %i", thing->sprite);
+    I_Error ("invalid sprite number %i", thing->sprite);
 
   sprdef = &sprites[thing->sprite];
 
   if ((thing->frame&FF_FRAMEMASK) >= sprdef->numframes)
-    I_Error ("R_ProjectSprite: invalid frame %i for sprite %s",
+    I_Error ("invalid frame %i for sprite %s",
              thing->frame & FF_FRAMEMASK, sprnames[thing->sprite]);
 
   // [Nugget] Alt. sprites /--------------------------------------------------
@@ -1046,7 +1089,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   // [crispy] randomly flip corpse, blood and death animation sprites
   if (STRICTMODE(flipcorpses) &&
-      (thing->flags2 & MF2_FLIPPABLE) &&
+      (thing->flags_extra & MFX_MIRROREDCORPSE) &&
       !(thing->flags & MF_SHOOTABLE) &&
       (thing->intflags & MIF_FLIP))
     {
@@ -1116,6 +1159,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   vis->mobjflags = thing->flags;
   vis->mobjflags2 = thing->flags2;
+  vis->mobjflags_extra = thing->flags_extra;
   vis->scale = scale; // [Nugget] Sprite scaling
   vis->gx = interpx;
   vis->gy = interpy;
@@ -1130,7 +1174,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   // [Nugget]
   vis->scale_mult = scale_mult;
   vis->yscale = xscale;
-  vis->lightnum = lightnum;
+  vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
   vis->flags = (VSF_FLIPPED * flip) | (VSF_SCALED * have_scale);
 
   if (flip)
@@ -1150,42 +1194,95 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
     vis->startfrac += vis->xiscale*(vis->x1-x1);
   vis->patch = lump;
 
+  vis->tint = GetThingTint(thing, thing->subsector->sector);
+
+  // [Nugget] Thing lighting
+  if (thing->tint >= 0) { vis->flags |= VSF_OWN_TINT; }
+
   // get light level
   if (thing->flags & MF_SHADOW)
-    vis->colormap[0] = vis->colormap[1] = 0;               // shadow draw
-  else if (fixedcolormapoffset)
-    vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;      // fixed map
+  {
+    // shadow draw
+    vis->colormap[0] = vis->colormap[1] = 0;
+  }
+  else if (fixedcolormapindex)
+  {
+    // fixed map
+    vis->colormap[0] = vis->colormap[1] = fixedcolormapindex * 256;
+  }
   else if (frame & FF_FULLBRIGHT)
   {
-    vis->colormap[0] = vis->colormap[1] = 0;       // full bright  // killough 3/20/98
+    // full bright
+    // killough 3/20/98
+    vis->colormap[0] = vis->colormap[1] = 0;
+
     vis->flags |= VSF_FULLBRIGHT; // [Nugget]
   }
   else
-    {      // diminished light
-      const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                        ? 0 : R_GetLightIndex(vis->scale, 0); // [Nugget]
+  {
+    // diminished light
+    const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                      ? 0 : R_GetLightIndex(vis->scale, 0); // [Nugget]
 
-      // [Nugget] Thing lighting
-      if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
-      {
-        int new_lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
-                         + extralight;
+    int lightnum;
 
-        new_lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
-
-        vis->lightnum = new_lightnum;
-        spritelights = scalelight[new_lightnum];
-      }
-
-      vis->colormap[0] = spritelights[index];
-      vis->colormap[1] = 0;
+    // [Nugget] Thing lighting
+    if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
+    {
+      lightnum = R_CalculateHitboxLightLevel(vis->gx, vis->gy, thing->radius, false)
+                 >> LIGHTSEGSHIFT;
+    }
+    else
+    {
+      lightnum = (demo_version >= DV_MBF)
+               ? (lightlevel_override >> LIGHTSEGSHIFT)
+               : (thing->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
     }
 
-  vis->brightmap = R_BrightmapForState(thing->state - states);
+    lightnum = CLAMP(lightnum + extralight, 0, LIGHTLEVELS - 1);
+    int* spritelightoffsets = &scalelightoffset[MAXLIGHTSCALE * lightnum];
+
+    vis->colormap[0] = spritelightoffsets[index];
+    vis->colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                       ? 0
+                       : vis->colormap[0];
+
+    vis->lightnum = lightnum; // [Nugget]
+  }
+
+  // [Nugget]
+  if (thing->gentranmap)
+  {
+    vis->tranmap = thing->gentranmap;
+  }
+  else
+
+  // ID24 per-state tranmap
+  // [Nugget] Visual mobjs' dummy state causes issues; don't check for those
+  if (!thing->isvisual && thing->state && thing->state->tranmap)
+  {
+    vis->tranmap = thing->state->tranmap;
+  }
+  else if (thing->tranmap)
+  {
+    vis->tranmap = thing->tranmap;
+  }
+  else if (thing->flags & MF_TRANSLUCENT && thing->state && thing->state->frame & FF_FULLBRIGHT)
+  {
+    vis->tranmap = main_addimap;
+  }
+  else if (thing->flags & MF_TRANSLUCENT)
+  {
+    vis->tranmap = main_tranmap;
+  }
+  else
+  {
+    vis->tranmap = NULL;
+  }
+
+  vis->brightmap = thing->state ? R_BrightmapForState(thing->state - states) : nobrightmap;
   if (vis->brightmap == nobrightmap)
     vis->brightmap = R_BrightmapForSprite(sprite);
-
-  vis->tranmap = thing->gentranmap; // [Nugget]
 
   // [Alaux] Lock crosshair on target
   if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target
@@ -1194,13 +1291,12 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   {
     if (STRICTMODE(flip_levels)) { txc = -txc; } // [Nugget] Flip levels
 
-    HU_UpdateCrosshairLock
-    (
-      BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(txc, vis->scale)) >> FRACBITS),
-      // [Nugget] Removed `actualheight`
-      BETWEEN(0, viewheight - 1, (centeryfrac + FixedMul(viewz - interpz - crosshair_target->height/2, vis->scale)) >> FRACBITS)
-    );
-
+    int x = (centerxfrac + FixedMul(txc, vis->scale)) >> FRACBITS;
+    // [Nugget] Removed `actualheight`
+    int y = (centeryfrac + FixedMul(viewz - interpz - crosshair_target->height / 2, vis->scale)) >> FRACBITS;
+    x = clampi(x, 0, viewwidth - 1);
+    y = clampi(y, 0, viewheight - 1);
+    HU_UpdateCrosshairLock(x, y);
     crosshair_target = NULL; // Don't update it again until next tic
   }
 
@@ -1209,8 +1305,8 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   if (   !R_SpriteShadowsOn()
       || (vis->scale <= FRACUNIT/4)
       || (frame & FF_FULLBRIGHT)
-      || (thing->flags & (MF_SHADOW|MF_TRANSLUCENT))
-      || thing->gentranmap
+      || (thing->flags & MF_SHADOW)
+      || vis->tranmap
       || (thing->flags & MF_SPAWNCEILING && thing->flags & MF_NOGRAVITY))
   {
     return;
@@ -1285,8 +1381,7 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
   shadow_vis->yscale = shadow_yscale;
 
-  // Thing lighting: set `VSF_FULLBRIGHT` to make per-column lighting not apply to shadows
-  shadow_vis->flags = VSF_FULLBRIGHT|VSF_SCALED|VSF_SHADOW;
+  shadow_vis->flags = VSF_NO_PERC|VSF_SCALED|VSF_SHADOW;
 
   fixed_t shadow_tx, shadow_tx_clipped;
 
@@ -1357,10 +1452,9 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 boolean draw_nearby_sprites;
 
 // killough 9/18/98: add lightlevel as parameter, fixing underwater lighting
-void R_AddSprites(sector_t* sec, int lightlevel)
+void R_AddSprites(sector_t* sec, int lightlevel_override)
 {
   mobj_t *thing;
-  int    lightnum;
 
   // BSP is traversed by subsector.
   // A sector might have been split into several
@@ -1373,22 +1467,10 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   // Well, now it will be done.
   sec->validcount = validcount;
 
-  if (demo_version <= DV_BOOM)
-    lightlevel = sec->lightlevel;
-
-  lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
-
-  if (lightnum < 0)
-    spritelights = scalelight[0];
-  else if (lightnum >= LIGHTLEVELS)
-    spritelights = scalelight[LIGHTLEVELS-1];
-  else
-    spritelights = scalelight[lightnum];
-
   // Handle all things in sector.
 
   for (thing = sec->thinglist; thing; thing = thing->snext)
-    R_ProjectSprite(thing, BETWEEN(0, LIGHTLEVELS-1, lightnum)); // [Nugget] Pass lightnum
+    R_ProjectSprite(thing, lightlevel_override);
 
   if (STRICTMODE(draw_nearby_sprites))
   {
@@ -1411,20 +1493,15 @@ void R_NearbySprites (void)
   {
     mobj_t *thing = nearby_sprites[i];
     sector_t* sec = thing->subsector->sector;
+    sector_t tempsec;
+    int floorlightlevel, ceilinglightlevel;
+
+    R_FakeFlat(sec, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
     // [FG] sprites in sector have already been projected
     if (sec->validcount != validcount)
     {
-      int lightnum = (sec->lightlevel >> LIGHTSEGSHIFT) + extralight;
-
-      if (lightnum < 0)
-        spritelights = scalelight[0];
-      else if (lightnum >= LIGHTLEVELS)
-        spritelights = scalelight[LIGHTLEVELS-1];
-      else
-        spritelights = scalelight[lightnum];
-
-      R_ProjectSprite(thing, BETWEEN(0, LIGHTLEVELS-1, lightnum)); // [Nugget] Pass lightnum
+      R_ProjectSprite(thing, (floorlightlevel + ceilinglightlevel) / 2);
     }
   }
 
@@ -1437,7 +1514,7 @@ static int queued_weapon_voxels = 0; // [Nugget] Weapon voxels
 // R_DrawPSprite
 //
 
-void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Translucent flashes
+void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flash) // [Nugget] Translucent flashes
 {
   fixed_t       tx;
   int           x1, x2;
@@ -1452,14 +1529,14 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
 
 #ifdef RANGECHECK
   if ((unsigned) psp->state->sprite >= num_sprites)
-    I_Error ("R_DrawPSprite: invalid sprite number %i", psp->state->sprite);
+    I_Error ("invalid sprite number %i", psp->state->sprite);
 #endif
 
   sprdef = &sprites[psp->state->sprite];
 
 #ifdef RANGECHECK
   if ((psp->state->frame&FF_FRAMEMASK) >= sprdef->numframes)
-    I_Error ("R_DrawPSprite: invalid frame %i for sprite %s",
+    I_Error ("invalid frame %i for sprite %s",
              (int)(psp->state->frame & FF_FRAMEMASK),
              sprnames[psp->state->sprite]);
 #endif
@@ -1470,7 +1547,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   const boolean translucent = is_flash && STRICTMODE(pspr_translucency_pct < 100);
 
   // [Nugget] Weapon voxels
-  if (VX_ProjectWeaponVoxel(psp, translucent))
+  if (VX_ProjectWeaponVoxel(psp, lightlevel_override, translucent))
   {
     queued_weapon_voxels++;
     return;
@@ -1485,7 +1562,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
 
   fixed_t wix, wiy; // [Nugget]
 
-  if (uncapped && oldleveltime < leveltime)
+  if (uncapped && oldleveltime < leveltime && psp_interp)
   {
     sx2 = LerpFixed(psp->oldsx2, psp->sx2);
     sy2 = LerpFixed(psp->oldsy2, psp->sy2);
@@ -1527,6 +1604,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   vis = &avis;
   vis->mobjflags = 0;
   vis->mobjflags2 = 0;
+  vis->mobjflags_extra = 0;
 
   // killough 12/98: fix psprite positioning problem
   vis->texturemid = (BASEYCENTER<<FRACBITS) /* + FRACUNIT/2 */ -
@@ -1543,8 +1621,8 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   // [Nugget]
   vis->scale_mult = 1.0f;
   vis->yscale = vis->scale;
-  vis->lightnum = 0;
-  vis->flags = (VSF_FLIPPED * flip) | VSF_FULLBRIGHT; // Don't apply per-column lighting and radial fog
+  vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
+  vis->flags = (VSF_FLIPPED * flip) | VSF_NO_PERC;
 
   if (flip)
     {
@@ -1564,29 +1642,50 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
 
   vis->patch = lump;
 
+  vis->tint = GetThingTint(viewplayer->mo, viewplayer->mo->subsector->sector);
+
+  // [Nugget] Thing lighting
+  if (viewplayer->mo->tint >= 0) { vis->flags |= VSF_OWN_TINT; }
+
   // killough 7/11/98: beta psprites did not draw shadows
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation
       && !STRICTMODE(pspr_invis_translucent)) // [Nugget] Translucent weapon when invisible
   {
-    vis->colormap[0] = vis->colormap[1] = 0;                    // shadow draw
+    // shadow draw
+    vis->colormap[0] = vis->colormap[1] = 0;
     vis->mobjflags |= MF_SHADOW; // [Nugget] Give corresponding flag
   }
-  else if (fixedcolormapoffset)
-    vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;           // fixed color
+  else if (fixedcolormapindex)
+  {
+    // fixed color
+    vis->colormap[0] = vis->colormap[1] = fixedcolormapindex * 256;
+  }
   else if (psp->state->frame & FF_FULLBRIGHT)
   {
-    vis->colormap[0] = vis->colormap[1] = 0;            // full bright // killough 3/20/98
+    // full bright
+    // killough 3/20/98
+    vis->colormap[0] = vis->colormap[1] = 0;
+
     vis->flags |= VSF_FULLBRIGHT; // [Nugget]
   }
   else
   {
+    // local light
+    int lightnum = (demo_version >= DV_MBF)
+                 ? (lightlevel_override >> LIGHTSEGSHIFT)
+                 : (viewplayer->mo->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
+
+    lightnum = CLAMP(lightnum + extralight, 0, LIGHTLEVELS - 1);
+    int* spritelightoffsets = &scalelightoffset[MAXLIGHTSCALE * lightnum];
+
     // [Nugget]
     const int index = STRICTMODE(!diminishing_lighting) ? 0 : MAXLIGHTSCALE-1;
 
-    vis->colormap[0] = spritelights[index];  // local light
-    vis->colormap[1] = 0;
+    vis->colormap[0] = spritelightoffsets[index];
+    vis->colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
+                        ? 0
+                        : vis->colormap[0];
   }
-  vis->brightmap = R_BrightmapForState(psp->state - states);
 
   // [Nugget] /---------------------------------------------------------------
 
@@ -1599,9 +1698,37 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
   // Translucent weapon flashes
   if (translucent) { trans_pct = pspr_translucency_pct * trans_pct / 100; }
 
-  vis->tranmap = (trans_pct < 100) ? R_GetGenericTranMap(trans_pct) : NULL;
-
   // [Nugget] ---------------------------------------------------------------/
+
+  if (trans_pct < 100)
+  {
+    vis->tranmap = R_GetGenericTranMap(trans_pct);
+  }
+  else
+
+  // ID24 per-state tranmap
+  if (psp->state && psp->state->tranmap)
+  {
+    vis->tranmap = psp->state->tranmap;
+  }
+  else if (viewplayer->mo->tranmap)
+  {
+    vis->tranmap = viewplayer->mo->tranmap;
+  }
+  else if (viewplayer->mo->flags & MF_TRANSLUCENT && psp->state->frame & FF_FULLBRIGHT)
+  {
+    vis->tranmap = main_addimap;
+  }
+  else if (viewplayer->mo->flags & MF_TRANSLUCENT)
+  {
+    vis->tranmap = main_tranmap;
+  }
+  else
+  {
+    vis->tranmap = NULL;
+  }
+
+  vis->brightmap = R_BrightmapForState(psp->state - states);
 
   // [crispy] free look
   vis->texturemid += (centery - viewheight/2) * pspriteiscale;
@@ -1626,7 +1753,7 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
 
 void R_DrawPlayerSprites(void)
 {
-  int i, lightnum;
+  int i;
   pspdef_t *psp;
   sector_t tmpsec;
   int floorlightlevel, ceilinglightlevel;
@@ -1636,25 +1763,20 @@ void R_DrawPlayerSprites(void)
   // (see r_bsp.c for similar calculations for non-player sprites)
 
   // [Nugget] Thing lighting
+
+  int lightlevel = 0;
+
   if (STRICTMODE(thing_lighting_mode) >= THINGLIGHTING_HITBOX)
   {
-    lightnum = R_CalculateHitboxLightNum(viewx, viewy, viewplayer->mo->radius, true)
-             + extralight;
+    lightlevel = R_CalculateHitboxLightLevel(viewx, viewy, viewplayer->mo->radius, true);
   }
   else
   {
     R_FakeFlat(viewplayer->mo->subsector->sector, &tmpsec,
                &floorlightlevel, &ceilinglightlevel, 0);
-    lightnum = ((floorlightlevel+ceilinglightlevel) >> (LIGHTSEGSHIFT+1))
-      + extralight;
-  }
 
-  if (lightnum < 0)
-    spritelights = scalelight[0];
-  else if (lightnum >= LIGHTLEVELS)
-    spritelights = scalelight[LIGHTLEVELS-1];
-  else
-    spritelights = scalelight[lightnum];
+    lightlevel = (floorlightlevel + ceilinglightlevel) / 2;
+  }
 
   // clip to screen bounds
   mfloorclip = screenheightarray;
@@ -1695,7 +1817,7 @@ void R_DrawPlayerSprites(void)
        i < num_psprites;
        i++,psp++)
     if (psp->state)
-      R_DrawPSprite (psp, i == ps_flash && !weapon_blank); // [Nugget] Translucent flashes
+      R_DrawPSprite (psp, lightlevel, i == ps_flash && !weapon_blank); // [Nugget] Translucent flashes
 
   // [Nugget] Weapon voxels
   if (queued_weapon_voxels)
