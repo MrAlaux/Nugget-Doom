@@ -227,7 +227,8 @@ set(BASE_SOURCES
     all-all/graphics/crossil.png
     all-all/graphics/crossir.png
     all-all/graphics/dig034.png
-    all-all/graphics/m_palett.png
+    all-all/graphics/ng_palbg.png
+    all-all/graphics/ng_palet.lmp
     all-all/sprites/ngcha0.png
     all-all/sprites/ngcla0.png
     all-all/sprites/ngtra0.png

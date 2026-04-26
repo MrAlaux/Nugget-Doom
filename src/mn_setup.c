@@ -2348,7 +2348,7 @@ static setup_menu_t stat_settings4[] = {
 
     // Message fadeout
     {"Message Fadeout", S_ONOFF, H_X, M_SPC, {"message_fadeout"},
-     .action = R_InitMessageFadeoutTranMaps},
+     .action = R_InitFadeoutTranMaps},
 
     // Message flash
     {"Message Flash", S_ONOFF, H_X, M_SPC, {"message_flash"}},
@@ -4167,7 +4167,7 @@ setup_menu_t display_settings1[] = {
     {"Backdrop For All Menus",       S_ONOFF,                 N_X, M_SPC, {"menu_background_all"}},
     {"No Palette Tint in Menus",     S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_menu_tint"}},
     {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = V_InitShadowTranMap},
-    {"Sprite Shadows",               S_CHOICE|S_STRICT,       N_X, M_SPC, {"sprite_shadows"}, .strings_id = str_sprite_shadows, .action = R_InitShadowTranMap},
+    {"Sprite Shadows",               S_CHOICE|S_STRICT,       N_X, M_SPC, {"sprite_shadows"}, .strings_id = str_sprite_shadows, .action = R_InitSpriteShadowsColormap},
     {"Thing Lighting Mode",          S_CHOICE|S_STRICT,       N_X, M_SPC, {"thing_lighting_mode"}, .strings_id = str_thing_lighting},
     {"Radial Fog",                   S_ONOFF,                 N_X, M_SPC, {"radial_fog"}, .action = R_DeferredInitLightTables},
     {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
@@ -4233,12 +4233,16 @@ void MN_DrawDisplay(void)
 
     if (current_page == 1)
     {
-      patch_t *const patch = V_CachePatchName("M_PALETT", PU_CACHE);
+      patch_t *const patch  = V_CachePatchName("NG_PALBG", PU_CACHE);
 
       const int x = (SCREENWIDTH / 2) - (SHORT(patch->width) / 2);
       const int y = 109;
 
       V_DrawPatchSH(x, y, patch);
+
+      patch_t *const patch2 = V_CachePatchName("NG_PALET", PU_CACHE);
+
+      V_DrawPatch(x, y, patch2);
     }
 }
 

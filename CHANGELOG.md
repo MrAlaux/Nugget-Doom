@@ -1,6 +1,8 @@
 ## New Features
 
 - **DeHackEd thing sprite `Scale` property** support
+- **Weapon Carousel fadeout** setting
+- Toggle to **use palette colors exactly when gamma correction is disabled**
 
 ## Changes
 
@@ -15,11 +17,13 @@
 - **Improved sky stretching**
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
 - **Optimized initialization of generic tranmaps by caching them in files**
+- **Raised upper limits of color _Intensity_ and _Saturation_ settings to 200%**
 - **Randomized duration of spawn, death, and gib states in _Fancy Cast_**, emulating in-game behavior
 
 ## Bug Fixes
 
 - **Crash when toggling _Smooth Palette Tinting_ while the screen were tinted**
+- **_Sprite Shadows_ relying on the first palette color being black**
 - **_Pain/Pickup/Powerup Flashes_ setting not disabling invulnerability effect and light-amp flashing**
 - **_Invulnerability Colormap_ setting affecting light-amp flashing and disabling _Night-Vision Visor Effect_**
 - **Damage tint not being reduced when the game were paused if _Smooth Palette Tinting_ were enabled**

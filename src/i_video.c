@@ -117,6 +117,7 @@ static aspect_ratio_mode_t widescreen, default_widescreen;
 
 // [Nugget] /-----------------------------------------------------------------
 
+static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
 
 boolean I_SmoothPaletteTinting(void)
@@ -1287,43 +1288,95 @@ void I_GetPalette(byte *const colors, const byte palette_index)
     const byte *palette = palettes[palette_index];
     const byte *const gamma = gammatable[gamma2];
 
+    // [Nugget] Color settings
+
+    const boolean
+        do_gamma      = !gamma_off_fix || gamma2 != 9,
+        do_red        = red_intensity  != 100,
+        do_green      = green_intensity != 100,
+        do_blue       = blue_intensity != 100,
+        do_saturation = color_saturation != 100,
+        do_contrast   = color_contrast != 100;
+
+    const float
+        red_factor   =   red_intensity / 100.0f,
+        green_factor = green_intensity / 100.0f,
+        blue_factor  =  blue_intensity / 100.0f;
+
+    // [PN] Contrast adjustment
+    const float contrast_factor = color_contrast / 100.0f;
+    const float contrast_adjustment = 128 * (100 - color_contrast) / 100.0f;
+
+    // [JN] Saturation floats, high and low.
+
+    float a_hi =
+        (color_saturation > 100)
+        ? -I_SaturationPercent[200 - color_saturation]
+        : I_SaturationPercent[color_saturation];
+
+    float a_lo = a_hi / 2.0f;
+
+    a_hi = 1.0f - a_hi;
+    a_lo = 0.0f + a_lo;
+
     for (int i = 0;  i < 256;  i++)
     {
-        // [Nugget] Color settings
+        int r = *palette++,
+            g = *palette++,
+            b = *palette++;
 
-        const byte r = gamma[*palette++] * red_intensity   / 100,
-                   g = gamma[*palette++] * green_intensity / 100,
-                   b = gamma[*palette++] * blue_intensity  / 100;
+        if (do_gamma)
+        {
+            r = gamma[r];
+            g = gamma[g];
+            b = gamma[b];
+        }
+
+        #define INTENSITY_SETTING(component, condition, factor) \
+            if (condition) \
+            { \
+                component = component * factor + 0.5f; \
+                component = CLAMP(component, 0, 255); \
+            }
+
+        INTENSITY_SETTING(r, do_red,   red_factor);
+        INTENSITY_SETTING(g, do_green, green_factor);
+        INTENSITY_SETTING(b, do_blue,  blue_factor);
+
+        #undef INTENSITY_SETTING
 
         // [PN] Contrast adjustment
+        if (do_contrast)
+        {
+            r = (r * contrast_factor) + contrast_adjustment + 0.5f;
+            g = (g * contrast_factor) + contrast_adjustment + 0.5f;
+            b = (b * contrast_factor) + contrast_adjustment + 0.5f;
 
-        const int contrast_adjustment = 128 * (100 - color_contrast) / 100;
-
-        int channels[3] = {
-            ((int) r * color_contrast / 100) + contrast_adjustment,
-            ((int) g * color_contrast / 100) + contrast_adjustment,
-            ((int) b * color_contrast / 100) + contrast_adjustment
-        };
-
-        channels[0] = CLAMP(channels[0], 0, 255);
-        channels[1] = CLAMP(channels[1], 0, 255);
-        channels[2] = CLAMP(channels[2], 0, 255);
+            r = CLAMP(r, 0, 255);
+            g = CLAMP(g, 0, 255);
+            b = CLAMP(b, 0, 255);
+        }
 
         // [JN] Saturation floats, high and low.
         // If saturation has been modified (< 100), set high and low
         // values according to saturation level. Sum of r,g,b channels
         // and floats must be 1.0 to get proper colors.
+        if (do_saturation)
+        {
+            const int orig_r = r,  orig_g = g,  orig_b = b;
 
-        float a_hi = I_SaturationPercent[color_saturation],
-              a_lo = a_hi / 2.0f;
+            r = (a_hi * orig_r) + (a_lo * orig_g) + (a_lo * orig_b) + 0.5f;
+            g = (a_lo * orig_r) + (a_hi * orig_g) + (a_lo * orig_b) + 0.5f;
+            b = (a_lo * orig_r) + (a_lo * orig_g) + (a_hi * orig_b) + 0.5f;
 
-        a_hi = 1.0f - a_hi;
-        a_lo = 0.0f + a_lo;
+            r = CLAMP(r, 0, 255);
+            g = CLAMP(g, 0, 255);
+            b = CLAMP(b, 0, 255);
+        }
 
-        // Calculate final color values
-        colors[(i * 3) + 0] = (a_hi * channels[0]) + (a_lo * channels[1]) + (a_lo * channels[2]);
-        colors[(i * 3) + 1] = (a_lo * channels[0]) + (a_hi * channels[1]) + (a_lo * channels[2]);
-        colors[(i * 3) + 2] = (a_lo * channels[0]) + (a_lo * channels[1]) + (a_hi * channels[2]);
+        colors[(i * 3) + 0] = r;
+        colors[(i * 3) + 1] = g;
+        colors[(i * 3) + 2] = b;
     }
 }
 
@@ -2188,6 +2241,12 @@ void I_BindVideoVariables(void)
     M_BindNum("fov", &custom_fov, NULL, FOV_DEFAULT, FOV_MIN, FOV_MAX, ss_gen,
               wad_no, "Field of view in degrees");
     BIND_NUM_GENERAL(gamma2, 9, 0, 17, "Custom gamma level (0 = -4; 9 = 0; 17 = 4)");
+
+    // [Nugget]
+    M_BindBool("gamma_off_fix", &gamma_off_fix, NULL,
+               false, ss_none, wad_yes,
+               "Use palette colors exactly when gamma correction is disabled");
+
     BIND_BOOL_GENERAL(smooth_scaling, true, "Smooth pixel scaling");
 
     BIND_BOOL(vga_porch_flash, false, "Emulate VGA \"porch\" behaviour");
@@ -2214,19 +2273,19 @@ void I_BindVideoVariables(void)
                "Smooth palette tinting");
 
     M_BindNum("red_intensity", &red_intensity, NULL,
-              100, 0, 100, ss_display, wad_no,
+              100, 0, 200, ss_display, wad_no,
               "Intensity percent of the screen's red component");
 
     M_BindNum("green_intensity", &green_intensity, NULL,
-              100, 0, 100, ss_display, wad_no,
+              100, 0, 200, ss_display, wad_no,
               "Intensity percent of the screen's green component");
 
     M_BindNum("blue_intensity", &blue_intensity, NULL,
-              100, 0, 100, ss_display, wad_no,
+              100, 0, 200, ss_display, wad_no,
               "Intensity percent of the screen's blue component");
 
     M_BindNum("color_saturation", &color_saturation, NULL,
-              100, 0, 100, ss_display, wad_no,
+              100, 0, 200, ss_display, wad_no,
               "Saturation percent of the screen's colors");
 
     M_BindNum("color_contrast", &color_contrast, NULL,

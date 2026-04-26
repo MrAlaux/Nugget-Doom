@@ -670,7 +670,11 @@ static void ProcessFOVEffects(void)
       else if (uncapped)
       {
         for (int i = 0;  i < NUMFOVFX;  i++)
-        { fovfx[i].current = fovfx[i].old + ((fovfx[i].target - fovfx[i].old) * ((float) fractionaltic/FRACUNIT)); }
+        {
+          fovfx[i].current = fovfx[i].old
+                           + ((fovfx[i].target - fovfx[i].old)
+                              * ((float) fractionaltic / FRACUNIT));
+        }
       }
     }
 

@@ -30,6 +30,7 @@
 
 // [Nugget]
 #include "r_main.h"
+#include "r_tranmap.h"
 #include "st_stuff.h"
 
 static const char *names[] = {
@@ -196,7 +197,22 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
     int xoffset = SHORT(patch->leftoffset);
     int yoffset = SHORT(patch->topoffset);
 
-    V_DrawPatchGeneralSH(x, y, xoffset, yoffset, elem->tranmap, cr, patch, zero_crop); // [Nugget] HUD/menu shadows
+    // [Nugget] Fadeout /-----------------------------------------------------
+
+    const byte *tranmap = NULL;
+
+    if (elem->tranmap)
+    {
+      tranmap = elem->tranmap;
+    }
+    else if (carousel_fadeout && 0 < duration && duration < 10)
+    {
+      tranmap = R_GetGenericTranMap(duration * 10);
+    }
+
+    // [Nugget] -------------------------------------------------------------/
+
+    V_DrawPatchGeneralSH(x, y, xoffset, yoffset, tranmap, cr, patch, zero_crop); // [Nugget] HUD/menu shadows
 }
 
 static int CalcOffset(void)

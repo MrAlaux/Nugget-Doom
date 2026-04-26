@@ -440,11 +440,31 @@ static void DrawTLColumn32(void)
 
 // Sprite shadows ------------------------------------------------------------
 
-const byte *sprite_shadows_tranmap;
+static byte sprite_shadows_colormap[256];
 
-void R_InitShadowTranMap(void)
+void R_InitSpriteShadowsColormap(void)
 {
-  sprite_shadows_tranmap = R_GetGenericTranMap(sprite_shadows_tran_pct);
+  static boolean initialized = false;
+
+  if (initialized) { return; }
+
+  initialized = true;
+
+  byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE),
+       *p = playpal;
+
+  const float factor = (100 - sprite_shadows_tran_pct) / 100.0f;
+
+  for (int i = 0;  i < 256;  i++, p += 3)
+  {
+    sprite_shadows_colormap[i] =
+      I_GetNearestColor(
+        playpal,
+        p[0] * factor,
+        p[1] * factor,
+        p[2] * factor
+      );
+  }
 }
 
 void (*R_DrawColumnShadow)(void) = NULL;
@@ -463,7 +483,7 @@ static void DrawColumnShadow8(void)
     pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
 
     do {
-        *dest = sprite_shadows_tranmap[*dest << 8];
+        *dest = sprite_shadows_colormap[*dest];
         dest += linesize; // killough 11/98
     } while (--count);
 }
@@ -482,7 +502,7 @@ static void DrawColumnShadow32(void)
     pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
 
     do {
-        *dest = V_IndexToRGB(sprite_shadows_tranmap[V_TranMapRowFromRGB(*dest)]);
+        *dest = V_IndexToRGB(sprite_shadows_colormap[V_IndexFromRGB(*dest)]);
         dest += linesize;
     } while (--count);
 }

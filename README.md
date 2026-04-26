@@ -152,6 +152,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Weapon Inertia_** settings [by _ceski_]
 - **_Weapon Squat Upon Landing_** setting [p.f. Crispy Doom]
 - **_Translucent [Weapon] When Invisible_** setting
+- **_Force Weapon Carousel_** setting
+- **Weapon Carousel fadeout** setting (CFG-only: `carousel_fadeout`)
 - **_[Weapon] Flash Opacity_** setting [i.b. Crispy Doom]
 - **Support for weapon voxel models**
 - **"Correct" first-person-sprite centering** setting (CFG-only: `sx_fix`)
@@ -315,6 +317,11 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - This does not apply to HacX, as it provides a dummy, incongruous lump for the sound
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)
 - Toggle to **allow chat in singleplayer** (CFG-only: `sp_chat`)
+- Toggle to **use palette colors exactly when gamma correction is disabled** (CFG-only: `gamma_off_fix`)
+  - In vanilla Doom, RGB channels are always passed through a gamma table, regardless of the gamma correction setting;
+    the table used when gamma correction is disabled makes channels with a value below 128 be incremented by one,
+    so e.g. `rgb(0, 64, 128)` from a `PLAYPAL` palette is rendered as `rgb(1, 65, 128)` in-game;
+    many source ports, including this one, retain this behavior, but this setting allows to disable it
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
 - Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter

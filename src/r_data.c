@@ -54,6 +54,7 @@
 #include "i_thread.h"
 #include "i_video.h"
 #include "r_draw.h"
+#include "st_stuff.h"
 #include "st_widgets.h"
 
 // [Nugget] /=================================================================
@@ -1368,11 +1369,11 @@ void R_InitData(void)
 
   // Sprite shadows
   if (sprite_shadows)
-  { R_InitShadowTranMap(); }
+  { R_InitSpriteShadowsColormap(); }
 
-  // Message fadeout
-  if (ST_MessageFadeoutOn())
-  { R_InitMessageFadeoutTranMaps(); }
+  // Message/carousel fadeout
+  if (ST_MessageFadeoutOn() || carousel_fadeout)
+  { R_InitFadeoutTranMaps(); }
 
   // Translucent weapon when invisible
   if (pspr_invis_translucent)
