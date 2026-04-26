@@ -399,7 +399,7 @@ const byte *R_GetGenericTranMap(const int filter_pct)
   return *tmap;
 }
 
-void R_InitMessageFadeoutTranMaps(void)
+void R_InitFadeoutTranMaps(void)
 {
   for (int i = 0;  i < 10;  i++)
   { R_GetGenericTranMap(i * 10); }
