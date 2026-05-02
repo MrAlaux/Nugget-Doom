@@ -145,6 +145,7 @@ int organize_savefiles;
 // [Nugget]
 const char *savegame_dir = NULL;
 const char *screenshot_dir = NULL;
+static int organize_screenshots;
 
 static boolean demobar;
 
@@ -1607,7 +1608,7 @@ void D_SetSavegameDirectory(void)
             char *oldsavegame = basesavegame;
 
             // [Nugget] Don't default to a "savegames" directory if path is set by config file
-            if (!savegame_dir || !strcmp(savegame_dir, ""))
+            if (!(savegame_dir && strcmp(savegame_dir, "")))
             {
                 basesavegame =
                     M_StringJoin(oldsavegame, DIR_SEPARATOR_S, "savegames");
@@ -1637,12 +1638,49 @@ void D_SetSavegameDirectory(void)
 
         M_MakeDirectory(screenshotdir);
     }
-    // [Nugget] Set screenshot path as determined by config file
-    else if (screenshot_dir && strcmp(screenshot_dir, ""))
+    // [Nugget]
+    else
     {
-        SET_DIR(screenshotdir, M_StringDuplicate(screenshot_dir));
+        // Set screenshot path as determined by config file
+        if (screenshot_dir && strcmp(screenshot_dir, ""))
+        {
+            SET_DIR(screenshotdir, M_StringDuplicate(screenshot_dir));
 
-        M_MakeDirectory(screenshotdir);
+            M_MakeDirectory(screenshotdir);
+        }
+
+        if (organize_screenshots)
+        {
+            const char *wadname = wadfiles[0];
+
+            for (int i = mainwadfile; i < array_size(wadfiles); i++)
+            {
+                if (FileContainsMaps(wadfiles[i]))
+                {
+                    wadname = wadfiles[i];
+                    break;
+                }
+            }
+
+            char *olddir;
+
+            if (!(screenshot_dir && strcmp(screenshot_dir, "")))
+            {
+                olddir = screenshotdir;
+                screenshotdir =
+                    M_StringJoin(olddir, DIR_SEPARATOR_S, "screenshots");
+                free(olddir);
+            }
+
+            M_MakeDirectory(screenshotdir);
+
+            olddir = screenshotdir;
+            screenshotdir = M_StringJoin(olddir, DIR_SEPARATOR_S,
+                M_BaseName(wadname));
+            free(olddir);
+
+            M_MakeDirectory(screenshotdir);
+        }
     }
 
     I_Printf(VB_INFO, "Savegame directory: %s", basesavegame);
@@ -2679,6 +2717,10 @@ void D_BindMiscVariables(void)
     "Palette changes when taking damage or picking up items (0 = Off; 1 = On; 2 = Reduced)");
   BIND_NUM_GENERAL(organize_savefiles, -1, -1, 1,
     "Organize save files");
+
+  // [Nugget]
+  BIND_BOOL_GENERAL(organize_screenshots, false, "Organize screenshots");
+
   M_BindStr("net_player_name", &net_player_name, DEFAULT_PLAYER_NAME, wad_no,
     "Network setup player name");
 

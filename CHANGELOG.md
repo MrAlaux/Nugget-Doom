@@ -2,6 +2,7 @@
 
 - **DeHackEd thing sprite `Scale` property** support
 - **Weapon Carousel fadeout** setting
+- Toggle to **organize screenshots**
 - Toggle to **use palette colors exactly when gamma correction is disabled**
 
 ## Changes
@@ -31,7 +32,8 @@
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**
 - **Quick-double-press actions being affected by game speed**
-- **_Solid [Status Bar] Background Color_ not respecting gamma and color settings with true-color rendering**
+- **True-color rendering breaking invisibility colormap in beta-emulation mode**
+- **_Solid [Status Bar] Background Color_ not respecting color settings with true-color rendering**
 - **UI/HUD updating before game world when changing gamma and color settings**
 
 [^1]: This will affect existing config files.
