@@ -102,8 +102,7 @@ void ST_Init(void);
 
 void ST_ResetPalette(void);
 
-// [Nugget] NUGHUD: replaces `boolean st_refresh_background`
-void ST_refreshBackground(void);
+extern boolean st_refresh_background;
 
 void ST_InitRes(void);
 void ST_SetSTHeight(void);

@@ -323,6 +323,7 @@ typedef struct sbe_widget_s
     boolean vertical;
 
     // [Nugget]
+    int duration_left;
     boolean under_messages;
 } sbe_widget_t;
 

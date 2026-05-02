@@ -322,7 +322,7 @@ void V_SetPalColors(const int palette_index)
 
   V_SetCurrentColormap(0);
 
-  ST_refreshBackground();
+  st_refresh_background = true;
 }
 
 void V_SetCurrentColormap(const int colormap_index)

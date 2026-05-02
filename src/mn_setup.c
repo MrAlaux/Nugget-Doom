@@ -2160,7 +2160,7 @@ static void SizeDisplayAlt(void)
 
 static void RefreshSolidBackground(void)
 {
-    ST_refreshBackground(); // [Nugget] NUGHUD
+    st_refresh_background = true;
 }
 
 static const char *hud_anchoring_strings[] = {
