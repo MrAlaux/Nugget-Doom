@@ -1903,7 +1903,7 @@ void R_InitBufferRes(void)
         ylookup = Z_Malloc(video.height * sizeof(*ylookup), PU_RENDERER, NULL);
     }
 
-    solidcol = Z_Calloc(1, video.width * sizeof(*solidcol), PU_RENDERER, NULL);
+    solidcol = Z_Calloc(video.width, sizeof(*solidcol), PU_RENDERER, NULL);
 }
 
 //

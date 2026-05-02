@@ -319,7 +319,6 @@ typedef struct sbe_widget_s
     int height;
 
     int duration;
-    int duration_left;
 
     boolean vertical;
 

@@ -2028,11 +2028,11 @@ static void CreateVideoBuffer(void)
 
     if (truecolor_rendering)
     {
-        I_VideoBuffer32 = calloc(sizeof(pixel32_t), video.width * video.height);
+        I_VideoBuffer32 = calloc(video.width * video.height, sizeof(pixel32_t));
     }
     else
     {
-        I_VideoBuffer = calloc(sizeof(pixel_t), video.width * video.height);
+        I_VideoBuffer = calloc(video.width * video.height, sizeof(pixel_t));
     }
 
     V_RestoreBuffer();

@@ -1705,10 +1705,6 @@ static void ResetElem(sbarelem_t *elem, player_t *player)
             }
             break;
 
-        case sbe_widget:
-            elem->subtype.widget->duration_left = 0;
-            break;
-
         case sbe_string:
             {
                 sbe_string_t *string = elem->subtype.string;
@@ -2434,7 +2430,7 @@ static void DrawSolidBackground(void)
     }
 }
 
-static boolean st_refresh_background = true; // [Nugget] Static
+boolean st_refresh_background = true;
 
 static void DrawBackground(const char *name)
 {
@@ -2444,7 +2440,6 @@ static void DrawBackground(const char *name)
         R_FillBackScreen();
         R_DrawViewBorder();
 
-        // [Nugget] Init this regardless of `st_height` changes
         ST_InitRes();
 
         if (truecolor_rendering)
@@ -2508,9 +2503,9 @@ static void DrawCenteredMessage(void)
     }
 }
 
-static void DrawStatusBar(void)
+void ST_SetSTHeight(void)
 {
-    if (!statusbar->fullscreenrender)
+    if (statusbar && !statusbar->fullscreenrender)
     {
         st_height = CLAMP(statusbar->height, 0, SCREENHEIGHT) & ~1;
     }
@@ -2518,6 +2513,11 @@ static void DrawStatusBar(void)
     {
         st_height = 0;
     }
+}
+
+static void DrawStatusBar(void)
+{
+    ST_SetSTHeight();
 
     if (st_height && (screenblocks <= 10 || automap_on))
     {
@@ -2676,7 +2676,7 @@ static void DoPaletteStuff(player_t *player)
             // tune down a bit so the menu remains legible
             if (menuactive || paused || STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
             {
-                palette /= 2;
+                palette = (palette + 1) / 2;
             }
             palette += STARTREDPALS;
 
@@ -2712,7 +2712,7 @@ static void DoPaletteStuff(player_t *player)
         }
         if (STRICTMODE(palette_changes == PAL_CHANGE_REDUCED))
         {
-            palette /= 2;
+            palette = (palette + 1) / 2;
         }
         palette += STARTBONUSPALS;
 
@@ -2995,10 +2995,18 @@ void ST_Init(void)
 
 void ST_InitRes(void)
 {
-    if (!st_height)
+    static int old_st_size;
+    const int st_size = video.width * V_ScaleY(st_height);
+
+    // [Nugget]
+    static boolean old_truecolor;
+
+    if (old_st_size >= st_size && old_truecolor == truecolor_rendering)
     {
         return;
     }
+    old_st_size = st_size;
+    old_truecolor = truecolor_rendering;
 
     if (st_backing_screen)
     {
@@ -3016,13 +3024,13 @@ void ST_InitRes(void)
     if (truecolor_rendering)
     {
         st_backing_screen32 =
-            Z_Malloc(video.width * V_ScaleY(st_height) * sizeof(*st_backing_screen32),
+            Z_Malloc(st_size * sizeof(*st_backing_screen32),
                      PU_STATIC, 0);
     }
     else
     {
         st_backing_screen =
-            Z_Malloc(video.width * V_ScaleY(st_height) * sizeof(*st_backing_screen),
+            Z_Malloc(st_size * sizeof(*st_backing_screen),
                      PU_STATIC, 0);
     }
 }
@@ -3341,11 +3349,6 @@ void ST_SetKeyBlink(player_t* player, int blue, int yellow, int red)
 }
 
 // NUGHUD --------------------------------------------------------------------
-
-void ST_refreshBackground(void)
-{
-  st_refresh_background = true;
-}
 
 static sbaralignment_t NughudConvertAlignment(const int wide, const int align)
 {

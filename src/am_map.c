@@ -155,6 +155,8 @@ static int m_zoomin_mouse = M2_ZOOMIN;
 static int m_zoomout_mouse = M2_ZOOMOUT;
 static boolean mousewheelzoom;
 
+static boolean am_refresh_background = false;
+
 // translates between frame-buffer and map distances
 // [FG] fix int overflow that causes map and grid lines to disappear
 #define FTOM(x) ((((int64_t)(x)<<16)*scale_ftom)>>16)
@@ -811,6 +813,8 @@ static void AM_initScreenSize(void)
     }
     else
     {
+        ST_SetSTHeight();
+
         f_x = f_y = 0;
         f_w = video.width;
         if (automapoverlay && scaledviewheight == SCREENHEIGHT)
@@ -1098,7 +1102,8 @@ boolean AM_Responder
         AM_Start ();
         SwapScale();
         viewactive = false;
-        ST_refreshBackground();
+        am_refresh_background = true;
+        st_refresh_background = true;
       }
 
       rc = true;
@@ -1161,7 +1166,8 @@ boolean AM_Responder
 
         bigstate = 0;
         viewactive = true;
-        ST_refreshBackground();
+        am_refresh_background = true;
+        st_refresh_background = true;
         AM_Stop ();
       }
       else
@@ -1239,9 +1245,8 @@ boolean AM_Responder
         default: togglemsg("%s", DEH_String(AMSTR_OVERLAYOFF)); break;
       }
 
-      AM_initScreenSize();
-      AM_activateNewScale();
-      ST_refreshBackground();
+      am_refresh_background = true;
+      st_refresh_background = true;
     }
     else if (M_InputActivated(input_map_rotate))
     {
@@ -1604,6 +1609,14 @@ void AM_Ticker (void)
 
   prev_m_x = m_x;
   prev_m_y = m_y;
+
+  if (am_refresh_background)
+  {
+      AM_initScreenSize();
+      AM_activateNewScale();
+
+      am_refresh_background = false;
+  }
 }
 
 

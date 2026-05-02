@@ -106,6 +106,7 @@ void ST_ResetPalette(void);
 void ST_refreshBackground(void);
 
 void ST_InitRes(void);
+void ST_SetSTHeight(void);
 
 extern int health_red;    // health amount less than which status is red
 extern int health_yellow; // health amount less than which status is yellow
