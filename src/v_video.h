@@ -65,7 +65,6 @@ extern byte invul_gray[];
 
 // [Nugget]
 extern byte cr_bright3[],
-            cr_allblack[],
             cr_gray_vc[],  // `V_Colorize()` only
             nightvision[]; // Night-vision visor
 
@@ -365,8 +364,9 @@ void V_InitColorFunctions(void);
 extern boolean hud_menu_shadows;
 extern int hud_menu_shadows_filter_pct;
 
-void V_InitShadowTranMap(void);
-void V_ToggleShadows(const boolean on);
+void V_InitShadowColormaps(void);
+void V_SetShadowColormap(int pct);
+void V_ToggleShadows(boolean on);
 
 // [Nugget] =================================================================/
 

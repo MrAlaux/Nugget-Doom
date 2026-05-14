@@ -1953,17 +1953,28 @@ static void DrawGlyphLine(int x1, int y1, int *x2, int *y2, boolean dry,
 
     if (glyph)
     {
-        // [Nugget] Message fadeout
+        // [Nugget] /=========================================================
+
+        // Message fadeout
         const byte *const tl = (!elem->tranmap && line->tran_pct)
                              ? R_GetGenericTranMap(line->tran_pct)
                              : elem->tranmap;
 
-        // [Nugget] Message flash
+        // Message flash
         const crange_idx_e cr2 = line->flash ? CR_BRIGHT : CR_NONE;
+
+        // HUD/menu shadows
+        if (!elem->tranmap && line->tran_pct)
+        { V_SetShadowColormap(line->tran_pct); }
+
+        // [Nugget] =========================================================/
 
         DrawPatchEx(x1 + line->xoffset, y1, x2, y2, dry, zero_crop,
                     font->maxheight, elem->alignment, glyph, elem->cr, cr2,
                     tl);
+
+        // [Nugget] HUD/menu shadows
+        V_SetShadowColormap(100);
     }
 
     if (elem->alignment & sbe_h_middle)

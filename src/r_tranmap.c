@@ -39,6 +39,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [Nugget]
+#include "v_video.h"
+
 //
 // R_InitTranMap
 //
@@ -403,6 +406,9 @@ void R_InitFadeoutTranMaps(void)
 {
   for (int i = 0;  i < 10;  i++)
   { R_GetGenericTranMap(i * 10); }
+
+  // HUD/menu shadows
+  if (hud_menu_shadows) { V_InitShadowColormaps(); }
 }
 
 // [Nugget] =================================================================/

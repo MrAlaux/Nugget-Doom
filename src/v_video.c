@@ -48,6 +48,7 @@
 
 // [Nugget]
 #include "st_stuff.h"
+#include "st_widgets.h"
 
 pixel_t *I_VideoBuffer = NULL;
 pixel32_t *I_VideoBuffer32 = NULL;
@@ -236,14 +237,12 @@ void V_InitColorTranslation(void)
         cr_bright3[i] = cr_bright[cr_bright[cr_bright[i]]];
     }
 
-    memset(cr_allblack, I_GetNearestColor(playpal, 0, 0, 0), 256);
-
     for (int i = 0;  i < 256;  i++)
     {
         cr_gray_vc[i] = V_Colorize(playpal, CR_GRAY, (byte) i);
     }
 
-    V_InitShadowTranMap(); // HUD/menu shadows
+    V_InitShadowColormaps(); // HUD/menu shadows
 
     // Night-vision visor ----------------------------------------------------
 
@@ -266,7 +265,6 @@ int automap_overlay_darkening;
 int menu_backdrop_darkening;
 
 byte cr_bright3[256],
-     cr_allblack[256],
      cr_gray_vc[256],  // `V_Colorize()` only
      nightvision[256]; // Night-vision visor
 
@@ -342,18 +340,54 @@ void V_SetCurrentColormap(const int colormap_index)
 boolean hud_menu_shadows;
 int hud_menu_shadows_filter_pct;
 
-const byte *shadow_tranmap = NULL;
+static byte       shadow_colormaps[10][256] = {0};
+static byte const *shadow_colormap = shadow_colormaps[9];
 
-static boolean drawshadows = true;
+static boolean shadows_on = true,
+               drawing_shadow = false;
 
-void V_InitShadowTranMap(void)
+void V_InitShadowColormaps(void)
 {
-  shadow_tranmap = R_GetGenericTranMap(hud_menu_shadows_filter_pct);
+  static int last_i = 10;
+
+  int i = (ST_MessageFadeoutOn() || carousel_fadeout) ? 0 : 9;
+
+  if (last_i <= i) { return; }
+
+  last_i = i;
+
+  byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
+
+  for (; i < 10;  i++)
+  {
+    byte *const colormap = shadow_colormaps[i];
+
+    const float factor = (100 - hud_menu_shadows_filter_pct * (i + 1) / 10) / 100.0f;
+
+    byte *p = playpal;
+
+    for (int j = 0;  j < 256;  j++, p += 3)
+    {
+      colormap[j] =
+        I_GetNearestColor(
+          playpal,
+          p[0] * factor,
+          p[1] * factor,
+          p[2] * factor
+        );
+    }
+  }
+}
+
+void V_SetShadowColormap(const int pct)
+{
+  const int i = 9 * pct / 100;
+  shadow_colormap = shadow_colormaps[CLAMP(i, 0, 9)];
 }
 
 void V_ToggleShadows(const boolean on)
 {
-  drawshadows = on;
+  shadows_on = on;
 }
 
 // [Nugget] =================================================================/
@@ -601,7 +635,7 @@ static void DrawPatchColumn8TRTRTL(const patch_column_t *patchcol)
     const byte *source = patchcol->source;
 
     #define SRCPIXEL \
-      tranmap[(*dest << 8) + translation2[translation[source[frac >> FRACBITS]]]]
+        tranmap[(*dest << 8) + translation2[translation[source[frac >> FRACBITS]]]]
 
     while ((count -= 2) >= 0)
     {
@@ -611,6 +645,44 @@ static void DrawPatchColumn8TRTRTL(const patch_column_t *patchcol)
         *dest = SRCPIXEL;
         dest += linesize;
         frac += fracstep;
+    }
+    if (count & 1)
+    {
+        *dest = SRCPIXEL;
+    }
+
+    #undef SRCPIXEL
+}
+
+static void (*DrawPatchColumnShadow)(const patch_column_t *patchcol) = NULL;
+
+static void DrawPatchColumn8Shadow(const patch_column_t *patchcol)
+{
+    int count = patchcol->y2 - patchcol->y1 + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned int)patchcol->x >= (unsigned int)video.width
+        || (unsigned int)patchcol->y1 >= (unsigned int)video.height)
+    {
+        I_Error("%i to %i at %i", patchcol->y1, patchcol->y2, patchcol->x); 
+    }
+#endif
+
+    pixel_t *dest = V_ADDRESS(dest_screen, patchcol->x, patchcol->y1);
+
+    #define SRCPIXEL \
+        shadow_colormap[*dest]
+
+    while ((count -= 2) >= 0)
+    {
+        *dest = SRCPIXEL;
+        dest += linesize;
+        *dest = SRCPIXEL;
+        dest += linesize;
     }
     if (count & 1)
     {
@@ -883,6 +955,42 @@ static void DrawPatchColumn32TRTRTL(const patch_column_t *patchcol)
     #undef SRCPIXEL
 }
 
+static void DrawPatchColumn32Shadow(const patch_column_t *patchcol)
+{
+    int count = patchcol->y2 - patchcol->y1 + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned int)patchcol->x >= (unsigned int)video.width
+        || (unsigned int)patchcol->y1 >= (unsigned int)video.height)
+    {
+        I_Error("%i to %i at %i", patchcol->y1, patchcol->y2, patchcol->x); 
+    }
+#endif
+
+    pixel32_t *dest = V_ADDRESS(dest_screen32, patchcol->x, patchcol->y1);
+
+    #define SRCPIXEL \
+        V_IndexToRGB(shadow_colormap[V_IndexFromRGB(*dest)])
+
+    while ((count -= 2) >= 0)
+    {
+        *dest = SRCPIXEL;
+        dest += linesize;
+        *dest = SRCPIXEL;
+        dest += linesize;
+    }
+    if (count & 1)
+    {
+        *dest = SRCPIXEL;
+    }
+
+    #undef SRCPIXEL
+}
+
 // [Nugget] =================================================================/
 
 static void DrawMaskedColumn(patch_column_t *patchcol, const int ytop,
@@ -970,7 +1078,14 @@ static inline void DrawPatchInternal(int x, int y, int xoffset, int yoffset,
                                    : DrawPatchColumn;
 
     // [Nugget]
-    if (xlat1 && xlat2 && trans) { drawcolfunc = DrawPatchColumnTRTRTL; }
+    if (drawing_shadow)
+    {
+        drawcolfunc = DrawPatchColumnShadow;
+    }
+    else if (xlat1 && xlat2 && trans)
+    {
+        drawcolfunc = DrawPatchColumnTRTRTL;
+    }
 
     if (crop.width)
     {
@@ -1165,12 +1280,16 @@ void V_DrawPatchShadow(
     struct patch_s *const patch,
     const boolean flip
 ) {
-    if (hud_menu_shadows && drawshadows)
+    if (hud_menu_shadows && shadows_on)
     {
+        drawing_shadow = true;
+
         V_DrawPatchAll(
-            x + 1, y + 1, SHORT(patch->leftoffset), SHORT(patch->topoffset), crop,
-            patch, flip, cr_allblack, NULL, shadow_tranmap
+            x + 1, y + 1, SHORT(patch->leftoffset), SHORT(patch->topoffset),
+            crop, patch, flip, NULL, NULL, NULL
         );
+
+        drawing_shadow = false;
     }
 }
 
@@ -1348,7 +1467,7 @@ static void V_ShadowRect8(int x, int y, int width, int height)
 
         while (width--)
         {
-            *col = shadow_tranmap[*col << 8];
+            *col = shadow_colormap[*col];
             ++col;
         }
 
@@ -1383,7 +1502,7 @@ static void V_ShadowRect32(int x, int y, int width, int height)
 
         while (width--)
         {
-            *col = V_IndexToRGB(shadow_tranmap[V_TranMapRowFromRGB(*col)]);
+            *col = V_IndexToRGB(shadow_colormap[V_IndexFromRGB(*col)]);
             ++col;
         }
 
@@ -2059,6 +2178,7 @@ void V_InitColorFunctions(void)
         DrawPatchColumnTL = DrawPatchColumn32TL;
         DrawPatchColumnTRTL = DrawPatchColumn32TRTL;
         DrawPatchColumnTRTRTL = DrawPatchColumn32TRTRTL;
+        DrawPatchColumnShadow = DrawPatchColumn32Shadow;
 
         V_FillRect = V_FillRect32;
         V_ShadeRect = V_ShadeRect32;
@@ -2073,6 +2193,7 @@ void V_InitColorFunctions(void)
         DrawPatchColumnTL = DrawPatchColumn8TL;
         DrawPatchColumnTRTL = DrawPatchColumn8TRTL;
         DrawPatchColumnTRTRTL = DrawPatchColumn8TRTRTL;
+        DrawPatchColumnShadow = DrawPatchColumn8Shadow;
 
         V_FillRect = V_FillRect8;
         V_ShadeRect = V_ShadeRect8;

@@ -208,11 +208,15 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
     else if (carousel_fadeout && 0 < duration && duration < 10)
     {
       tranmap = R_GetGenericTranMap(duration * 10);
+      V_SetShadowColormap(100 * duration / 10); // HUD/menu shadows
     }
 
     // [Nugget] -------------------------------------------------------------/
 
     V_DrawPatchGeneralSH(x, y, xoffset, yoffset, tranmap, cr, patch, zero_crop); // [Nugget] HUD/menu shadows
+
+    // [Nugget] HUD/menu shadows
+    V_SetShadowColormap(100);
 }
 
 static int CalcOffset(void)
