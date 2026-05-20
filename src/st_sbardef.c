@@ -513,18 +513,47 @@ static void LoadHUDFont(hudfont_t *out)
     int maxwidth = 0;
     int maxheight = 0;
 
+    // [Nugget] If any lowercase character is missing, don't use lowercase at all
+    boolean use_lowercase = true;
+
     for (int i = 0; i < HU_FONTSIZE; ++i)
     {
         M_snprintf(lump, sizeof(lump), "%s%03d", out->stem, i + HU_FONTSTART);
         found = W_CheckNumForName(lump);
         if (found < 0)
         {
+            if ('a' <= i + HU_FONTSTART && i + HU_FONTSTART <= 'z')
+            { use_lowercase = false; }
+
             out->characters[i] = NULL;
             continue;
         }
         out->characters[i] = V_CachePatchNum(found, PU_STATIC);
         maxwidth = MAX(maxwidth, SHORT(out->characters[i]->width));
         maxheight = MAX(maxheight, SHORT(out->characters[i]->height));
+    }
+
+    if (use_lowercase)
+    {
+        // All lowercase characters are present; now check if they were loaded
+        // after the uppercase ones to guess if they're from the same set
+
+        char namebuf[16];
+        int upper_lumpnum = 0, lower_lumpnum = 0;
+
+        M_snprintf(namebuf, sizeof(namebuf), "%s065", out->stem);
+        upper_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+
+        M_snprintf(namebuf, sizeof(namebuf), "%s097", out->stem);
+        lower_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+
+        use_lowercase = upper_lumpnum < lower_lumpnum;
+    }
+
+    if (!use_lowercase)
+    {
+        for (int i = 'a' - HU_FONTSTART;  i <= 'z' - HU_FONTSTART;  i++)
+        { out->characters[i] = out->characters[i + 'A' - 'a']; }
     }
 
     out->maxheight = maxheight;

@@ -188,10 +188,13 @@ Toggle faux-demo mode, which emulates the condition of demo/net play (disables s
 Override the RNG output with `X`, which is a three-digit number between 0 and 255.
 
 `DIMLIGHT`  
-Toggle diminishing lighting.
+Toggle diminishing lighting (`diminishing_lighting` CVAR).
 
 `FOVSKY`  
-Toggle FOV-based sky stretching.
+Toggle FOV-based sky stretching (`fov_stretchsky` CVAR).
+
+`HIRESGFX`  
+Toggle usage of high-resolution graphics (`allow_hires_graphics` CVAR).
 
 `CASTCALL`  
 Enter the character cast call.

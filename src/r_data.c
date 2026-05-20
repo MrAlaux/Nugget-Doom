@@ -183,8 +183,17 @@ static void M_ProgressBarEnd(void)
 // needed for pre-rendering
 fixed_t   *spritewidth, *spriteoffset, *spritetopoffset;
 
-// [Nugget]
+// [Nugget] /=================================================================
+
 fixed_t *spriteheight;
+
+// Hi-res graphics -----------------------------------------------------------
+
+int first_hires_lump, last_hires_lump, num_hires_lumps;
+fixed_t *hires_graphic_widths, *hires_graphic_heights;
+float *hires_sprite_xscales, *hires_sprite_yscales;
+
+// [Nugget] =================================================================/
 
 //
 // MAPTEXTURE_T CACHING
@@ -1356,6 +1365,31 @@ int R_ColormapNumForName(const char *name)
   return i;
 }
 
+// [Nugget] Hi-res graphics
+static void R_InitHiresGraphics(void)
+{
+  first_hires_lump = W_CheckNumForName("HI_START") + 1;
+  last_hires_lump = W_CheckNumForName("HI_END") - 1;
+  num_hires_lumps = last_hires_lump - first_hires_lump + 1;
+
+  if (first_hires_lump >= 0 && last_hires_lump >= 0 && num_hires_lumps > 0)
+  {
+    hires_graphic_widths  = Z_Malloc(num_hires_lumps * sizeof(*hires_graphic_widths),  PU_STATIC, 0);
+    hires_graphic_heights = Z_Malloc(num_hires_lumps * sizeof(*hires_graphic_heights), PU_STATIC, 0);
+
+    hires_sprite_xscales = Z_Malloc(num_hires_lumps * sizeof(*hires_sprite_xscales), PU_STATIC, 0);
+    hires_sprite_yscales = Z_Malloc(num_hires_lumps * sizeof(*hires_sprite_yscales), PU_STATIC, 0);
+
+    // These arrays are properly filled when determining the replacements,
+    // otherwise we might unnecessarily convert many of them,
+    // which would take a while
+
+    for (int i = 0;  i < num_hires_lumps;  i++)
+    { hires_graphic_widths[i] = -1; }
+  }
+  else { num_hires_lumps = 0; }
+}
+
 //
 // R_InitData
 // Locates all the lumps
@@ -1365,6 +1399,9 @@ int R_ColormapNumForName(const char *name)
 
 void R_InitData(void)
 {
+  // [Nugget] Hi-res graphics
+  R_InitHiresGraphics();
+
   // [crispy] Moved R_InitFlats() to the top, because it sets firstflat/lastflat
   // which are required by R_InitTextures() to prevent flat lumps from being
   // mistaken as patches and by R_InitFlatBrightmaps() to set brightmaps for

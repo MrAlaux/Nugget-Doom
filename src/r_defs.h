@@ -492,6 +492,8 @@ typedef struct
   // Flip bit (1 = flip) to use for view angles 0-7.
   byte  flip[8];
 
+  // [Nugget] Hi-res graphics
+  short hires_lump[8];
 } spriteframe_t;
 
 //

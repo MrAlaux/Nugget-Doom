@@ -92,6 +92,7 @@ static void LoadNuggetGraphics(void);
 // CVARs ---------------------------------------------------------------------
 
 boolean no_menu_tint;
+boolean hud_menu_allow_lowercase;
 boolean no_berserk_tint;
 boolean no_radsuit_tint;
 boolean comp_godface;
@@ -102,6 +103,14 @@ static boolean hud_blink_keys;
 static boolean sts_show_berserk;
 int force_carousel;
 int carousel_fadeout;
+
+char ST_ToUpper(const char c)
+{
+  if (c >= 'a' && c <= 'z' && !hud_menu_allow_lowercase)
+    return c + 'A' - 'a';
+  else
+    return c;
+}
 
 // Font extras ---------------------------------------------------------------
 
@@ -1292,7 +1301,7 @@ static void UpdateLines(sbarelem_t *elem)
 
             if (font->type == sbf_proportional)
             {
-                ch = (unsigned char) M_ToUpper(ch) - HU_FONTSTART; // [Nugget] Cast to unsigned
+                ch = (unsigned char) ST_ToUpper(ch) - HU_FONTSTART; // [Nugget] Cast to unsigned
                 if (ch < 0 || ch >= HU_FONTSIZE + HU_FONTEXTRAS) // [Nugget]
                 {
                     totalwidth += SPACEWIDTH;
@@ -2060,7 +2069,7 @@ static void DrawStringLine(int x1, int y1, int *x2, int *y2, boolean dry,
             continue;
         }
 
-        ch = (unsigned char) M_ToUpper(ch) - HU_FONTSTART; // [Nugget] Cast to unsigned
+        ch = (unsigned char) ST_ToUpper(ch) - HU_FONTSTART; // [Nugget] Cast to unsigned
 
         // [Nugget] HUD/menu shadows
 
@@ -3785,6 +3794,9 @@ static hudfont_t LoadNughudHUDFont(
 
   int maxwidth = 0, maxheight = 0;
 
+  // [Nugget] If any lowercase character is missing, don't use lowercase at all
+  boolean use_lowercase = true;
+
   for (int i = 0;  i < HU_FONTSIZE;  i++)
   {
     char namebuf[16];
@@ -3798,6 +3810,34 @@ static hudfont_t LoadNughudHUDFont(
       maxwidth  = MAX(maxwidth,  SHORT(font.characters[i]->width));
       maxheight = MAX(maxheight, SHORT(font.characters[i]->height));
     }
+    else {
+      const char c = i + HU_FONTSTART;
+
+      if ('a' <= c && c <= 'z') { use_lowercase = false; }
+    }
+  }
+
+  if (use_lowercase)
+  {
+    // All lowercase characters are present; now check if they were loaded
+    // after the uppercase ones to guess if they're from the same set
+
+    char namebuf[16];
+    int upper_lumpnum = 0, lower_lumpnum = 0;
+
+    M_snprintf(namebuf, sizeof(namebuf), "%s065", stem);
+    upper_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+
+    M_snprintf(namebuf, sizeof(namebuf), "%s097", stem);
+    lower_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+
+    use_lowercase = upper_lumpnum < lower_lumpnum;
+  }
+
+  if (!use_lowercase)
+  {
+    for (int i = 'a' - HU_FONTSTART;  i <= 'z' - HU_FONTSTART;  i++)
+    { font.characters[i] = font.characters[i + 'A' - 'a']; }
   }
 
   font.monowidth = maxwidth;

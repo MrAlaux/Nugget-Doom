@@ -300,6 +300,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - _Run_ button to gib
   - _Strafe_ buttons to skip
   - Press `0` to toggle fancy mode
+- **Support for high-resolution sprites between `HI_START`/`HI_END` markers**
 - **Support for the DeHackEd thing sprite `Scale` property**, as featured in ZDoom and derivatives
   - Does not work with voxel models
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
@@ -312,6 +313,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS` (last three unused)
   - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
+- **Support for lowercase characters in console font** (CFG-only: `hud_menu_allow_lowercase`)
 - **Customizable darkening level for dark menu background and Automap overlay**
   (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
 - The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump

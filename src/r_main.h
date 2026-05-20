@@ -161,6 +161,7 @@ typedef enum fakecontrast_s {
 
 extern boolean vertical_lockon;
 
+extern boolean allow_hires_graphics;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;

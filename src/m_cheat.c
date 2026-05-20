@@ -192,6 +192,7 @@ static void cheat_myrng(void);
 static void cheat_myrngx(char *buf);
 static void cheat_dimlight(void);
 static void cheat_fovsky(void);
+static void cheat_hiresgfx(void);
 static void cheat_castcall(void);
 
 static void cheat_cheese(void);
@@ -467,10 +468,11 @@ cheat_sequence_t cheats_table[] = {
   { "boomcan",    NULL, not_net | not_demo, {.v = cheat_boomcan} }, // --------------------------- Explosive hitscan
 
   { "fauxdemo",   NULL, devmode_only, {.v = cheat_fauxdemo} }, // Emulates demo/net-play state, for debugging
-  { "myrng",        NULL, devmode_only, {.v = cheat_myrng} },
-  { "myrng",        NULL, devmode_only, {.s = cheat_myrngx}, -3 },
+  { "myrng",      NULL, devmode_only, {.v = cheat_myrng} },
+  { "myrng",      NULL, devmode_only, {.s = cheat_myrngx}, -3 },
   { "dimlight",   NULL, devmode_only, {.v = cheat_dimlight} },
   { "fovsky",     NULL, devmode_only, {.v = cheat_fovsky} },
+  { "hiresgfx",   NULL, devmode_only, {.v = cheat_hiresgfx}, .repeatable = true },
   { "castcall",   NULL, devmode_only, {.v = cheat_castcall} },
 
   { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
@@ -1015,6 +1017,12 @@ static void cheat_fovsky(void)
 
   fov_stretchsky = !fov_stretchsky;
   displaymsg("FOV Stretching %s", fov_stretchsky ? "ON" : "OFF");
+}
+
+static void cheat_hiresgfx(void)
+{
+  allow_hires_graphics = !allow_hires_graphics;
+  displaymsg("Hi-Res Graphics %s", allow_hires_graphics ? "ON" : "OFF");
 }
 
 static void cheat_castcall(void)

@@ -553,6 +553,10 @@ static void DrawTabs(void)
 
     int width = 0;
 
+    // [Nugget]
+    const boolean old_lowercase = hud_menu_allow_lowercase;
+    hud_menu_allow_lowercase = false;
+
     for (int i = 0; tabs[i].text; ++i)
     {
         if (i)
@@ -569,6 +573,8 @@ static void DrawTabs(void)
         }
         width += rect->w;
     }
+
+    hud_menu_allow_lowercase = old_lowercase;
 
     int x = (SCREENWIDTH - width) / 2;
 
@@ -4759,7 +4765,7 @@ void MN_DrawStringCR(int cx, int cy, byte *cr1, byte *cr2, const char *ch)
             continue;
         }
 
-        c = M_ToUpper(c) - HU_FONTSTART;
+        c = ST_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c >= HU_FONTSIZE || hu_font[c] == NULL)
         {
             cx += SPACEWIDTH; // space
@@ -4858,7 +4864,7 @@ int MN_GetPixelWidth(const char *ch)
             continue;
         }
 
-        c = M_ToUpper(c) - HU_FONTSTART;
+        c = ST_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c >= HU_FONTSIZE || hu_font[c] == NULL)
         {
             len += SPACEWIDTH; // space
@@ -5829,7 +5835,7 @@ int MN_StringWidth(const char *string)
             }
             continue;
         }
-        c = M_ToUpper(c) - HU_FONTSTART;
+        c = ST_ToUpper(c) - HU_FONTSTART;
         if (c < 0 || c >= HU_FONTSIZE || hu_font[c] == NULL)
         {
             w += SPACEWIDTH;
@@ -6123,6 +6129,11 @@ void MN_BindMenuVariables(void)
     M_BindNum("hud_menu_shadows_filter_pct", &hud_menu_shadows_filter_pct, NULL,
               66, 0, 100, ss_none, wad_yes,
               "HUD/menu-shadows opacity percent");
+
+    // (CFG-only)
+    M_BindBool("hud_menu_allow_lowercase", &hud_menu_allow_lowercase, NULL,
+               false, ss_none, wad_yes,
+               "Allow display of lowercase console-font characters in HUD/menu");
 
     // [Nugget] -------------------------------------------------------------/
 

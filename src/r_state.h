@@ -73,6 +73,11 @@ extern int firstspritelump;
 extern int lastspritelump;
 extern int numspritelumps;
 
+// [Nugget] Hi-res graphics
+extern int first_hires_lump, last_hires_lump, num_hires_lumps;
+extern fixed_t *hires_graphic_widths, *hires_graphic_heights;
+extern float *hires_sprite_xscales, *hires_sprite_yscales;
+
 //
 // Lookup tables for map data.
 //
