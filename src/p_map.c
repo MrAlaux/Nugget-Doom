@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include "d_player.h"
+#include "deh_misc.h"
 #include "doomdata.h"
 #include "doomdef.h"
 #include "doomstat.h"
@@ -28,8 +29,10 @@
 #include "i_printf.h"
 #include "i_system.h"
 #include "info.h"
+#include "m_arena.h"
 #include "m_argv.h"
 #include "m_bbox.h"
+#include "m_fixed.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_inter.h"
@@ -97,6 +100,8 @@ int numspechit;
 
 // Temporary holder for thing_sectorlist threads
 msecnode_t *sector_list = NULL;                             // phares 3/16/98
+
+arena_t *msecnodes_arena;
 
 // [Nugget] /=================================================================
 
@@ -1506,7 +1511,7 @@ static void P_HitSlideLine(line_t *ld)
       if (deltaangle > ANG180)
 	deltaangle += ANG180;
 
-      //  I_Error ("SlideLine: ang>ANG180");
+      //  I_Error ("ang>ANG180");
 
       lineangle >>= ANGLETOFINESHIFT;
       deltaangle >>= ANGLETOFINESHIFT;
@@ -1527,7 +1532,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 
 #ifdef RANGECHECK
   if (!in->isaline)
-    I_Error ("PTR_SlideTraverse: not a line?");
+    I_Error ("not a line?");
 #endif
 
   li = in->d.line;
@@ -1905,7 +1910,7 @@ static int CorrectPuffPosition(
   // Calculate corrected values even if we hit a sky (i.e. don't check for skies)
   if (hit_plane)
   {
-    *cz = BETWEEN(sector->floorheight, sector->ceilingheight, z);
+    *cz = CLAMP(z, sector->floorheight, sector->ceilingheight);
     *cfrac = FixedDiv(*cz - shootz, FixedMul(aimslope, attackrange));
     *cx = trace.x + FixedMul (trace.dx, *cfrac);
     *cy = trace.y + FixedMul (trace.dy, *cfrac);
@@ -1964,7 +1969,10 @@ static boolean PTR_ShootTraverse(intercept_t *in)
       line_t *li = in->d.line;
 
       if (li->special)
-	P_ShootSpecialLine (shootthing, li);
+	{
+	  int side = P_PointOnLineSide(shootthing->x, shootthing->y, li);
+	  P_ShootSpecialLine(shootthing, li, side);
+	}
 
       if (li->flags & ML_TWOSIDED)
 	{  // crosses a two sided (really 2s) line
@@ -2596,7 +2604,7 @@ static boolean PTR_ChasecamTraverse(intercept_t *in)
 
     if (z < sec->floorheight+FRACUNIT || sec->ceilingheight-FRACUNIT < z)
     {
-      z = BETWEEN(sec->floorheight+FRACUNIT, sec->ceilingheight-FRACUNIT, z);
+      z = CLAMP(z, sec->floorheight+FRACUNIT, sec->ceilingheight-FRACUNIT);
       frac = FixedDiv(z - shootz, FixedMul(aimslope, attackrange));
       x = trace.x + FixedMul(trace.dx, frac);
       y = trace.y + FixedMul(trace.dy, frac);
@@ -2712,7 +2720,7 @@ boolean PIT_RadiusAttack(mobj_t *thing)
 
 void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, int distance)
 {
-  fixed_t dist = (distance+MAXRADIUS)<<FRACBITS;
+  fixed_t dist = IntToFixed(distance + MAXRADIUS);
   int yh = (spot->y + dist - bmaporgy)>>MAPBLOCKSHIFT;
   int yl = (spot->y - dist - bmaporgy)>>MAPBLOCKSHIFT;
   int xh = (spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
@@ -2771,7 +2779,7 @@ boolean PIT_ChangeSector(mobj_t *thing)
       thing->height = thing->radius = 0;
       if (thing->info->bloodcolor || idgaf)
       {
-        thing->flags2 |= MF2_COLOREDBLOOD;
+        thing->flags_extra |= MFX_COLOREDBLOOD;
         thing->bloodcolor = V_BloodColor(thing->info->bloodcolor);
       }
 
@@ -2835,7 +2843,7 @@ boolean PIT_ChangeSector(mobj_t *thing)
 
       if (thing->info->bloodcolor || idgaf)
       {
-        mo->flags2 |= MF2_COLOREDBLOOD;
+        mo->flags_extra |= MFX_COLOREDBLOOD;
         mo->bloodcolor = V_BloodColor(thing->info->bloodcolor);
       }
 
@@ -2937,7 +2945,7 @@ static msecnode_t *P_GetSecnode(void)
 
   return headsecnode ?
     node = headsecnode, headsecnode = node->m_snext, node :
-    Z_Malloc(sizeof *node, PU_LEVEL, NULL);
+    arena_alloc(msecnodes_arena, msecnode_t);
 }
 
 // P_PutSecnode() returns a node to the freelist.
@@ -3185,7 +3193,7 @@ void P_CreateSecNodeList(mobj_t *thing,fixed_t x,fixed_t y)
 void P_MapStart(void)
 {
   if (tmthing)
-    I_Error("P_MapStart: tmthing set!");
+    I_Error("tmthing set!");
 }
 
 void P_MapEnd(void)
