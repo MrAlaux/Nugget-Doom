@@ -196,13 +196,18 @@ void P_CalcHeight (player_t* player)
         static boolean breathing_dir = 0;
         const fixed_t BREATHING_STEP = 32, BREATHING_MAX = 1408;
 
-        if (breathing_dir) { // Inhale (camera up)
+        if (breathing_dir)
+        {
+          // Inhale (camera up)
           breathing_val += BREATHING_STEP;
+
           if (breathing_val >= BREATHING_MAX)
           { breathing_dir = false; }
         }
-        else { // Exhale (camera down)
+        else {
+          // Exhale (camera down)
           breathing_val -= BREATHING_STEP;
+
           if (breathing_val <= -BREATHING_MAX)
           { breathing_dir = true; }
         }
