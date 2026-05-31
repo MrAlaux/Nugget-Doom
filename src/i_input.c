@@ -831,7 +831,7 @@ static const char shiftxform[] =
 // [Nugget]
 boolean I_ShiftPressed(void)
 {
-  return (SDL_GetModState() & KMOD_SHIFT) != 0;
+  return (SDL_GetModState() & SDL_KMOD_SHIFT) != 0;
 }
 
 static boolean vanilla_keyboard_mapping;

@@ -99,7 +99,7 @@ There are some additional toggles (value of `0` or `1`) for some specific widget
 - `nughud_ammobar_resize`: Resize the _Ammo_ bar when the player has the backpack.
 - `nughud_ammoicon_big`: Toggle usage of big-ammo-pickup sprites for the _Ammo_ icon.
 - `nughud_face_bg`: Toggle the _Face_ background, whose position is linked to that of the _Face_ itself.
-- `nughud_armor_hide`: Hide the _Armor_ count, icon and bar when the player has zero armor.
+- `nughud_armor_hide`: Hide the _Armor_ count, icon and bar when the player has no armor.
 
 ## Text lines
 
