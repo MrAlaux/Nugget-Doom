@@ -1,11 +1,16 @@
 ## New Features
 
 - **Support for high-resolution sprites between `HI_START`/`HI_END` markers**
-- **DeHackEd thing sprite `Scale` property** support
+- **DeHackEd thing `Scale` property** support
 - **Weapon Carousel fadeout** setting
+- **NUGHUD:**
+  - Toggle to hide armor-related widgets when the player has no armor
+  - Toggle to resize the ammo bar when the player has the backpack
 - Toggle to **organize screenshots**
 - **Support for lowercase characters in console font**
+- Toggle to **disable minimap double-press**
 - Toggle to **use palette colors exactly when gamma correction is disabled**
+- Developer cheats to toggle netgame and deathmatch states
 
 ## Changes
 
@@ -22,7 +27,9 @@
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
 - **Optimized initialization of generic tranmaps by caching them in files**
 - **Raised upper limits of color _Intensity_ and _Saturation_ settings to 200%**
+- **Made automap-mark coloring take the <kbd>Shift</kbd> key into account**
 - **Randomized duration of spawn, death, and gib states in _Fancy Cast_**, emulating in-game behavior
+- **Improved _Sprite Shadows_ casting threshold**
 
 ## Bug Fixes
 

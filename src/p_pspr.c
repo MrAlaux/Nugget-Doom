@@ -44,10 +44,10 @@
 // [Nugget]
 #include "g_game.h"
 #include "m_input.h"
-#include "m_swap.h"
 #include "p_maputl.h"
+#include "r_state.h"
 #include "r_things.h"
-#include "v_patch.h"
+#include "w_wad.h"
 
 // [Nugget] /=================================================================
 
@@ -1560,7 +1560,7 @@ static void WeaponInertiaVertical(
   {
     static int sprite = -1, frame = -1;
     static const actualspriteheight_t *ash = NULL;
-    static short spritetopoffset;
+    static short thisspritetopoffset;
 
     if (psp->state->sprite != sprite || (psp->state->frame & FF_FRAMEMASK) != frame)
     {
@@ -1569,13 +1569,12 @@ static void WeaponInertiaVertical(
 
       ash = R_GetActualSpriteHeight(sprite, frame);
 
-      const patch_t *const patch = (patch_t *) V_CachePatchNum(ash->lump, PU_CACHE);
-      spritetopoffset = SHORT(patch->topoffset);
+      thisspritetopoffset = spritetopoffset[ash->lump] >> FRACBITS;
     }
 
     const int screenbottom = SCREENHEIGHT - ((screenblocks < 11) ? 48 : 32);
 
-    fixed_t min = WEAPONTOP - ((-spritetopoffset + ash->height - screenbottom) * FRACUNIT);
+    fixed_t min = WEAPONTOP - ((-thisspritetopoffset + ash->height - screenbottom) * FRACUNIT);
 
     min = MIN(min, WEAPONTOP);
 

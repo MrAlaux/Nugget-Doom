@@ -64,6 +64,7 @@
 #include "m_array.h"
 
 // [Nugget] CVARs
+boolean minimap_double_press;
 boolean fancy_teleport;
 
 //jff 1/7/98 default automap colors added
@@ -438,13 +439,20 @@ static const int markcolors[] =
 
 static const size_t NUM_MARKCOLORS = sizeof(markcolors) / sizeof(*markcolors);
 
-static void AM_colorPointedMark(void)
+static void AM_colorPointedMark(const boolean shift)
 {
   if (!markpointnum || pointed_mark_index < 0) { return; }
 
   mapmark_t *const mark = markpoints + pointed_mark_index;
 
-  mark->color = (mark->color + 1) % NUM_MARKCOLORS;
+  if (shift)
+  {
+    if (--mark->color < 0) { mark->color = NUM_MARKCOLORS-1; }
+  }
+  else
+  {
+    if (++mark->color >= NUM_MARKCOLORS) { mark->color = 0; }
+  }
 }
 
 static void AM_clearPointedMark(void)
@@ -1048,9 +1056,7 @@ static boolean CheckQuickMapButtonDoublePress(void)
 
   boolean ret = false;
 
-  const boolean minimap_input_set = array_size(M_Input(input_map_mini)) > 0;
-
-  if (current_time - last_input_map_time < MINIMAP_TOGGLE_MS && !minimap_input_set)
+  if (current_time - last_input_map_time < MINIMAP_TOGGLE_MS && minimap_double_press)
   {
     ST_ToggleMinimap();
     ret = true;
@@ -1202,7 +1208,7 @@ boolean AM_Responder
       // [Nugget]
       if (pointed_mark_index >= 0)
       {
-        AM_colorPointedMark();
+        AM_colorPointedMark(M_ShiftPressed());
       }
       else
       {

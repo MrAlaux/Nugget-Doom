@@ -29,6 +29,7 @@ enum automapmode_e; // [Nugget]
 // [Nugget] /=================================================================
 
 // CVARs
+extern boolean minimap_double_press;
 extern boolean fancy_teleport;
 
 void AM_InitColorFunctions(void);

@@ -236,6 +236,9 @@ int M_GetMouseBForName(const char *name);
 
 boolean M_IsMouseWheel(int mouseb);
 
+// [Nugget]
+boolean M_ShiftPressed(void);
+
 void M_InputPredefined(void);
 
 void M_BindInputVariables(void);

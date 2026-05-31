@@ -100,10 +100,11 @@ nughud_t nughud; // Behold!!!
 //
 
 default_t nughud_defaults[] = {
-  WIDGET2( "nughud_ammo",         nughud.ammo,          44, 171, -1,  1     ),
-  WIDGET3( "nughud_ammoicon",     nughud.ammoicon,     -1,  0,    0, -1, 1  ),
-  TOGGLE(  "nughud_ammoicon_big", nughud.ammoicon_big,  0                   ),
-  BAR(     "nughud_ammobar",      nughud.ammobar,      -1,  0,    0, -1, -1 ),
+  WIDGET2( "nughud_ammo",           nughud.ammo,            44, 171, -1,  1     ),
+  WIDGET3( "nughud_ammoicon",       nughud.ammoicon,       -1,  0,    0, -1, 1  ),
+  TOGGLE(  "nughud_ammoicon_big",   nughud.ammoicon_big,    0                   ),
+  BAR(     "nughud_ammobar",        nughud.ammobar,        -1,  0,    0, -1, -1 ),
+  TOGGLE(  "nughud_ammobar_resize", nughud.ammobar_resize,  0                   ),
 
   WIDGET3( "nughud_weaponicon", nughud.weaponicon, -1, 0, 0, -1, 1 ),
 
@@ -126,9 +127,10 @@ default_t nughud_defaults[] = {
   WIDGET( "nughud_face",    nughud.face,    -1, 168, 0 ),
   TOGGLE( "nughud_face_bg", nughud.face_bg,  1         ),
 
-  WIDGET2( "nughud_armor",     nughud.armor,      221, 171, 1,  1     ),
-  WIDGET3( "nughud_armoricon", nughud.armoricon, -1,   0,   0, -1, 1  ),
-  BAR(     "nughud_armorbar",  nughud.armorbar,  -1,   0,   0, -1, -1 ),
+  WIDGET2( "nughud_armor",      nughud.armor,       221, 171, 1,  1     ),
+  TOGGLE(  "nughud_armor_hide", nughud.armor_hide,  0                   ),
+  WIDGET3( "nughud_armoricon",  nughud.armoricon,  -1,   0,   0, -1, 1  ),
+  BAR(     "nughud_armorbar",   nughud.armorbar,   -1,   0,   0, -1, -1 ),
 
   WIDGET( "nughud_key0", nughud.keys[0], 239, 171, 1 ),
   WIDGET( "nughud_key1", nughud.keys[1], 239, 181, 1 ),

@@ -81,6 +81,7 @@ typedef struct nughud_s {
   nughud_vlignable_t ammoicon;
   boolean            ammoicon_big;
   nughud_bar_t       ammobar;
+  boolean            ammobar_resize;
   nughud_vlignable_t weaponicon;
   nughud_alignable_t health;
   nughud_vlignable_t healthicon;
@@ -90,6 +91,7 @@ typedef struct nughud_s {
   nughud_widget_t    face;
   boolean            face_bg;
   nughud_alignable_t armor;
+  boolean            armor_hide;
   nughud_vlignable_t armoricon;
   nughud_bar_t       armorbar;
   nughud_widget_t    keys[3];

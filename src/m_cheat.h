@@ -51,8 +51,7 @@ typedef enum {
   not_net = not_dm | not_coop,
 
   // [Nugget]
-  devmode_only_bit = 65536,
-  devmode_only = devmode_only_bit|not_demo|not_net
+  devmode_only = 65536
 } cheat_when_t;
 
 #define MAX_CHEAT_LEN 25

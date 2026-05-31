@@ -828,6 +828,12 @@ static const char shiftxform[] =
     '{', '|', '}', '~', 127
 };
 
+// [Nugget]
+boolean I_ShiftPressed(void)
+{
+  return (SDL_GetModState() & KMOD_SHIFT) != 0;
+}
+
 static boolean vanilla_keyboard_mapping;
 
 static int TranslateKey(SDL_Scancode scancode)

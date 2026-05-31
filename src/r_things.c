@@ -542,9 +542,9 @@ vissprite_t *R_NewVisSprite(void)
 
 static actualspriteheight_t *actual_sprite_heights = NULL;
 
-static const actualspriteheight_t *CalculateActualSpriteHeight(const int lump)
+static const actualspriteheight_t *CalculateActualSpriteHeight(const short lump)
 {
-  patch_t *const patch = V_CachePatchNum(lump, PU_CACHE);
+  patch_t *const patch = V_CachePatchNum(firstspritelump + lump, PU_CACHE);
   const short width = SHORT(patch->width);
 
   short actualheight = 0, toppadding = SHRT_MAX;
@@ -576,7 +576,12 @@ static const actualspriteheight_t *CalculateActualSpriteHeight(const int lump)
     actualheight = MAX(actualheight, columnheight);
   }
 
-  actualheight -= toppadding;
+  if (!actualheight)
+  {
+    // The sprite is blank
+    toppadding = 0;
+  }
+  else { actualheight -= toppadding; }
 
   array_push(
     actual_sprite_heights,
@@ -600,7 +605,7 @@ const actualspriteheight_t *R_GetActualSpriteHeight(const int sprite, int frame)
   if (frame >= sprdef->numframes)
   { return &dummy; }
 
-  const int lump = firstspritelump + sprdef->spriteframes[frame].lump[0];
+  const short lump = sprdef->spriteframes[frame].lump[0];
 
   for (int i = 0;  i < array_size(actual_sprite_heights);  i++)
   {
@@ -741,7 +746,7 @@ static void DrawVisSpriteLoop8(
       // Thing lighting
       if (percolumn_lighting)
       {
-        fixed_t offset = (frac - pcl_offset) * pcl_scale_mult;
+        fixed_t offset = frac * pcl_scale_mult - pcl_offset;
 
         if (vis->flags & VSF_FLIPPED) { offset = -offset; }
 
@@ -825,7 +830,7 @@ static void DrawVisSpriteLoop32(
       // Thing lighting
       if (percolumn_lighting)
       {
-        fixed_t offset = (frac - pcl_offset) * pcl_scale_mult;
+        fixed_t offset = frac * pcl_scale_mult - pcl_offset;
 
         if (vis->flags & VSF_FLIPPED) { offset = -offset; }
 
@@ -935,7 +940,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
     {
       percolumn_lighting = true;
 
-      pcl_offset = (SHORT(patch->leftoffset) << FRACBITS) - vis->xiscale/2;
+      pcl_offset = vis->leftoffset - vis->xiscale/2;
 
       const int angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
 
@@ -1066,8 +1071,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
         yscale_mult = 1.0f,
         info_scale_mult = 1.0f;
 
-  boolean have_scale = false,
-          have_info_scale = false;
+  boolean have_scale = false;
 
   const fixed_t info_scale = thing->info ? thing->info->scale : FRACUNIT;
 
@@ -1076,7 +1080,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
     if (info_scale <= 0) { return; }
 
     have_scale = true;
-    have_info_scale = true;
 
     info_scale_mult = FixedToDouble(thing->info->scale);
     xscale_mult = yscale_mult = info_scale_mult;
@@ -1206,7 +1209,8 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   gzt = interpz + thisspritetopoffset;
 
   // [Nugget] Sprite scaling
-  if (have_info_scale) { gzt = interpz + thisspritetopoffset * info_scale_mult; }
+  if (info_scale_mult != 1.0f)
+  { gzt = interpz + thisspritetopoffset * info_scale_mult; }
 
   // killough 4/9/98: clip things which are out of view due to height
   if (interpz > (int64_t)viewz + FixedDiv(viewheightfrac, xscale) ||
@@ -1259,6 +1263,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   vis->scale_mult = xscale_mult;
   vis->yscale = yscale;
   vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
+  vis->leftoffset = spriteoffset[lump] * info_scale_mult;
   vis->flags = (VSF_FLIPPED * flip) | (VSF_SCALED * have_scale);
 
   if (flip)
@@ -1390,8 +1395,12 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] Sprite shadows -------------------------------------------------
 
+  const unsigned sprite_area =
+    (thisspritewidth >> FRACBITS) * (thisspriteheight >> FRACBITS)
+    * FixedToDouble(vis->scale);
+
   if (   !R_SpriteShadowsOn()
-      || (vis->scale <= FRACUNIT/4)
+      || (sprite_area < 1024)
       || (frame & FF_FULLBRIGHT)
       || (thing->flags & MF_SHADOW)
       || vis->tranmap
@@ -1440,8 +1449,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   }
 
   fixed_t shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
-
-  if (vis->scale * shadow_yscale_mult <= FRACUNIT * 3/256) { return; }
 
   shadow_yscale = yscale * shadow_yscale_mult;
   shadow_xscale = xscale * (1.0f - floordist);
@@ -1750,6 +1757,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
   vis->scale_mult = xscale_mult;
   vis->yscale = yscale;
   vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
+  vis->leftoffset = spriteoffset[lump];
   vis->flags = (VSF_FLIPPED * flip) | VSF_NO_PERC | (VSF_SCALED * have_scale);
 
   if (flip)

@@ -15,14 +15,15 @@ nughud_ammoicon_vlign 1
 nughud_ammoicon_big   0
 
 ; Ammo bar
-nughud_ammobar_x     -1
-nughud_ammobar_y     0
-nughud_ammobar_wide  0
-nughud_ammobar_align -1
-nughud_ammobar_vlign -1
-nughud_ammobar_xstep 0
-nughud_ammobar_ystep 0
-nughud_ammobar_ups   100
+nughud_ammobar_x      -1
+nughud_ammobar_y      0
+nughud_ammobar_wide   0
+nughud_ammobar_align  -1
+nughud_ammobar_vlign  -1
+nughud_ammobar_xstep  0
+nughud_ammobar_ystep  0
+nughud_ammobar_ups    100
+nughud_ammobar_resize 0
 
 ; Health count
 nughud_health_x     90
@@ -102,6 +103,7 @@ nughud_armor_x     221
 nughud_armor_y     171
 nughud_armor_wide  1
 nughud_armor_align 1
+nughud_armor_hide  0
 
 ; Armor icon
 nughud_armoricon_x     -1

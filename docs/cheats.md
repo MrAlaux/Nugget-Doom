@@ -184,6 +184,12 @@ The following cheats in this section are developer-only: the `nugget_devmode` CV
 `FAUXDEMO`  
 Toggle faux-demo mode, which emulates the condition of demo/net play (disables some features).
 
+`NETGAME`  
+Toggle netgame state.
+
+`DMATCH`  
+Toggle deathmatch state.
+
 `MYRNG[X]`  
 Override the RNG output with `X`, which is a three-digit number between 0 and 255.
 

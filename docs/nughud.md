@@ -96,8 +96,10 @@ Otherwise, if only the first slice graphic is provided, the bars will continue t
 There are some additional toggles (value of `0` or `1`) for some specific widgets:
 
 - `nughud_percents`: Toggle drawing of percentage signs for the _Health_ and _Armor_ counts.
+- `nughud_ammobar_resize`: Resize the _Ammo_ bar when the player has the backpack.
 - `nughud_ammoicon_big`: Toggle usage of big-ammo-pickup sprites for the _Ammo_ icon.
 - `nughud_face_bg`: Toggle the _Face_ background, whose position is linked to that of the _Face_ itself.
+- `nughud_armor_hide`: Hide the _Armor_ count, icon and bar when the player has zero armor.
 
 ## Text lines
 
