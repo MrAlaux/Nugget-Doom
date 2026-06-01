@@ -1996,8 +1996,6 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 {
   mobj_t *const mobj = arena_alloc(thinkers_arena, mobj_t);
 
-  memset(mobj, 0, sizeof(*mobj));
-
   mobj->oldx = mobj->x = x;
   mobj->oldy = mobj->y = y;
 
@@ -2012,6 +2010,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 
   mobj->info = P_VisualMobjDummyInfo();
 
+  mobj->tint = NO_INDEX;
   mobj->gentranmap_pct = -1;
 
   mobj->isvisual = true;
