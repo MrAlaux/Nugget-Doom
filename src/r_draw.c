@@ -382,7 +382,8 @@ static void DrawTLColumn32(void)
         V_IndexToRGB( \
             tranmap[ \
                 V_TranMapRowFromRGB(*dest) \
-                + V_IndexFromRGB(colormap[brightmap[src]][src])] \
+                + V_IndexFromRGB(colormap[brightmap[src]][src]) \
+            ] \
          )
 
     if (dc_texheight & heightmask)
@@ -436,6 +437,8 @@ static void DrawTLColumn32(void)
             *dest = SRCPIXEL;
         }
     }
+
+    #undef SRCPIXEL
 }
 
 // Sprite shadows ------------------------------------------------------------
@@ -1636,7 +1639,9 @@ void R_InitTranslationTables(void)
     }
 }
 
-void R_DrawTRTLColumn(void)
+void (*R_DrawTRTLColumn)(void) = NULL;
+
+static void DrawTRTLColumn8(void)
 {
     int count = dc_yh - dc_yl + 1;
     if (count <= 0)
@@ -1665,6 +1670,96 @@ void R_DrawTRTLColumn(void)
 
     #define SRCPIXEL \
       tranmap[(*dest << 8) + colormap[brightmap[src]][translation[src]]]
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+        }
+    }
+
+    #undef SRCPIXEL
+}
+
+static void DrawTRTLColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *source = dc_source;
+    const byte *translation = dc_translation;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    #define SRCPIXEL \
+        V_IndexToRGB( \
+            tranmap[ \
+                V_TranMapRowFromRGB(*dest) \
+                + V_IndexFromRGB(colormap[brightmap[src]][translation[src]]) \
+            ] \
+         )
 
     if (dc_texheight & heightmask)
     {
@@ -2195,6 +2290,7 @@ void R_InitDrawColorFunctions(void)
         R_DrawColumn = DrawColumn32;
         R_DrawTranslatedColumn = DrawTranslatedColumn32;
         R_DrawTLColumn = DrawTLColumn32;
+        R_DrawTRTLColumn = DrawTRTLColumn32;
 
         R_DrawColumnShadow = DrawColumnShadow32;
         R_DrawSkyColumn = DrawSkyColumn32;
@@ -2207,6 +2303,7 @@ void R_InitDrawColorFunctions(void)
         R_DrawColumn = DrawColumn8;
         R_DrawTranslatedColumn = DrawTranslatedColumn8;
         R_DrawTLColumn = DrawTLColumn8;
+        R_DrawTRTLColumn = DrawTRTLColumn8;
 
         R_DrawColumnShadow = DrawColumnShadow8;
         R_DrawSkyColumn = DrawSkyColumn8;
