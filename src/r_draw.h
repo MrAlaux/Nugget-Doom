@@ -74,6 +74,7 @@ void R_DrawSkyColumnMasked(void);
 //  Green/Red/Blue/Indigo shirts.
 
 extern void (*R_DrawTranslatedColumn)(void);
+extern void (*R_DrawTRTLColumn)(void);
 
 extern const lighttable_t *ds_colormap[2];
 extern const lighttable32_t *ds_colormap32[2];
