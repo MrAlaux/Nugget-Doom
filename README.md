@@ -116,8 +116,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
 - **Color settings** [p.f. International Doom]
   - _Contrast_ by [@pvictress](https://github.com/pvictress)
-- **Percentage of variable sound pitch** setting
-- **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
+- **Percentage of variable sound pitch** setting (CFG-only: `pitched_sounds_range`)
+- **_Sound Hearing Distance_** selection, to optionally double the distance at which sound effects become audible
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **_Auto Save Interval_** setting, for periodic auto saves
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
