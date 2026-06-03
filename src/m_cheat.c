@@ -61,7 +61,6 @@
 #include "f_finale.h"
 #include "m_random.h"
 #include "r_main.h"
-#include "version.h"
 
 #define plyr (players+consoleplayer)     /* the console player */
 
@@ -965,7 +964,7 @@ static void cheat_boomcan(void)
 
 static void cheat_version(void)
 {
-  displaymsg("%s (built on %s)", PROJECT_STRING, version_date);
+  displaymsg("%s", PROJECT_STRING);
 }
 
 // Developer cheats ----------------------------------------------------------
