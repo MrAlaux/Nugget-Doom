@@ -83,6 +83,9 @@ static int hudcolor_ms_incomp;
 static int hudcolor_ms_comp;
 
 boolean announce_milestones;
+boolean announce_milestone_kills;
+boolean announce_milestone_items;
+boolean announce_milestone_secrets;
 boolean show_save_messages;
 static boolean message_fadeout;
 static boolean message_flash;
@@ -1750,10 +1753,27 @@ void ST_BindHUDVariables(void)
   M_BindBool("hud_map_announce", &hud_map_announce, NULL,
             false, ss_stat, wad_no, "Announce map titles");
 
-  // [Nugget] Announce milestone completion
+  // [Nugget] Announce milestone completion /---------------------------------
+
   M_BindBool("announce_milestones", &announce_milestones, NULL,
             false, ss_stat, wad_yes,
-            "Announce completion of milestones");
+            "Enable milestone-completion announcements (affected by CVARs below)");
+
+  // The following are CFG-only
+
+  M_BindBool("announce_milestone_kills", &announce_milestone_kills, NULL,
+            true, ss_none, wad_yes,
+            "Announce completion of kills milestone");
+
+  M_BindBool("announce_milestone_items", &announce_milestone_items, NULL,
+            true, ss_none, wad_yes,
+            "Announce completion of items milestone");
+
+  M_BindBool("announce_milestone_secrets", &announce_milestone_secrets, NULL,
+            true, ss_none, wad_yes,
+            "Announce completion of secrets milestone");
+
+  // [Nugget] ---------------------------------------------------------------/
 
   M_BindBool("show_toggle_messages", &show_toggle_messages, NULL,
             true, ss_stat, wad_no, "Show toggle messages");

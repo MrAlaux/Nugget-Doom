@@ -715,7 +715,7 @@ picked_up: // [Nugget]
       {
         complete_milestones |= MILESTONE_ITEMS;
 
-        if (announce_milestones)
+        if (announce_milestones && announce_milestone_items)
         {
           players[displayplayer].secretmessage = "All items acquired!";
           S_StartSound(NULL, sfx_secret);
@@ -1009,7 +1009,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *inflictor, mobj_t *target, method
     {
       complete_milestones |= MILESTONE_KILLS;
 
-      if (announce_milestones)
+      if (announce_milestones && announce_milestone_kills)
       {
         players[displayplayer].secretmessage = "All enemies killed!";
         S_StartSound(NULL, sfx_secret);

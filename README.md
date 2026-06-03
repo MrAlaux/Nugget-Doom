@@ -175,6 +175,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Sound only_ option for "secret revealed" message**
 - **Show Save Messages** setting (CFG-only: `show_save_messages`)
 - **_Milestone-Completion Announcements_** setting, to report completion of milestones (e.g. all items acquired)
+  - Each announcement can be toggled through the CFG-only `announce_milestone_#` CVARs
 - **_Message Fadeout_** setting
 - **_Message Flash_** setting
 - **_Message Lines_** settings

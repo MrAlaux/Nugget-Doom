@@ -399,12 +399,19 @@ static int buttons_state[STATE_NUM] = { 0 };
 
 static boolean findtag;
 
-#define MAGIC_SECTOR_COLOR_MIN 168
-#define MAGIC_SECTOR_COLOR_MAX 180
-#define MAGIC_LINE_COLOR_MIN 112
-#define MAGIC_LINE_COLOR_MAX 124
-static int magic_sector_color_pos = MAGIC_SECTOR_COLOR_MIN;
-static int magic_line_color_pos = MAGIC_LINE_COLOR_MIN;
+#define NUM_MAGIC_SECTOR_COLORS 12
+static int magic_sector_colors[NUM_MAGIC_SECTOR_COLORS],
+           magic_sector_color_pos = 0,
+           magic_sector_color;
+
+static int magic_sector_mark_color;
+
+#define NUM_MAGIC_LINE_COLORS 12
+static int magic_line_colors[NUM_MAGIC_LINE_COLORS],
+           magic_line_color_pos = 0,
+           magic_line_color;
+
+static int magic_line_mark_color;
 
 static sector_t* magic_sector;
 static short     magic_tag = -1;
@@ -437,7 +444,7 @@ static const int markcolors[] =
   CR_PURPLE
 };
 
-static const size_t NUM_MARKCOLORS = sizeof(markcolors) / sizeof(*markcolors);
+#define NUM_MARKCOLORS (sizeof(markcolors) / sizeof(*markcolors))
 
 static void AM_colorPointedMark(const boolean shift)
 {
@@ -711,7 +718,8 @@ void AM_initVariables(void)
   {
     m_x = (plr->mo->x >> FRACTOMAPBITS) - m_w/2;
     m_y = (plr->mo->y >> FRACTOMAPBITS) - m_h/2;
-    automapfirststart = false;
+
+    // [Nugget] Moved `automapfirststart` assignment to end of function
   }
   AM_Ticker(); // initialize variables for interpolation
   AM_changeWindowLoc();
@@ -728,14 +736,45 @@ void AM_initVariables(void)
 
   // [Nugget] ----------------------------------------------------------------
 
-  byte *const playpal = W_CacheLumpNum(W_GetNumForName("PLAYPAL"), PU_STATIC);
+  if (automapfirststart)
+  {
+    byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
 
-  const int low = 223;
+    { // Highlight points of interest
+      const int low = 223;
 
-  highlight_color[0] = I_GetNearestColor(playpal, 255, low, low); // Red
-  highlight_color[1] = I_GetNearestColor(playpal, low, low, 255); // Blue
-  highlight_color[2] = I_GetNearestColor(playpal, 255, 255, low); // Yellow
-  highlight_color[3] = I_GetNearestColor(playpal, 255, 255, 255); // Any (white)
+      highlight_color[0] = I_GetNearestColor(playpal, 255, low, low); // Red
+      highlight_color[1] = I_GetNearestColor(playpal, low, low, 255); // Blue
+      highlight_color[2] = I_GetNearestColor(playpal, 255, 255, low); // Yellow
+      highlight_color[3] = I_GetNearestColor(playpal, 255, 255, 255); // Any (white)
+    }
+
+    // Tag Finder ------------------------------------------------------------
+
+    // White to red
+    for (int i = 0;  i < NUM_MAGIC_SECTOR_COLORS;  i++)
+    {
+      const int low = 255 * (NUM_MAGIC_SECTOR_COLORS-1 - i) / (NUM_MAGIC_SECTOR_COLORS-1);
+
+      magic_sector_colors[i] = I_GetNearestColor(playpal, 255, low, low);
+    }
+
+    // Yellow
+    magic_sector_mark_color = I_GetNearestColor(playpal, 255, 255, 0);
+
+    // Light green to dark green
+    for (int i = 0;  i < NUM_MAGIC_LINE_COLORS;  i++)
+    {
+      const float mult = 1.0f - (0.75f * i / (NUM_MAGIC_LINE_COLORS-1));
+
+      magic_line_colors[i] = I_GetNearestColor(playpal, 127*mult, 255*mult, 127*mult);
+    }
+
+    // Magenta
+    magic_line_mark_color = I_GetNearestColor(playpal, 255, 0, 255);
+  }
+
+  automapfirststart = false;
 }
 
 //
@@ -1535,11 +1574,11 @@ void AM_Ticker (void)
 
   if (magic_sector || magic_tag > 0)
   {
-    if (++magic_sector_color_pos >= MAGIC_SECTOR_COLOR_MAX)
-    { magic_sector_color_pos = MAGIC_SECTOR_COLOR_MIN; }
+    magic_sector_color_pos = (magic_sector_color_pos + 1) % NUM_MAGIC_SECTOR_COLORS;
+    magic_sector_color = magic_sector_colors[magic_sector_color_pos];
 
-    if (++magic_line_color_pos >= MAGIC_LINE_COLOR_MAX)
-    { magic_line_color_pos = MAGIC_LINE_COLOR_MIN; }
+    magic_line_color_pos = (magic_line_color_pos + 1) % NUM_MAGIC_LINE_COLORS;
+    magic_line_color = magic_line_colors[magic_line_color_pos];
   }
 
   // -------------------------------------------------------------------------
@@ -2418,23 +2457,25 @@ static void AM_drawWalls(void)
     if (is_tf_line & 0x1)
     {
       if (!lines[i].backsector)
-      { array_push(lines_1S, ((am_line_t) {l, magic_sector_color_pos})); }
-      else
-      { AM_drawMline(&l, magic_sector_color_pos); }
+      {
+        array_push(lines_1S, ((am_line_t) {l, magic_sector_color}));
+      }
+      else { AM_drawMline(&l, magic_sector_color); }
 
-      if (magic_sector_color_pos <= MAGIC_SECTOR_COLOR_MIN+1)
-      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 229 })); }
+      if (magic_sector_color_pos < 2)
+      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, magic_sector_mark_color })); }
     }
     
     if (is_tf_line & 0x2)
     {
       if (!lines[i].backsector)
-      { array_push(lines_1S, ((am_line_t) {l, magic_line_color_pos})); }
-      else
-      { AM_drawMline(&l, magic_line_color_pos); }
+      {
+        array_push(lines_1S, ((am_line_t) {l, magic_line_color}));
+      }
+      else { AM_drawMline(&l, magic_line_color); }
 
-      if (magic_line_color_pos <= MAGIC_LINE_COLOR_MIN+1)
-      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, 251 })); }
+      if (magic_line_color_pos < 2)
+      { array_push(crossmarks, ((crossmark_t) { l.a.x, l.a.y, magic_line_mark_color })); }
     }
 
     if (is_tf_line) { continue; }

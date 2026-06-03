@@ -2392,7 +2392,7 @@ static void P_SecretRevealed(player_t *player)
     {
       complete_milestones |= MILESTONE_SECRETS;
 
-      if (announce_milestones)
+      if (announce_milestones && announce_milestone_secrets)
       {
         players[displayplayer].secretmessage = "All secrets revealed!";
         S_StartSound(NULL, sfx_secret);

@@ -8,9 +8,11 @@
   - Toggle to resize the ammo bar when the player has the backpack
 - Toggle to **organize screenshots**
 - **Support for lowercase characters in console font**
-- Toggle to **disable minimap double-press**
+- **Toggle to disable minimap double-press**
+- **Toggles to disable specific milestone-completion announcements**
 - Toggle to **use palette colors exactly when gamma correction is disabled**
 - Developer cheats to toggle netgame and deathmatch states
+- Version cheat
 
 ## Changes
 
@@ -37,6 +39,7 @@
 - **_Sprite Shadows_ relying on the first palette color being black**
 - **_Pain/Pickup/Powerup Flashes_ setting not disabling invulnerability effect and light-amp flashing**
 - **_Invulnerability Colormap_ setting affecting light-amp flashing and disabling _Night-Vision Visor Effect_**
+- **Wrong _Tag Finder_ colors with different palettes**
 - **Damage tint not being reduced when the game were paused if _Smooth Palette Tinting_ were enabled**
 - **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**

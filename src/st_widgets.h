@@ -20,6 +20,9 @@
 
 // CVARs
 extern boolean announce_milestones;
+extern boolean announce_milestone_kills;
+extern boolean announce_milestone_items;
+extern boolean announce_milestone_secrets;
 extern boolean show_save_messages;
 extern boolean sp_chat;
 

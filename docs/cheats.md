@@ -179,6 +179,9 @@ Change the player speed in-game.
 `NOMOMENTUM`  
 Toggle no-momentum mode (re-enabled debugging cheat).
 
+`VERSION`  
+Display program version and related info.
+
 The following cheats in this section are developer-only: the `nugget_devmode` CVAR must be enabled for them to take effect.
 
 `FAUXDEMO`  
