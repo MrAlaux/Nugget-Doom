@@ -27,6 +27,7 @@
 - **Improved sky stretching**
 - **Made message shadows fade out when _Message Fadeout_ is enabled**
 - **Optimized initialization of _Interpolated/True-color Lighting_ and _Radial Fog_ through multithreading**
+- **Optimized rendering of small and/or distant sprites**
 - **Optimized initialization of generic tranmaps by caching them in files**
 - **Raised upper limits of color _Intensity_ and _Saturation_ settings to 200%**
 - **Made automap-mark coloring take the <kbd>Shift</kbd> key into account**
