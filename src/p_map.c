@@ -2790,7 +2790,8 @@ boolean PIT_ChangeSector(mobj_t *thing)
       { thing->intflags |= MIF_DONTRENDER; }
 
       // Bloodier crushing
-      if (CASUALPLAY(bloodier_gibbing) && not_already_crushed)
+      if (CASUALPLAY(bloodier_gibbing)
+          && thing->info->flags & MF_SHOOTABLE && not_already_crushed)
       {
         if (!(thing->flags & MF_NOBLOOD)) { S_StartSound(thing, sfx_slop); }
 
