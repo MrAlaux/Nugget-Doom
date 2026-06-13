@@ -16,14 +16,14 @@
 #include <math.h>
 #include <string.h>
 
-#include "d_deh.h"
 #include "d_event.h"
 #include "d_player.h"
+#include "deh_strings.h"
 #include "doomdef.h"
 #include "doomkeys.h"
 #include "doomstat.h"
 #include "doomtype.h"
-#include "dstrings.h"
+#include "g_game.h"
 #include "g_umapinfo.h"
 #include "hu_command.h"
 #include "hu_coordinates.h"
@@ -110,7 +110,7 @@ int ST_GetNumMessageLines(void)
     return MAX(hud_msg_total_lines, hud_msg_lines);
 }
 
-void FadeOutLine(widgetline_t *const line, const int duration_left)
+static void FadeOutLine(stringline_t *const line, const int duration_left)
 {
     if (message_fadeout && 0 <= duration_left && duration_left < 9)
     {
@@ -133,7 +133,7 @@ widgetstate_t hud_player_coords;
 widgetstate_t hud_widget_font;
 
 static boolean hud_map_announce;
-static boolean message_colorized;
+boolean message_colorized;
 
 //jff 2/16/98 hud supported automap colors added
 int hudcolor_titl;  // color range of automap level title
@@ -154,18 +154,19 @@ void ST_ClearLines(sbe_widget_t *widget)
 
 void ST_AddLine(sbe_widget_t *widget, const char *string)
 {
-    widgetline_t line = { .string = string };
+    stringline_t line = { .string = string };
     array_push(widget->lines, line);
 }
 
 static void SetLine(sbe_widget_t *widget, const char *string)
 {
     array_clear(widget->lines);
-    widgetline_t line = { .string = string };
+    stringline_t line = { .string = string };
     array_push(widget->lines, line);
 }
 
 static char message_string[HU_MAXLINELENGTH];
+//static int message_duration_left; // [Nugget] Unused
 
 static boolean message_review;
 
@@ -336,7 +337,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
 
     static boolean messages_enabled = true;
 
-    if (messages_enabled)
+    if (messages_enabled || message_string[0])
     {
         if (message_string[0])
         {
@@ -375,7 +376,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
 
             ST_AddLine(widget, m->string);
 
-            widgetline_t *const line = &widget->lines[array_size(widget->lines) - 1];
+            stringline_t *const line = &widget->lines[array_size(widget->lines) - 1];
 
             // Message fadeout -----------------------------------------------
 
@@ -410,6 +411,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
 }
 
 static char announce_string[HU_MAXLINELENGTH], author_string[HU_MAXLINELENGTH];
+static int announce_duration_left;
 
 static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
 {
@@ -433,7 +435,7 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
     if (announce_string[0])
     {
         state = announce_map;
-        widget->duration_left = widget->duration;
+        announce_duration_left = widget->duration;
         M_StringCopy(string, announce_string, sizeof(string));
         announce_string[0] = '\0';
     }
@@ -441,24 +443,24 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
     {
         author_string[0] = '\0';
         state = announce_secret;
-        widget->duration_left = widget->duration;
+        announce_duration_left = widget->duration;
         M_snprintf(string, sizeof(string), GOLD_S "%s" ORIG_S,
             player->secretmessage);
         player->secretmessage = NULL;
     }
 
-    if (widget->duration_left > 0)
+    if (announce_duration_left > 0)
     {
         ST_AddLine(widget, string);
         if (author_string[0])
         {
             ST_AddLine(widget, author_string);
         }
-        --widget->duration_left;
+        --announce_duration_left;
 
         // [Nugget] Message fadeout
         for (int i = 0;  i < array_size(widget->lines);  i++)
-        { FadeOutLine(&widget->lines[i], widget->duration_left); }
+        { FadeOutLine(&widget->lines[i], announce_duration_left); }
     }
     else
     {
@@ -558,14 +560,6 @@ static boolean AddKeyToChatLine(chatline_t *line, char ch)
 
 #define HU_BROADCAST 5
 
-char **player_names[] =
-{
-    &s_HUSTR_PLRGREEN,
-    &s_HUSTR_PLRINDIGO,
-    &s_HUSTR_PLRBROWN,
-    &s_HUSTR_PLRRED
-};
-
 void ST_UpdateChatMessage(void)
 {
     static char chat_dest[MAXPLAYERS];
@@ -597,7 +591,7 @@ void ST_UpdateChatMessage(void)
                                              || chat_dest[p] == HU_BROADCAST))
                     {
                         M_snprintf(message_string, sizeof(message_string),
-                            "%s%s", *player_names[p], chatlines[p].string);
+                            "%s%s", DEH_StringColorized(strings_players[p]), chatlines[p].string);
 
                         S_StartSoundPitch(0,
                                           gamemode == commercial ? sfx_radio
@@ -679,8 +673,6 @@ boolean ST_MessagesResponder(event_t *ev)
         return false;
     }
 
-    static char lastmessage[HU_MAXLINELENGTH + 1];
-
     boolean eatkey = false;
     static boolean shiftdown = false;
     static boolean altdown = false;
@@ -716,7 +708,7 @@ boolean ST_MessagesResponder(event_t *ev)
 
     if (!chat_on)
     {
-        if (M_InputActivated(input_chat_enter)) // phares
+        if (M_InputActivated(input_msgreview)) // phares
         {
             //jff 2/26/98 toggle list of messages
             message_review = true;
@@ -741,13 +733,14 @@ boolean ST_MessagesResponder(event_t *ev)
                 {
                     if (p == consoleplayer)
                     {
-                        displaymsg("%s",
-                                   ++num_nobrainers < 3 ? HUSTR_TALKTOSELF1
-                                   : num_nobrainers < 6 ? HUSTR_TALKTOSELF2
-                                   : num_nobrainers < 9 ? HUSTR_TALKTOSELF3
-                                   : num_nobrainers < 32
-                                       ? HUSTR_TALKTOSELF4
-                                       : HUSTR_TALKTOSELF5);
+                        M_StringCopy(message_string,
+                                     ++num_nobrainers < 3 ? HUSTR_TALKTOSELF1
+                                     : num_nobrainers < 6 ? HUSTR_TALKTOSELF2
+                                     : num_nobrainers < 9 ? HUSTR_TALKTOSELF3
+                                     : num_nobrainers < 32
+                                         ? HUSTR_TALKTOSELF4
+                                         : HUSTR_TALKTOSELF5,
+                                     sizeof(message_string));
                     }
                     else if (playeringame[p])
                     {
@@ -789,8 +782,8 @@ boolean ST_MessagesResponder(event_t *ev)
 
             // leave chat mode and notify that it was sent
             chat_on = false;
-            M_StringCopy(lastmessage, chat_macros[ch], sizeof(lastmessage));
-            displaymsg("%s", lastmessage);
+            M_StringCopy(message_string, chat_macros[ch],
+                         sizeof(message_string));
             eatkey = true;
         }
         else
@@ -810,9 +803,8 @@ boolean ST_MessagesResponder(event_t *ev)
                 chat_on = false;
                 if (chatline.pos)
                 {
-                    M_StringCopy(lastmessage, chatline.string,
-                                 sizeof(lastmessage));
-                    displaymsg("%s", lastmessage);
+                    M_StringCopy(message_string, chatline.string,
+                                 sizeof(message_string));
                 }
             }
             else if (ch == KEY_ESCAPE) // phares
@@ -844,23 +836,6 @@ static void UpdateChat(sbe_widget_t *widget)
     }
 }
 
-static boolean IsVanillaMap(int e, int m)
-{
-    if (gamemode == commercial)
-    {
-        return (e == 1 && m > 0 && m <= 32);
-    }
-    else
-    {
-        return (e > 0 && e <= 4 && m > 0 && m <= 9);
-    }
-}
-
-#define HU_TITLE  (*mapnames[(gameepisode - 1) * 9 + gamemap - 1])
-#define HU_TITLE2 (*mapnames2[gamemap - 1])
-#define HU_TITLEP (*mapnamesp[gamemap - 1])
-#define HU_TITLET (*mapnamest[gamemap - 1])
-
 static char title_string[HU_MAXLINELENGTH];
 
 void ST_ResetTitle(void)
@@ -868,54 +843,7 @@ void ST_ResetTitle(void)
     char string[120];
     string[0] = '\0';
 
-    char *s;
-
-    if (gamemapinfo && gamemapinfo->levelname)
-    {
-        if (gamemapinfo->label)
-        {
-            s = gamemapinfo->label;
-        }
-        else
-        {
-            s = gamemapinfo->mapname;
-        }
-
-        if (!(gamemapinfo->flags & MapInfo_LabelClear))
-        {
-            M_snprintf(string, sizeof(string), "%s: ", s);
-        }
-
-        s = gamemapinfo->levelname;
-    }
-    else if (gamestate == GS_LEVEL)
-    {
-        if (IsVanillaMap(gameepisode, gamemap))
-        {
-            s = (gamemode != commercial)     ? HU_TITLE
-                : (gamemission == pack_tnt)  ? HU_TITLET
-                : (gamemission == pack_plut) ? HU_TITLEP
-                                             : HU_TITLE2;
-        }
-        // WADs like pl2.wad have a MAP33, and rely on the layout in the
-        // Vanilla executable, where it is possible to overflow the end of one
-        // array into the next.
-        else if (gamemode == commercial && gamemap >= 33 && gamemap <= 35)
-        {
-            s = (gamemission == doom2)       ? (*mapnamesp[gamemap - 33])
-                : (gamemission == pack_plut) ? (*mapnamest[gamemap - 33])
-                                             : "";
-        }
-        else
-        {
-            // initialize the map title widget with the generic map lump name
-            s = MapName(gameepisode, gamemap);
-        }
-    }
-    else
-    {
-        s = "";
-    }
+    const char *s = G_GetLevelTitle();
 
     char *n;
 
@@ -960,11 +888,11 @@ static void UpdateTitle(sbe_widget_t *widget)
 
 static boolean WidgetEnabled(widgetstate_t state)
 {
-    if (automapactive == AM_FULL && !(state & HUD_WIDGET_AUTOMAP))
+    if (automapactive && !(state & HUD_WIDGET_AUTOMAP))
     {
         return false;
     }
-    else if (automapactive != AM_FULL && !(state & HUD_WIDGET_HUD))
+    else if (!automapactive && !(state & HUD_WIDGET_HUD))
     {
         return false;
     }
@@ -1091,6 +1019,9 @@ static const statsformatfunc_t StatsFormatFuncs[] = {
     StatsFormatFunc_Remaining, StatsFormatFunc_Count,
 };
 
+static char killchar = 'K';
+static char statscolor = '0' + CR_RED;
+
 static void UpdateMonSec(sbe_widget_t *widget)
 {
     ST_ClearLines(widget);
@@ -1102,7 +1033,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
 
     // [Nugget] /-------------------------------------------------------------
 
-    const boolean *const showstats = (automapactive == AM_FULL) ? hud_stats_show_map : hud_stats_show;
+    const boolean *const showstats = automapactive ? hud_stats_show_map : hud_stats_show;
 
     if (!(showstats[SHOWSTATS_KILLS] || showstats[SHOWSTATS_ITEMS] || showstats[SHOWSTATS_SECRETS]))
     { return; }
@@ -1159,19 +1090,19 @@ static void UpdateMonSec(sbe_widget_t *widget)
             _labelcolorvar_ = '0' + _labelcolor_;                                \
         }
 
-    USE_ICON(killlabel,   'K', killlabelcolor,   hudcolor_kills,   0);
-    USE_ICON(itemlabel,   'I', itemlabelcolor,   hudcolor_items,   1);
-    USE_ICON(secretlabel, 'S', secretlabelcolor, hudcolor_secrets, 2);
+    USE_ICON(killlabel,   killchar, killlabelcolor,   hudcolor_kills,   0);
+    USE_ICON(itemlabel,   'I',      itemlabelcolor,   hudcolor_items,   1);
+    USE_ICON(secretlabel, 'S',      secretlabelcolor, hudcolor_secrets, 2);
 
     #undef USE_ICON
 
     // [Nugget] -------------------------------------------------------------/
 
-    char kill_str[16], item_str[16], secret_str[16];
+    char kill_str[80], item_str[80], secret_str[80];
 
     statsformatfunc_t StatsFormatFunc = StatsFormatFuncs[
         // [Nugget]
-        ((automapactive == AM_FULL && hud_stats_format_map)
+        ((automapactive && hud_stats_format_map)
          ? hud_stats_format_map : hud_stats_format) - 1
     ];
 
@@ -1179,7 +1110,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
     StatsFormatFunc(item_str, sizeof(item_str), fullitemcount, totalitems);
     StatsFormatFunc(secret_str, sizeof(secret_str), fullsecretcount, totalsecret);
 
-    static char kill_str2[24], item_str2[24], secret_str2[24];
+    static char kill_str2[80], item_str2[80], secret_str2[80];
 
     memset(kill_str2,   0, sizeof(kill_str2));
     memset(item_str2,   0, sizeof(item_str2));
@@ -1235,7 +1166,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
               string + offset, sizeof(string) - offset, "%s", secret_str2
             );
         }
-  
+
         ST_AddLine(widget, string);
     }
     else
@@ -1291,7 +1222,7 @@ static void UpdateDM(sbe_widget_t *widget)
         }
 
         offset += M_snprintf(string + offset, sizeof(string) - offset,
-                             "\x1b%c%d/%d ", (i == displayplayer) ?
+                             "\x1b%c%02d/%02d ", (i == displayplayer) ?
                              '0' + cr_blue : '0' + CR_GRAY, result, others);
     }
 
@@ -1420,9 +1351,9 @@ static void UpdateSpeed(sbe_widget_t *widget, player_t *player)
     static const char *units[] = {"ups", "km/h", "mph"};
     const int type = speedometer - 1;
     const mobj_t *mo = player->mo;
-    const double dx = FIXED2DOUBLE(mo->x - mo->oldx);
-    const double dy = FIXED2DOUBLE(mo->y - mo->oldy);
-    const double dz = FIXED2DOUBLE(mo->z - mo->oldz);
+    const double dx = FixedToDouble(mo->x - mo->oldx);
+    const double dy = FixedToDouble(mo->y - mo->oldy);
+    const double dz = FixedToDouble(mo->z - mo->oldz);
     const double speed = sqrt(dx * dx + dy * dy + dz * dz) * factor[type];
 
     static char string[60];
@@ -1527,89 +1458,54 @@ boolean ST_DemoProgressBar(boolean force)
     return true;
 }
 
-struct
+static void ColorizeString(const char *haystack, const char *needle, crange_idx_e cr)
 {
-    char **str;
-    const int cr;
-    const char *col;
-} static const colorize_strings[] = {
-    // [Woof!] colorize keycard and skull key messages
-    {&s_GOTBLUECARD,     CR_BLUE2, "blue"  },
-    {&s_GOTBLUESKUL,     CR_BLUE2, "blue"  },
-    {&s_GOTREDCARD,      CR_RED,   "red"   },
-    {&s_GOTREDSKULL,     CR_RED,   "red"   },
-    {&s_GOTYELWCARD,     CR_GOLD,  "yellow"},
-    {&s_GOTYELWSKUL,     CR_GOLD,  "yellow"},
-    {&s_PD_BLUEC,        CR_BLUE2, "blue"  },
-    {&s_PD_BLUEK,        CR_BLUE2, "blue"  },
-    {&s_PD_BLUEO,        CR_BLUE2, "blue"  },
-    {&s_PD_BLUES,        CR_BLUE2, "blue"  },
-    {&s_PD_REDC,         CR_RED,   "red"   },
-    {&s_PD_REDK,         CR_RED,   "red"   },
-    {&s_PD_REDO,         CR_RED,   "red"   },
-    {&s_PD_REDS,         CR_RED,   "red"   },
-    {&s_PD_YELLOWC,      CR_GOLD,  "yellow"},
-    {&s_PD_YELLOWK,      CR_GOLD,  "yellow"},
-    {&s_PD_YELLOWO,      CR_GOLD,  "yellow"},
-    {&s_PD_YELLOWS,      CR_GOLD,  "yellow"},
-
-    // [Woof!] colorize multi-player messages
-    {&s_HUSTR_PLRGREEN,  CR_GREEN, "Green:" },
-    {&s_HUSTR_PLRINDIGO, CR_GRAY,  "Indigo:"},
-    {&s_HUSTR_PLRBROWN,  CR_BROWN, "Brown:" },
-    {&s_HUSTR_PLRRED,    CR_RED,   "Red:"   },
-};
-
-static char* PrepareColor(const char *str, const char *col)
-{
-    char *str_replace, col_replace[16];
-
-    M_snprintf(col_replace, sizeof(col_replace),
-               ORIG_S "%s" ORIG_S, col);
-    str_replace = M_StringReplaceWord(str, col, col_replace);
-
-    return str_replace;
-}
-
-static void UpdateColor(char *str, int cr)
-{
-    int i;
-    int len = strlen(str);
-
-    if (!message_colorized)
-    {
-        cr = CR_ORIG;
-    }
-
-    for (i = 0; i < len; ++i)
-    {
-        if (str[i] == '\x1b' && i + 1 < len)
-        {
-          str[i + 1] = '0'+cr;
-          break;
-        }
-    }
+    char replacement[18];
+    M_snprintf(replacement, sizeof(replacement), "%s%s%s", crdefs[cr].str, needle, ORIG_S);
+    char * colorized = M_StringReplaceWord(DEH_String(haystack), needle, replacement);
+    DEH_AddStringColorizedReplacement(haystack, colorized);
+    free(colorized);
 }
 
 void ST_InitWidgets(void)
 {
-    // [Woof!] prepare player messages for colorization
-    for (int i = 0; i < arrlen(colorize_strings); i++)
+    // [Woof!] colorize keycard and skull key messages
+    ColorizeString(GOTBLUECARD, "blue",   CR_BLUE2);
+    ColorizeString(GOTBLUESKUL, "blue",   CR_BLUE2);
+    ColorizeString(GOTREDCARD,  "red",    CR_RED);
+    ColorizeString(GOTREDSKULL, "red",    CR_RED);
+    ColorizeString(GOTYELWCARD, "yellow", CR_GOLD);
+    ColorizeString(GOTYELWSKUL, "yellow", CR_GOLD);
+    ColorizeString(PD_BLUEC,    "blue",   CR_BLUE2);
+    ColorizeString(PD_BLUEK,    "blue",   CR_BLUE2);
+    ColorizeString(PD_BLUEO,    "blue",   CR_BLUE2);
+    ColorizeString(PD_BLUES,    "blue",   CR_BLUE2);
+    ColorizeString(PD_REDC,     "red",    CR_RED);
+    ColorizeString(PD_REDK,     "red",    CR_RED);
+    ColorizeString(PD_REDO,     "red",    CR_RED);
+    ColorizeString(PD_REDS,     "red",    CR_RED);
+    ColorizeString(PD_YELLOWC,  "yellow", CR_GOLD);
+    ColorizeString(PD_YELLOWK,  "yellow", CR_GOLD);
+    ColorizeString(PD_YELLOWO,  "yellow", CR_GOLD);
+    ColorizeString(PD_YELLOWS,  "yellow", CR_GOLD);
+
+    ColorizeString(HUSTR_PLRGREEN,  "Green:",  CR_GREEN);
+    ColorizeString(HUSTR_PLRINDIGO, "Indigo:", CR_GRAY);
+    ColorizeString(HUSTR_PLRBROWN,  "Brown:",  CR_BROWN);
+    ColorizeString(HUSTR_PLRRED,    "Red:",    CR_RED);
+
+    if (gamemission == pack_chex || gamemission == pack_chex3v)
     {
-        *colorize_strings[i].str =
-            PrepareColor(*colorize_strings[i].str, colorize_strings[i].col);
+        killchar = 'F';
+        statscolor = '0' + CR_GREEN;
     }
-
-    ST_ResetMessageColors();
-}
-
-void ST_ResetMessageColors(void)
-{
-    int i;
-
-    for (i = 0; i < arrlen(colorize_strings); i++)
+    else if (gamemission == pack_hacx)
     {
-        UpdateColor(*colorize_strings[i].str, colorize_strings[i].cr);
+        statscolor = '0' + CR_BLUE2;
+    }
+    else if (gamemission == pack_rekkr)
+    {
+        statscolor = '0' + CR_GOLD;
     }
 }
 

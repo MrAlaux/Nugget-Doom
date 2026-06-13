@@ -21,6 +21,8 @@
 #define __R_PLANE__
 
 #include "m_fixed.h"
+#include "r_defs.h"
+#include "tables.h"
 
 struct visplane_s;
 
@@ -32,15 +34,16 @@ extern int maxopenings;
 extern int *openings, *lastopening; // [FG] 32-bit integer math
 
 extern int *floorclip, *ceilingclip; // [FG] 32-bit integer math
-extern fixed_t *yslope, *distscale;
+extern fixed_t *yslope;
 
 void R_InitPlanes(void);
 void R_ClearPlanes(void);
 void R_DrawPlanes (void);
 
+// killough 2/28/98: add x-y offsets
 struct visplane_s *R_FindPlane(fixed_t height, int picnum, int lightlevel,
-                               fixed_t xoffs,  // killough 2/28/98: add x-y offsets
-                               fixed_t yoffs);
+                               fixed_t xoffs, fixed_t yoffs, angle_t rotation,
+                               int tint);
 
 struct visplane_s *R_CheckPlane(struct visplane_s *pl, int start, int stop);
 
