@@ -52,6 +52,8 @@ typedef enum bobstyle_s {
   NUM_BOBSTYLES
 } bobstyle_t;
 
+void P_AnalyzeWeapons(void);
+
 // CVARs ---------------------------------------------------------------------
 
 extern int weapon_recoilpitch_scale_pct;

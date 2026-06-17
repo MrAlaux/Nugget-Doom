@@ -909,7 +909,7 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
       dummymo.z = freecam.z;
       dummymo.player = &dummyplayer;
 
-      P_AimLineAttack(&dummymo, freecam.angle, 16*64*FRACUNIT * (comp_longautoaim+1), CROSSHAIR_AIM);
+      P_AimLineAttack(&dummymo, freecam.angle, AUTOAIM_RANGE(), CROSSHAIR_AIM);
 
       overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
 

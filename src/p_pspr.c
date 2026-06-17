@@ -43,6 +43,7 @@
 
 // [Nugget]
 #include "g_game.h"
+#include "m_array.h"
 #include "m_input.h"
 #include "p_maputl.h"
 #include "r_state.h"
@@ -78,6 +79,258 @@ static void ApplyRecoil(player_t *const player, int recoil)
                                 / 100;
         }
     }
+}
+
+// Weapon attributes ---------------------------------------------------------
+
+static statenum_t *wanl_seen_statenums = NULL;
+
+static boolean WANL_StateSeen(statenum_t statenum)
+{
+  for (int i = 0;  i < array_size(wanl_seen_statenums);  i++)
+  {
+    if (statenum == wanl_seen_statenums[i]) { return true; }
+  }
+
+  array_push(wanl_seen_statenums, statenum);
+  return false;
+}
+
+static void WANL_SetRangeAndIsDamaging(
+  weaponattributes_t *const attributes,
+  const fixed_t range,
+  const boolean is_damaging
+) {
+  // Damaging range takes precedence over total range
+  if (attributes->is_damaging && !is_damaging)
+  {
+    return;
+  }
+  else if (!attributes->is_damaging && is_damaging)
+  {
+    attributes->range = 0;
+  }
+
+  if (range == WEAPON_INFINITE_RANGE)
+  {
+    attributes->range = range;
+  }
+  else if (attributes->range != WEAPON_INFINITE_RANGE)
+  {
+    attributes->range = MAX(attributes->range, range);
+  }
+
+  attributes->is_damaging |= is_damaging;
+}
+
+static void WANL_AddProjectile(
+  weaponattributes_t *const attributes,
+  const mobjtype_t projectile
+) {
+  for (int i = 0;  i < array_size(attributes->projectiles);  i++)
+  {
+    if (projectile == attributes->projectiles[i]) { return; }
+  }
+
+  array_push(attributes->projectiles, projectile);
+
+  // For now, let's just assume that a projectile has infinite range
+  WANL_SetRangeAndIsDamaging(
+    attributes, WEAPON_INFINITE_RANGE, mobjinfo[projectile].damage != 0
+  );
+}
+
+static void WANL_AnalyzeState(
+  const weaponinfo_t *const weapinfo,
+  weaponattributes_t *const attributes,
+  const state_t *const state
+) {
+  void *const action = (void *) state->action.p2;
+
+  if (action == A_ConsumeAmmo)
+  {
+    if (weapinfo->ammo != am_noammo)
+    {
+      const int amount = state->args[0] ? state->args[0] : weapinfo->ammopershot;
+
+      if (amount) { attributes->consumes_ammo = true; }
+    }
+  }
+  else if (action == A_FireBFG)
+  {
+    attributes->consumes_ammo = true;
+    WANL_AddProjectile(attributes, MT_BFG);
+  }
+  else if (   action == A_FireCGun
+           || action == A_FirePistol
+           || action == A_FireShotgun
+           || action == A_FireShotgun2)
+  {
+    attributes->consumes_ammo = true;
+    attributes->is_hitscan = true;
+    WANL_SetRangeAndIsDamaging(attributes, MISSILERANGE, true);
+  }
+  else if (action == A_FireMissile)
+  {
+    attributes->consumes_ammo = true;
+    WANL_AddProjectile(attributes, MT_ROCKET);
+  }
+  else if (action == A_FireOldBFG)
+  {
+    attributes->consumes_ammo = true;
+    WANL_AddProjectile(attributes, MT_PLASMA1);
+    WANL_AddProjectile(attributes, MT_PLASMA2);
+  }
+  else if (action == A_FirePlasma)
+  {
+    attributes->consumes_ammo = true;
+    WANL_AddProjectile(attributes, MT_PLASMA);
+  }
+  else if (action == A_Punch)
+  {
+    attributes->is_hitscan = true;
+    WANL_SetRangeAndIsDamaging(attributes, MELEERANGE, true);
+  }
+  else if (action == A_Saw)
+  {
+    attributes->is_hitscan = true;
+    WANL_SetRangeAndIsDamaging(attributes, MELEERANGE+1, true);
+  }
+  else if (action == A_WeaponBulletAttack)
+  {
+    const boolean is_damaging = state->args[3] != 0;
+
+    attributes->is_hitscan |= is_damaging;
+
+    WANL_SetRangeAndIsDamaging(attributes, MISSILERANGE, is_damaging);
+  }
+  else if (action == A_WeaponMeleeAttack)
+  {
+    const boolean is_damaging = state->args[0] != 0;
+
+    const fixed_t range = state->args[4]
+                        ? state->args[4]
+                        : mobjinfo[MT_PLAYER].meleerange;
+
+    attributes->is_hitscan |= is_damaging;
+
+    WANL_SetRangeAndIsDamaging(attributes, range, is_damaging);
+  }
+  else if (action == A_WeaponProjectile)
+  {
+    WANL_AddProjectile(attributes, state->args[0] - 1);
+  }
+}
+
+static void WANL_AnalyzeStates(
+  const weaponinfo_t *const weapinfo,
+  weaponattributes_t *const attributes,
+  statenum_t statenum
+) {
+  while (statenum != S_NULL && !WANL_StateSeen(statenum))
+  {
+    const state_t *const state = &states[statenum];
+
+    WANL_AnalyzeState(weapinfo, attributes, state);
+
+    void *const action = (void *) state->action.p2;
+
+    if (   action == A_FireCGun
+        || action == A_FirePistol
+        || action == A_FirePlasma
+        || action == A_FireShotgun
+        || action == A_FireShotgun2
+        || action == A_GunFlash)
+    {
+      WANL_AnalyzeStates(weapinfo, attributes, weapinfo->flashstate);
+
+      if (action == A_FireCGun)
+      {
+        WANL_AnalyzeStates(weapinfo, attributes, weapinfo->flashstate + statenum - S_CHAIN1);
+      }
+      else if (action == A_FirePlasma)
+      {
+        WANL_AnalyzeStates(weapinfo, attributes, weapinfo->flashstate + 1);
+      }
+    }
+    else if (    action == A_CheckAmmo
+             ||  action == A_GunFlashTo
+             ||  action == A_RefireTo
+             || (action == A_WeaponJump && state->args[1] > 0))
+    {
+      WANL_AnalyzeStates(weapinfo, attributes, state->args[0]);
+    }
+
+    if (state->tics == -1) { break; }
+
+    statenum = state->nextstate;
+  }
+}
+
+static void WANL_StartAnalyzeStates(
+  const weaponinfo_t *const weapinfo,
+  weaponattributes_t *const attributes,
+  statenum_t statenum
+) {
+  array_clear(wanl_seen_statenums);
+
+  WANL_AnalyzeStates(weapinfo, attributes, statenum);
+}
+
+void P_AnalyzeWeapons(void)
+{
+  for (int i = 0;  i < NUMWEAPONS;  i++)
+  {
+    const weaponinfo_t *const weapinfo = &weaponinfo[i];
+    weaponattributes_t *const attributes = &weaponinfo[i].attributes;
+
+    *attributes = (weaponattributes_t) { .projectile_largest = MT_NULL };
+
+    WANL_StartAnalyzeStates(weapinfo, attributes, weapinfo->upstate);
+    WANL_StartAnalyzeStates(weapinfo, attributes, weapinfo->downstate);
+    WANL_StartAnalyzeStates(weapinfo, attributes, weapinfo->readystate);
+    WANL_StartAnalyzeStates(weapinfo, attributes, weapinfo->atkstate);
+    // Don't analyze the flash right away, since the player can't invoke it directly
+
+    // Find the largest projectile, preferring the largest damaging one
+    if (attributes->projectiles)
+    {
+      #define CALC_SIZE(info) FixedMul(info->radius * 2, info->height)
+
+      mobjtype_t largest = attributes->projectiles[0];
+      const mobjinfo_t *largest_info = &mobjinfo[largest];
+      boolean largest_is_damaging = largest_info->damage != 0;
+      int64_t largest_size = CALC_SIZE(largest_info);
+
+      mobjtype_t *projectile = NULL;
+      array_foreach(projectile, attributes->projectiles)
+      {
+        const mobjtype_t current = *projectile;
+        const mobjinfo_t *const current_info = &mobjinfo[current];
+        const boolean current_is_damaging = current_info->damage != 0;
+
+        if (largest_is_damaging && !current_is_damaging) { continue; }
+
+        const int64_t current_size = CALC_SIZE(current_info);
+
+        if (largest_size < current_size
+            || (!largest_is_damaging && current_is_damaging))
+        {
+          largest = current;
+          largest_info = current_info;
+          largest_size = current_size;
+          largest_is_damaging = current_is_damaging;
+        }
+      }
+
+      attributes->projectile_largest = largest;
+
+      #undef CALC_SIZE
+    }
+  }
+
+  array_free(wanl_seen_statenums);
+  wanl_seen_statenums = NULL;
 }
 
 // [Nugget] =================================================================/
@@ -916,7 +1169,7 @@ void A_Punch(player_t *player, pspdef_t *psp)
         slope = player->slope;
       }
       else {
-        slope = P_AimLineAttack(player->mo, angle, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+        slope = P_AimLineAttack(player->mo, angle, AUTOAIM_RANGE(), mask);
 
         if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
         { slope = player->slope; }
@@ -1127,11 +1380,11 @@ void A_FireOldBFG(player_t *player, pspdef_t *psp)
 	  do
 	    {
 	      // [Nugget] Double autoaim range
-	      slope = P_AimLineAttack(mo, an, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+	      slope = P_AimLineAttack(mo, an, AUTOAIM_RANGE(), mask);
 	      if (!linetarget)
-		slope = P_AimLineAttack(mo, an += 1<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+		slope = P_AimLineAttack(mo, an += 1<<26, AUTOAIM_RANGE(), mask);
 	      if (!linetarget)
-		slope = P_AimLineAttack(mo, an -= 2<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+		slope = P_AimLineAttack(mo, an -= 2<<26, AUTOAIM_RANGE(), mask);
 	      if (!linetarget)
 		an = mo->angle,
 		// [Nugget] Vertical aiming
@@ -1201,11 +1454,11 @@ static void P_BulletSlope(mobj_t *mo)
   do
     {
       // [Nugget] Double autoaim range
-      bulletslope = P_AimLineAttack(mo, an, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+      bulletslope = P_AimLineAttack(mo, an, AUTOAIM_RANGE(), mask);
       if (!linetarget)
-        bulletslope = P_AimLineAttack(mo, an += 1<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+        bulletslope = P_AimLineAttack(mo, an += 1<<26, AUTOAIM_RANGE(), mask);
       if (!linetarget)
-        bulletslope = P_AimLineAttack(mo, an -= 2<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+        bulletslope = P_AimLineAttack(mo, an -= 2<<26, AUTOAIM_RANGE(), mask);
       // [Nugget] Vertical aiming
       if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
         bulletslope = mo->player->slope;

@@ -1804,15 +1804,15 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
       do
         {
           // [Nugget] Double Autoaim range
-          slope = P_AimLineAttack(source, an, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+          slope = P_AimLineAttack(source, an, AUTOAIM_RANGE(), mask);
           if (!linetarget)
             // [Nugget] Disable horizontal autoaim
             if (!casual_play || !no_hor_autoaim)
-              slope = P_AimLineAttack(source, an += 1<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+              slope = P_AimLineAttack(source, an += 1<<26, AUTOAIM_RANGE(), mask);
           if (!linetarget)
             // [Nugget] Disable horizontal autoaim
             if (!casual_play || !no_hor_autoaim)
-              slope = P_AimLineAttack(source, an -= 2<<26, 16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1), mask);
+              slope = P_AimLineAttack(source, an -= 2<<26, AUTOAIM_RANGE(), mask);
           if (!linetarget)
             an = source->angle,
             // [Nugget] Vertical aiming

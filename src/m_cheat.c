@@ -935,7 +935,7 @@ static void cheat_mdk(void)
     slope = plyr->slope;
   }
   else {
-    slope = P_AimLineAttack(plyr->mo, plyr->mo->angle, 16*64*FRACUNIT * (comp_longautoaim+1), 0);
+    slope = P_AimLineAttack(plyr->mo, plyr->mo->angle, AUTOAIM_RANGE(), 0);
 
     if (!linetarget && vertical_aiming == VERTAIM_DIRECTAUTO)
     { slope = plyr->slope; }

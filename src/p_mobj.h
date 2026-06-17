@@ -516,6 +516,8 @@ extern boolean comp_fuzzyblood;
 extern boolean comp_nonbleeders;
 extern boolean comp_deadoof;
 
+#define AUTOAIM_RANGE() (16*64*FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1))
+
 int P_FindDoomedNum(unsigned type); // Global
 
 void P_ToggleDuplicateSpawns(const boolean state);

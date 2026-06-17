@@ -1010,7 +1010,7 @@ void P_PlayerThink (player_t* player)
     boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
 
     overflow[emu_intercepts].enabled = false;
-    P_AimLineAttack(player->mo, player->mo->angle, 16*64*FRACUNIT * (comp_longautoaim+1), 0);
+    P_AimLineAttack(player->mo, player->mo->angle, AUTOAIM_RANGE(), 0);
     overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
 
     if (linetarget)

@@ -22,6 +22,27 @@
 
 #include "doomdef.h"
 
+// [Nugget]
+#include "doomtype.h"
+#include "info.h"
+#include "m_fixed.h"
+
+// [Nugget] Weapon attributes /-----------------------------------------------
+
+#define WEAPON_INFINITE_RANGE -1
+
+typedef struct weaponattributes_s
+{
+  boolean consumes_ammo;
+  boolean is_damaging;
+  boolean is_hitscan;
+  mobjtype_t *projectiles;
+  mobjtype_t projectile_largest;
+  fixed_t range;
+} weaponattributes_t;
+
+// [Nugget] -----------------------------------------------------------------/
+
 //
 // mbf21: Internal weapon flags
 //
@@ -60,6 +81,8 @@ typedef struct
   // id24
   int         slot;
   const char  *carouselicon;
+
+  weaponattributes_t attributes; // [Nugget] Weapon attributes
 } weaponinfo_t;
 
 extern  weaponinfo_t    weaponinfo[NUMWEAPONS+2];

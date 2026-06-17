@@ -240,26 +240,41 @@ void HU_UpdateCrosshair(void)
     {
         angle_t an = plr->mo->angle;
         ammotype_t ammo = weaponinfo[plr->readyweapon].ammo;
-        fixed_t range = (ammo == am_noammo
-                         && !(plr->readyweapon == wp_fist && plr->cheats & CF_SAITAMA)) // [Nugget]
-                        ? MELEERANGE : 16 * 64 * FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1); // [Nugget]
+        fixed_t range = (ammo == am_noammo) ? MELEERANGE : 16 * 64 * FRACUNIT;
         boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
 
-        // [Nugget]
-        const boolean is_projectile_weapon = ammo == am_misl || ammo == am_cell;
+        // [Nugget] /---------------------------------------------------------
+
+        const weaponattributes_t *const attributes = &weaponinfo[plr->readyweapon].attributes;
+        const boolean is_projectile_weapon = attributes->projectiles != NULL;
         int side = 0;
 
-        crosshair_target = linetarget = NULL;
+        range = (attributes->range == WEAPON_INFINITE_RANGE)
+              ? AUTOAIM_RANGE()
+              : MIN(AUTOAIM_RANGE(), attributes->range);
 
-        // [Nugget] The crosshair target doesn't necessarily correspond
-        // to the target given by smart autoaim
-        if (CASUALPLAY(smart_autoaim) && is_projectile_weapon)
-        { return; }
+        // Smart autoaim
+        if (!attributes->is_hitscan && is_projectile_weapon)
+        {
+            const mobjinfo_t *const info = &mobjinfo[attributes->projectile_largest];
+
+            P_SetProjectileInfo(
+                plr->mo->x,
+                plr->mo->y,
+                plr->mo->z + (4*8*FRACUNIT) - plr->crouchoffset,
+                info->radius,
+                info->height
+            );
+        }
+
+        // [Nugget] ---------------------------------------------------------/
+
+        crosshair_target = linetarget = NULL;
 
         overflow[emu_intercepts].enabled = false;
         P_AimLineAttack(plr->mo, an, range, CROSSHAIR_AIM);
         if (!vertical_aiming && is_projectile_weapon
-            && (!no_hor_autoaim || !casual_play)) // [Nugget]
+            && NOTCASUALPLAY(!no_hor_autoaim)) // [Nugget]
         {
             if (!linetarget)
             {
@@ -275,6 +290,8 @@ void HU_UpdateCrosshair(void)
             }
         }
         overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
+
+        P_ClearProjectileInfo(); // [Nugget] Smart autoaim
 
         if (linetarget && (!(linetarget->flags & MF_SHADOW)
                            || hud_crosshair_fuzzy)) // [Nugget]

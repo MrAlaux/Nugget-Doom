@@ -2646,6 +2646,8 @@ void D_DoomMain(void)
 
   D_UpdateCasualPlay();
 
+  P_AnalyzeWeapons();
+
   P_NuggetSetWeaponInertiaScale();
 
   if (casual_play && !fail_safe)
