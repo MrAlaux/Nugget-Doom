@@ -864,10 +864,10 @@ static void cheat_reveal_exit(void)
     const line_t *const line = &lines[i];
     const short special = line->special;
 
-    if (   special ==  11 || special ==  51 || special ==  52
-        || special == 124 || special == 197 || special == 198)
+    if (P_IsExitLine(&lines[i]))
     {
-      found_exit |= 1 + (special == 51 || special == 124 || special == 198);
+      found_exit |= 1 + (   special == 51   || special == 124  || special == 198
+                         || special == 2072 || special == 2073 || special == 2074);
     }
 
     for (int j = 0;  j < 2;  j++)

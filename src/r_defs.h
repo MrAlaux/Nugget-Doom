@@ -274,9 +274,6 @@ typedef struct line_s
   int backtint; // Front lower texture -- activated from the back side
 
   boolean dirty;
-
-  // [Nugget]: [crispy] calculate sound origin of line to be its midpoint
-  degenmobj_t soundorg;
 } line_t;
 
 // phares 3/14/98

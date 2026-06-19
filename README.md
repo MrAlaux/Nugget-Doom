@@ -240,7 +240,6 @@ All of these are CFG-only, so their CVAR names are included.
 - Fix lopsided Icon of Sin explosions (`comp_iosdeath`)
 - Permanent IDCHOPPERS invulnerability (`comp_choppers`)
 - Manually toggled moving doors are silent (`comp_manualdoor`) [p.f. Crispy Doom]
-- Corrected switch sound source (`comp_switchsource`) [p.f. Crispy Doom]
 - Chaingun makes two sounds with one bullet (`comp_cgundblsnd`)
 - Chaingunner uses pistol/chaingun sound (`comp_cgunnersfx`)
 - Arch-Vile fire plays flame start sound (`comp_flamst`) [p.f. Crispy Doom]

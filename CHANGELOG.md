@@ -22,6 +22,7 @@
   - Maintained _Pistol Start_ menu item
   - Replaced `pitch_bend_range` with `pitched_sounds_range` [^1]
   - Changed _Fake Contrast_ default to _Vanilla_, and changed the order of its values [^1]
+  - Removed `comp_switchsource` (now default behavior)
   - Removed `no_page_ticking` in favor of Woof's `menu_pause_demos`
   - Removed `quick_quitgame` in favor of Woof's `quit_prompt`
 - **Improved sky stretching**

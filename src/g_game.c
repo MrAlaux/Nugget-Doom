@@ -6121,7 +6121,6 @@ void G_BindCompVariables(void)
   BIND_COMP_NUG(comp_iosdeath,     false, "Fix lopsided Icon of Sin explosions");
   BIND_COMP_NUG(comp_choppers,     false, "Permanent IDCHOPPERS invulnerability");
   BIND_COMP_NUG(comp_manualdoor,   true,  "Manually toggled moving doors are silent");
-  BIND_COMP_NUG(comp_switchsource, false, "Corrected switch sound source");
   BIND_COMP_NUG(comp_cgundblsnd,   true,  "Chaingun makes two sounds with one bullet");
   BIND_COMP_NUG(comp_cgunnersfx,   false, "Chaingunner uses pistol/chaingun sound");
   BIND_COMP_NUG(comp_flamst,       false, "Arch-Vile fire plays flame-start sound");
