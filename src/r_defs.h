@@ -262,6 +262,7 @@ typedef struct line_s
   sector_t *backsector;
   int validcount;        // if == validcount, already checked
   void *specialdata;     // thinker_t for reversable actions
+  degenmobj_t soundorg;  // sound origin for switches/buttons
   const byte *tranmap;   // better translucency handling
   int firsttag,nexttag;  // killough 4/17/98: improves searches for tags.
 
@@ -277,20 +278,6 @@ typedef struct line_s
   // [Nugget]: [crispy] calculate sound origin of line to be its midpoint
   degenmobj_t soundorg;
 } line_t;
-
-//
-// A SubSector.
-// References a Sector.
-// Basically, this is a list of LineSegs,
-//  indicating the visible walls that define
-//  (all or some) sides of a convex BSP leaf.
-//
-
-typedef struct subsector_s
-{
-  sector_t *sector;
-  int numlines, firstline; // [FG] extended nodes
-} subsector_t;
 
 // phares 3/14/98
 //
@@ -345,6 +332,29 @@ typedef struct seg_s
   // NanoBSP
   struct seg_s *next;
 } seg_t;
+
+typedef struct ssline_s
+{
+  seg_t *seg;
+  line_t *linedef;
+  fixed_t x1, y1;
+  fixed_t x2, y2;
+  fixed_t bbox[4];
+} ssline_t;
+
+//
+// A SubSector.
+// References a Sector.
+// Basically, this is a list of LineSegs,
+//  indicating the visible walls that define
+//  (all or some) sides of a convex BSP leaf.
+//
+
+typedef struct subsector_s
+{
+  sector_t *sector;
+  int numlines, firstline; // [FG] extended nodes
+} subsector_t;
 
 //
 // BSP node.
