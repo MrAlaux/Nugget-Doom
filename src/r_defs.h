@@ -264,6 +264,9 @@ typedef enum amls_e
     amls_UnexploredSecret,
     amls_Portal,
 
+    // [Nugget]
+    amls_Trigger,
+
     amls_InterTeleportSecret,
     amls_Invisible,
     amls_RevealedSecret,
