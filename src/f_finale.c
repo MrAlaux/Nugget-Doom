@@ -765,8 +765,8 @@ static void F_TextWrite(void)
     {
       continue;
     }
-    // [cispy] prevent text from being drawn off-screen vertically
-    if (cy + SHORT(hu_font[c]->height) > SCREENHEIGHT)
+    // [crispy] prevent text from being drawn off-screen vertically
+    if (cy + SHORT(hu_font[c]->height) - SHORT(hu_font[c]->topoffset) > SCREENHEIGHT)
       break;
     V_DrawPatchSH(cx, cy, hu_font[c]); // [Nugget] HUD/menu shadows
     cx+=w;
