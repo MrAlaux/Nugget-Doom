@@ -2767,7 +2767,8 @@ void A_BrainScream(mobj_t *mo)
     }
   S_StartSound(NULL,sfx_bosdth);
 
-  R_ExplosionShake(mo->x, mo->y, 2048, 2048); // [Nugget] Explosion shake effect
+  // [Nugget] Screen-shake effects
+  if (screen_shake_explosions) { R_ExplosionShake(mo->x, mo->y, 2048, 2048); }
 }
 
 void A_BrainExplode(mobj_t *mo)

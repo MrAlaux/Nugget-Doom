@@ -259,10 +259,13 @@ extern void R_SetFOVFX(const int fx);
 extern int  R_GetZoom(void);
 extern void R_SetZoom(const int state);
 
-// Explosion shake effect ----------------------------------------------------
+// Screen-shake effects ------------------------------------------------------
 
-extern boolean explosion_shake;
-extern int explosion_shake_intensity_pct;
+extern boolean screen_shake;
+extern boolean screen_shake_hitscan;
+extern boolean screen_shake_projectiles;
+extern boolean screen_shake_explosions;
+extern int screen_shake_intensity_pct;
 
 extern void R_ClearShake(void);
 extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range);

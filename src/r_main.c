@@ -715,10 +715,13 @@ static void ProcessFOVEffects(void)
   }
 }
 
-// Explosion shake effect ----------------------------------------------------
+// Screen-shake effects ------------------------------------------------------
 
-boolean explosion_shake;
-int explosion_shake_intensity_pct;
+boolean screen_shake;
+boolean screen_shake_hitscan;
+boolean screen_shake_projectiles;
+boolean screen_shake_explosions;
+int screen_shake_intensity_pct;
 
 static int shake;
 #define MAX_SHAKE 50
@@ -730,7 +733,7 @@ void R_ClearShake(void)
 
 void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 {
-  if (strictmode || !explosion_shake) { return; }
+  if (strictmode || !screen_shake) { return; }
 
   #define SHAKE_RANGE_MULT 5
 
@@ -1818,7 +1821,7 @@ void R_SetupFrame (player_t *player)
   }
   else { target_interangle = viewangle; }
 
-  // Explosion shake effect --------------------------------------------------
+  // Screen-shake effects ----------------------------------------------------
 
   camera_height = R_GetFreecamMobj() ? freecam.z - freecam.mobj->z
                                      : chasecam_height * FRACUNIT;
@@ -1830,7 +1833,7 @@ void R_SetupFrame (player_t *player)
     if (!((menuactive && !demoplayback && !netgame) || paused))
     {
       static int oldtime = -1;
-      const fixed_t intensity = FRACUNIT * explosion_shake_intensity_pct / 100;
+      const fixed_t intensity = FRACUNIT * screen_shake_intensity_pct / 100;
 
       #define CALC_SHAKE (((Woof_Random() - 128) % 3) * intensity) * shake / MAX_SHAKE
 
@@ -2409,14 +2412,29 @@ void R_BindRenderVariables(void)
              false, ss_view, wad_no,
              "Camera automatically locks onto targets vertically");
 
-  M_BindBool("explosion_shake", &explosion_shake, NULL,
+  M_BindBool("screen_shake", &screen_shake, NULL,
              false, ss_view, wad_yes,
-             "Explosions shake the view");
+             "Enable screen-shake effects in general (affected by CVARs below)");
 
   // (CFG-only)
-  M_BindNum("explosion_shake_intensity_pct", &explosion_shake_intensity_pct, NULL,
+  M_BindBool("screen_shake_hitscan", &screen_shake_hitscan, NULL,
+             true, ss_none, wad_yes,
+             "Screen shake for hitscan attacks with damage greater than range");
+
+  // (CFG-only)
+  M_BindBool("screen_shake_projectiles", &screen_shake_projectiles, NULL,
+             true, ss_none, wad_yes,
+             "Screen shake for impact of high-damage projectiles");
+
+  // (CFG-only)
+  M_BindBool("screen_shake_explosions", &screen_shake_explosions, NULL,
+             true, ss_none, wad_yes,
+             "Screen shake for explosions");
+
+  // (CFG-only)
+  M_BindNum("screen_shake_intensity_pct", &screen_shake_intensity_pct, NULL,
             100, 10, 100, ss_none, wad_yes,
-            "Explosion-shake intensity percent");
+            "Screen-shake effects intensity percent");
 
   M_BindBool("breathing", &breathing, NULL,
              false, ss_view, wad_yes,

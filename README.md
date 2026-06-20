@@ -75,8 +75,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_View Height_** setting, which allows to enter a custom POV height value in the [32, 56] range [i.b. Brutal Doom]
 - **_Vertical Target Lock-on_** setting, to make the camera automatically lock onto targets vertically [i.b. Rise of the Triad]
 - **Flinching** setting, to flinch upon landing and/or taking damage
-- **_Explosion Shake Effect_** setting [i.b. Doom Retro]
-  - Shake intensity determined by the CFG-only `explosion_shake_intensity_pct` CVAR
+- **_Screen-Shake Effects_** setting [i.b. Doom Retro]
+  - Configurable through the CFG-only `screen_shake_#` CVARs
 - **_Subtle Idle Bobbing/Breathing_** setting [p.f. International Doom]
 - **_Teleporter Zoom_** setting [i.b. ZDoom]
 - **_Death Camera_** setting [i.b. ZDoom]

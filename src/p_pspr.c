@@ -1634,7 +1634,7 @@ void A_Light2 (player_t *player, pspdef_t *psp)
 void A_BFGSpray(mobj_t *mo)
 {
   int i;
-  int shake = 0; // [Nugget] Explosion shake effect
+  int shake = 0; // [Nugget] Screen-shake effects
 
   for (i=0 ; i<40 ; i++)  // offset angles from its attack angle
     {
@@ -1694,11 +1694,11 @@ void A_BFGSpray(mobj_t *mo)
 
       P_SetIsBFGTracer(false); // [Nugget] Extra Gibbing
 
-      shake++; // [Nugget] Explosion shake effect
+      shake++;
     }
 
-  // [Nugget] Explosion shake effect
-  if (mo->target->player == &players[displayplayer])
+  // [Nugget] Screen-shake effects
+  if (screen_shake_explosions && mo->target->player == &players[displayplayer])
   { R_ExplosionShake(mo->target->x, mo->target->y, 2*shake, 16*64); }
 }
 

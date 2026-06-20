@@ -2244,6 +2244,8 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
       // Don't spawn anything if we hit a sky ceiling
       if (!(hit_plane == 1 && sector->ceilingpic == skyflatnum))
       {
+        no_hit = false;
+
         // Explosive hitscan cheat
         if (is_boomshot && (is_boomshot = false, distance_travelled > (144 + 4)*FRACUNIT))
         {
@@ -2251,6 +2253,23 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance,
         }
         else { P_SpawnPuff(cx, cy, cz); }
       }
+    }
+  }
+
+  // Screen-shake effects
+  if (!no_hit && screen_shake_hitscan)
+  {
+    int value = (damage - FixedToInt(distance)) / 3;
+        value = MIN(50, value);
+
+    if (value > 0)
+    {
+      R_ExplosionShake(
+        t1->x + FixedMul(distance_travelled, finecosine[angle]),
+        t1->y + FixedMul(distance_travelled, finesine[angle]),
+        value,
+        value
+      );
     }
   }
 
@@ -2732,7 +2751,16 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, int distance)
   bombdamage = damage;
   bombdistance = distance;
 
-  R_ExplosionShake(bombspot->x, bombspot->y, bombdamage, bombdistance); // [Nugget] Explosion shake effect
+  // [Nugget] /---------------------------------------------------------------
+
+  // Screen-shake effects: don't apply if the spot triggered an explosion
+  // recently (it might be a continuously "exploding" attack, e.g. fire)
+  if (screen_shake_explosions && gametic - bombspot->last_explosion_tic >= TICRATE * 2/5)
+  { R_ExplosionShake(bombspot->x, bombspot->y, bombdamage, bombdistance); }
+
+  bombspot->last_explosion_tic = gametic;
+
+  // [Nugget] ---------------------------------------------------------------/
 
   for (y=yl ; y<=yh ; y++)
     for (x=xl ; x<=xh ; x++)
