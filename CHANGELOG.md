@@ -42,6 +42,7 @@
 - **Made automap-mark coloring take the <kbd>Shift</kbd> key into account**
 - **Randomized duration of spawn, death, and gib states in _Fancy Cast_**, emulating in-game behavior
 - **Improved _Sprite Shadows_ casting threshold**
+- **Tweaked zoom effect**
 
 ## Bug Fixes
 
@@ -55,6 +56,8 @@
 - **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**
+- **Late _Radial Fog_ initialization when changing FOV**
+- **Message review not being enabled while new messages were being shown**
 - **Quick-double-press actions being affected by game speed**
 - **True-color rendering breaking invisibility colormap in beta-emulation mode**
 - **_Solid [Status Bar] Background Color_ not respecting color settings with true-color rendering**

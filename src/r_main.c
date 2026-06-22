@@ -503,14 +503,14 @@ typedef struct fovfx_s {
   float old, current, target;
 } fovfx_t;
 
-static fovfx_t fovfx[NUMFOVFX] = {0}; // FOV effects (recoil, teleport)
-static int     zoomed = 0; // ---------- Current zoom state
+static fovfx_t fovfx[NUM_FOVFX] = {0};
+static int zoomed = 0;
 
 void R_ClearFOVFX(void)
 {
   R_SetZoom(ZOOM_RESET);
 
-  for (int i = FOVFX_ZOOM+1;  i < NUMFOVFX;  i++)
+  for (int i = FOVFX_ZOOM+1;  i < NUM_FOVFX;  i++)
   {
     fovfx[i] = (fovfx_t) { .target = 0, .current = 0, .old = 0 };
   }
@@ -527,10 +527,6 @@ void R_SetFOVFX(const int fx)
 
   switch (fx)
   {
-    case FOVFX_ZOOM:
-      // Handled by `R_Get/SetZoom()`
-      break;
-
     case FOVFX_TELEPORT:
     {
       if (!teleporter_zoom) { break; }
@@ -540,6 +536,8 @@ void R_SetFOVFX(const int fx)
 
       break;
     }
+
+    default: break; // The rest are handled elsewhere
   }
 }
 
@@ -577,13 +575,12 @@ static void ProcessFOVEffects(void)
   else {
     static int oldtic = -1;
 
-    int zoomtarget;
+    int zoomtarget = 0;
 
     // Force zoom reset
     if (strictmode || zoomed == ZOOM_RESET)
     {
-      zoomtarget = 0;
-      fovfx[FOVFX_ZOOM] = (fovfx_t) { .target = 0, .current = 0, .old = 0 };
+      fovfx[FOVFX_ZOOM] = (fovfx_t) {0};
       zoomed = ZOOM_OFF;
     }
     else {
@@ -600,18 +597,19 @@ static void ProcessFOVEffects(void)
 
     boolean fovchange = false;
 
+    static const float SLOWMO_FOV_TARGET = -10.0f;
+
     if (!strictmode)
     {
       if (fovfx[FOVFX_ZOOM].target != zoomtarget)
       {
         fovchange = true;
       }
-      else if (fovfx[FOVFX_SLOWMO].target
-               || (G_GetSlowMotion() && fovfx[FOVFX_SLOWMO].target != 10))
+      else if (G_GetSlowMotion() && fovfx[FOVFX_SLOWMO].target != SLOWMO_FOV_TARGET)
       {
         fovchange = true;
       }
-      else for (int i = 0;  i < NUMFOVFX;  i++)
+      else for (int i = 0;  i < NUM_FOVFX;  i++)
       {
         if (fovfx[i].target || fovfx[i].current)
         {
@@ -625,8 +623,6 @@ static void ProcessFOVEffects(void)
     {
       if (oldtic != gametic)
       {
-        fovchange = false;
-
         float *target;
 
         // Zoom --------------------------------------------------------------
@@ -637,10 +633,10 @@ static void ProcessFOVEffects(void)
         // Special handling for zoom
         if (zoomtarget || *target)
         {
-          float step = zoomtarget - *target;
+          const float step = zoomtarget - *target;
           const int sign = (step > 0) ? 1 : -1;
 
-          *target += CLAMP(fabs(step) / 3.0, 1, 16) * sign;
+          *target += CLAMP(fabs(step) / 3.0f, 0.1f, 16.0f) * sign;
 
           if (   (sign > 0 && *target > zoomtarget)
               || (sign < 0 && *target < zoomtarget))
@@ -663,14 +659,15 @@ static void ProcessFOVEffects(void)
 
         if (G_GetSlowMotionFactor() != SLOWMO_FACTOR_NORMAL)
         {
-          *target = -10.0f * (SLOWMO_FACTOR_NORMAL - G_GetSlowMotionFactor())
-                           / (SLOWMO_FACTOR_NORMAL - SLOWMO_FACTOR_TARGET);
+          *target = SLOWMO_FOV_TARGET
+                  * (SLOWMO_FACTOR_NORMAL - G_GetSlowMotionFactor())
+                  / (SLOWMO_FACTOR_NORMAL - SLOWMO_FACTOR_TARGET);
         }
         else { *target = 0; }
       }
       else if (uncapped)
       {
-        for (int i = 0;  i < NUMFOVFX;  i++)
+        for (int i = 0;  i < NUM_FOVFX;  i++)
         {
           fovfx[i].current = fovfx[i].old
                            + ((fovfx[i].target - fovfx[i].old)
@@ -681,7 +678,7 @@ static void ProcessFOVEffects(void)
 
     oldtic = gametic;
 
-    for (int i = 0;  i < NUMFOVFX;  i++)
+    for (int i = 0;  i < NUM_FOVFX;  i++)
     {
       if (FOVFX_ZOOM < i && R_FreecamOn()) { break; }
 
@@ -712,6 +709,8 @@ static void ProcessFOVEffects(void)
     skyiscalediff = (custom_fov == FOV_DEFAULT)
                   ? FRACUNIT
                   : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
+
+    R_InitDistLightTables();
   }
 }
 

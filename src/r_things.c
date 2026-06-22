@@ -108,33 +108,16 @@ static void ApplyFlipPostProcess(void)
 
     int16_t count = half_viewwidth;
 
-    #define SWAP() \
-        temp = *left; \
-       *left = *right; \
-      *right = temp; \
-      left++; \
+    while (count--)
+    {
+      const pixel_t temp = *left;
+
+      *left = *right;
+      *right = temp;
+
+      left++;
       right--;
-
-    while (count >= 8)
-    {
-      pixel_t temp;
-
-      SWAP(); SWAP(); SWAP(); SWAP();
-      SWAP(); SWAP(); SWAP(); SWAP();
-
-      count -= 8;
     }
-
-    while (count)
-    {
-      pixel_t temp;
-
-      SWAP();
-
-      count--;
-    }
-
-    #undef SWAP
   }
 }
 
@@ -155,33 +138,16 @@ static void ApplyFlipPostProcess32(void)
 
     int16_t count = half_viewwidth;
 
-    #define SWAP() \
-        temp = *left; \
-       *left = *right; \
-      *right = temp; \
-      left++; \
+    while (count--)
+    {
+      const pixel32_t temp = *left;
+
+      *left = *right;
+      *right = temp;
+
+      left++;
       right--;
-
-    while (count >= 8)
-    {
-      pixel32_t temp;
-
-      SWAP(); SWAP(); SWAP(); SWAP();
-      SWAP(); SWAP(); SWAP(); SWAP();
-
-      count -= 8;
     }
-
-    while (count)
-    {
-      pixel32_t temp;
-
-      SWAP();
-
-      count--;
-    }
-
-    #undef SWAP
   }
 }
 

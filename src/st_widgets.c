@@ -347,7 +347,8 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
         {
             AddMessage(player->message, widget->duration, false);
         }
-        else if (message_review)
+
+        if (message_review)
         {
             message_review = false;
             message_review_duration_left = hud_msg_duration ? hud_msg_duration : widget->duration;

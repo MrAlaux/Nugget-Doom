@@ -3879,7 +3879,8 @@ void G_Ticker(void)
     change = true;
   }
 
-  if (change) {
+  if (change)
+  {
     G_SetTimeScale();
     setrefreshneeded = false;
   }
