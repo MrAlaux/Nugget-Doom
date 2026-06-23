@@ -515,6 +515,7 @@ void P_LinedefInit(line_t * const linedef)
   // Andrey Budko: fix sound origin for large levels
   linedef->soundorg.x = linedef->bbox[BOXLEFT] / 2 + linedef->bbox[BOXRIGHT] / 2;
   linedef->soundorg.y = linedef->bbox[BOXTOP] / 2 + linedef->bbox[BOXBOTTOM] / 2;
+  linedef->soundorg.thinker.function.p1 = P_DegenMobjThinker;
 }
 
 // killough 4/4/98: delay using sidedefs until they are loaded
@@ -1368,6 +1369,8 @@ void P_SetupLevel(int episode, int map_num, skill_t skill)
   Z_FreeTag(PU_CACHE);
 
   P_InitThinkers();
+  // haleyjd 02/02/04 -- clear the TID hash table
+  P_InitTIDHash();
 
   // if working with a devlopment map, reload it
   //    W_Reload ();     killough 1/31/98: W_Reload obsolete
