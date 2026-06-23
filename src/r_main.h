@@ -199,6 +199,8 @@ void R_GetLightLevelAndTintInSector(
   int *const tint_p
 );
 
+const struct mobj_s *R_POVMobj(void);
+
 #define PSPR_INVIS_TRANSLUCENCY 50
 
 #define POWER_RUNOUT(power) \

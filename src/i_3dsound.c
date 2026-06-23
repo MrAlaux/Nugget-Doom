@@ -271,12 +271,8 @@ static boolean I_3D_AdjustSoundParams(const mobj_t *listener,
         params->volume = 127;
     }
 
-    // [Nugget] Freecam
-    const mobj_t *playermo = (R_FreecamOn() && !nodrawers)
-                             ? viewplayer->mo
-                             : players[displayplayer].mo;
-
-    if (!source || source == playermo || !listener
+    // [Nugget] Compare `source` against `listener`
+    if (!source || source == listener || !listener
         || !listener->player)
     {
         src.positional = false;

@@ -56,6 +56,7 @@
 - **_Blink Missing Keys_ not working when `screenblocks` were set to 12 and NUGHUD were disabled**
 - **Sprite shadows flickering when the crosshair locked onto a target with _Flip Levels_ enabled**
 - **Horizontal-autoaim indicators not accounting for _Flip Levels_**
+- **Sound not accounting for chasecam**
 - **Late _Radial Fog_ initialization when changing FOV**
 - **Message review not being enabled while new messages were being shown**
 - **Quick-double-press actions being affected by game speed**

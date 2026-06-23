@@ -52,11 +52,6 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
     int adx, ady, dist;
     angle_t angle;
 
-    // [Nugget] Freecam
-    const mobj_t *playermo = (R_FreecamOn() && !nodrawers)
-                             ? viewplayer->mo
-                             : players[displayplayer].mo;
-
     // haleyjd 05/29/06: allow per-channel volume scaling
     params->volume = snd_SfxVolume * params->volume_scale / 15;
 
@@ -71,7 +66,8 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
 
     params->separation = NORM_SEP;
 
-    if (!source || source == playermo)
+    // [Nugget] Compare `source` against `listener`
+    if (!source || source == listener)
     {
         return true;
     }
@@ -125,8 +121,9 @@ static boolean I_MBF_AdjustSoundParams(const mobj_t *listener,
         return true;
     }
 
-    if (source->x != playermo->x
-        || source->y != playermo->y)
+    // [Nugget] Compare `source` against `listener`
+    if (source->x != listener->x
+        || source->y != listener->y)
     {
         // angle of source to listener
         angle = R_PointToAngle2(listener->x, listener->y, source->x, source->y);

@@ -732,7 +732,7 @@ void R_ClearShake(void)
 
 void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 {
-  if (strictmode || !screen_shake) { return; }
+  if (strictmode || !screen_shake || nodrawers) { return; }
 
   #define SHAKE_RANGE_MULT 5
 
@@ -742,12 +742,10 @@ void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
   const fixed_t dx = abs(viewx - bombx),
                 dy = abs(viewy - bomby);
 
-  const fixed_t radius = viewplayer
-                       ? viewplayer->mo->radius
-                       : players[displayplayer].mo->radius;
+  const fixed_t radius = R_POVMobj()->radius;
 
-  fixed_t dist = (MAX(dx, dy) - radius) >> FRACBITS;
-          dist = MAX(0, dist);
+  int dist = FixedToInt(MAX(dx, dy) - radius);
+      dist = MAX(0, dist);
 
   if (dist >= range) { return; }
 
@@ -1637,20 +1635,67 @@ void R_UpdateViewAngleFunction(void)
   }
 }
 
+// [Nugget] /=================================================================
+
+static mobj_t povmobj = {0};
+
+static void UpdatePOVMobj(void)
+{
+  static player_t povplayer = {0};
+
+  const fixed_t
+    old_viewx = povmobj.x,
+    old_viewy = povmobj.y,
+    old_viewz = povmobj.z,
+    old_viewpitch = povplayer.pitch;
+
+  const angle_t old_viewangle = povmobj.angle;
+
+  povmobj = *(viewplayer->mo);
+  povmobj.player = &povplayer;
+
+  povmobj.x     = viewx;
+  povmobj.y     = viewy;
+  povmobj.z     = viewz;
+  povmobj.angle = viewangle;
+
+  povmobj.oldx     = old_viewx;
+  povmobj.oldy     = old_viewy;
+  povmobj.oldz     = old_viewz;
+  povmobj.oldangle = old_viewangle;
+
+  povplayer = *viewplayer;
+  povplayer.mo = &povmobj;
+
+  povplayer.viewz = viewz;
+  povplayer.pitch = viewpitch;
+  povplayer.oldpitch = old_viewpitch;
+}
+
+const mobj_t *R_POVMobj(void)
+{
+  return (!(R_FreecamOn() || R_ChasecamOn()) || nodrawers)
+         ? players[displayplayer].mo
+         : &povmobj;
+}
+
+// [Nugget] =================================================================/
+
 //
 // R_SetupFrame
 //
 
 void R_SetupFrame (player_t *player)
 {
-  // [Nugget]
+  // [Nugget] /===============================================================
+
   chasecam_on = gamestate == GS_LEVEL
                 && !(R_FreecamOn() && !R_GetFreecamMobj())
                 && STRICTMODE(chasecam_mode || (death_camera && player->mo->health <= 0
                                                 && player->playerstate == PST_DEAD
                                                 && !R_FreecamOn()));
 
-  // [Nugget] Freecam
+  // Freecam
   if (R_FreecamOn() && gamestate == GS_LEVEL)
   {
     static player_t dummyplayer = {0};
@@ -1703,6 +1748,8 @@ void R_SetupFrame (player_t *player)
     player = &dummyplayer;
   }
 
+  // [Nugget] ===============================================================/
+
   int cm;
   fixed_t pitch;
   const boolean use_localview = CheckLocalView(player);
@@ -1717,15 +1764,13 @@ void R_SetupFrame (player_t *player)
     leveltime > oldleveltime
   );
 
-  // [Nugget]
-  fixed_t playerz, basepitch;
-  static angle_t old_interangle, target_interangle;
-  static fixed_t camera_height;
-
   viewplayer = player;
 
   // [AM] Interpolate the player camera if the feature is enabled.
   // [Nugget] Freecam: separated position and rotation
+
+  // [Nugget]
+  fixed_t playerz, basepitch;
 
   if (uncapped && (camera_ready || (R_FreecamOn() && freecam.interp && !R_GetFreecamMobj())))
   {
@@ -1796,11 +1841,9 @@ void R_SetupFrame (player_t *player)
 
   // [Nugget] /===============================================================
 
-  // Flip levels
-  if (viewangleoffset && STRICTMODE(flip_levels))
-  { viewangle += ANG180; }
-
   // Alt. intermission background --------------------------------------------
+
+  static angle_t old_interangle, target_interangle;
 
   if (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)
   {
@@ -1821,6 +1864,8 @@ void R_SetupFrame (player_t *player)
   else { target_interangle = viewangle; }
 
   // Screen-shake effects ----------------------------------------------------
+
+  static fixed_t camera_height;
 
   camera_height = R_GetFreecamMobj() ? freecam.z - freecam.mobj->z
                                      : chasecam_height * FRACUNIT;
@@ -1981,8 +2026,14 @@ void R_SetupFrame (player_t *player)
     R_SetupFreelook();
   }
 
+  UpdatePOVMobj(); // [Nugget]
+
   // 3-screen display mode.
   viewangle += viewangleoffset;
+
+  // [Nugget] Flip levels
+  if (viewangleoffset && STRICTMODE(flip_levels))
+  { viewangle += ANG180; }
 
   // [Nugget]: [crispy] A11Y
   if (!(strictmode || a11y_weapon_flash))
