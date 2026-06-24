@@ -146,14 +146,19 @@ void G_SaveAutoKeyframe(void)
         }
         if (disable_rewind)
         {
-            displaymsg("Slow key framing: rewind disabled");
+            displaymsg("Slow key framing: storing stopped"); // [Nugget] Different message
         }
     }
 }
 
 void G_LoadAutoKeyframe(void)
 {
+    const int time = I_GetTimeMS(); // [Nugget]
+
     gameaction = ga_nothing;
+
+    // [Nugget] Reenable if user attempts to rewind
+    disable_rewind = false;
 
     if (IsEmpty())
     {
@@ -196,15 +201,19 @@ void G_LoadAutoKeyframe(void)
     keyframe_t* keyframe = Pop();
     if (keyframe)
     {
+        // [Nugget] Delete current keyframe only if we quickly rewind twice
+        static int last_rewind_time = 0;
+
         if (keyframe->episode != gameepisode || keyframe->map != gamemap)
         {
             G_SimplifiedInitNew(keyframe->episode, keyframe->map);
             P_UnArchiveDirtyArrays(keyframe->episode, keyframe->map);
         }
         P_LoadKeyframe(keyframe);
-        displaymsg("Restored key frame");
+        displaymsg("Restored key frame %i", queue.count); // [Nugget] Show index
 
-        if (IsEmpty()) // Don't delete the first keyframe.
+        if (IsEmpty() // Don't delete the first keyframe.
+            || time - last_rewind_time >= 600) // [Nugget]
         {
             Push(keyframe);
         }
@@ -219,22 +228,24 @@ void G_LoadAutoKeyframe(void)
             players[consoleplayer].pitch = 0;
         }
         gamestate = GS_LEVEL;
+
+        // [Nugget] ----------------------------------------------------------
+
+        // Slow Motion
+        G_ResetSlowMotion();
+
+        // Clear visual effects
+        R_ClearFOVFX();
+        R_ClearShake();
+
+        // Freecam
+        R_UpdateFreecamMobj(NULL);
+
+        // Animated health/armor counts
+        ST_Start();
+
+        last_rewind_time = time;
     }
-
-    // [Nugget] --------------------------------------------------------------
-
-    // Slow Motion
-    G_ResetSlowMotion();
-
-    // Clear visual effects
-    R_ClearFOVFX();
-    R_ClearShake();
-
-    // Freecam
-    R_UpdateFreecamMobj(NULL);
-
-    // Animated health/armor counts
-    ST_Start();
 }
 
 static void FreeKeyframeQueue(void)
