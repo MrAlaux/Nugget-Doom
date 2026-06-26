@@ -40,6 +40,7 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "r_main.h"
 #include "v_video.h"
 
 //
@@ -288,21 +289,24 @@ void R_InitTranMap(void)
 
 // [Nugget] /=================================================================
 
-static byte *InitGenericTranMap(const int filter_pct)
-{
-  // Try to load from file
-
+static byte *GetGenericTranMapFromFile(
+  const char *const name,
+  const int filter_pct
+) {
   if (!gt_playpal_dir) { CreateTranMapPaletteDir(); }
 
-  const int length = strlen(gt_playpal_dir) + sizeof("/gentranmap_XYZ.dat");
+  const int length = strlen(gt_playpal_dir)
+                   + sizeof("/") - 1
+                   + strlen(name)
+                   + sizeof("_XYZ.dat");
+
   char *const filename = malloc(length);
 
-  M_snprintf(filename, length, "%s/gentranmap_%03d.dat", gt_playpal_dir, filter_pct);
-
-  byte *tmap = NULL;
+  M_snprintf(filename, length, "%s/%s_%03d.dat", gt_playpal_dir, name, filter_pct);
 
   if (M_FileExistsNotDir(filename))
   {
+    byte *tmap = NULL;
     const int file_length = M_ReadFile(filename, &tmap);
 
     if (tmap)
@@ -315,13 +319,42 @@ static byte *InitGenericTranMap(const int filter_pct)
 
       // Invalid file
       Z_Free(tmap);
-      tmap = NULL;
     }
   }
 
-  // Failed to load; generate and save it
+  free(filename);
+  return NULL;
+}
+
+static void SaveGenericTranMapToFile(
+  const char *const name,
+  const int filter_pct,
+  const byte *const tmap
+) {
+  const int length = strlen(gt_playpal_dir)
+                   + sizeof("/") - 1
+                   + strlen(name)
+                   + sizeof("_XYZ.dat");
+
+  char *const filename = malloc(length);
+
+  M_snprintf(filename, length, "%s/%s_%03d.dat", gt_playpal_dir, name, filter_pct);
+
+  M_WriteFile(filename, tmap, tranmap_lump_length);
+  free(filename);
+}
+
+static byte *InitGenericTranMap(const int filter_pct)
+{
+  static const char *const name = "gentranmap";
+
+  byte *tmap = GetGenericTranMapFromFile(name, filter_pct);
+
+  if (tmap) { return tmap; }
 
   I_Printf(VB_DEBUG, "%s: %i%%", __func__, filter_pct);
+
+  // Original Boom algorithm, faster than `GenerateTranmapData()`
 
   byte *const playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
 
@@ -384,8 +417,24 @@ static byte *InitGenericTranMap(const int filter_pct)
 
   Z_ChangeTag(playpal, PU_CACHE);
 
-  M_WriteFile(filename, tmap, tranmap_lump_length);
-  free(filename);
+  SaveGenericTranMapToFile(name, filter_pct, tmap);
+
+  return tmap;
+}
+
+static byte *InitGenericAdditiveTranMap(const int filter_pct)
+{
+  static const char *const name = "genadditranmap";
+
+  byte *tmap = GetGenericTranMapFromFile(name, filter_pct);
+
+  if (tmap) { return tmap; }
+
+  I_Printf(VB_DEBUG, "%s: %i%%", __func__, filter_pct);
+
+  tmap = GenerateTranmapData(filter_pct / 100.0, 1.0 - (filter_pct * 0.0075));
+
+  SaveGenericTranMapToFile(name, filter_pct, tmap);
 
   return tmap;
 }
@@ -402,6 +451,17 @@ const byte *R_GetGenericTranMap(const int filter_pct)
   return *tmap;
 }
 
+static byte *generic_additive_tranmaps[101] = { NULL };
+
+const byte *R_GetGenericAdditiveTranMap(const int filter_pct)
+{
+  byte **const tmap = &generic_additive_tranmaps[filter_pct];
+
+  if (!*tmap) { *tmap = InitGenericAdditiveTranMap(filter_pct); }
+
+  return *tmap;
+}
+
 void R_InitFadeoutTranMaps(void)
 {
   for (int i = 0;  i < 10;  i++)
@@ -409,6 +469,22 @@ void R_InitFadeoutTranMaps(void)
 
   // HUD/menu shadows
   if (hud_menu_shadows) { V_InitShadowColormaps(); }
+}
+
+void R_InitWeaponTranMaps(void)
+{
+  // Translucent weapon when invisible
+  if (pspr_invis_translucent)
+  { R_GetGenericTranMap(PSPR_INVIS_TRANSLUCENCY); }
+
+  // Translucent weapon flashes
+  if (pspr_translucency_pct != 100)
+  {
+    R_GetGenericTranMap(pspr_translucency_pct);
+
+    if (pspr_invis_translucent)
+    { R_GetGenericTranMap(pspr_translucency_pct * PSPR_INVIS_TRANSLUCENCY / 100); }
+  }
 }
 
 // [Nugget] =================================================================/

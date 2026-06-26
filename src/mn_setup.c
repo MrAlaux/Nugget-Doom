@@ -2058,11 +2058,6 @@ static const char *force_carousel_strings[] = {
   "Off", "Off Player", "Always"
 };
 
-void WeaponFlashTrans(void)
-{
-    R_GetGenericTranMap(pspr_translucency_pct);
-}
-
 static setup_menu_t weap_settings5[] =
 {
   {"Nugget - Cosmetic", S_SKIP|S_TITLE, W_X, M_SPC},
@@ -2070,14 +2065,14 @@ static setup_menu_t weap_settings5[] =
     {"Bobbing Style",              S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"bobbing_style"}, .strings_id = str_bobbing_style},
     {"Bob While Switching",        S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"switch_bob"}},
     {"Weapon Squat Upon Landing",  S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"weaponsquat"}},
-    {"Translucent When Invisible", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"pspr_invis_translucent"}},
+    {"Translucent When Invisible", S_ONOFF |S_STRICT,                W_X,       M_SPC,      {"pspr_invis_translucent"}, .action = R_InitWeaponTranMaps},
     {"Force Weapon Carousel",      S_CHOICE|S_STRICT,                W_X,       M_SPC,      {"force_carousel"}, .strings_id = str_force_carousel},
     MI_GAP,
     #define W_X2 (W_X_THRM8 + 16)
     {"Weapon Bob Speed",          S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_bobbing_speed_pct"}},
     {"Weapon Inertia",            S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_inertia_scale_pct"}, .action = P_NuggetResetWeaponInertia},
     {"Firing Weapon Inertia",     S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"weapon_inertia_fire_scale_pct"}, .action = P_NuggetResetWeaponInertia},
-    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"pspr_translucency_pct"}, .action = WeaponFlashTrans},
+    {"Flash Opacity",             S_THERMO|S_STRICT|S_PCT|S_ACTION, W_X2, M_THRM_SPC, {"pspr_translucency_pct"}, .action = R_InitWeaponTranMaps},
     #undef W_X2
 
   MI_END

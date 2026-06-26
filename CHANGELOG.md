@@ -62,6 +62,7 @@
 - **Quick-double-press actions being affected by game speed**
 - **True-color rendering breaking invisibility colormap in beta-emulation mode**
 - **_Solid [Status Bar] Background Color_ not respecting color settings with true-color rendering**
+- **Weapon-translucency menu items not generating tranmaps immediately**
 - **UI/HUD updating before game world when changing gamma and color settings**
 - **_Tag Finder_ memory leak**
 

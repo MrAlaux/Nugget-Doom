@@ -39,6 +39,8 @@ byte *R_NormalTranMap(int alpha, boolean force);
 
 // [Nugget]
 const byte *R_GetGenericTranMap(int filter_pct);
+const byte *R_GetGenericAdditiveTranMap(int filter_pct);
 void R_InitFadeoutTranMaps(void);
+void R_InitWeaponTranMaps(void);
 
 #endif
