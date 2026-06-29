@@ -42,8 +42,10 @@ void G_ClearInput(void);
 boolean G_MovementResponder(struct event_s *ev);
 boolean G_Responder(struct event_s *ev);
 boolean G_CheckDemoStatus(void);
+void G_CheckDemoRecordingStatus(void);
 void G_DeathMatchSpawnPlayer(int playernum);
 void G_InitNew(skill_t skill, int episode, int map);
+void G_SimplifiedInitNew(int episode, int map);
 void G_DeferedInitNew(skill_t skill, int episode, int map);
 void G_DeferedPlayDemo(const char *demo);
 void G_LoadAutoSave(char *name, boolean is_command);
@@ -77,11 +79,15 @@ void G_DoVictory(void);
 
 void G_EnableWarp(boolean warp);
 void G_SetTimeScale(void);
+void G_Rewind(void);
 
 demo_version_t G_GetNamedComplevel(const char *arg);
 const char *G_GetCurrentComplevelName(void);
 
 int G_GotoNextLevel(int *pEpi, int *pMap);
+int G_GotoPrevLevel(void);
+
+const char *G_GetLevelTitle(void);
 
 void G_BindGameInputVariables(void);
 void G_BindGameVariables(void);
@@ -96,9 +102,13 @@ typedef enum
   CL_BOOM,
   CL_MBF,
   CL_MBF21,
+  CL_ID24,
 } complevel_t;
 
 extern complevel_t force_complevel, default_complevel;
+
+// ID24 exit line specials
+extern boolean reset_inventory;
 
 extern int realtic_clock_rate;
 
@@ -113,8 +123,7 @@ extern int  key_help;
 extern boolean autorun;           // always running?                   // phares
 extern boolean autostrafe50;
 extern boolean novert;
-extern boolean mouselook;
-extern boolean padlook;
+extern boolean freelook;
 
 extern fixed_t forwardmove[2];
 extern fixed_t default_sidemove[2];
@@ -126,13 +135,9 @@ extern boolean haswolflevels;  //jff 4/18/98 wolf levels present
 
 extern int  bodyquesize, default_bodyquesize; // killough 2/8/98, 10/98
 
-// killough 5/2/98: moved from d_deh.c:
-// Par times (new item with BOOM) - from g_game.c
-extern int pars[][10];  // hardcoded array size
-extern int cpars[];     // hardcoded array size
-extern boolean um_pars;
-
 extern boolean secretexit;
+
+extern byte *demo_p;
 
 // [Nugget] ==================================================================
 
@@ -152,6 +157,7 @@ extern boolean improved_weapon_toggles;
 extern boolean skip_ammoless_weapons;
 extern screenshotpalette_t screenshot_palette;
 extern boolean comp_longautoaim;
+extern boolean default_pistolstart;
 
 extern boolean nugget_devmode;
 
@@ -161,16 +167,6 @@ extern int autosave_interval;
 
 boolean G_SavingPeriodicAutoSave(void);
 void G_SetAutoSaveCountdown(int value);
-
-// Rewind --------------------------------------------------------------------
-
-extern int rewind_interval;
-
-void G_SetRewindCountdown(int value);
-void G_EnableRewind(void);
-void G_Rewind(void);
-void G_ClearExcessKeyFrames(void);
-boolean G_KeyFrameRW(void);
 
 // Slow Motion ---------------------------------------------------------------
 
@@ -200,6 +196,38 @@ extern boolean custom_skill_fast;
 extern boolean custom_skill_respawn;
 extern boolean custom_skill_aggressive;
 extern boolean custom_skill_x2monsters;
+
+typedef struct customskill_s
+{
+  int     things;
+  boolean coopspawns;
+  boolean nomonsters;
+  boolean doubleammo;
+  boolean halfplayerdamage;
+  boolean slowbrain;
+  boolean fast;
+  boolean respawn;
+  boolean aggromonsters;
+  boolean x2monsters;
+} customskill_t;
+
+extern customskill_t custom_skill;
+
+typedef struct initialloadout_s
+{
+  int          mohealth;
+  int          health;
+  int          armorpoints;
+  int          armortype;
+  boolean      backpack;
+  weapontype_t readyweapon;
+  weapontype_t lastweapon;
+  boolean      weaponowned[NUMWEAPONS];
+  int          ammo[NUMAMMO];
+  int          maxammo[NUMAMMO];
+} initialloadout_t;
+
+extern initialloadout_t initial_loadout;
 
 void G_SetSkillParms(const skill_t skill);
 void G_SetUserCustomSkill(void);

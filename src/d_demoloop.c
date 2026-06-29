@@ -23,7 +23,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 
-#include "doomtype.h"
+#include "f_wipe.h"
 #include "i_printf.h"
 #include "m_array.h"
 #include "m_json.h"
@@ -39,34 +39,34 @@
 
 // Doom
 static demoloop_entry_t demoloop_registered[] = {
-    { "TITLEPIC", "D_INTRO",  170, TYPE_ART,  WIPE_MELT },
-    { "DEMO1",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "CREDIT",   "",         200, TYPE_ART,  WIPE_MELT },
-    { "DEMO2",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "HELP2",    "",         200, TYPE_ART,  WIPE_MELT },
-    { "DEMO3",    "",         0,   TYPE_DEMO, WIPE_MELT },
+    { "TITLEPIC", "D_INTRO",  170, TYPE_ART,  wipe_Melt },
+    { "DEMO1",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "CREDIT",   "",         200, TYPE_ART,  wipe_Melt },
+    { "DEMO2",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "HELP2",    "",         200, TYPE_ART,  wipe_Melt },
+    { "DEMO3",    "",         0,   TYPE_DEMO, wipe_Melt },
 };
 
 // Ultimate Doom
 static demoloop_entry_t demoloop_retail[] = {
-    { "TITLEPIC", "D_INTRO",  170, TYPE_ART,  WIPE_MELT },
-    { "DEMO1",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "CREDIT",   "",         200, TYPE_ART,  WIPE_MELT },
-    { "DEMO2",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "CREDIT",   "",         200, TYPE_ART,  WIPE_MELT },
-    { "DEMO3",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "DEMO4",    "",         0,   TYPE_DEMO, WIPE_MELT },
+    { "TITLEPIC", "D_INTRO",  170, TYPE_ART,  wipe_Melt },
+    { "DEMO1",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "CREDIT",   "",         200, TYPE_ART,  wipe_Melt },
+    { "DEMO2",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "CREDIT",   "",         200, TYPE_ART,  wipe_Melt },
+    { "DEMO3",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "DEMO4",    "",         0,   TYPE_DEMO, wipe_Melt },
 };
 
 // Doom II & Final Doom
 static demoloop_entry_t demoloop_commercial[] = {
-    { "TITLEPIC", "D_DM2TTL", 385, TYPE_ART,  WIPE_MELT },
-    { "DEMO1",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "CREDIT",   "",         200, TYPE_ART,  WIPE_MELT },
-    { "DEMO2",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "TITLEPIC", "D_DM2TTL", 385, TYPE_ART,  WIPE_MELT },
-    { "DEMO3",    "",         0,   TYPE_DEMO, WIPE_MELT },
-    { "DEMO4",    "",         0,   TYPE_DEMO, WIPE_MELT },
+    { "TITLEPIC", "D_DM2TTL", 385, TYPE_ART,  wipe_Melt },
+    { "DEMO1",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "CREDIT",   "",         200, TYPE_ART,  wipe_Melt },
+    { "DEMO2",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "TITLEPIC", "D_DM2TTL", 385, TYPE_ART,  wipe_Melt },
+    { "DEMO3",    "",         0,   TYPE_DEMO, wipe_Melt },
+    { "DEMO4",    "",         0,   TYPE_DEMO, wipe_Melt },
 };
 
 demoloop_t demoloop = NULL;
@@ -76,10 +76,10 @@ static void D_ParseOutroWipe(json_t *json, demoloop_entry_t *entry)
 {
     entry->outro_wipe = JS_GetIntegerValue(json, "outrowipe");
 
-    if (entry->outro_wipe != WIPE_IMMEDIATE && entry->outro_wipe != WIPE_MELT)
+    if (entry->outro_wipe < wipe_None || entry->outro_wipe >= wipe_NUMWIPES)
     {
         I_Printf(VB_WARNING, "DEMOLOOP: invalid outrowipe, using screen melt");
-        entry->outro_wipe = WIPE_MELT;
+        entry->outro_wipe = wipe_Melt;
     }
 }
 
@@ -87,7 +87,7 @@ static void D_ParseDuration(json_t *json, demoloop_entry_t *entry)
 {
     const double duration_seconds = JS_GetNumberValue(json, "duration");
     double duration_tics = duration_seconds * TICRATE;
-    duration_tics = BETWEEN(0, INT_MAX, duration_tics);
+    duration_tics = CLAMP(duration_tics, 0, INT_MAX);
     entry->duration = lround(duration_tics);
 }
 
@@ -168,7 +168,7 @@ static boolean D_ParseDemoLoopEntry(json_t *json)
 static void D_ParseDemoLoop(void)
 {
     // Does the JSON lump even exist?
-    json_t *json = JS_Open("DEMOLOOP", "demoloop", (version_t){1, 0, 0});
+    json_t *json = JS_Open("DEMOLOOP", "demoloop", (version_t){1, 1, 0});
     if (json == NULL)
     {
         return;
@@ -223,6 +223,11 @@ static void D_GetDefaultDemoLoop(GameMode_t mode)
 
         case retail:
             DEH_MUSIC_LUMP(demoloop_retail[0].secondary_lump, mus_intro)
+
+            if (pwad_help2)
+            {
+                M_CopyLumpName(demoloop_retail[4].primary_lump, "HELP2");
+            }
 
             demoloop = demoloop_retail;
             demoloop_count = arrlen(demoloop_retail);

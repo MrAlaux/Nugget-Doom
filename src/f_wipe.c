@@ -19,6 +19,7 @@
 
 #include <string.h>
 
+#include "doomstat.h"
 #include "doomtype.h"
 #include "f_wipe.h"
 #include "i_video.h"
@@ -60,7 +61,7 @@ static pixel32_t *wipe_scr32;
 
 static int fade_tick;
 
-static int wipe_initColorXForm(int width, int height, int ticks)
+static int wipe_initCrossfade(int width, int height, int ticks)
 {
     if (truecolor_rendering)
     {
@@ -75,7 +76,7 @@ static int wipe_initColorXForm(int width, int height, int ticks)
     return 0;
 }
 
-static int wipe_doColorXForm(int width, int height, int ticks)
+static int wipe_doCrossfade(int width, int height, int ticks)
 {
     if (ticks <= 0)
     {
@@ -92,7 +93,7 @@ static int wipe_doColorXForm(int width, int height, int ticks)
         {
             pixel32_t *sta = wipe_scr32_start + y * width;
             pixel32_t *end = wipe_scr32_end + y * width;
-            pixel32_t *dst = wipe_scr32 + y * video.pitch;
+            pixel32_t *dst = wipe_scr32 + y * video.width;
 
             for (int x = 0; x < width; x++)
             {
@@ -113,7 +114,7 @@ static int wipe_doColorXForm(int width, int height, int ticks)
         {
             pixel_t *sta = wipe_scr_start + y * width;
             pixel_t *end = wipe_scr_end + y * width;
-            pixel_t *dst = wipe_scr + y * video.pitch;
+            pixel_t *dst = wipe_scr + y * video.width;
 
             for (int x = 0; x < width; x++)
             {
@@ -249,9 +250,9 @@ static int wipe_doMelt(int width, int height, int ticks)
     return done;
 }
 
-int wipe_renderMelt32(int width, int height, int ticks);
+static int wipe_renderMelt32(int width, int height, int ticks);
 
-int wipe_renderMelt(int width, int height, int ticks)
+static int wipe_renderMelt(int width, int height, int ticks)
 {
     if (truecolor_rendering)
     { return wipe_renderMelt32(width, height, ticks); }
@@ -265,7 +266,7 @@ int wipe_renderMelt(int width, int height, int ticks)
     int currcolend;
     int currrow;
 
-    V_UseBuffer(wipe_scr);
+    V_UseBuffer(wipe_scr, width);
     V_PutBlock(0, 0, width, height, wipe_scr_end);
     V_RestoreBuffer();
 
@@ -294,7 +295,7 @@ int wipe_renderMelt(int width, int height, int ticks)
                 for (int i = 0; i < height; ++i)
                 {
                     *dest = *source;
-                    dest += video.pitch;
+                    dest += width;
                     source += width;
                 }
             }
@@ -309,12 +310,12 @@ int wipe_renderMelt(int width, int height, int ticks)
             for (; currcol < currcolend; ++currcol)
             {
                 pixel_t *source = wipe_scr_start + currcol;
-                pixel_t *dest = wipe_scr + currcol + (currrow * video.pitch);
+                pixel_t *dest = wipe_scr + currcol + (currrow * video.width);
 
                 for (int i = 0; i < height - currrow; ++i)
                 {
                     *dest = *source;
-                    dest += video.pitch;
+                    dest += width;
                     source += width;
                 }
             }
@@ -330,14 +331,14 @@ int wipe_renderMelt(int width, int height, int ticks)
         for (int i = 0; i < height; ++i)
         {
             *dest = v_darkest_color;
-            dest += video.pitch;
+            dest += width;
         }
     }
 
     return done;
 }
 
-int wipe_renderMelt32(int width, int height, int ticks)
+static int wipe_renderMelt32(int width, int height, int ticks)
 {
     boolean done = true;
 
@@ -347,7 +348,7 @@ int wipe_renderMelt32(int width, int height, int ticks)
     int currcolend;
     int currrow;
 
-    V_UseBuffer32(wipe_scr32);
+    V_UseBuffer32(wipe_scr32, width);
     V_PutBlock32(0, 0, width, height, wipe_scr32_end);
     V_RestoreBuffer();
 
@@ -376,7 +377,7 @@ int wipe_renderMelt32(int width, int height, int ticks)
                 for (int i = 0; i < height; ++i)
                 {
                     *dest = *source;
-                    dest += video.pitch;
+                    dest += video.width;
                     source += width;
                 }
             }
@@ -391,12 +392,12 @@ int wipe_renderMelt32(int width, int height, int ticks)
             for (; currcol < currcolend; ++currcol)
             {
                 pixel32_t *source = wipe_scr32_start + currcol;
-                pixel32_t *dest = wipe_scr32 + currcol + (currrow * video.pitch);
+                pixel32_t *dest = wipe_scr32 + currcol + (currrow * video.width);
 
                 for (int i = 0; i < height - currrow; ++i)
                 {
                     *dest = *source;
-                    dest += video.pitch;
+                    dest += video.width;
                     source += width;
                 }
             }
@@ -412,7 +413,7 @@ int wipe_renderMelt32(int width, int height, int ticks)
         for (int i = 0; i < height; ++i)
         {
             *dest = V_IndexToRGB(v_darkest_color);
-            dest += video.pitch;
+            dest += video.width;
         }
     }
 
@@ -596,13 +597,13 @@ static int wipe_doFizzle(int width, int height, int ticks)
         V_ScaleRect(&rect);
 
         pixel_t *src = wipe_scr_end + rect.sy * width + rect.sx;
-        pixel_t *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
+        pixel_t *dest = wipe_scr + rect.sy * width + rect.sx;
 
         while (rect.sh--)
         {
             memcpy(dest, src, rect.sw);
             src += width;
-            dest += video.pitch;
+            dest += width;
         }
 
         if (rndval == 0) // entire sequence has been completed
@@ -652,13 +653,13 @@ static int wipe_doFizzle32(int width, int height, int ticks)
         V_ScaleRect(&rect);
 
         pixel32_t *src = wipe_scr32_end + rect.sy * width + rect.sx;
-        pixel32_t *dest = wipe_scr32 + rect.sy * video.pitch + rect.sx;
+        pixel32_t *dest = wipe_scr32 + rect.sy * video.width + rect.sx;
 
         while (rect.sh--)
         {
             V_RGBCopy(dest, src, rect.sw);
             src += width;
-            dest += video.pitch;
+            dest += video.width;
         }
 
         if (rndval == 0)
@@ -750,18 +751,21 @@ typedef struct
 } wipe_t;
 
 static wipe_t wipes[] = {
-    {wipe_NOP,            wipe_NOP,          wipe_NOP,        wipe_exit    },
-    {wipe_initMelt,       wipe_doMelt,       wipe_renderMelt, wipe_exitMelt},
-    {wipe_initColorXForm, wipe_doColorXForm, wipe_NOP,        wipe_exit    },
-    {wipe_initFizzle,     wipe_doFizzle,     wipe_NOP,        wipe_exit    },
+    {wipe_NOP,           wipe_NOP,         wipe_NOP,        wipe_exit    },
+    {wipe_initMelt,      wipe_doMelt,      wipe_renderMelt, wipe_exitMelt},
+    {wipe_initCrossfade, wipe_doCrossfade, wipe_NOP,        wipe_exit    },
+    {wipe_initFizzle,    wipe_doFizzle,    wipe_NOP,        wipe_exit    },
 
     // [Nugget] "Black Fade" wipe
-    {wipe_initFade,       wipe_doFade,       wipe_NOP,        wipe_exit    },
+    {wipe_initFade,      wipe_doFade,      wipe_NOP,        wipe_exit    },
 };
 
 // killough 3/5/98: reformatted and cleaned up
-int wipe_ScreenWipe(int wipeno, int x, int y, int width, int height, int ticks)
+int wipe_ScreenWipe(int x, int y, int width, int height, int ticks)
 {
+    wipefx_t wipeno = (screen_wipe_internal == wipe_Invalid)
+                    ? screen_wipe
+                    : screen_wipe_internal;
     static boolean go; // when zero, stop the wipe
 
     if (!go) // initial stuff
@@ -789,6 +793,12 @@ int wipe_ScreenWipe(int wipeno, int x, int y, int width, int height, int ticks)
         go = 0;
     }
     return !go;
+}
+
+void F_SetWipe(wipefx_t wipe)
+{
+  wipegamestate = -1;
+  screen_wipe_internal = (strictmode) ? wipe : screen_wipe;
 }
 
 //----------------------------------------------------------------------------

@@ -22,12 +22,13 @@
 
 #include "doomtype.h"
 #include "m_fixed.h"
+#include "p_mobj.h"
 #include "r_defs.h"
 
 // [Nugget] /=================================================================
 
 // Thing lighting
-int R_CalculateHitboxLightNum(fixed_t x, fixed_t y, fixed_t radius, boolean force_mbf);
+int R_CalculateHitboxLightLevel(fixed_t x, fixed_t y, fixed_t radius, boolean force_mbf);
 
 typedef struct actualspriteheight_s
 {
@@ -56,8 +57,6 @@ extern fixed_t pspriteiscale;
 
 extern boolean flipcorpses;
 
-extern cmapoffset_t *spritelights;
-
 extern boolean draw_nearby_sprites;
 
 void R_DrawMaskedColumn(column_t *column);
@@ -74,6 +73,8 @@ void R_ClipVisSprite(vissprite_t *vis, int xl, int xh);
 void R_InitSpritesRes(void);
 
 void R_NearbySprites(void);
+
+extern const int GetThingTint(const mobj_t *const mo, const sector_t *const sector);
 
 void R_InitThingsColorFunctions(void);
 

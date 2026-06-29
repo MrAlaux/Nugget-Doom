@@ -23,22 +23,23 @@
 #include "d_player.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "dsdhacked.h"
 #include "g_game.h"
 #include "i_printf.h"
 #include "info.h"
+#include "m_fixed.h"
 #include "m_random.h"
+#include "p_ambient.h"
 #include "p_inter.h"
 #include "p_map.h"
 #include "p_maputl.h"
 #include "p_mobj.h"
 #include "p_pspr.h"
+#include "p_setup.h"
 #include "p_spec.h"
 #include "p_tick.h"
 #include "r_defs.h"
 #include "r_main.h"
 #include "r_state.h"
-#include "r_things.h"
 #include "s_musinfo.h" // [crispy] S_ParseMusInfo()
 #include "s_sound.h"
 #include "sounds.h"
@@ -50,7 +51,7 @@
 // [Nugget]
 #include "m_array.h"
 #include "p_user.h"
-#include "r_data.h"
+#include "r_tranmap.h"
 
 // [Nugget] CVARs
 int viewheight_value;
@@ -66,8 +67,7 @@ int max_pitch_angle = 32 * ANG1, default_max_pitch_angle;
 void P_UpdateDirectVerticalAiming(void)
 {
   // [Nugget]
-  vertical_aiming = CRITICAL(mouselook || padlook) ? default_vertical_aiming : 0;
-
+  vertical_aiming = CRITICAL(freelook) ? default_vertical_aiming : 0;
   max_pitch_angle = default_max_pitch_angle * ANG1;
 }
 
@@ -696,8 +696,8 @@ void P_NightmareRespawn(mobj_t* mobj)
   mobj_t*      mo;
   mapthing_t*  mthing;
 
-  x = mobj->spawnpoint.x << FRACBITS;
-  y = mobj->spawnpoint.y << FRACBITS;
+  x = mobj->spawnpoint.x;
+  y = mobj->spawnpoint.y;
 
   // haleyjd: stupid nightmare respawning bug fix
   //
@@ -851,8 +851,8 @@ void P_MobjThinker (mobj_t* mobj)
     {
       P_XYMovement(mobj);
       mobj->intflags &= ~MIF_SCROLLING;
-      if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
-        return;       // mobj was removed
+      if (mobj->thinker.function.p1 == P_RemoveMobjThinkerDelayed) // killough
+	return;       // mobj was removed
 
       oucheck = true; // [Nugget] Over/Under
     }
@@ -890,8 +890,8 @@ void P_MobjThinker (mobj_t* mobj)
       else
         P_ZMovement(mobj);
 
-      if (mobj->thinker.function.p1 == (actionf_p1)P_RemoveThinkerDelayed) // killough
-        return;       // mobj was removed
+      if (mobj->thinker.function.p1 == P_RemoveMobjThinkerDelayed) // killough
+	return;       // mobj was removed
 
       oucheck = true; // [Nugget] Over/Under
     }
@@ -957,7 +957,7 @@ void P_MobjThinker (mobj_t* mobj)
       P_DamageMobj(mobj, NULL, NULL, 10000);
 
       // must have been removed
-      if (mobj->thinker.function.p1 != (actionf_p1)P_MobjThinker)
+      if (mobj->thinker.function.p1 != P_MobjThinker)
         return;
     }
   }
@@ -989,11 +989,9 @@ void P_MobjThinker (mobj_t* mobj)
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
-  mobj_t *mobj = Z_Malloc(sizeof *mobj, PU_LEVEL, NULL);
+  mobj_t *mobj = arena_alloc(thinkers_arena, mobj_t);
   mobjinfo_t *info = &mobjinfo[type];
   state_t    *st;
-
-  memset(mobj, 0, sizeof *mobj);
 
   mobj->type = type;
   mobj->info = info;
@@ -1003,6 +1001,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->height = info->height;                                      // phares
   mobj->flags  = info->flags;
   mobj->flags2 = info->flags2;
+  mobj->flags_extra = info->flags_extra;
+  mobj->tint = NO_INDEX;
 
   // killough 8/23/98: no friends, bouncers, or touchy things in old demos
   if (demo_version < DV_MBF)
@@ -1013,10 +1013,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   mobj->health = info->spawnhealth;
 
-  if (!aggressive) // [Nugget] Custom Skill: use `aggressive`
+  if (gameskill != sk_nightmare && !aggromonsters)
     mobj->reactiontime = info->reactiontime;
 
-  mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
+  if (type != zmt_ambientsound)
+  {
+    mobj->lastlook = P_Random (pr_lastlook) % MAXPLAYERS;
+  }
 
   // do not set the state with P_SetMobjState,
   // because action routines can not be called yet
@@ -1039,8 +1042,18 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->floorz   = mobj->subsector->sector->floorheight;
   mobj->ceilingz = mobj->subsector->sector->ceilingheight;
 
-  mobj->z = z == ONFLOORZ ? mobj->floorz : z == ONCEILINGZ ?
-    mobj->ceilingz - mobj->height : z;
+  if (z == ONFLOORZ)
+  {
+    mobj->z = mobj->floorz;
+  }
+  else if (z == ONCEILINGZ)
+  {
+    mobj->z = mobj->ceilingz - mobj->height;
+  }
+  else
+  {
+    mobj->z = z;
+  }
 
   // [AM] Do not interpolate on spawn.
   mobj->interp = false;
@@ -1051,14 +1064,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
   mobj->oldz = mobj->z;
   mobj->oldangle = mobj->angle;
 
-  mobj->thinker.function.p1 = (actionf_p1)P_MobjThinker;
+  mobj->thinker.function.p1 = P_MobjThinker;
   mobj->above_thing = mobj->below_thing = 0;           // phares
 
   // for Boom friction code
   mobj->friction    = ORIG_FRICTION;                        // phares 3/17/98
 
   // [crispy] randomly flip corpse, blood and death animation sprites
-  if (mobj->flags2 & MF2_FLIPPABLE && !(mobj->flags & MF_SHOOTABLE))
+  if (mobj->flags_extra & MFX_MIRROREDCORPSE && !(mobj->flags & MF_SHOOTABLE))
   {
     if (Woof_Random() & 1)
       mobj->intflags |= MIF_FLIP;
@@ -1068,19 +1081,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
   // [Nugget] Removed `actualheight`
 
-  // [Nugget] /---------------------------------------------------------------
-
+  // [Nugget]
   mobj->altsprite = mobj->altframe = -1; // Alt. sprites
-
-  // Alt. states
-  mobj->altstate = NULL;
-  mobj->alttics  = -1; 
-
-  mobj->isvisual = false;
-  mobj->gentranmap = NULL;
+  mobj->alttics = -1; // Alt. states
   mobj->gentranmap_pct = -1;
-
-  // [Nugget] ---------------------------------------------------------------/
 
   P_AddThinker(&mobj->thinker);
 
@@ -1110,6 +1114,9 @@ void P_RemoveMobj (mobj_t *mobj)
       if ((iquehead &= ITEMQUESIZE-1) == iquetail)   // lose one off the end?
         iquetail = (iquetail+1)&(ITEMQUESIZE-1);
     }
+
+  // haleyjd 02/02/04: remove from tid hash
+  P_RemoveThingTID(mobj);
 
   // unlink from sector and block lists
 
@@ -1147,7 +1154,7 @@ void P_RemoveMobj (mobj_t *mobj)
 
   // free block
 
-  P_RemoveThinker(&mobj->thinker);
+  P_RemoveMobjThinker(mobj);
 }
 
 // Certain functions assume that a mobj_t pointer is non-NULL,
@@ -1225,8 +1232,8 @@ void P_RespawnSpecials (void)
 
   mthing = &itemrespawnque[iquetail];
 
-  x = mthing->x << FRACBITS;
-  y = mthing->y << FRACBITS;
+  x = mthing->x;
+  y = mthing->y;
 
   // spawn a teleport fog at the new spot
 
@@ -1275,8 +1282,8 @@ void P_SpawnPlayer (mapthing_t* mthing)
   if (p->playerstate == PST_REBORN)
     G_PlayerReborn (mthing->type-1);
 
-  x    = mthing->x << FRACBITS;
-  y    = mthing->y << FRACBITS;
+  x    = mthing->x;
+  y    = mthing->y;
   z    = ONFLOORZ;
   mobj = P_SpawnMobj (x,y,z, MT_PLAYER);
 
@@ -1312,11 +1319,6 @@ void P_SpawnPlayer (mapthing_t* mthing)
   if (deathmatch)
     for (i = 0 ; i < NUMCARDS ; i++)
       p->cards[i] = true;
-
-  if (mthing->type-1 == consoleplayer)
-    {
-      ST_Start(); // wake up the status bar
-    }
 }
 
 // [Nugget] Custom Skill: duplicate monster spawns /--------------------------
@@ -1341,7 +1343,6 @@ void P_SpawnMapThing (mapthing_t* mthing)
   int    i;
   mobj_t *mobj;
   fixed_t x, y, z;
-  int    musid = 0;
 
   switch(mthing->type)
     {
@@ -1363,7 +1364,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   if (demo_compatibility || 
       (demo_version >= DV_MBF && mthing->options & MTF_RESERVED))
-    mthing->options &= MTF_EASY|MTF_NORMAL|MTF_HARD|MTF_AMBUSH|MTF_NOTSINGLE;
+    mthing->options &= MTF_SKILL1|MTF_SKILL2|MTF_SKILL3|MTF_SKILL4|MTF_SKILL5|MTF_AMBUSH|MTF_NOTSINGLE;
 
   // count deathmatch start positions
 
@@ -1401,11 +1402,11 @@ void P_SpawnMapThing (mapthing_t* mthing)
         {  // use secretcount to avoid multiple dogs in case of multiple starts
           players[mthing->type-1].secretcount = 1;
 
-          // killough 10/98: force it to be a friend
-          mthing->options |= MTF_FRIEND;
-          i = MT_DOGS;
-          goto spawnit;
-        }
+	  // killough 10/98: force it to be a friend
+	  mthing->options |= MTF_FRIEND;
+	  i = helper_type >= 0 ? helper_type : MT_DOGS;
+	  goto spawnit;
+	}
 
       // save spots for respawning in network games
       playerstarts[mthing->type-1] = *mthing;
@@ -1417,7 +1418,8 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   // check for apropriate skill level
 
-  if (!coop_spawns && !netgame && mthing->options & MTF_NOTSINGLE)//jff "not single" thing flag
+  if (!coopspawns && !netgame
+      && mthing->options & MTF_NOTSINGLE) //jff "not single" thing flag
     return;
 
   //jff 3/30/98 implement "not deathmatch" thing flag
@@ -1427,23 +1429,32 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
   //jff 3/30/98 implement "not cooperative" thing flag
 
-  if ((coop_spawns || netgame) && !deathmatch && mthing->options & MTF_NOTCOOP)
+  if ((coopspawns || netgame) && !deathmatch && mthing->options & MTF_NOTCOOP)
     return;
 
   // killough 11/98: simplify
   // [Nugget] Custom Skill: use `thingspawns`
-  if ((gameskill == sk_none && demo_compatibility) ||
-      (thingspawns == THINGSPAWNS_EASY ?
-      !(mthing->options & MTF_EASY) :
-      thingspawns == THINGSPAWNS_HARD ?
-      !(mthing->options & MTF_HARD) : !(mthing->options & MTF_NORMAL)))
+  if ((gameskill == sk_none && demo_compatibility)
+      || (!(mthing->options & MTF_SKILL1) && thingspawns == THINGSPAWNS_BABY)
+      || (!(mthing->options & MTF_SKILL2) && thingspawns == THINGSPAWNS_EASY)
+      || (!(mthing->options & MTF_SKILL3) && thingspawns == THINGSPAWNS_MEDIUM)
+      || (!(mthing->options & MTF_SKILL4) && thingspawns == THINGSPAWNS_HARD)
+      || (!(mthing->options & MTF_SKILL5) && thingspawns == THINGSPAWNS_NIGHTMARE)
+    )
+  {
     return;
+  }
 
   // [crispy] support MUSINFO lump (dynamic music changing)
   if (mthing->type >= 14100 && mthing->type <= 14164)
   {
-      musid = mthing->type - 14100;
+      mthing->args[0] = mthing->type - 14100;
       mthing->type = mobjinfo[MT_MUSICSOURCE].doomednum;
+  }
+  else if (mthing->type >= 14001 && mthing->type <= 14064)
+  {
+      mthing->args[0] = mthing->type - 14000;
+      mthing->type = mobjinfo[zmt_ambientsound].doomednum;
   }
 
   // find which type to spawn
@@ -1456,11 +1467,23 @@ void P_SpawnMapThing (mapthing_t* mthing)
   // warning message for the player.
 
   if (i == num_mobj_types)
-    {
-      I_Printf(VB_WARNING, "P_SpawnMapThing: Unknown Thing type %i at (%i, %i)",
-	      mthing->type, mthing->x, mthing->y);
+  {
+      // No warning for Doom Builder Camera
+      if (mthing->type == 32000)
+      {
+          I_Printf(
+              VB_DEBUG,
+              "P_SpawnMapThing: Found level editor camera spawn at (%i, %i)",
+              FixedToInt(mthing->x), FixedToInt(mthing->y));
+      }
+      else
+      {
+          I_Printf(VB_WARNING,
+                   "P_SpawnMapThing: Unknown Thing type %i at (%i, %i)",
+                   mthing->type, FixedToInt(mthing->x), FixedToInt(mthing->y));
+      }
       return;
-    }
+  }
 
   // don't spawn keycards and players in deathmatch
 
@@ -1476,8 +1499,8 @@ void P_SpawnMapThing (mapthing_t* mthing)
   // spawn it
 spawnit:
 
-  x = mthing->x << FRACBITS;
-  y = mthing->y << FRACBITS;
+  x = mthing->x;
+  y = mthing->y;
 
   z = mobjinfo[i].flags & MF_SPAWNCEILING ? ONCEILINGZ : ONFLOORZ;
 
@@ -1496,6 +1519,44 @@ spawnit:
       mobj->flags |= MF_FRIEND;            // killough 10/98:
       P_UpdateThinker(&mobj->thinker);     // transfer friendliness flag
     }
+
+  // Spawn health
+  if (mthing->health != FRACUNIT)
+  {
+    if (mthing->health < 0)
+    {
+      mobj->health = FixedToInt(-mthing->health);
+    }
+    else
+    {
+      mobj->health = FixedMul(mobj->health, mthing->health);
+    }
+  }
+
+  // Vertical spawn position
+  if (z == ONFLOORZ)
+  {
+    mobj->z += mthing->height;
+  }
+  else if (z == ONCEILINGZ)
+  {
+    mobj->z -= mthing->height;
+  }
+
+  // haleyjd 10/03/05: Hexen-style TID
+  P_AddThingTID(mobj, mthing->tid);
+
+  // haleyjd 10/03/05: Hexen-style args
+  memcpy(mobj->args, mthing->args, 5 * sizeof(int32_t));
+
+  // Action specials
+  mobj->special = mthing->special;
+
+  // Tinting
+  mobj->tint = mthing->tint;
+
+  // Translucency
+  mobj->tranmap = mthing->tranmap;
 
   // [Nugget] Custom Skill: duplicate monster spawns
   if (duplicatespawns)
@@ -1547,10 +1608,9 @@ spawnit:
   if (mthing->options & MTF_AMBUSH)
     mobj->flags |= MF_AMBUSH;
 
-  // [crispy] support MUSINFO lump (dynamic music changing)
-  if (i == MT_MUSICSOURCE)
+  if (i == zmt_ambientsound)
   {
-      mobj->health = 1000 + musid;
+      P_AddAmbientSoundThinker(mobj);
   }
 
   // [Nugget] Key blinking:
@@ -1568,6 +1628,130 @@ spawnit:
 }
 
 //
+// haleyjd 02/02/04: Thing IDs (aka TIDs)
+//
+
+#define TIDCHAINS 131
+
+// TID hash chains
+static mobj_t *tidhash[TIDCHAINS];
+
+//
+// P_InitTIDHash
+//
+// Initializes the tid hash table.
+//
+void P_InitTIDHash(void)
+{
+    memset(tidhash, 0, TIDCHAINS * sizeof(mobj_t *));
+}
+
+//
+// P_AddThingTID
+//
+// Adds a thing to the tid hash table
+//
+void P_AddThingTID(mobj_t *mo, int tid)
+{
+    // zero is no tid, and negative tids are reserved to
+    // have special meanings
+    if (tid <= 0)
+    {
+        mo->tid = 0;
+        mo->tid_next = NULL;
+        mo->tid_prevn = NULL;
+    }
+    else
+    {
+        int key = tid % TIDCHAINS;
+
+        mo->tid = (uint16_t)tid;
+
+        // insert at head of chain
+        mo->tid_next = tidhash[key];
+        mo->tid_prevn = &tidhash[key];
+        tidhash[key] = mo;
+
+        // connect to any existing things in chain
+        if (mo->tid_next)
+        {
+            mo->tid_next->tid_prevn = &(mo->tid_next);
+        }
+    }
+}
+
+//
+// P_RemoveThingTID
+//
+// Removes the given thing from the tid hash table if it is
+// in it already.
+//
+void P_RemoveThingTID(mobj_t *mo)
+{
+    if (mo->tid > 0 && mo->tid_prevn)
+    {
+        // set previous thing's next field to this thing's next thing
+        *(mo->tid_prevn) = mo->tid_next;
+
+        // set next thing's prev field to this thing's prev field
+        if (mo->tid_next)
+        {
+            mo->tid_next->tid_prevn = mo->tid_prevn;
+        }
+    }
+
+    // clear tid
+    mo->tid = 0;
+}
+
+//
+// P_FindMobjFromTID
+//
+// Like line and sector tag search functions, this function will
+// keep returning the next object with the same tid when called
+// repeatedly with the previous call's return value. Returns NULL
+// once the end of the chain is hit. Calling it again at that point
+// would restart the search from the base of the chain.
+//
+// haleyjd 06/10/06: eliminated infinite loop for TID_TRIGGER
+//
+mobj_t *P_FindMobjFromTID(int tid, mobj_t *rover, mobj_t *trigger)
+{
+    // Normal TIDs
+    if (tid > 0)
+    {
+        rover = rover ? rover->tid_next : tidhash[tid % TIDCHAINS];
+
+        while (rover && rover->tid != tid)
+        {
+            rover = rover->tid_next;
+        }
+
+        return rover;
+    }
+
+    // Reserved TIDs
+    switch (tid)
+    {
+        case 0: // script trigger object (may be NULL, which is fine)
+            return !rover ? trigger : NULL;
+
+        case -1: // players are -1 through -4
+        case -2:
+        case -3:
+        case -4:
+            {
+                int pnum = -tid - 1;
+
+                return !rover && playeringame[pnum] ? players[pnum].mo : NULL;
+            }
+
+        default:
+            return NULL;
+    }
+}
+
+//
 // GAME SPAWN FUNCTIONS
 //
 
@@ -1580,7 +1764,7 @@ void P_SpawnPuff(fixed_t x,fixed_t y,fixed_t z)
   mobj_t* th;
   // killough 5/5/98: remove dependence on order of evaluation:
   int t = P_Random(pr_spawnpuff);
-  z += (t - P_Random(pr_spawnpuff))<<10;
+  z += shiftleft32(t - P_Random(pr_spawnpuff), 10);
 
   th = P_SpawnMobj (x,y,z, MT_PUFF);
   th->momz = FRACUNIT;
@@ -1608,7 +1792,7 @@ void P_SpawnBlood(fixed_t x,fixed_t y,fixed_t z,int damage,mobj_t *bleeder)
   extern boolean idgaf; // [Nugget]
   // killough 5/5/98: remove dependence on order of evaluation:
   int t = P_Random(pr_spawnblood);
-  z += (t - P_Random(pr_spawnblood))<<10;
+  z += shiftleft32(t - P_Random(pr_spawnblood), 10);
   th = P_SpawnMobj(x,y,z, MT_BLOOD);
   th->momz = FRACUNIT*2;
   th->tics -= P_Random(pr_spawnblood)&3;
@@ -1619,7 +1803,7 @@ void P_SpawnBlood(fixed_t x,fixed_t y,fixed_t z,int damage,mobj_t *bleeder)
 
   if (bleeder->info->bloodcolor || idgaf)
   {
-    th->flags2 |= MF2_COLOREDBLOOD;
+    th->flags_extra |= MFX_COLOREDBLOOD;
     th->bloodcolor = V_BloodColor(bleeder->info->bloodcolor);
   }
 
@@ -1928,10 +2112,15 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
     mobj->altsprite = state->sprite;
     mobj->altframe = state->frame;
 
-    if (statenum == AS_TRAIL2)
+    if (state->gentranmap_pct > 0)
     {
-      mobj->gentranmap_pct = 15;
+      mobj->gentranmap_pct = state->gentranmap_pct;
       mobj->gentranmap = R_GetGenericTranMap(mobj->gentranmap_pct);
+    }
+    else if (state->gentranmap_pct == -1)
+    {
+      mobj->gentranmap_pct = state->gentranmap_pct;
+      mobj->gentranmap = NULL;
     }
 
     statenum = state->nextstate;
@@ -1940,9 +2129,7 @@ void P_SetMobjAltState(mobj_t *const mobj, altstatenum_t statenum)
 
 mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenum)
 {
-  mobj_t *const mobj = Z_Malloc(sizeof(*mobj), PU_LEVEL, NULL);
-
-  memset(mobj, 0, sizeof(*mobj));
+  mobj_t *const mobj = arena_alloc(thinkers_arena, mobj_t);
 
   mobj->oldx = mobj->x = x;
   mobj->oldy = mobj->y = y;
@@ -1958,6 +2145,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 
   mobj->info = P_VisualMobjDummyInfo();
 
+  mobj->tint = NO_INDEX;
   mobj->gentranmap_pct = -1;
 
   mobj->isvisual = true;
@@ -1978,7 +2166,7 @@ mobj_t *P_SpawnVisualMobj(fixed_t x, fixed_t y, fixed_t z, altstatenum_t statenu
 
   mobj->friction = ORIG_FRICTION;
 
-  mobj->thinker.function.p1 = (actionf_p1) P_MobjThinker;
+  mobj->thinker.function.p1 = P_MobjThinker;
   P_AddThinker(&mobj->thinker);
 
   return mobj;
