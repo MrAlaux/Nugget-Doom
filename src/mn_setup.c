@@ -397,7 +397,7 @@ enum
     str_menu_backdrop, // [Nugget] Restored backdrop item
     str_widescreen,
     // [Nugget] Removed `str_bobbing_pct`
-    str_screen_melt,
+    str_screen_wipe,
     str_palette_changes,
     str_invul_mode,
     str_skill,
@@ -3939,7 +3939,7 @@ static setup_menu_t gen_settings5[] = {
 static const char *death_use_action_strings[] = {"default", "last save",
                                                  "nothing"};
 
-static const char *screen_melt_strings[] = {"Off", "Melt", "Crossfade", "Fizzle", "Black Fade"}; // [Nugget] More wipes
+static const char *screen_wipe_strings[] = {"Off", "Melt", "Crossfade", "Fizzle", "Black Fade"}; // [Nugget] More wipes
 
 static const char *palette_changes_strings[] = {"Off", "On", "Reduced"};
 
@@ -3967,7 +3967,7 @@ static setup_menu_t gen_settings6[] = {
     {"Quality of life", S_SKIP | S_TITLE, OFF_CNTR_X, M_SPC},
 
     {"Screen wipe effect", S_CHOICE | S_STRICT, OFF_CNTR_X, M_SPC,
-     {"screen_melt"}, .strings_id = str_screen_melt},
+     {"screen_melt"}, .strings_id = str_screen_wipe},
 
     {"Pain/Pickup/Powerup flashes", S_CHOICE | S_STRICT, OFF_CNTR_X, M_SPC,
      {"palette_changes"}, .strings_id = str_palette_changes, .action = UpdatePaletteItems}, // [Nugget]
@@ -5948,7 +5948,7 @@ static const char **selectstrings[] = {
     [str_menu_backdrop] = menu_backdrop_strings, // [Nugget] Restored backdrop item
     [str_widescreen] = widescreen_strings,
     // [Nugget] Removed unused `bobbing_pct_strings`
-    [str_screen_melt] = screen_melt_strings,
+    [str_screen_wipe] = screen_wipe_strings,
     [str_palette_changes] = palette_changes_strings,
     [str_invul_mode] = invul_mode_strings,
     [str_skill] = skill_strings,
