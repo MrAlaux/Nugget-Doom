@@ -333,6 +333,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
     the table used when gamma correction is disabled makes channels with a value below 128 be incremented by one,
     so e.g. `rgb(0, 64, 128)` from a `PLAYPAL` palette is rendered as `rgb(1, 65, 128)` in-game;
     many source ports, including this one, retain this behavior, but this setting allows to disable it
+- **FPS-counter update time** setting (CFG-only: `fps_counter_update_time`)
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
 - Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter

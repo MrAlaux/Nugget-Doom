@@ -105,6 +105,7 @@ static boolean disk_icon; // killough 10/98
 
 // [Nugget] /-----------------------------------------------------------------
 
+static int fps_counter_update_time;
 static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
 
@@ -994,7 +995,8 @@ void I_FinishUpdate(void)
         time = frametime_start - last_time;
 
         // Update FPS counter every second
-        if (time >= 1000000)
+        // [Nugget] Made customizable
+        if (time >= fps_counter_update_time * 1000)
         {
             fps = ((uint64_t)frame_counter * 1000000) / time;
             frame_counter = 0;
@@ -2388,6 +2390,12 @@ void I_BindVideoVariables(void)
         "Uncapped rendering frame rate");
     BIND_NUM_GENERAL(fpslimit, 0, 0, 500,
         "Framerate limit in frames per second (< 35 = Disable)");
+
+    // [Nugget] (CFG-only)
+    M_BindNum("fps_counter_update_time", &fps_counter_update_time, NULL,
+              1000, 50, 1000, ss_none, wad_no,
+              "Time between updates of the frame-rate counter, in milliseconds");
+
     M_BindNum("widescreen", &default_widescreen, &widescreen, RATIO_AUTO, 0,
               NUM_RATIOS - 1, ss_gen, wad_no,
               "Widescreen (0 = Off; 1 = Auto; 2 = 16:10; 3 = 16:9; 4 = 21:9; 5 = 32:9)");
