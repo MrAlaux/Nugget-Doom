@@ -1337,6 +1337,9 @@ static void UpdateRectX(menu_t *menu, int x)
     }
 }
 
+// [Nugget]
+static boolean showing_autosave_slot = false;
+
 //
 // M_ReadSaveStrings
 //  read the strings from the savegame files
@@ -1365,6 +1368,9 @@ static void M_ReadSaveStrings(void)
         M_ReadSaveString(name, 0, 0, true);
         start_slot = 1;
     }
+
+    // [Nugget]
+    showing_autosave_slot = start_slot == 1;
 
     const int num_slots = currentMenu->numitems - 1;
 
@@ -1771,8 +1777,31 @@ static void M_QuickSaveResponse(int ch)
     }
 }
 
-// [Nugget] Restore this temp buffer
-char tempstring[84]; // [FG] increase
+// [Nugget] /-----------------------------------------------------------------
+
+// Restore this temp buffer
+static char tempstring[84]; // [FG] increase
+
+static void SetTempString(const char *const format)
+{
+#if defined(__GNUC__)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+
+  M_snprintf(
+    tempstring,
+    sizeof(tempstring),
+    format,
+    savegamestrings[quickSaveSlot + showing_autosave_slot]
+  );
+
+#if defined(__GNUC__)
+#  pragma GCC diagnostic pop
+#endif
+}
+
+// [Nugget] -----------------------------------------------------------------/
 
 static void M_QuickSave(void)
 {
@@ -1799,8 +1828,10 @@ static void M_QuickSave(void)
     // [Nugget] Restore quick-save/load prompts
     if (!one_key_saveload)
     {
-        sprintf(tempstring, QSPROMPT, savegamestrings[quickSaveSlot]);
+        SetTempString(s_QSPROMPT);
+
         M_StartMessage(tempstring, M_QuickSaveResponse, true);
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [NS] Optional menu sounds.
     }
     else
         M_QuickSaveResponse('y');
@@ -1851,8 +1882,10 @@ static void M_QuickLoad(void)
     // [Nugget] Restore quick-save/load prompts
     if (!one_key_saveload)
     {
-        sprintf(tempstring, QLPROMPT, savegamestrings[quickSaveSlot]);
+        SetTempString(s_QLPROMPT);
+
         M_StartMessage(tempstring, M_QuickLoadResponse, true);
+        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [NS] Optional menu sounds.
     }
     else
         M_QuickLoadResponse('y');

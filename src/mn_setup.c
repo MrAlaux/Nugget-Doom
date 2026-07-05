@@ -4033,8 +4033,9 @@ setup_menu_t gen_settings7[] = {
 
   {"Gameplay", S_SKIP|S_TITLE, N_X, M_SPC},
 
-    {"Move Over/Under Things", S_CHOICE|S_STRICT|S_CRITICAL, N_X, M_SPC, {"over_under"}, .strings_id = str_over_under},
-    {"Jumping/Crouching",      S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"jump_crouch"}},
+    {"Move Over/Under Things",    S_CHOICE|S_STRICT|S_CRITICAL, N_X, M_SPC, {"over_under"}, .strings_id = str_over_under},
+    {"Jumping/Crouching",         S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"jump_crouch"}},
+    {"Hold Use to Pick up Items", S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"manual_pickup"}},
 
   MI_GAP,
   {"Accessibility", S_SKIP|S_TITLE, N_X, M_SPC},

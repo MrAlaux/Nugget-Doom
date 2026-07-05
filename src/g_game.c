@@ -6048,6 +6048,11 @@ void G_BindCompVariables(void)
              false, ss_gen, wad_yes,
              "Jumping/crouching");
 
+  // (CFG-only)
+  M_BindBool("manual_pickup", &manual_pickup, NULL,
+             false, ss_none, wad_yes,
+             "Only pick up items when holding down the use-button");
+
   // [Nugget] ---------------------------------------------------------------/
 
   M_BindBool("blockmapfix", &blockmapfix, NULL, false, ss_comp, wad_no,

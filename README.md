@@ -72,6 +72,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Jumping** (default key: <kbd>Alt</kbd>) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>) [i.b. ZDoom]
   - Includes support for crouching-player sprites, named `PLYC`; must be provided by the user
+- **_Hold Use to Pick up Items_** setting
 - **_View Height_** setting, which allows to enter a custom POV height value in the [32, 56] range [i.b. Brutal Doom]
 - **_Vertical Target Lock-on_** setting, to make the camera automatically lock onto targets vertically [i.b. Rise of the Triad]
 - **Flinching** setting, to flinch upon landing and/or taking damage
@@ -329,6 +330,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
     the table used when gamma correction is disabled makes channels with a value below 128 be incremented by one,
     so e.g. `rgb(0, 64, 128)` from a `PLAYPAL` palette is rendered as `rgb(1, 65, 128)` in-game;
     many source ports, including this one, retain this behavior, but this setting allows to disable it
+- **FPS-counter update time** setting (CFG-only: `fps_counter_update_time`)
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
 - Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter

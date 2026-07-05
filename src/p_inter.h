@@ -28,6 +28,7 @@ struct mobj_s;
 
 // [Nugget] CVARs /-----------------------------------------------------------
 
+extern boolean manual_pickup;
 extern boolean switch_on_pickup;
 extern boolean extra_gibbing_on;
 
