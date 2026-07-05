@@ -264,9 +264,13 @@ void P_GiveCard(player_t *player, card_t card)
     
   // [Nugget] Fix for "key pickup resets palette"
   if (STRICTMODE(!comp_keypal))
-  { player->bonuscount += BONUSADD; }
+  {
+    player->bonuscount += BONUSADD;
+  }
   else
-  { player->bonuscount = BONUSADD; }
+  {
+    player->bonuscount = BONUSADD;
+  }
   
   player->cards[card] = 1;
   
@@ -331,8 +335,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
   // [Nugget] /---------------------------------------------------------------
 
-  if (CASUALPLAY(manual_pickup) && !player->usedown && toucher == player->mo)
-  { return; }
+  if (CASUALPLAY(manual_pickup) && !manual_pickup_lock
+      && !player->usedown && toucher == player->mo)
+  {
+    return;
+  }
 
   if (casual_play && special->altsprite > -1)
   {
@@ -1210,8 +1217,11 @@ void P_DamageMobjBy(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage
 
       // [Nugget] Custom red tint cap
       if (STRICTMODE(player->damagecount > damagecount_cap))
+      {
         player->damagecount = damagecount_cap;
+      }
       else
+
       if (player->damagecount > 100)
         player->damagecount = 100;  // teleport stomp does 10k points...
 
