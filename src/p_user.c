@@ -986,14 +986,16 @@ void P_PlayerThink (player_t* player)
     }
     else if (!just_toggled_lock)
     {
-      if (manual_pickup_lock && I_GetTimeMS() - use_time >= 500)
+      const int current_time = I_GetTimeMS();
+
+      if (manual_pickup_lock && current_time - use_time >= 500)
       {
         manual_pickup_lock = false;
         just_toggled_lock = true;
 
         displaymsg("Auto-Pickup disabled");
       }
-      else if (!manual_pickup_lock && I_GetTimeMS() - use_time >= 1000)
+      else if (!manual_pickup_lock && current_time - use_time >= 1000)
       {
         manual_pickup_lock = true;
         just_toggled_lock = true;
