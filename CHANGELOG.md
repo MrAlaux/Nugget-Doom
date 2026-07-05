@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Hold Use to Pick up Items_** setting
 - **FPS-counter update time** setting
 
 ## Changes

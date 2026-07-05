@@ -85,6 +85,7 @@ int clipammo[NUMAMMO] = { 10,  4,  20,  1};
 
 // [Nugget] /-----------------------------------------------------------------
 
+boolean manual_pickup;
 boolean switch_on_pickup;
 
 static boolean P_AutoswitchWeapon(void)
@@ -352,7 +353,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
   if (toucher->health <= 0)
     return;
 
-  // [Nugget]
+  // [Nugget] /---------------------------------------------------------------
+
+  if (CASUALPLAY(manual_pickup) && !player->usedown && toucher == player->mo)
+  { return; }
+
   if (casual_play && special->altsprite > -1)
   {
     if (special->altsprite == ASPR_NGCH)
@@ -383,6 +388,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       goto picked_up;
     }
   }
+
+  // [Nugget] ---------------------------------------------------------------/
 
     // Identify by sprite.
   switch (special->sprite)
