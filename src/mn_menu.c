@@ -1828,7 +1828,7 @@ static void M_QuickSave(void)
     // [Nugget] Restore quick-save/load prompts
     if (!one_key_saveload)
     {
-        SetTempString(s_QSPROMPT);
+        SetTempString(DEH_String(QSPROMPT));
 
         M_StartMessage(tempstring, M_QuickSaveResponse, true);
         M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [NS] Optional menu sounds.
@@ -1882,7 +1882,7 @@ static void M_QuickLoad(void)
     // [Nugget] Restore quick-save/load prompts
     if (!one_key_saveload)
     {
-        SetTempString(s_QLPROMPT);
+        SetTempString(DEH_String(QLPROMPT));
 
         M_StartMessage(tempstring, M_QuickLoadResponse, true);
         M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [NS] Optional menu sounds.

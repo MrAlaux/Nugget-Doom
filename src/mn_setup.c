@@ -4037,7 +4037,7 @@ setup_menu_t gen_settings7[] = {
     {"Jumping/Crouching",         S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"jump_crouch"}},
     {"Hold Use to Pick up Items", S_ONOFF |S_STRICT|S_CRITICAL, N_X, M_SPC, {"manual_pickup"}},
 
-  MI_GAP,
+  MI_GAP_Y(6),
   {"Accessibility", S_SKIP|S_TITLE, N_X, M_SPC},
 #if 0 // For future use, hopefully
     {"Flickering Sector Lighting", S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_sector_lighting"}},
@@ -4046,13 +4046,13 @@ setup_menu_t gen_settings7[] = {
     {"Weapon Flash Sprite",        S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_weapon_pspr"}},
     {"Invulnerability Colormap",   S_ONOFF|S_STRICT, N_X, M_SPC, {"a11y_invul_colormap"}},
 
-  MI_GAP,
+  MI_GAP_Y(6),
   {"Miscellaneous", S_SKIP|S_TITLE, N_X, M_SPC},
     {"Sound Hearing Distance",  S_CHOICE|S_STRICT, N_X, M_SPC, {"s_clipping_dist_x2"}, .strings_id = str_s_clipping_dist, .action = SetSoundModule},
     {"One-Key Quick-Save/Load", S_ONOFF,           N_X, M_SPC, {"one_key_saveload"}},
     {"Auto Save Interval",      S_NUM,             N_X, M_SPC, {"autosave_interval"}, .action = UpdateAutoSaveInterval, .append = "s"},
 
-  MI_GAP,
+  MI_GAP_Y(6),
   {"View Options",          S_FUNC, N_X, M_SPC, .action = MN_View},
   {"Display Options",       S_FUNC, N_X, M_SPC, .action = MN_Display},
 
