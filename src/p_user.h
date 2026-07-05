@@ -59,8 +59,10 @@ extern boolean onground; // whether player is on ground or in air
 
 // [Nugget] ==================================================================
 
-extern boolean jump_crouch; // Jumping/crouching
+extern boolean jump_crouch;
 extern boolean breathing;
+
+extern boolean manual_pickup_lock;
 
 void P_SetFlinch(player_t *const player, int pitch); // Flinching
 

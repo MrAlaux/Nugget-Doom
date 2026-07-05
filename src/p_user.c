@@ -43,7 +43,9 @@
 
 // [Nugget]
 #include "d_items.h"
+#include "i_timer.h"
 #include "m_input.h"
+#include "p_inter.h"
 #include "p_maputl.h"
 #include "s_sound.h"
 #include "sounds.h"
@@ -56,11 +58,14 @@ static fixed_t PlayerSlope(player_t *player)
 
 // [Nugget] /=================================================================
 
-// Jumping/crouching
+// CVARs
 boolean jump_crouch;
+boolean breathing;
+
+// Jumping/crouching
 #define CROUCHUNITS (3*FRACUNIT)
 
-boolean breathing;
+boolean manual_pickup_lock = false;
 
 // Flinching
 void P_SetFlinch(player_t *const player, int pitch)
@@ -196,17 +201,20 @@ void P_CalcHeight (player_t* player)
       {
         static fixed_t breathing_val = 0;
         static boolean breathing_dir = 0;
-        const fixed_t BREATHING_STEP = 32, BREATHING_MAX = 1408;
+        static const fixed_t BREATHING_STEP = 32, BREATHING_MAX = 1408;
 
-        if (breathing_dir) { // Inhale (camera up)
+        if (breathing_dir)
+        {
+          // Inhale (camera up)
           breathing_val += BREATHING_STEP;
-          if (breathing_val >= BREATHING_MAX)
-          { breathing_dir = false; }
+
+          if (breathing_val >= BREATHING_MAX) { breathing_dir = false; }
         }
-        else { // Exhale (camera down)
+        else {
+          // Exhale (camera down)
           breathing_val -= BREATHING_STEP;
-          if (breathing_val <= -BREATHING_MAX)
-          { breathing_dir = true; }
+
+          if (breathing_val <= -BREATHING_MAX) { breathing_dir = true; }
         }
 
         player->viewheight += breathing_val;
@@ -948,6 +956,9 @@ void P_PlayerThink (player_t* player)
 
   // check for use
 
+  // [Nugget]
+  static int use_time = 0;
+
   if (cmd->buttons & BT_USE)
     {
       if (!player->usedown)
@@ -957,10 +968,40 @@ void P_PlayerThink (player_t* player)
 
 	  // [Nugget] Support more event timers
 	  P_SetPlayerEvent(player, TIMER_USE);
+
+	  use_time = I_GetTimeMS();
 	}
     }
   else
     player->usedown = false;
+
+  // [Nugget]
+  if (CASUALPLAY(manual_pickup))
+  {
+    static boolean just_toggled_lock = false;
+
+    if (!player->usedown)
+    {
+      just_toggled_lock = false;
+    }
+    else if (!just_toggled_lock)
+    {
+      if (manual_pickup_lock && I_GetTimeMS() - use_time >= 500)
+      {
+        manual_pickup_lock = false;
+        just_toggled_lock = true;
+
+        displaymsg("Auto-Pickup disabled");
+      }
+      else if (!manual_pickup_lock && I_GetTimeMS() - use_time >= 1000)
+      {
+        manual_pickup_lock = true;
+        just_toggled_lock = true;
+
+        displaymsg("Auto-Pickup enabled");
+      }
+    }
+  }
 
   // cycle psprites
 
