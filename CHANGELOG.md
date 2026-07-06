@@ -24,6 +24,7 @@
 - **_Invulnerability Colormap_ setting affecting light-amp flashing and disabling _Night-Vision Visor Effect_**
 - **Quick-double-press actions being affected by game speed**
 - **Weapon-translucency menu items not generating tranmaps immediately**
+- **Key-binding menu items not working when backing from a submenu**
 - **Quick-save/load prompts not playing a sound when brought up**
 - **Quick-save/load prompts not being replaced by DeHackEd**
 - **Quick-save/load prompts sometimes showing the wrong savegame name**

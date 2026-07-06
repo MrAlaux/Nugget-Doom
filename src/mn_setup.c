@@ -5564,6 +5564,11 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
         SetItemOn(set_item_on);
         SetPageIndex(current_page);
 
+        // [Nugget] Reset these before backing,
+        // in case we back into a menu which sets them again
+        set_keybnd_active = false;
+        set_weapon_active = false;
+
         if (action == MENU_ESCAPE) // Clear all menus
         {
             MN_ClearMenus();
@@ -5589,8 +5594,6 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
         }
 
         current_item->m_flags &= ~(S_HILITE | S_SELECT); // phares 4/19/98
-        set_keybnd_active = false;
-        set_weapon_active = false;
         default_verify = false;              // phares 4/19/98
         print_warning_about_changes = false; // [FG] reset
         active_thermo = NULL;
