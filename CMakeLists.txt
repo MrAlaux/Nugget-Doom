@@ -70,7 +70,7 @@ endif()
 
 # Hardcoded defines added to configure and resource files.
 set(PROJECT_COMPANY "Alaux and contributors")
-set(PROJECT_COPYRIGHT "Copyright (C) 1993-2025")
+set(PROJECT_COPYRIGHT "Copyright (C) 1993-2026")
 set(PROJECT_LICENSE "GNU General Public License, version 2")
 set(PROJECT_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 set(PROJECT_SHORTNAME "nugget-doom")
