@@ -1609,9 +1609,9 @@ static setup_menu_t keys_settings7[] =
     {"Toggle Zoom",        S_INPUT|S_STRICT,            N_X, M_SPC, {0}, m_scrn, input_zoom},
     {"Zoom FOV",           S_NUM  |S_STRICT,            N_X, M_SPC, {"zoom_fov"}, .action = UpdateFOV},
     MI_GAP,
-    {"Toggle Crosshair",   S_INPUT,                     N_X, M_SPC, {0}, m_scrn, input_crosshair},
-    MI_GAP,
-    {"Rewind",             S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_rewind, .action = G_EnableRewind},
+    {"Toggle Crosshair",     S_INPUT,                     N_X, M_SPC, {0}, m_scrn, input_crosshair},
+    {"Toggle Manual Pickup", S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_manual_pickup},
+    {"Rewind",               S_INPUT|S_STRICT|S_CRITICAL, N_X, M_SPC, {0}, m_scrn, input_rewind, .action = G_EnableRewind},
 
     MI_GAP,
     {"Automap Keys", S_FUNC, N_X, M_SPC, .action = MN_MapKeys},

@@ -69,6 +69,7 @@
 #include "am_map.h"
 #include "hu_crosshair.h"
 #include "m_nughud.h"
+#include "p_inter.h"
 #include "st_stuff.h"
 
 // [crispy] remove DOS reference from the game quit confirmation dialogs
@@ -2881,7 +2882,13 @@ boolean M_ShortcutResponder(const event_t *ev)
 
         UpdateCrosshairItems();
 
-        togglemsg("Crosshair %s", hud_crosshair_on ? "Enabled" : "Disabled");
+        togglemsg("Crosshair %s", hud_crosshair_on ? "enabled" : "disabled");
+    }
+
+    if (STRICTMODE(M_InputActivated(input_manual_pickup)))
+    {
+        manual_pickup = !manual_pickup;
+        togglemsg("Manual Pickup %s", manual_pickup ? "enabled" : "disabled");
     }
 
     if (STRICTMODE(M_InputActivated(input_chasecam)))
@@ -2889,10 +2896,12 @@ boolean M_ShortcutResponder(const event_t *ev)
         // Freecam
         if (R_FreecamOn() && !R_GetFreecamMobj())
         {
-          const freecammode_t mode = R_CycleFreecamMode();
+            const freecammode_t mode = R_CycleFreecamMode();
 
-          togglemsg("Freecam: controlling %s",
-                    (mode == FREECAM_PLAYER) ? "player" : "camera");
+            togglemsg(
+                "Freecam: controlling %s",
+                (mode == FREECAM_PLAYER) ? "player" : "camera"
+            );
         }
         // Chasecam
         else if (++chasecam_mode > CHASECAMMODE_FRONT)

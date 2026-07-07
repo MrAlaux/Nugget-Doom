@@ -359,8 +359,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
 
   // [Nugget] /---------------------------------------------------------------
 
-  if (CASUALPLAY(manual_pickup) && !manual_pickup_lock
-      && !player->usedown && toucher == player->mo)
+  if (CASUALPLAY(manual_pickup) && !player->usedown && toucher == player->mo)
   {
     return;
   }

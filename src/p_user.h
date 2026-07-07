@@ -62,8 +62,6 @@ extern boolean onground; // whether player is on ground or in air
 extern boolean jump_crouch;
 extern boolean breathing;
 
-extern boolean manual_pickup_lock;
-
 void P_SetFlinch(player_t *const player, int pitch); // Flinching
 
 void P_SetPlayerEvent(player_t *player, enum eventtimer_e type); // Event timers
