@@ -45,8 +45,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **Support for SSG in Doom 1** [p.f. Woof! 15.2.0]
 - **_Hitbox-based Hitscan Collision_** setting
-- **_"Direct + Auto"_ mode for Vertical Aiming**
-- **_Direct Vertical Aiming_ for melee attacks**
+- **_"Direct + Auto"_ mode for _Free Look_**
+- **Direct vertical aiming for melee attacks**
 - **_Move Over/Under Things_** setting [partially p.f. Crispy Doom, DSDA-Doom]
 - **Jumping** (default key: <kbd>Alt</kbd>) [p.f. Crispy Doom]
 - **Crouching/ducking** (default key: <kbd>C</kbd>) [i.b. ZDoom]
@@ -96,25 +96,16 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
 - **Color settings** [p.f. International Doom]
   - _Contrast_ by [@pvictress](https://github.com/pvictress)
-- **_Sound Clipping Distance_** selection, to optionally double the distance at which sound effects become audible
+- **Percentage of variable sound pitch** setting (CFG-only: `pitched_sounds_range`)
+- **_Sound Hearing Distance_** selection, to optionally double the distance at which sound effects become audible
 - **_One-Key Quick Save/Load_** setting, to skip the confirmation prompt
 - **_Auto Save Interval_** setting, for periodic auto saves
-- **Rewinding** [i.b. DSDA-Doom]
-  - _Rewind Interval_ : number of seconds between key frames
-  - _Rewind Depth_: number of maximum key frames to store; when exceeded, the oldest key frame is deleted to make room for the new one;
-    set to 0 to disable rewinding
-  - _Rewind Frame Timeout_: number of maximum milliseconds that the game can spend storing a single key frame;
-    if exceeded, storing of further key frames is stopped
-  - _Rewind 4-Frame Timeout_: number of maximum milliseconds that the game can have spent storing the last 4 key frames;
-    if exceeded, storing of further key frames is stopped
-  - The _Frame Timeout_ can be set to a higher value to allow flukes in key-frame storage time,
-    while the _4-Frame Timeout_ stops storing if it is consistently slow
-  - If stopped, storing can be restarted by attempting to rewind or by changing any of the settings above
-- **_Play Internal Demos_** setting, to control whether or not to play demos built into WADs
-- **_Quick "Quit Game"_** setting, to skip the confirmation prompt [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Lighting_** [p.f. Crispy Doom]
 - Toggle for **_Weapon Flash Sprite_** [p.f. Crispy Doom]
 - Toggle for **_Invulnerability Colormap_** [p.f. Crispy Doom]
+- **Rewind improvements:**
+  - Made the current key frame be deleted only when quickly rewinding twice
+  - Made storing resume upon rewinding
 - **Fixed bullet puffs not spawning when firing at planes far away from lines**
 - **Fixed bullet puffs not spawning when "hitting" the sky behind a line if said sky were the ceiling of the line's front sector**
 - **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees**
@@ -196,8 +187,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 
 ## Automap
 
-- **Minimap mode:** Quickly press the automap button twice to toggle it [i.b. DSDA-Doom]
-  - The CFG-only `minimap_double_press` CVAR controls this functionality
+- **Toggle minimap by quickly pressing the automap button twice** (CFG-only: `minimap_double_press`)
+  - This is disabled if a dedicated minimap button is set
 - Button to **_Highlight Points of Interest_**; marks and keyed lines (default: <kbd>B</kbd>)
 - **_Tag Finder_** button [p.f. PrBoomX]
   - Position the automap pointer over a sector and press this button
@@ -232,7 +223,6 @@ All of these are CFG-only, so their CVAR names are included.
 - Fix lopsided Icon of Sin explosions (`comp_iosdeath`)
 - Permanent IDCHOPPERS invulnerability (`comp_choppers`)
 - Manually toggled moving doors are silent (`comp_manualdoor`) [p.f. Crispy Doom]
-- Corrected switch sound source (`comp_switchsource`) [p.f. Crispy Doom]
 - Chaingun makes two sounds with one bullet (`comp_cgundblsnd`)
 - Chaingunner uses pistol/chaingun sound (`comp_cgunnersfx`)
 - Arch-Vile fire plays flame start sound (`comp_flamst`) [p.f. Crispy Doom]
@@ -273,7 +263,13 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 
 ## Miscellaneous
 
-- **Customizable skill level**, supporting all vanilla settings and a new one for duplicate monster spawns
+- **Extended custom skill**:
+  - Considered skill #6, settable through the `SKILL` cheat
+  - _Thing Spawns_ setting
+  - _Duplicate Monsters_ setting
+  - _Slow Spawn-Cube Spitter_ setting
+  - _Restart [Current] Level_ options
+  - Settings are saved in the config file
   - Its menu item uses the `M_CSTSKL` graphic if found
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
@@ -282,7 +278,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 - **Intermission ratio stats** setting, to use ratios for the stats on the intermission screen (CFG-only: `inter_ratio_stats`) [i.b. Heretic]
 - Setting to **increase the duration of the "Entering" state in Doom 2's intermission screen** (CFG-only: `inter_entering_delay`)
   - When enabled, said state can also be accelerated like previous states by pressing the _Fire_ or _Use_ buttons
-- **When dying with freelook enabled, the camera is pitched towards the killer**
+- **When dying with _Free Look_ enabled, the camera is pitched towards the killer**
 - **Extended character cast** [partially p.f. Crispy Doom]
   - _Turn_ buttons to rotate
   - _Run_ button to gib

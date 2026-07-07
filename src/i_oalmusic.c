@@ -14,7 +14,7 @@
 // DESCRIPTION:
 //
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #include "al.h"
 #include "alc.h"
 #include "alext.h"
@@ -42,18 +42,24 @@ static stream_module_t *all_modules[] =
     &stream_fl_module,
 #endif
     &stream_opl_module,
+#if defined (HAVE_SNDFILE)
     &stream_snd_module,
+#endif
 #if defined(HAVE_LIBXMP)
     &stream_xmp_module,
 #endif
+    &stream_mp3_module
 };
 
 static stream_module_t *stream_modules[] =
 {
+#if defined (HAVE_SNDFILE)
     &stream_snd_module,
+#endif
 #if defined(HAVE_LIBXMP)
     &stream_xmp_module,
 #endif
+    &stream_mp3_module
 };
 
 static stream_module_t *midi_modules[] =
@@ -89,7 +95,7 @@ typedef struct
 static stream_player_t player;
 
 static SDL_Thread *player_thread_handle;
-static SDL_atomic_t player_thread_running;
+static SDL_AtomicInt player_thread_running;
 
 static boolean music_initialized;
 
@@ -338,15 +344,15 @@ static boolean StartPlayer(void)
 
 static int PlayerThread(void *unused)
 {
-    SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
+    SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
 
     StartPlayer();
 
-    while (SDL_AtomicGet(&player_thread_running))
+    while (SDL_GetAtomicInt(&player_thread_running))
     {
         if (!UpdatePlayer())
         {
-            SDL_AtomicSet(&player_thread_running, 0);
+            SDL_SetAtomicInt(&player_thread_running, 0);
         }
 
         SDL_Delay(1);
@@ -411,7 +417,7 @@ void I_OAL_ShutdownStream(void)
     alDeleteBuffers(NUM_BUFFERS, player.buffers);
     if (alGetError() != AL_NO_ERROR)
     {
-        I_Printf(VB_ERROR, "I_OAL_ShutdownMusic: Failed to delete object IDs.");
+        I_Printf(VB_ERROR, "I_OAL_ShutdownStream: Failed to delete object IDs.");
     }
 
     memset(&player, 0, sizeof(stream_player_t));
@@ -507,20 +513,20 @@ static void I_OAL_PlaySong(void *handle, boolean looping)
         return;
     }
 
-    SDL_AtomicSet(&player_thread_running, 1);
+    SDL_SetAtomicInt(&player_thread_running, 1);
     player_thread_handle = SDL_CreateThread(PlayerThread, NULL, NULL);
 }
 
 static void I_OAL_StopSong(void *handle)
 {
-    if (!music_initialized || !SDL_AtomicGet(&player_thread_running))
+    if (!music_initialized || !SDL_GetAtomicInt(&player_thread_running))
     {
         return;
     }
 
     alSourceStop(player.source);
 
-    SDL_AtomicSet(&player_thread_running, 0);
+    SDL_SetAtomicInt(&player_thread_running, 0);
     SDL_WaitThread(player_thread_handle, NULL);
 
     if (alGetError() != AL_NO_ERROR)

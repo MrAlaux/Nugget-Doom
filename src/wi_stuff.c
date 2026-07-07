@@ -18,11 +18,10 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <string.h>
 
 #include "d_event.h"
-#include "d_deh.h"
 #include "d_player.h"
+#include "deh_bex_partimes.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
@@ -38,7 +37,7 @@
 #include "st_sbardef.h"
 #include "st_stuff.h"
 #include "sounds.h"
-#include "v_fmt.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "wi_interlvl.h"
@@ -560,7 +559,7 @@ static boolean UpdateAnimation(void)
 
                 case Frame_RandomDuration:
                     tics = M_Random() % frame->maxduration;
-                    tics = BETWEEN(frame->duration, frame->maxduration, tics);
+                    tics = CLAMP(tics, frame->duration, frame->maxduration);
                     break;
 
                 default:
@@ -862,9 +861,11 @@ static void WI_drawEL(void)
     {
         patch_t *patch = V_CachePatchName(mapinfo->levelpic, PU_CACHE);
 
+        // If the levelpic graphics lump is not fullscreen,
+        // draw it right below the "entering" graphics lump
         if (SHORT(patch->height) < SCREENHEIGHT)
         {
-            y += (5 * SHORT(patch->height)) / 4;
+            y += (5 * SHORT(entering->height)) / 4;
         }
 
         V_DrawPatchSH((SCREENWIDTH - SHORT(patch->width)) / 2, y, patch);
@@ -1253,10 +1254,15 @@ static void WI_drawTime(int x, int y, int seconds, boolean suck)
 // Args:    none
 // Returns: void
 //
+
+static boolean wi_inited = false;
+
 static void WI_unloadData(void)
 {
   int   i;
   int   j;
+
+  wi_inited = false;
 
   if (wiminus)
   Z_ChangeTag(wiminus, PU_CACHE);
@@ -1369,6 +1375,7 @@ static void WI_updateNoState(void)
 
 static boolean    snl_pointeron = false;
 
+static void WI_loadData(void);
 
 // ====================================================================
 // WI_initShowNextLoc
@@ -1393,8 +1400,6 @@ static void WI_initShowNextLoc(void)
       // episode change
       if (wbs->epsd != wbs->nextep)
       {
-          void WI_loadData(void);
-
           wbs->epsd = wbs->nextep;
           wbs->last = wbs->next - 1;
           WI_loadData();
@@ -1661,7 +1666,7 @@ static void WI_updateDeathmatchStats(void)
 
             if (NextLocAnimation())
               WI_initShowNextLoc();
-            if ( gamemode == commercial)
+            else if (gamemode == commercial)
               WI_initNoState(true);
             else
               WI_initShowNextLoc();
@@ -1773,6 +1778,61 @@ static void WI_drawDeathmatchStats(void)
     }
 }
 
+static void WI_overlayDeathmatchStats(void)
+{
+    V_DrawPatch(DM_TOTALSX - SHORT(total->width) / 2,
+                DM_MATRIXY - WI_SPACINGY + 10, total);
+    V_DrawPatch(DM_KILLERSX, DM_KILLERSY, killers);
+    V_DrawPatch(DM_VICTIMSX, DM_VICTIMSY, victims);
+
+    int x = DM_MATRIXX + DM_SPACINGX;
+    int y = DM_MATRIXY;
+    const int w = SHORT(num[0]->width);
+
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        int x2 = DM_MATRIXX + DM_SPACINGX;
+
+        if (playeringame[i])
+        {
+            V_DrawPatch(x - SHORT(p[i]->width) / 2, DM_MATRIXY - WI_SPACINGY,
+                        p[i]);
+
+            V_DrawPatch(DM_MATRIXX - SHORT(p[i]->width) / 2, y, p[i]);
+
+            if (i == displayplayer)
+            {
+                V_DrawPatch(x - SHORT(p[i]->width) / 2,
+                            DM_MATRIXY - WI_SPACINGY, bstar);
+
+                V_DrawPatch(DM_MATRIXX - SHORT(p[i]->width) / 2, y, star);
+            }
+
+            int totals = 0;
+
+            for (int j = 0; j < MAXPLAYERS; j++)
+            {
+                if (playeringame[j])
+                {
+                    WI_drawNum(x2 + w, y + 10, CLAMP(players[i].frags[j], -999, 999), 2);
+
+                    if (i != j)
+                    {
+                        totals += players[i].frags[j];
+                    }
+                    else
+                    {
+                        totals -= players[i].frags[j];
+                    }
+                }
+                x2 += DM_SPACINGX;
+            }
+            WI_drawNum(DM_TOTALSX + w, y + 10, CLAMP(totals, -999, 999), 2);
+        }
+        x += DM_SPACINGX;
+        y += WI_SPACINGY;
+    }
+}
 
 //
 // Note: The term "Netgame" means a coop game
@@ -1972,7 +2032,7 @@ static void WI_updateNetgameStats(void)
 
                   if (NextLocAnimation())
                     WI_initShowNextLoc();
-                  if ( gamemode == commercial )
+                  else if (gamemode == commercial)
                     WI_initNoState(true);
                   else
                     WI_initShowNextLoc();
@@ -2051,6 +2111,67 @@ static void WI_drawNetgameStats(void)
       }
 
       y += WI_SPACINGY;
+    }
+}
+
+static void WI_overlayNetgameStats(void)
+{
+    dofrags = false;
+
+    V_DrawPatch(NG_STATSX + NG_SPACINGX - SHORT(kills->width), NG_STATSY,
+                kills);
+    V_DrawPatch(NG_STATSX + 2 * NG_SPACINGX - SHORT(items->width), NG_STATSY,
+                items);
+    V_DrawPatch(NG_STATSX + 3 * NG_SPACINGX - SHORT(secret->width), NG_STATSY,
+                secret);
+
+    const int pwidth = SHORT(percent->width);
+    int y = NG_STATSY + SHORT(kills->height);
+
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        if (!playeringame[i])
+        {
+            continue;
+        }
+
+        int x = NG_STATSX;
+        V_DrawPatch(x - SHORT(p[i]->width), y, p[i]);
+
+        if (i == displayplayer)
+        {
+            V_DrawPatch(x - SHORT(p[i]->width), y, star);
+        }
+
+        x += NG_SPACINGX;
+        WI_drawPercent(x - pwidth, y + 10, 100 * players[i].killcount / (totalkills ? totalkills : 1));
+        x += NG_SPACINGX;
+        WI_drawPercent(x - pwidth, y + 10, 100 * players[i].itemcount / (totalitems ? totalitems : 1));
+        x += NG_SPACINGX;
+        WI_drawPercent(x - pwidth, y + 10, totalsecret ? (100 * players[i].secretcount / totalsecret) : 100);
+
+        y += WI_SPACINGY;
+    }
+}
+
+boolean wi_overlay = false;
+
+void WI_drawOverlayStats(void)
+{
+    if (!wi_inited)
+    {
+        WI_loadData();
+    }
+
+    V_ShadeScreen(20); // [Nugget] Parameterized
+
+    if (deathmatch)
+    {
+        WI_overlayDeathmatchStats();
+    }
+    else if (netgame)
+    {
+        WI_overlayNetgameStats();
     }
 }
 
@@ -2360,8 +2481,8 @@ static void WI_drawStats(void)
   DrawStat(SP_STATSX, SP_STATSY + lh,     1);
   DrawStat(SP_STATSX, SP_STATSY + lh * 2, 2);
 
-  const boolean draw_partime = (W_IsIWADLump(maplump) || deh_pars || um_pars) &&
-                               (wbs->epsd < 3 || um_pars);
+  const boolean draw_partime = (W_IsIWADLump(maplump) || bex_partimes || umapinfo_partimes) &&
+                               (wbs->epsd < 3 || umapinfo_partimes);
   // [FG] choose x-position depending on width of time string
   const boolean wide_total = (wbs->totaltimes / TICRATE > 61*59) ||
                              (SP_TIMEX + SHORT(total->width) >= SCREENWIDTH/4);
@@ -2516,7 +2637,7 @@ void WI_Ticker(void)
 // Args:    none
 // Returns: void
 //
-void WI_loadData(void)
+static void WI_loadData(void)
 {
   int   i,j;
   char name[32];
@@ -2686,6 +2807,8 @@ void WI_loadData(void)
       M_snprintf(name, sizeof(name), "WIBP%d", i + 1);
       bp[i] = V_CachePatchName(name, PU_STATIC);
     }
+
+  wi_inited = true;
 }
 
 // ====================================================================
@@ -2833,6 +2956,8 @@ void WI_Start(wbstartstruct_t* wbstartstruct)
       WI_initNetgameStats();
     else
       WI_initStats();
+
+  wi_overlay = false;
 
   old_alt_interpic_on = false; // [Nugget] Alt. intermission background
 }

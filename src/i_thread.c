@@ -11,11 +11,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-#include "SDL_cpuinfo.h"
-#include "SDL_mutex.h"
-#include "SDL_thread.h"
+#include <SDL3/SDL.h>
 
 #include "doomtype.h"
+#include "i_exit.h"
 #include "i_printf.h"
 #include "i_system.h"
 #include "i_thread.h"
@@ -35,12 +34,12 @@ static SDL_Thread **threads = NULL;
 static size_t num_threads = 1, num_threads_alloc = 0;
 static boolean destroy_threads = false;
 
-static SDL_sem **semaphores = NULL;
+static SDL_Semaphore **semaphores = NULL;
 static size_t num_semaphores = 0, num_semaphores_alloc = 0;
 
 static int main_semaphore_index = -1, worker_semaphore_index = -1;
 
-static SDL_mutex *worker_mutex = NULL;
+static SDL_Mutex *worker_mutex = NULL;
 
 static void I_ShutdownThreading(void);
 static int  I_SemaphoreCreate(void);
@@ -50,7 +49,7 @@ static void WorkerFunctionWrapper(void *data);
 void I_InitThreading(void)
 {
   worker_threads = (cvar_worker_threads == -1)
-                 ? SDL_GetCPUCount() - 1
+                 ? SDL_GetNumLogicalCPUCores() - 1
                  : cvar_worker_threads;
 
   if (worker_threads < 1) { return; }
@@ -60,22 +59,22 @@ void I_InitThreading(void)
   main_semaphore_index = I_SemaphoreCreate();
 
   if (main_semaphore_index == -1)
-  { I_Error("%s: Failed to create main semaphore.", __func__); }
+  { I_Error("Failed to create main semaphore."); }
 
   worker_semaphore_index = I_SemaphoreCreate();
 
   if (worker_semaphore_index == -1)
-  { I_Error("%s: Failed to create worker semaphore.", __func__); }
+  { I_Error("Failed to create worker semaphore."); }
 
   worker_mutex = SDL_CreateMutex();
 
   if (!worker_mutex)
-  { I_Error("%s: Failed to create worker mutex.", __func__); }
+  { I_Error("Failed to create worker mutex."); }
 
   for (int i = 0;  i < worker_threads;  i++)
   {
     if (I_ThreadCreate(WorkerFunctionWrapper, i + 1) < 0)
-    { I_Error("%s: Failed to create worker threads.", __func__); }
+    { I_Error("Failed to create worker threads."); }
   }
 
   const int total_threads = 1 + worker_threads;
@@ -120,7 +119,7 @@ int I_WorkerSemaphoreIndex(void)
 
 // Semaphores ----------------------------------------------------------------
 
-static void StoreSemaphore(SDL_sem *const semaphore)
+static void StoreSemaphore(SDL_Semaphore *const semaphore)
 {
   if (num_semaphores >= num_semaphores_alloc)
   {
@@ -134,7 +133,7 @@ static void StoreSemaphore(SDL_sem *const semaphore)
 
 static int I_SemaphoreCreate(void)
 {
-  SDL_sem *const semaphore = SDL_CreateSemaphore(0);
+  SDL_Semaphore *const semaphore = SDL_CreateSemaphore(0);
 
   if (!semaphore) { return -1; }
 
@@ -146,14 +145,14 @@ void I_SemaphorePost(int index)
 {
   if (!semaphores) { return; }
 
-  SDL_SemPost(semaphores[index]);
+  SDL_SignalSemaphore(semaphores[index]);
 }
 
 void I_SemaphoreWait(int index)
 {
   if (!semaphores) { return; }
 
-  SDL_SemWait(semaphores[index]);
+  SDL_WaitSemaphore(semaphores[index]);
 }
 
 // Threads -------------------------------------------------------------------
