@@ -6216,7 +6216,7 @@ void G_BindGameVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindNum("autosave_interval", &autosave_interval, NULL,
-            0, 0, 600, ss_misc, wad_no,
+            300, 0, 600, ss_misc, wad_no,
             "Interval between periodic auto saves, in seconds (0 = Off)");
 
   M_BindBool("one_key_saveload", &one_key_saveload, NULL,

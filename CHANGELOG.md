@@ -5,7 +5,7 @@
 
 ## Changes
 
-None.
+- **Changed default _Auto Save Interval_ to 300s**, enabling periodic auto-saves by default [^1]
 
 ## Bug Fixes
 
@@ -13,3 +13,5 @@ None.
 - **Quick-save/load prompts not playing a sound when brought up**
 - **Quick-save/load prompts not being replaced by DeHackEd**
 - **Quick-save/load prompts sometimes showing the wrong savegame name**
+
+[^1]: This will only affect new config files.
