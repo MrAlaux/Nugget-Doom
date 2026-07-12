@@ -197,13 +197,29 @@ static void DrawPlane8(fixed_t distance)
       {
         DrawSpan = R_DrawSpanWithRadialFog;
         spandistlight = planedistlight[distance >> light_distance_shift_bits];
+
+        // Dithered lighting
+        if (dithered_lighting)
+        {
+          R_SetSpanDitherPattern(distance / light_distance_dither_step);
+        }
       }
       else
       {
         ds_colormap[0] = V_ColormapRowByIndex(planezlight[index]);
+
+        // [Nugget] Dithered lighting
+        if (dithered_lighting && index < MAXLIGHTZ-1)
+        {
+          ds_nextcolormap[0] = V_ColormapRowByIndex(planezlight[index + 1]);
+
+          R_SetSpanDitherPattern(distance / LIGHTZDITHERSTEP);
+        }
+        else { ds_nextcolormap[0] = ds_colormap[0]; }
       }
 
       ds_colormap[1] = fullcolormap;
+      ds_nextcolormap[1] = fullcolormap; // [Nugget] Dithered lighting
     }
 
   DrawSpan();
@@ -239,13 +255,29 @@ static void DrawPlane32(fixed_t distance)
       {
         DrawSpan = R_DrawSpanWithRadialFog;
         spandistlight = planedistlight[distance >> light_distance_shift_bits];
+
+        // Dithered lighting
+        if (dithered_lighting)
+        {
+          R_SetSpanDitherPattern(distance / light_distance_dither_step);
+        }
       }
       else
       {
         ds_colormap32[0] = V_ColormapRowByIndex32(planezlight[index]);
+
+        // [Nugget] Dithered lighting
+        if (dithered_lighting && index < MAXLIGHTZ-1)
+        {
+          ds_nextcolormap32[0] = V_ColormapRowByIndex32(planezlight[index + 1]);
+
+          R_SetSpanDitherPattern(distance / LIGHTZDITHERSTEP);
+        }
+        else { ds_nextcolormap32[0] = ds_colormap32[0]; }
       }
 
       ds_colormap32[1] = fullcolormap32;
+      ds_nextcolormap32[1] = fullcolormap32; // [Nugget] Dithered lighting
     }
 
   DrawSpan();

@@ -194,6 +194,7 @@ static int num_colormap_rows;
 boolean vertical_lockon;
 
 boolean allow_hires_graphics;
+boolean dithered_lighting;
 spriteshadows_t sprite_shadows;
 int sprite_shadows_tran_pct;
 thinglighting_t thing_lighting_mode;
@@ -329,6 +330,15 @@ void R_DeferredInitLightTables(void)
   init_light_tables = true;
 }
 
+// Dithered lighting ---------------------------------------------------------
+
+fixed_t dc_rawlightindex;
+
+int LIGHTSCALESTEP;
+int LIGHTSCALEDITHERSTEP;
+int LIGHTZSTEP;
+int LIGHTZDITHERSTEP;
+
 // Radial fog ----------------------------------------------------------------
 
 static int R_GetLightIndexVanilla(fixed_t scale, int x);
@@ -339,7 +349,10 @@ static int R_GetLightIndexRadFog(fixed_t scale, const int x)
 {
   scale = FixedMul(scale, finecosine[xtoviewangle[x] >> ANGLETOFINESHIFT]) * RADFOG_MULT;
 
-  const int index = ((int64_t) scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
+  // Dithered lighting
+  dc_rawlightindex = ((int64_t) scale * (160 << FRACBITS) / lightfocallength);
+
+  const int index = dc_rawlightindex >> LIGHTSCALESHIFT;
 
   return BETWEEN(0, MAXLIGHTSCALE - 1, index);
 }
@@ -347,6 +360,10 @@ static int R_GetLightIndexRadFog(fixed_t scale, const int x)
 int (*R_GetLightIndex)(fixed_t scale, int x) = R_GetLightIndexVanilla;
 
 int light_distance_shift_bits;
+
+// Dithered lighting
+int light_distance_step;
+int light_distance_dither_step;
 
 uint16_t ** planedistlight = NULL,
           *  spandistlight = NULL;
@@ -429,6 +446,11 @@ void R_InitDistLightTables(void)
   R_GetLightIndex = R_GetLightIndexRadFog;
 
   light_distance_shift_bits = 18 - radial_plane_fog_fidelity;
+
+  // Dithered lighting
+  light_distance_step = 1 << light_distance_shift_bits;
+  light_distance_dither_step = light_distance_step / NUM_DITHER_LEVELS;
+
   max_light_distance = 1 << (27 - light_distance_shift_bits);
 
   if (!planedistlight)
@@ -1275,6 +1297,12 @@ void R_InitLightTables (void)
   MAXLIGHTSCALE = 3 << (16 - LIGHTSCALESHIFT);
   MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
 
+  // [Nugget] Dithered lighting
+  LIGHTSCALESTEP = 1 << LIGHTSCALESHIFT;
+  LIGHTSCALEDITHERSTEP = LIGHTSCALESTEP / NUM_DITHER_LEVELS;
+  LIGHTZSTEP = 1 << LIGHTZSHIFT;
+  LIGHTZDITHERSTEP = LIGHTZSTEP / NUM_DITHER_LEVELS;
+
   scalelightfixed = Z_Malloc(MAXLIGHTSCALE * sizeof(*scalelightfixed), PU_STATIC, 0);
 
   // killough 4/4/98: dynamic colormaps
@@ -1327,7 +1355,11 @@ void R_InitLightTables (void)
 // [Nugget] Static, added X parameter
 static int R_GetLightIndexVanilla(const fixed_t scale, const int x)
 {
-  const int index = ((int64_t)scale * (160 << FRACBITS) / lightfocallength) >> LIGHTSCALESHIFT;
+  // Dithered lighting
+  dc_rawlightindex = ((int64_t) scale * (160 << FRACBITS) / lightfocallength);
+
+  const int index = dc_rawlightindex >> LIGHTSCALESHIFT;
+
   return BETWEEN(0, MAXLIGHTSCALE - 1, index);
 }
 
@@ -2072,6 +2104,9 @@ void R_SetupFrame (player_t *player)
 
         // [Nugget] Set `dc_colormap` here
         dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
+
+        // [Nugget] Dithered lighting
+        dc_nextcolormap32[0] = dc_nextcolormap32[1] = fixedcolormap32;
       }
     else
       fixedcolormap32 = NULL;
@@ -2092,6 +2127,9 @@ void R_SetupFrame (player_t *player)
 
         // [Nugget] Set `dc_colormap` here
         dc_colormap[0] = dc_colormap[1] = fixedcolormap;
+
+        // [Nugget] Dithered lighting
+        dc_nextcolormap[0] = dc_nextcolormap[1] = fixedcolormap;
       }
     else
       fixedcolormap = 0;
@@ -2335,6 +2373,10 @@ void R_BindRenderVariables(void)
   M_BindBool("diminishing_lighting", &diminishing_lighting, NULL,
              true, ss_none, wad_yes,
              "Diminishing lighting (light emitted by player)");
+
+  M_BindBool("dithered_lighting", &dithered_lighting, NULL,
+             false, ss_none, wad_yes, // ADD TO MENU
+             "Dithered lighting");
 
   M_BindNum("sprite_shadows", &sprite_shadows, NULL,
             SPRITESHADOWS_OFF, SPRITESHADOWS_OFF, NUM_SPRITESHADOWS-1, ss_display, wad_yes,

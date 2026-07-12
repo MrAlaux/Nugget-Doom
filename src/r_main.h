@@ -149,6 +149,7 @@ typedef enum fakecontrast_s {
 extern boolean vertical_lockon;
 
 extern boolean allow_hires_graphics;
+extern boolean dithered_lighting;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
@@ -198,9 +199,22 @@ extern lightingmode_t lighting_mode;
 boolean R_InitLightTablesPending(void);
 void R_DeferredInitLightTables(void);
 
+// Dithered lighting ---------------------------------------------------------
+
+extern fixed_t dc_rawlightindex;
+
+extern int LIGHTSCALESTEP;
+extern int LIGHTSCALEDITHERSTEP;
+extern int LIGHTZSTEP;
+extern int LIGHTZDITHERSTEP;
+
 // Radial fog ----------------------------------------------------------------
 
 extern int light_distance_shift_bits;
+
+// Dithered lighting
+extern int light_distance_step;
+extern int light_distance_dither_step;
 
 extern cmapoffset_t *planezlight;
 extern uint16_t **planedistlight, *spandistlight;

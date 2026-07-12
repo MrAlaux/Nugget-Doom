@@ -26,6 +26,10 @@
 extern lighttable_t *dc_colormap[2];
 extern lighttable32_t *dc_colormap32[2];
 
+// [Nugget] Dithered lighting
+extern lighttable_t *dc_nextcolormap[2];
+extern lighttable32_t *dc_nextcolormap32[2];
+
 extern int      dc_x;
 extern int      dc_yl;
 extern int      dc_yh;
@@ -79,6 +83,10 @@ extern void (*R_DrawTranslatedColumn)(void);
 extern lighttable_t *ds_colormap[2];
 extern lighttable32_t *ds_colormap32[2];
 
+// [Nugget] Dithered lighting
+extern lighttable_t *ds_nextcolormap[2];
+extern lighttable32_t *ds_nextcolormap32[2];
+
 extern int     ds_y;
 extern int     ds_x1;
 extern int     ds_x2;
@@ -97,6 +105,11 @@ extern const byte *ds_brightmap;
 extern void (*R_DrawSpan)(void);
 
 extern void (*R_DrawSpanWithRadialFog)(void); // [Nugget] Radial fog
+
+// [Nugget] Dithered lighting
+#define NUM_DITHER_LEVELS 8
+void R_SetColumnDitherPattern(int index);
+void R_SetSpanDitherPattern(int index);
 
 void R_InitBuffer(void);
 

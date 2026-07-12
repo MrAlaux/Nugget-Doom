@@ -399,6 +399,10 @@ typedef struct vissprite_s
 
   // [Nugget] ----------------------------------------------------------------
 
+  // Dithered lighting
+  cmapoffset_t nextcolormap[2];
+  byte ditherlevel;
+
   // Sprite scaling
   float scale_mult;
   fixed_t yiscale, yscale;

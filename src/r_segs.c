@@ -96,7 +96,12 @@ static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
   column_t *col;
 
   if (fixedcolormap)
+  {
     dc_colormap[0] = dc_colormap[1] = fixedcolormap;
+
+    // [Nugget] Dithered lighting
+    dc_nextcolormap[0] = dc_nextcolormap[1] = fixedcolormap;
+  }
 
   // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
@@ -113,6 +118,19 @@ static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
             dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                               ? fullcolormap
                               : dc_colormap[0];
+
+            // [Nugget] Dithered lighting
+            if (dithered_lighting && index > 0)
+            {
+              dc_nextcolormap[0] = V_ColormapRowByIndex(walllights[index - 1]);
+              dc_nextcolormap[1] = fullcolormap;
+
+              R_SetColumnDitherPattern(dc_rawlightindex / LIGHTSCALEDITHERSTEP);
+            }
+            else {
+              dc_nextcolormap[0] = dc_colormap[0];
+              dc_nextcolormap[1] = dc_colormap[1];
+            }
           }
 
         // killough 3/2/98:
@@ -156,7 +174,12 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
   column_t *col;
 
   if (fixedcolormap32)
+  {
     dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
+
+    // [Nugget] Dithered lighting
+    dc_nextcolormap32[0] = dc_nextcolormap32[1] = fixedcolormap32;
+  }
 
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != INT_MAX)
@@ -171,6 +194,19 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
             dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                               ? fullcolormap32
                               : dc_colormap32[0];
+
+            // [Nugget] Dithered lighting
+            if (dithered_lighting && index > 0)
+            {
+              dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllights[index - 1]);
+              dc_nextcolormap32[1] = fullcolormap32;
+
+              R_SetColumnDitherPattern(dc_rawlightindex / LIGHTSCALEDITHERSTEP);
+            }
+            else {
+              dc_nextcolormap32[0] = dc_colormap32[0];
+              dc_nextcolormap32[1] = dc_colormap32[1];
+            }
           }
 
         {
@@ -446,6 +482,19 @@ static void R_RenderSegLoop (void)
                                 (STRICTMODE(brightmaps) || force_brightmaps))
                                 ? fullcolormap32
                                 : dc_colormap32[0];
+
+              // [Nugget] Dithered lighting
+              if (dithered_lighting && index > 0)
+              {
+                dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllights[index - 1]);
+                dc_nextcolormap32[1] = (!fixedcolormap32) ? fullcolormap32 : dc_nextcolormap32[0];
+
+                R_SetColumnDitherPattern(dc_rawlightindex / LIGHTSCALEDITHERSTEP);
+              }
+              else {
+                dc_nextcolormap32[0] = dc_colormap32[0];
+                dc_nextcolormap32[1] = dc_colormap32[1];
+              }
             }
             else
             {
@@ -454,6 +503,19 @@ static void R_RenderSegLoop (void)
                                 (STRICTMODE(brightmaps) || force_brightmaps))
                                 ? fullcolormap
                                 : dc_colormap[0];
+
+              // [Nugget] Dithered lighting
+              if (dithered_lighting && index > 0)
+              {
+                dc_nextcolormap[0] = V_ColormapRowByIndex(walllights[index - 1]);
+                dc_nextcolormap[1] = (!fixedcolormap) ? fullcolormap : dc_nextcolormap[0];
+
+                R_SetColumnDitherPattern(dc_rawlightindex / LIGHTSCALEDITHERSTEP);
+              }
+              else {
+                dc_nextcolormap[0] = dc_colormap[0];
+                dc_nextcolormap[1] = dc_colormap[1];
+              }
             }
           }
 
