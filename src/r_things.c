@@ -173,6 +173,10 @@ fixed_t pspriteiscale;
 
 cmapoffset_t *spritelights;        // killough 1/25/98 made static
 
+// [Nugget] Dithered lighting
+static byte *spritelight_ditherlevel = NULL;
+static cmapoffset_t *spritelight_nextcolormap = NULL;
+
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c
 typedef struct drawseg_xrange_item_s
@@ -676,12 +680,19 @@ static void DrawVisSpriteLoop8(
   dc_colormap[0] = V_ColormapRowByIndex(vis->colormap[0]);
   dc_colormap[1] = V_ColormapRowByIndex(vis->colormap[1]);
 
-  // [Nugget] Dithered lighting
+  // [Nugget] Dithered lighting /--------------------------------------------
+
+  boolean do_dithered_lighting = false;
+
   if (dithered_lighting)
   {
+    do_dithered_lighting = lightindex < MAXLIGHTSCALE-1;
+
     dc_nextcolormap[0] = V_ColormapRowByIndex(vis->nextcolormap[0]);
     dc_nextcolormap[1] = V_ColormapRowByIndex(vis->nextcolormap[1]);
   }
+
+  // [Nugget] --------------------------------------------------------------/
 
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
@@ -699,17 +710,22 @@ static void DrawVisSpriteLoop8(
       {
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
-        // Dithered lighting
-        if (dithered_lighting)
-        { R_SetColumnDitherPattern(dc_rawlightindex / LIGHTSCALEDITHERSTEP); }
+        // Dithered lighting /------------------------------------------------
+
+        do_dithered_lighting = dithered_lighting && lightindex < MAXLIGHTSCALE-1;
+
+        if (do_dithered_lighting)
+        { R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]); }
+
+        // ------------------------------------------------------------------/
 
         if (!percolumn_lighting)
         {
           dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]);
 
           // Dithered lighting
-          if (dithered_lighting && lightindex > 0)
-          { dc_nextcolormap[0] = V_ColormapRowByIndex(spritelights[lightindex - 1]); }
+          if (do_dithered_lighting)
+          { dc_nextcolormap[0] = V_ColormapRowByIndex(spritelight_nextcolormap[lightindex]); }
         }
       }
 
@@ -723,16 +739,19 @@ static void DrawVisSpriteLoop8(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
+        int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                     + extralight;
 
-        spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+        lightnum = BETWEEN(0, LIGHTLEVELS-1, lightnum);
 
-        dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]);
+        dc_colormap[0] = V_ColormapRowByIndex(scalelight[lightnum][lightindex]);
 
         // Dithered lighting
-        if (dithered_lighting && lightindex > 0)
-        { dc_nextcolormap[0] = V_ColormapRowByIndex(spritelights[lightindex - 1]); }
+        if (do_dithered_lighting)
+        {
+          dc_nextcolormap[0] = V_ColormapRowByIndex(scalelight_nextcolormap[lightnum][lightindex]);
+          R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+        }
       }
 
       // [Nugget] ===========================================================/
@@ -761,12 +780,19 @@ static void DrawVisSpriteLoop32(
   dc_colormap32[0] = V_ColormapRowByIndex32(vis->colormap[0]);
   dc_colormap32[1] = V_ColormapRowByIndex32(vis->colormap[1]);
 
-  // [Nugget] Dithered lighting
+  // [Nugget] Dithered lighting /--------------------------------------------
+
+  boolean do_dithered_lighting = false;
+
   if (dithered_lighting)
   {
+    do_dithered_lighting = lightindex < MAXLIGHTSCALE-1;
+
     dc_nextcolormap32[0] = V_ColormapRowByIndex32(vis->nextcolormap[0]);
     dc_nextcolormap32[1] = V_ColormapRowByIndex32(vis->nextcolormap[1]);
   }
+
+  // [Nugget] --------------------------------------------------------------/
 
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
@@ -784,17 +810,22 @@ static void DrawVisSpriteLoop32(
       {
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
-        // Dithered lighting
-        if (dithered_lighting)
-        { R_SetColumnDitherPattern(dc_rawlightindex / LIGHTSCALEDITHERSTEP); }
+        // Dithered lighting /------------------------------------------------
+
+        do_dithered_lighting = dithered_lighting && lightindex < MAXLIGHTSCALE-1;
+
+        if (do_dithered_lighting)
+        { R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]); }
+
+        // ------------------------------------------------------------------/
 
         if (!percolumn_lighting)
         {
           dc_colormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex]);
 
           // Dithered lighting
-          if (dithered_lighting && lightindex > 0)
-          { dc_nextcolormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex - 1]); }
+          if (do_dithered_lighting)
+          { dc_nextcolormap32[0] = V_ColormapRowByIndex32(spritelight_nextcolormap[lightindex]); }
         }
       }
 
@@ -808,16 +839,19 @@ static void DrawVisSpriteLoop32(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
+        int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                     + extralight;
 
-        spritelights = scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)];
+        lightnum = BETWEEN(0, LIGHTLEVELS-1, lightnum);
 
-        dc_colormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex]);
+        dc_colormap32[0] = V_ColormapRowByIndex32(scalelight[lightnum][lightindex]);
 
         // Dithered lighting
-        if (dithered_lighting && lightindex > 0)
-        { dc_nextcolormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex - 1]); }
+        if (do_dithered_lighting)
+        {
+          dc_nextcolormap32[0] = V_ColormapRowByIndex32(scalelight_nextcolormap[lightnum][lightindex]);
+          R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+        }
       }
 
       // [Nugget] ===========================================================/
@@ -926,7 +960,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
     // Dithered lighting
     if (!do_sprite_radial_fog)
-    { R_SetColumnDitherPattern(vis->ditherlevel); }
+    { R_SetDitherPattern(vis->ditherlevel); }
   }
 
   // [Nugget] ===============================================================/
@@ -1295,14 +1329,14 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
       vis->colormap[1] = 0;
 
       // [Nugget] Dithered lighting
-      if (dithered_lighting && index > 0)
+      if (dithered_lighting && index < MAXLIGHTSCALE-1)
       {
         do_dithered_lighting = true;
 
-        vis->nextcolormap[0] = spritelights[index - 1];
+        vis->nextcolormap[0] = spritelight_nextcolormap[index];
         vis->nextcolormap[1] = 0;
 
-        vis->ditherlevel = dc_rawlightindex / LIGHTSCALEDITHERSTEP;
+        vis->ditherlevel = spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
       }
     }
 
@@ -1520,6 +1554,15 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   else
     spritelights = scalelight[lightnum];
 
+  // [Nugget] Dithered lighting
+  if (dithered_lighting)
+  {
+    const int light = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+    spritelight_ditherlevel = scalelight_ditherlevel[light];
+    spritelight_nextcolormap = scalelight_nextcolormap[light];
+  }
+
   // Handle all things in sector.
 
   for (thing = sec->thinglist; thing; thing = thing->snext)
@@ -1558,6 +1601,15 @@ void R_NearbySprites (void)
         spritelights = scalelight[LIGHTLEVELS-1];
       else
         spritelights = scalelight[lightnum];
+
+      // [Nugget] Dithered lighting
+      if (dithered_lighting)
+      {
+        const int light = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+        spritelight_ditherlevel = scalelight_ditherlevel[light];
+        spritelight_nextcolormap = scalelight_nextcolormap[light];
+      }
 
       R_ProjectSprite(thing, BETWEEN(0, LIGHTLEVELS-1, lightnum)); // [Nugget] Pass lightnum
     }

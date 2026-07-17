@@ -203,10 +203,13 @@ void R_DeferredInitLightTables(void);
 
 extern fixed_t dc_rawlightindex;
 
-extern int LIGHTSCALESTEP;
-extern int LIGHTSCALEDITHERSTEP;
-extern int LIGHTZSTEP;
-extern int LIGHTZDITHERSTEP;
+extern int LIGHTSCALEDITHERSHIFT;
+extern byte **scalelight_ditherlevel;
+extern cmapoffset_t **scalelight_nextcolormap;
+
+extern int LIGHTZDITHERSHIFT;
+extern byte **zlight_ditherlevel;
+extern cmapoffset_t **zlight_nextcolormap;
 
 // Radial fog ----------------------------------------------------------------
 

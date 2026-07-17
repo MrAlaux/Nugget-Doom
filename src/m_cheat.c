@@ -56,10 +56,8 @@
 #include "ws_stuff.h"
 
 // [Nugget]
-#include "am_map.h"
 #include "f_finale.h"
 #include "m_random.h"
-#include "r_main.h"
 #include "version.h"
 
 #define plyr (players+consoleplayer)     /* the console player */

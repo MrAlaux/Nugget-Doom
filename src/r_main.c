@@ -186,14 +186,12 @@ int R_GetLightLevelInSector(
   return sector->lightlevel;
 }
 
-// True color
-static int num_colormap_rows;
-
 // CVARs ---------------------------------------------------------------------
 
 boolean vertical_lockon;
 
 boolean allow_hires_graphics;
+static boolean cvar_dithered_lighting;
 boolean dithered_lighting;
 spriteshadows_t sprite_shadows;
 int sprite_shadows_tran_pct;
@@ -330,14 +328,19 @@ void R_DeferredInitLightTables(void)
   init_light_tables = true;
 }
 
+static int num_colormap_rows;
+
 // Dithered lighting ---------------------------------------------------------
 
 fixed_t dc_rawlightindex;
 
-int LIGHTSCALESTEP;
-int LIGHTSCALEDITHERSTEP;
-int LIGHTZSTEP;
-int LIGHTZDITHERSTEP;
+int LIGHTSCALEDITHERSHIFT;
+byte **scalelight_ditherlevel = NULL;
+cmapoffset_t **scalelight_nextcolormap = NULL;
+
+int LIGHTZDITHERSHIFT;
+byte **zlight_ditherlevel = NULL;
+cmapoffset_t **zlight_nextcolormap = NULL;
 
 // Radial fog ----------------------------------------------------------------
 
@@ -1297,12 +1300,6 @@ void R_InitLightTables (void)
   MAXLIGHTSCALE = 3 << (16 - LIGHTSCALESHIFT);
   MAXLIGHTZ = 1 << (27 - LIGHTZSHIFT);
 
-  // [Nugget] Dithered lighting
-  LIGHTSCALESTEP = 1 << LIGHTSCALESHIFT;
-  LIGHTSCALEDITHERSTEP = LIGHTSCALESTEP / NUM_DITHER_LEVELS;
-  LIGHTZSTEP = 1 << LIGHTZSHIFT;
-  LIGHTZDITHERSTEP = LIGHTZSTEP / NUM_DITHER_LEVELS;
-
   scalelightfixed = Z_Malloc(MAXLIGHTSCALE * sizeof(*scalelightfixed), PU_STATIC, 0);
 
   // killough 4/4/98: dynamic colormaps
@@ -1344,6 +1341,109 @@ void R_InitLightTables (void)
             c_zlight[t][i][j] = level;
         }
     }
+
+  // [Nugget] Dithered lighting /---------------------------------------------
+
+  // If one of these is initialized, all of them must be, so just check one
+  if (scalelight_ditherlevel)
+  {
+    Z_Free(scalelight_ditherlevel[0]);
+    Z_Free(scalelight_nextcolormap[0]);
+    Z_Free(zlight_ditherlevel[0]);
+    Z_Free(zlight_nextcolormap[0]);
+
+    Z_Free(scalelight_ditherlevel);
+    Z_Free(scalelight_nextcolormap);
+    Z_Free(zlight_ditherlevel);
+    Z_Free(zlight_nextcolormap);
+
+    scalelight_ditherlevel = NULL;
+  }
+
+  if (dithered_lighting != cvar_dithered_lighting)
+  {
+    dithered_lighting = cvar_dithered_lighting;
+    R_DeferredInitDrawFunctions();
+  }
+
+  if (dithered_lighting)
+  {
+    LIGHTSCALEDITHERSHIFT = MAX(0, LIGHTSCALESHIFT - NUM_DITHER_LEVELS_BITS);
+    LIGHTZDITHERSHIFT = MAX(0, LIGHTZSHIFT - NUM_DITHER_LEVELS_BITS);
+
+    const int MAXLIGHTSCALEDITHER = 3 << (16 - LIGHTSCALEDITHERSHIFT);
+    const int MAXLIGHTZDITHER = 1 << (27 - LIGHTZDITHERSHIFT);
+
+    scalelight_ditherlevel = Z_Malloc(sizeof(*scalelight_ditherlevel) * LIGHTLEVELS, PU_STATIC, 0);
+    scalelight_nextcolormap = Z_Malloc(sizeof(*scalelight_nextcolormap) * LIGHTLEVELS, PU_STATIC, 0);
+    zlight_ditherlevel = Z_Malloc(sizeof(*zlight_ditherlevel) * LIGHTLEVELS, PU_STATIC, 0);
+    zlight_nextcolormap = Z_Malloc(sizeof(*zlight_nextcolormap) * LIGHTLEVELS, PU_STATIC, 0);
+
+    byte *const all_scalelight_ditherlevels =
+      Z_Malloc(sizeof(*all_scalelight_ditherlevels) * LIGHTLEVELS * MAXLIGHTSCALEDITHER, PU_STATIC, 0);
+
+    memset(
+      all_scalelight_ditherlevels, NUM_DITHER_LEVELS-1,
+      sizeof(*all_scalelight_ditherlevels) * LIGHTLEVELS * MAXLIGHTSCALEDITHER
+    );
+
+    cmapoffset_t *const all_scalelight_nextcolormaps =
+      Z_Malloc(sizeof(*all_scalelight_nextcolormaps) * LIGHTLEVELS * MAXLIGHTSCALE, PU_STATIC, 0);
+
+    byte *const all_planezlight_ditherlevels =
+      Z_Malloc(sizeof(*all_planezlight_ditherlevels) * LIGHTLEVELS * MAXLIGHTZDITHER, PU_STATIC, 0);
+
+    memset(
+      all_planezlight_ditherlevels, 0,
+      sizeof(*all_planezlight_ditherlevels) * LIGHTLEVELS * MAXLIGHTZDITHER
+    );
+
+    cmapoffset_t *const all_planezlight_nextcolormaps =
+      Z_Malloc(sizeof(*all_planezlight_nextcolormaps) * LIGHTLEVELS * MAXLIGHTZ, PU_STATIC, 0);
+
+    const int dither_levels_per_z = MAXLIGHTZDITHER / MAXLIGHTZ;
+
+    for (i = 0;  i < LIGHTLEVELS;  i++)
+    {
+      scalelight_ditherlevel[i] = all_scalelight_ditherlevels + (MAXLIGHTSCALEDITHER * i);
+      scalelight_nextcolormap[i] = all_scalelight_nextcolormaps + (MAXLIGHTSCALE * i);
+
+      zlight_ditherlevel[i] = all_planezlight_ditherlevels + (MAXLIGHTZDITHER * i);
+      zlight_nextcolormap[i] = all_planezlight_nextcolormaps + (MAXLIGHTZ * i);
+
+      cmapoffset_t *const curr_planezlight = c_zlight[0][i];
+
+      for (int j = 0, next_j = j;  j < MAXLIGHTZ-1;  j = next_j)
+      {
+        do {
+          next_j++;
+        } while (next_j < MAXLIGHTZ && curr_planezlight[j] == curr_planezlight[next_j]);
+
+        for (int k = j;  k < next_j;  k++)
+        { zlight_nextcolormap[i][k] = curr_planezlight[MIN(MAXLIGHTZ-1, next_j)]; }
+
+        if (next_j >= MAXLIGHTZ) { break; }
+
+        const int dither_level_max = dither_levels_per_z * (next_j - j);
+
+        for (int k = 0;  k < dither_level_max;  k++)
+        {
+          zlight_ditherlevel[i][j * dither_levels_per_z + k] =
+            NUM_DITHER_LEVELS * k / dither_level_max;
+        }
+
+        if (curr_planezlight[next_j] / 256 >= num_colormap_rows-1)
+        {
+          for (int k = next_j;  k < MAXLIGHTZ;  k++)
+          { zlight_nextcolormap[i][k] = curr_planezlight[MAXLIGHTZ-1]; }
+
+          break;
+        }
+      }
+    }
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   // [Nugget]: [crispy] re-calculate fake contrast
   P_SegLengths(true);
@@ -1546,6 +1646,46 @@ void R_ExecuteSetViewSize (void)
         }
     }
 
+  // [Nugget] Dithered lighting
+  if (dithered_lighting)
+  {
+    const int MAXLIGHTSCALEDITHER = 3 << (16 - LIGHTSCALEDITHERSHIFT);
+    const int dither_levels_per_scale = MAXLIGHTSCALEDITHER / MAXLIGHTSCALE;
+
+    for (i = 0;  i < LIGHTLEVELS;  i++)
+    {
+      cmapoffset_t *const curr_scalelight = c_scalelight[0][i];
+
+      for (int j = MAXLIGHTSCALE-1, next_j = j;  j > 0;  j = next_j)
+      {
+        do {
+          next_j--;
+        } while (next_j >= 0 && curr_scalelight[j] == curr_scalelight[next_j]);
+
+        for (int k = j;  k > next_j;  k--)
+        { scalelight_nextcolormap[i][k] = curr_scalelight[MAX(0, next_j)]; }
+
+        if (next_j < 0) { break; }
+
+        const int dither_level_max = dither_levels_per_scale * (j - next_j);
+
+        for (int k = 0;  k < dither_level_max;  k++)
+        {
+          scalelight_ditherlevel[i][(j-1) * dither_levels_per_scale + k] =
+            (NUM_DITHER_LEVELS * k / dither_level_max) ^ (NUM_DITHER_LEVELS - 1);
+        }
+
+        if (curr_scalelight[next_j] / 256 >= num_colormap_rows-1)
+        {
+          for (int k = next_j;  k >= 0;  k--)
+          { scalelight_nextcolormap[i][k] = curr_scalelight[0]; }
+
+          break;
+        }
+      }
+    }
+  }
+
   // [Nugget] Alt. intermission background
   if (!WI_AltInterpicOn())
     ST_refreshBackground(); // [Nugget] NUGHUD
@@ -1575,7 +1715,7 @@ void R_Init (void)
   R_InitData();
   R_SetViewSize(screenblocks);
   R_InitPlanes();
-  R_InitLightTables();
+  /*R_InitLightTables();*/ // [Nugget] Don't initialize twice at startup
   R_InitSkyMap();
   R_InitTranslationTables();
   V_InitFlexTranTable();
@@ -1583,8 +1723,8 @@ void R_Init (void)
   // [FG] spectre drawing mode
   R_SetFuzzColumnMode();
 
-  // [Nugget] `colfunc` initialized in this function
-  R_InitDrawFunctions();
+  // [Nugget] Deferred | `colfunc` initialized in this function
+  R_DeferredInitDrawFunctions();
 }
 
 //
@@ -2374,8 +2514,8 @@ void R_BindRenderVariables(void)
              true, ss_none, wad_yes,
              "Diminishing lighting (light emitted by player)");
 
-  M_BindBool("dithered_lighting", &dithered_lighting, NULL,
-             false, ss_none, wad_yes, // ADD TO MENU
+  M_BindBool("dithered_lighting", &cvar_dithered_lighting, NULL,
+             false, ss_display, wad_yes,
              "Dithered lighting");
 
   M_BindNum("sprite_shadows", &sprite_shadows, NULL,

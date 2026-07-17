@@ -4067,30 +4067,19 @@ static const char *fake_contrast_strings[] = {
   "Off", "Smooth", "Vanilla", NULL
 };
 
-static const char *alt_interpic_strings[] = {
-  "Off", "IWAD only", "Always", NULL
-};
-
 #define N_X (M_X - 14)
 
 setup_menu_t display_settings1[] = {
 
-    {"Backdrop For All Menus",       S_ONOFF,                 N_X, M_SPC, {"menu_background_all"}},
-    {"No Palette Tint in Menus",     S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_menu_tint"}},
+    {"Dithered Lighting",            S_ONOFF,                 N_X, M_SPC, {"dithered_lighting"}, .action = R_DeferredInitLightTables},
+    MI_GAP,
     {"HUD/Menu Shadows",             S_ONOFF,                 N_X, M_SPC, {"hud_menu_shadows"}, .action = V_InitShadowTranMap},
     {"Sprite Shadows",               S_CHOICE|S_STRICT,       N_X, M_SPC, {"sprite_shadows"}, .strings_id = str_sprite_shadows, .action = R_InitSpriteShadowsColormap},
+    MI_GAP,
     {"Thing Lighting Mode",          S_CHOICE|S_STRICT,       N_X, M_SPC, {"thing_lighting_mode"}, .strings_id = str_thing_lighting},
+    MI_GAP,
     {"Radial Fog",                   S_ONOFF,                 N_X, M_SPC, {"radial_fog"}, .action = R_DeferredInitLightTables},
-    {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
-    {"No Berserk Tint",              S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_berserk_tint"}},
-    {"No Radiation Suit Tint",       S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_radsuit_tint"}},
-    {"Night-Vision Visor Effect",    S_ONOFF |S_STRICT,       N_X, M_SPC, {"nightvision_visor"}},
-    {"Smooth Palette Tinting",       S_ONOFF,                 N_X, M_SPC, {"smooth_palette_tinting"}, .action = I_DeferredInitPalettes},
-    {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
-    {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
     {"Fake Contrast",                S_CHOICE|S_STRICT,       N_X, M_SPC, {"fake_contrast"}, .strings_id = str_fake_contrast, .action = RecalculateFakeContrast},
-    {"Screen Wipe Speed Percentage", S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
-    {"Alt. Intermission Background", S_CHOICE|S_STRICT,       N_X, M_SPC, {"alt_interpic"}, .strings_id = str_alt_interpic},
 
   MI_END
 };
@@ -4099,12 +4088,41 @@ setup_menu_t display_settings1[] = {
 
 // Page 7: Display (2) -------------------------------------------------------
 
+static const char *alt_interpic_strings[] = {
+  "Off", "IWAD only", "Always", NULL
+};
+
+#define N_X (M_X - 14)
+
+setup_menu_t display_settings2[] = {
+
+    {"Flip Levels",                  S_ONOFF,                 N_X, M_SPC, {"flip_levels"}},
+    MI_GAP,
+    {"Backdrop For All Menus",       S_ONOFF,                 N_X, M_SPC, {"menu_background_all"}},
+    {"No Palette Tint in Menus",     S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_menu_tint"}},
+    {"No Berserk Tint",              S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_berserk_tint"}},
+    {"No Radiation Suit Tint",       S_ONOFF |S_STRICT,       N_X, M_SPC, {"no_radsuit_tint"}},
+    {"Night-Vision Visor Effect",    S_ONOFF |S_STRICT,       N_X, M_SPC, {"nightvision_visor"}},
+    {"Smooth Palette Tinting",       S_ONOFF,                 N_X, M_SPC, {"smooth_palette_tinting"}, .action = I_DeferredInitPalettes},
+    {"Damage Tint Cap",              S_NUM   |S_STRICT,       N_X, M_SPC, {"damagecount_cap"}},
+    {"Bonus Tint Cap",               S_NUM   |S_STRICT,       N_X, M_SPC, {"bonuscount_cap"}},
+    MI_GAP,
+    {"Screen Wipe Speed",            S_NUM   |S_STRICT|S_PCT, N_X, M_SPC, {"wipe_speed_percentage"}},
+    {"Alt. Intermission Background", S_CHOICE|S_STRICT,       N_X, M_SPC, {"alt_interpic"}, .strings_id = str_alt_interpic},
+
+  MI_END
+};
+
+#undef N_X
+
+// Page 7: Display (3) -------------------------------------------------------
+
 void SetPalette(void)
 {
     I_SetPalette(0); // [Nugget] Pass index
 }
 
-static setup_menu_t display_settings2[] = {
+static setup_menu_t display_settings3[] = {
 
     {"Red Intensity",   S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"red_intensity"},    .action = SetPalette},
     {"Green Intensity", S_THERMO|S_THRM_SIZE11|S_PCT|S_ACTION, M_X_THRM11, M_THRM_SPC, {"green_intensity"},  .action = SetPalette},
@@ -4117,9 +4135,11 @@ static setup_menu_t display_settings2[] = {
 
 // Page 7: Display -----------------------------------------------------------
 
-static setup_menu_t *display_settings[] = { display_settings1, display_settings2, NULL };
+static setup_menu_t *display_settings[] = {
+  display_settings1, display_settings2, display_settings3, NULL
+};
 
-static setup_tab_t display_tabs[] = { {"Display"}, {"Colors"}, {NULL} };
+static setup_tab_t display_tabs[] = { {"Lighting"}, {"Screen"}, {"Colors"}, {NULL} };
 
 static void MN_Display(void)
 {
@@ -4142,7 +4162,7 @@ void MN_DrawDisplay(void)
     DrawInstructions();
     DrawScreenItems(current_menu);
 
-    if (current_page == 1)
+    if (current_page == 2) // display_settings3
     {
       patch_t *const patch  = V_CachePatchName("NG_PALBG", PU_CACHE);
 
@@ -4290,11 +4310,11 @@ static void UpdateVerticalLockonItem(void)
 
 static void UpdatePaletteItems(void)
 {
-  DisableItem(!palette_changes, display_settings1, "no_menu_tint");
-  DisableItem(!palette_changes, display_settings1, "no_berserk_tint");
-  DisableItem(!palette_changes, display_settings1, "no_radsuit_tint");
-  DisableItem(!palette_changes, display_settings1, "damagecount_cap");
-  DisableItem(!palette_changes, display_settings1, "bonuscount_cap");
+  DisableItem(!palette_changes, display_settings2, "no_menu_tint");
+  DisableItem(!palette_changes, display_settings2, "no_berserk_tint");
+  DisableItem(!palette_changes, display_settings2, "no_radsuit_tint");
+  DisableItem(!palette_changes, display_settings2, "damagecount_cap");
+  DisableItem(!palette_changes, display_settings2, "bonuscount_cap");
   DisableItem(!palette_changes, gen_settings7, "a11y_invul_colormap");
 }
 

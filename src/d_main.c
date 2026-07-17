@@ -338,6 +338,10 @@ void D_Display (void)
   if (R_InitDistLightTablesPending())
   { R_InitDistLightTables(); }
 
+  // [Nugget]
+  if (R_InitDrawFunctionsPending())
+  { R_InitDrawFunctions(); }
+
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
 

@@ -2350,7 +2350,6 @@ static void InitColorFunctions(void)
     AM_InitColorFunctions();
     R_InitColorFunctions();
     R_InitDrawColorFunctions();
-    R_InitDrawFunctions();
     R_InitPlanesColorFunctions();
     R_InitSegsColorFunctions();
     R_InitThingsColorFunctions();

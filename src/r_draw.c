@@ -71,9 +71,21 @@ byte *main_tranmap;     // killough 4/11/98
 static pixel_t *background_buffer = NULL;
 static pixel32_t *background_buffer32 = NULL;
 
-// [Nugget] Dithered lighting /-----------------------------------------------
+// [Nugget] /=================================================================
 
-#define NUM_DITHER_LEVELS_MASK (NUM_DITHER_LEVELS - 1)
+static boolean init_draw_functions = false;
+
+boolean R_InitDrawFunctionsPending(void)
+{
+  return init_draw_functions;
+}
+
+void R_DeferredInitDrawFunctions(void)
+{
+  init_draw_functions = true;
+}
+
+// Dithered lighting ---------------------------------------------------------
 
 #define DITHER_PATTERN_WIDTH  4
 #define DITHER_PATTERN_HEIGHT 4
@@ -84,39 +96,9 @@ static pixel32_t *background_buffer32 = NULL;
 static const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITHER_PATTERN_WIDTH] =
 {
   {
-    { 0, 1, 1, 1 },
-    { 1, 1, 1, 1 },
-    { 1, 1, 0, 1 },
-    { 1, 1, 1, 1 },
-  },
-  {
-    { 0, 1, 0, 1 },
-    { 1, 1, 1, 1 },
-    { 0, 1, 0, 1 },
-    { 1, 1, 1, 1 },
-  },
-  {
-    { 0, 1, 0, 1 },
-    { 1, 0, 1, 1 },
-    { 0, 1, 0, 1 },
-    { 1, 1, 1, 0 },
-  },
-  {
-    { 1, 0, 1, 0 },
-    { 0, 1, 0, 1 },
-    { 1, 0, 1, 0 },
-    { 0, 1, 0, 1 },
-  },
-  {
-    { 1, 0, 1, 0 },
-    { 0, 1, 0, 0 },
-    { 1, 0, 1, 0 },
     { 0, 0, 0, 0 },
-  },
-  {
-    { 1, 0, 1, 0 },
     { 0, 0, 0, 0 },
-    { 1, 0, 1, 0 },
+    { 0, 0, 0, 0 },
     { 0, 0, 0, 0 },
   },
   {
@@ -126,30 +108,51 @@ static const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITH
     { 0, 0, 0, 0 },
   },
   {
+    { 1, 0, 1, 0 },
     { 0, 0, 0, 0 },
+    { 1, 0, 1, 0 },
     { 0, 0, 0, 0 },
+  },
+  {
+    { 1, 0, 1, 0 },
+    { 0, 1, 0, 0 },
+    { 1, 0, 1, 0 },
     { 0, 0, 0, 0 },
-    { 0, 0, 0, 0 },
+  },
+  {
+    { 1, 0, 1, 0 },
+    { 0, 1, 0, 1 },
+    { 1, 0, 1, 0 },
+    { 0, 1, 0, 1 },
+  },
+  {
+    { 0, 1, 0, 1 },
+    { 1, 0, 1, 1 },
+    { 0, 1, 0, 1 },
+    { 1, 1, 1, 0 },
+  },
+  {
+    { 0, 1, 0, 1 },
+    { 1, 1, 1, 1 },
+    { 0, 1, 0, 1 },
+    { 1, 1, 1, 1 },
+  },
+  {
+    { 0, 1, 1, 1 },
+    { 1, 1, 1, 1 },
+    { 1, 1, 0, 1 },
+    { 1, 1, 1, 1 },
   }
 };
 
 static const byte (*dither_pattern)[DITHER_PATTERN_WIDTH] = dither_patterns[0];
 
-void R_SetColumnDitherPattern(const int index)
+void R_SetDitherPattern(const int index)
 {
-  dither_pattern = dither_patterns[
-    index & NUM_DITHER_LEVELS_MASK
-  ];
+  dither_pattern = dither_patterns[index];
 }
 
-void R_SetSpanDitherPattern(const int index)
-{
-  dither_pattern = dither_patterns[
-    (index & NUM_DITHER_LEVELS_MASK) ^ NUM_DITHER_LEVELS_MASK
-  ];
-}
-
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 //
 // R_DrawColumn
@@ -1985,6 +1988,9 @@ void (*R_DrawSpanWithRadialFog)(void) = NULL;
 
 void R_InitDrawFunctions(void)
 {
+    // [Nugget]
+    init_draw_functions = false;
+
     boolean local_brightmaps = (STRICTMODE(brightmaps) || force_brightmaps);
 
     // [Nugget] Dithered lighting
@@ -2288,6 +2294,8 @@ void R_InitDrawColorFunctions(void)
         DrawSpanWithRadialFogBrightmap = DrawSpanWithRadialFog8Brightmap;
         DrawSpanDitheredWithRadialFog = DrawSpanDitheredWithRadialFog8;
     }
+
+    R_DeferredInitDrawFunctions();
 }
 
 //----------------------------------------------------------------------------

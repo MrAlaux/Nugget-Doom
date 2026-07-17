@@ -106,10 +106,17 @@ extern void (*R_DrawSpan)(void);
 
 extern void (*R_DrawSpanWithRadialFog)(void); // [Nugget] Radial fog
 
-// [Nugget] Dithered lighting
-#define NUM_DITHER_LEVELS 8
-void R_SetColumnDitherPattern(int index);
-void R_SetSpanDitherPattern(int index);
+// [Nugget] /=================================================================
+
+boolean R_InitDrawFunctionsPending(void);
+void R_DeferredInitDrawFunctions(void);
+
+// Dithered lighting
+#define NUM_DITHER_LEVELS_BITS 3
+#define NUM_DITHER_LEVELS (1 << NUM_DITHER_LEVELS_BITS)
+void R_SetDitherPattern(int index);
+
+// [Nugget] =================================================================/
 
 void R_InitBuffer(void);
 
