@@ -197,12 +197,6 @@ static void DrawPlane8(fixed_t distance)
       {
         DrawSpan = R_DrawSpanWithRadialFog;
         spandistlight = planedistlight[distance >> light_distance_shift_bits];
-
-        // Dithered lighting
-        if (do_dithered_lighting)
-        {
-          R_SetDitherPattern(distance / light_distance_dither_step);
-        }
       }
       else
       {
@@ -251,12 +245,6 @@ static void DrawPlane32(fixed_t distance)
       {
         DrawSpan = R_DrawSpanWithRadialFog;
         spandistlight = planedistlight[distance >> light_distance_shift_bits];
-
-        // Dithered lighting
-        if (do_dithered_lighting)
-        {
-          R_SetDitherPattern(distance / light_distance_dither_step);
-        }
       }
       else
       {

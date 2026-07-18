@@ -1886,9 +1886,8 @@ static void DrawSpanDitheredWithRadialFog8(void)
         ds_yfrac += ds_ystep;
         src = ds_source[spot];
 
-        ds_colormap[0]     = V_ColormapRowByIndex(planezlight[*sdl]);
-        ds_nextcolormap[0] = V_ColormapRowByIndex(planezlight[*sdl + 1]);
-        sdl++;
+        ds_colormap[0] = V_ColormapRowByIndex(planezlight[*sdl++]);
+        ds_nextcolormap[0] = ds_colormap[0];
 
         *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
         dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
@@ -1973,9 +1972,8 @@ static void DrawSpanDitheredWithRadialFog32(void)
         ds_yfrac += ds_ystep;
         src = ds_source[spot];
 
-        ds_colormap32[0]     = V_ColormapRowByIndex32(planezlight[*sdl]);
-        ds_nextcolormap32[0] = V_ColormapRowByIndex32(planezlight[*sdl + 1]);
-        sdl++;
+        ds_colormap32[0] = V_ColormapRowByIndex32(planezlight[*sdl++]);
+        ds_nextcolormap32[0] = ds_colormap32[0];
 
         *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
         dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;

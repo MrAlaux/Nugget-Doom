@@ -215,10 +215,6 @@ extern cmapoffset_t **zlight_nextcolormap;
 
 extern int light_distance_shift_bits;
 
-// Dithered lighting
-extern int light_distance_step;
-extern int light_distance_dither_step;
-
 extern cmapoffset_t *planezlight;
 extern uint16_t **planedistlight, *spandistlight;
 

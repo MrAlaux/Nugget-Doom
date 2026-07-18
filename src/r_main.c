@@ -364,10 +364,6 @@ int (*R_GetLightIndex)(fixed_t scale, int x) = R_GetLightIndexVanilla;
 
 int light_distance_shift_bits;
 
-// Dithered lighting
-int light_distance_step;
-int light_distance_dither_step;
-
 uint16_t ** planedistlight = NULL,
           *  spandistlight = NULL;
 
@@ -449,10 +445,6 @@ void R_InitDistLightTables(void)
   R_GetLightIndex = R_GetLightIndexRadFog;
 
   light_distance_shift_bits = 18 - radial_plane_fog_fidelity;
-
-  // Dithered lighting
-  light_distance_step = 1 << light_distance_shift_bits;
-  light_distance_dither_step = light_distance_step / NUM_DITHER_LEVELS;
 
   max_light_distance = 1 << (27 - light_distance_shift_bits);
 
