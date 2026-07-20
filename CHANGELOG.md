@@ -6,6 +6,9 @@
 ## Changes
 
 - **Changed default _Auto Save Interval_ to 300s**, enabling periodic auto-saves by default [^1]
+- **Improved _Radial Fog_ for planes**
+  - As a result, it no longer overrides the lighting fidelity of planes as set by the _Lighting Mode_ setting,
+    so it ought to look rougher with lesser modes, especially with _Vanilla_ lighting
 
 ## Bug Fixes
 
