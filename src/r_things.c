@@ -956,7 +956,16 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
       if (diminishing_lighting && !do_sprite_radial_fog)
       { lightindex = R_GetLightIndex(vis->scale, 0); }
     }
-    else { spritelights = scalelight[vis->lightnum]; }
+    else {
+      spritelights = scalelight[vis->lightnum];
+
+      // Dithered lighting
+      if (dithered_lighting)
+      {
+        spritelight_ditherlevel = scalelight_ditherlevel[vis->lightnum];
+        spritelight_nextcolormap = scalelight_nextcolormap[vis->lightnum];
+      }
+    }
 
     // Dithered lighting
     if (!do_sprite_radial_fog)
@@ -1323,6 +1332,13 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
         vis->lightnum = new_lightnum;
         spritelights = scalelight[new_lightnum];
+
+        // Dithered lighting
+        if (dithered_lighting)
+        {
+          spritelight_ditherlevel = scalelight_ditherlevel[new_lightnum];
+          spritelight_nextcolormap = scalelight_nextcolormap[new_lightnum];
+        }
       }
 
       vis->colormap[0] = spritelights[index];
