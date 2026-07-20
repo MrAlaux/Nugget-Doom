@@ -96,8 +96,8 @@ cmapoffset_t *planezlight; // [Nugget] Global
 static fixed_t planeheight;
 
 // [Nugget] Dithered lighting
-static byte *planezlight_ditherlevel = NULL;
-static cmapoffset_t *planezlight_nextcolormap = NULL;
+byte *planezlight_ditherlevel = NULL;
+cmapoffset_t *planezlight_nextcolormap = NULL;
 
 // killough 2/8/98: make variables static
 
@@ -197,6 +197,14 @@ static void DrawPlane8(fixed_t distance)
       {
         DrawSpan = R_DrawSpanWithRadialFog;
         spandistlight = planedistlight[distance >> light_distance_shift_bits];
+
+        // Dithered lighting
+        if (do_dithered_lighting)
+        {
+          spandistlight_ditherlevel = planedistlight_ditherlevel[
+            distance >> light_distance_shift_bits
+          ];
+        }
       }
       else
       {
@@ -245,6 +253,14 @@ static void DrawPlane32(fixed_t distance)
       {
         DrawSpan = R_DrawSpanWithRadialFog;
         spandistlight = planedistlight[distance >> light_distance_shift_bits];
+
+        // Dithered lighting
+        if (do_dithered_lighting)
+        {
+          spandistlight_ditherlevel = planedistlight_ditherlevel[
+            distance >> light_distance_shift_bits
+          ];
+        }
       }
       else
       {

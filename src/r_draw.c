@@ -1873,9 +1873,8 @@ static void DrawSpanDitheredWithRadialFog8(void)
     byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK;
     byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK;
 
-    const byte *const dither_pattern_row = dither_pattern[dy];
-
     const uint16_t *sdl = spandistlight + ds_x1;
+    const uint16_t *sdld = spandistlight_ditherlevel + ds_x1;
 
     while (count--)
     {
@@ -1886,8 +1885,12 @@ static void DrawSpanDitheredWithRadialFog8(void)
         ds_yfrac += ds_ystep;
         src = ds_source[spot];
 
-        ds_colormap[0] = V_ColormapRowByIndex(planezlight[*sdl++]);
-        ds_nextcolormap[0] = ds_colormap[0];
+        ds_colormap[0] = V_ColormapRowByIndex(planezlight[*sdl]);
+        ds_nextcolormap[0] = V_ColormapRowByIndex(planezlight_nextcolormap[*sdl]);
+        sdl++;
+
+        const byte *const dither_pattern_row =
+          dither_patterns[planezlight_ditherlevel[*sdld++]][dy];
 
         *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
         dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
@@ -1959,9 +1962,8 @@ static void DrawSpanDitheredWithRadialFog32(void)
     byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK;
     byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK;
 
-    const byte *const dither_pattern_row = dither_pattern[dy];
-
     const uint16_t *sdl = spandistlight + ds_x1;
+    const uint16_t *sdld = spandistlight_ditherlevel + ds_x1;
 
     while (count--)
     {
@@ -1972,8 +1974,12 @@ static void DrawSpanDitheredWithRadialFog32(void)
         ds_yfrac += ds_ystep;
         src = ds_source[spot];
 
-        ds_colormap32[0] = V_ColormapRowByIndex32(planezlight[*sdl++]);
-        ds_nextcolormap32[0] = ds_colormap32[0];
+        ds_colormap32[0] = V_ColormapRowByIndex32(planezlight[*sdl]);
+        ds_nextcolormap32[0] = V_ColormapRowByIndex32(planezlight_nextcolormap[*sdl]);
+        sdl++;
+
+        const byte *const dither_pattern_row =
+          dither_patterns[planezlight_ditherlevel[*sdld++]][dy];
 
         *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
         dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;

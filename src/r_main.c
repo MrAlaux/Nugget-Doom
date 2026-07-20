@@ -335,10 +335,12 @@ static int num_colormap_rows;
 fixed_t dc_rawlightindex;
 
 int LIGHTSCALEDITHERSHIFT;
+static int MAXLIGHTSCALEDITHER;
 byte **scalelight_ditherlevel = NULL;
 cmapoffset_t **scalelight_nextcolormap = NULL;
 
 int LIGHTZDITHERSHIFT;
+static int MAXLIGHTZDITHER;
 byte **zlight_ditherlevel = NULL;
 cmapoffset_t **zlight_nextcolormap = NULL;
 
@@ -383,6 +385,15 @@ void R_DeferredInitDistLightTables(void)
 
 static float *plane_radfog_multipliers = NULL;
 
+// Dithered lighting /--------------------------------------------------------
+
+uint16_t ** planedistlight_ditherlevel = NULL,
+          *  spandistlight_ditherlevel = NULL;
+
+static float *plane_radfog_dither_multipliers = NULL;
+
+// --------------------------------------------------------------------------/
+
 static int idlt_iteration, idlt_units_quot, idlt_units_rem, idlt_units_cur;
 
 static void ThreadInitDistLightTables(void)
@@ -417,6 +428,28 @@ static void ThreadInitDistLightTables(void)
       *sdll = *sdlr = MIN(maxlightz, distance);
     }
   }
+
+  // Dithered lighting
+  if (dithered_lighting)
+  {
+    const int maxlightzdither = MAXLIGHTZDITHER-1;
+
+    for (int i = light_distance_start;  i < light_distance_end;  i++)
+    {
+      // spandistlight_ditherlevel
+      uint16_t *sdldl = planedistlight_ditherlevel[i],
+               *sdldr = sdldl + width;
+
+      const float *prfdm = plane_radfog_dither_multipliers;
+      const fixed_t base_distance = i << light_distance_shift_bits;
+
+      for (; sdldl <= sdldr;  sdldl++, sdldr--, prfdm++)
+      {
+        const fixed_t distance = base_distance * *prfdm;
+        *sdldl = *sdldr = MIN(maxlightzdither, distance);
+      }
+    }
+  }
 }
 
 void R_InitDistLightTables(void)
@@ -435,6 +468,15 @@ void R_InitDistLightTables(void)
     planedistlight[0] = NULL;
   }
 
+  // Dithered lighting
+  if (planedistlight_ditherlevel && planedistlight_ditherlevel[0])
+  {
+    Z_Free(planedistlight_ditherlevel[0]);
+    Z_Free(plane_radfog_dither_multipliers);
+
+    planedistlight_ditherlevel[0] = NULL;
+  }
+
   do_radial_fog = STRICTMODE(radial_fog && diminishing_lighting);
 
   if (!do_radial_fog)
@@ -446,7 +488,6 @@ void R_InitDistLightTables(void)
   R_GetLightIndex = R_GetLightIndexRadFog;
 
   light_distance_shift_bits = 18 - radial_plane_fog_fidelity;
-
   max_light_distance = 1 << (27 - light_distance_shift_bits);
 
   if (!planedistlight)
@@ -475,6 +516,35 @@ void R_InitDistLightTables(void)
   {
     plane_radfog_multipliers[i] =
       (1.0 / RADFOG_MULT) * floatsecant[xtoviewangle[i] >> ANGLETOFINESHIFT] / (1 << LIGHTZSHIFT);
+  }
+
+  // Dithered lighting
+  if (dithered_lighting)
+  {
+    if (!planedistlight_ditherlevel)
+    {
+      planedistlight_ditherlevel = Z_Malloc(
+        sizeof(*planedistlight_ditherlevel) * max_light_distance, PU_STATIC, 0
+      );
+    }
+
+    uint16_t *const all_spandistlight_ditherlevel = Z_Malloc(
+      sizeof(**planedistlight_ditherlevel) * max_light_distance * max_width, PU_STATIC, 0
+    );
+
+    for (int i = 0;  i < max_light_distance;  i++)
+    { planedistlight_ditherlevel[i] = all_spandistlight_ditherlevel + (max_width * i); }
+
+    plane_radfog_dither_multipliers = Z_Malloc(
+      sizeof(*plane_radfog_dither_multipliers) * (max_width / 2 + max_width % 2),
+      PU_STATIC, 0
+    );
+
+    for (int i = 0;  i < halfwidth;  i++)
+    {
+      plane_radfog_dither_multipliers[i] =
+        (1.0 / RADFOG_MULT) * floatsecant[xtoviewangle[i] >> ANGLETOFINESHIFT] / (1 << LIGHTZDITHERSHIFT);
+    }
   }
 
   const int idlt_iterations = MIN(max_light_distance, I_ThreadsNum());
@@ -1371,8 +1441,8 @@ void R_InitLightTables (void)
     LIGHTSCALEDITHERSHIFT = MAX(0, LIGHTSCALESHIFT - NUM_DITHER_LEVELS_BITS);
     LIGHTZDITHERSHIFT = MAX(0, LIGHTZSHIFT - NUM_DITHER_LEVELS_BITS);
 
-    const int MAXLIGHTSCALEDITHER = 3 << (16 - LIGHTSCALEDITHERSHIFT);
-    const int MAXLIGHTZDITHER = 1 << (27 - LIGHTZDITHERSHIFT);
+    MAXLIGHTSCALEDITHER = 3 << (16 - LIGHTSCALEDITHERSHIFT);
+    MAXLIGHTZDITHER = 1 << (27 - LIGHTZDITHERSHIFT);
 
     scalelight_ditherlevel = Z_Malloc(sizeof(*scalelight_ditherlevel) * LIGHTLEVELS, PU_STATIC, 0);
     scalelight_nextcolormap = Z_Malloc(sizeof(*scalelight_nextcolormap) * LIGHTLEVELS, PU_STATIC, 0);

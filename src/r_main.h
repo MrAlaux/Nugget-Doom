@@ -218,6 +218,11 @@ extern int light_distance_shift_bits;
 extern cmapoffset_t *planezlight;
 extern uint16_t **planedistlight, *spandistlight;
 
+// Dithered lighting
+extern byte *planezlight_ditherlevel;
+extern cmapoffset_t *planezlight_nextcolormap;
+extern uint16_t **planedistlight_ditherlevel, *spandistlight_ditherlevel;
+
 extern boolean do_radial_fog;
 
 boolean R_InitDistLightTablesPending(void);
