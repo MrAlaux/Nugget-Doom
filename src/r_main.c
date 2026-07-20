@@ -191,6 +191,8 @@ static int num_colormap_rows;
 
 // CVARs ---------------------------------------------------------------------
 
+skyprojection_t sky_projection;
+
 boolean vertical_lockon;
 
 boolean allow_hires_graphics;
@@ -2327,10 +2329,14 @@ void R_BindRenderVariables(void)
 
   // [Nugget] FOV-based sky stretching (CFG-only)
   M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,
-             true, ss_display, wad_no,
+             true, ss_none, wad_no,
              "Stretch skies based on FOV");
 
-  BIND_BOOL_GENERAL(linearsky, false, "Linear horizontal scrolling for skies");
+  // [Nugget] Sky projection: replaced `linearsky`
+  M_BindNum("sky_projection", &sky_projection, NULL,
+            SKYPROJ_VANILLA, SKYPROJ_VANILLA, NUM_SKYPROJS-1, ss_gen, wad_yes,
+            "Sky projection (0 = Vanilla; 1 = Linear; 2 = Cylindrical)");
+
   BIND_BOOL_GENERAL(r_swirl, false, "Swirling animated flats");
 
   // [Nugget] /---------------------------------------------------------------

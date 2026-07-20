@@ -40,6 +40,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
 - **_Bounded Voxel Rendering_** setting, to draw each voxel as a rectangular sprite
 - **FOV-based sky stretching** setting (CFG-only: `fov_stretchsky`)
+- **_Sky Projection_** setting, featuring **_Cylindrical_ projection**
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]

@@ -35,7 +35,7 @@ extern boolean stretchsky;
 extern boolean fov_stretchsky; // [Nugget]
 
 // [FG] linear horizontal sky scrolling
-extern boolean linearsky;
+// [Nugget] Sky projection: replaced `linearsky`
 
 extern int skytexture;
 extern int skytexturemid;
