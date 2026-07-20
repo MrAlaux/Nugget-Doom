@@ -365,6 +365,8 @@ void R_DeferredInitDistLightTables(void)
   init_radfog = true;
 }
 
+static float *plane_radfog_multipliers = NULL;
+
 static int idlt_iteration, idlt_units_quot, idlt_units_rem, idlt_units_cur;
 
 static void ThreadInitDistLightTables(void)
@@ -382,9 +384,7 @@ static void ThreadInitDistLightTables(void)
   I_WorkerMutexUnlock();
 
   const int width = viewwidth - 1;
-
-  const int shift_bits = light_distance_shift_bits - LIGHTZSHIFT,
-            maxlightz = MAXLIGHTZ-1;
+  const int maxlightz = MAXLIGHTZ-1;
 
   for (int i = light_distance_start;  i < light_distance_end;  i++)
   {
@@ -392,14 +392,12 @@ static void ThreadInitDistLightTables(void)
     uint16_t *sdll = planedistlight[i],
              *sdlr = sdll + width;
 
-    const angle_t *xtva = xtoviewangle;
+    const float *prfm = plane_radfog_multipliers;
+    const fixed_t base_distance = i << light_distance_shift_bits;
 
-    const fixed_t base_distance = (i << shift_bits) * (1.0 / RADFOG_MULT);
-
-    for (; sdll <= sdlr;  sdll++, sdlr--, xtva++)
+    for (; sdll <= sdlr;  sdll++, sdlr--, prfm++)
     {
-      const fixed_t distance = base_distance * floatsecant[*xtva >> ANGLETOFINESHIFT];
-
+      const fixed_t distance = base_distance * *prfm;
       *sdll = *sdlr = MIN(maxlightz, distance);
     }
   }
@@ -407,6 +405,8 @@ static void ThreadInitDistLightTables(void)
 
 void R_InitDistLightTables(void)
 {
+  init_radfog = false;
+
   static int max_width = 0, max_light_distance = 0;
 
   const int old_width = max_width;
@@ -414,6 +414,7 @@ void R_InitDistLightTables(void)
   if (planedistlight && planedistlight[0] && old_width < video.width)
   {
     Z_Free(planedistlight[0]);
+    Z_Free(plane_radfog_multipliers);
 
     planedistlight[0] = NULL;
   }
@@ -444,6 +445,19 @@ void R_InitDistLightTables(void)
 
     for (int i = 0;  i < max_light_distance;  i++)
     { planedistlight[i] = all_spandistlight + (max_width * i); }
+
+    plane_radfog_multipliers = Z_Malloc(
+      sizeof(*plane_radfog_multipliers) * (max_width / 2 + max_width % 2),
+      PU_STATIC, 0
+    );
+  }
+
+  const int halfwidth = viewwidth / 2 + viewwidth % 2;
+
+  for (int i = 0;  i < halfwidth;  i++)
+  {
+    plane_radfog_multipliers[i] =
+      (1.0 / RADFOG_MULT) * floatsecant[xtoviewangle[i] >> ANGLETOFINESHIFT] / (1 << LIGHTZSHIFT);
   }
 
   const int idlt_iterations = MIN(max_light_distance, I_ThreadsNum());
@@ -462,8 +476,6 @@ void R_InitDistLightTables(void)
 
   for (int i = 1;  i < idlt_iterations;  i++)
   { I_SemaphoreWait(I_MainSemaphoreIndex()); }
-
-  init_radfog = false;
 }
 
 // FOV effects ---------------------------------------------------------------
@@ -1265,10 +1277,6 @@ void R_InitLightTables (void)
       LIGHTZSHIFT = 20;
     }
   }
-
-  // [Nugget] Radial fog
-  if (STRICTMODE(radial_fog))
-  { LIGHTZSHIFT = MIN(LIGHTZSHIFT, 18 - radial_plane_fog_fidelity); }
 
   LIGHTLEVELS = 1 << (8 - LIGHTSEGSHIFT);
   LIGHTBRIGHT = LIGHTLEVELS / 16;
