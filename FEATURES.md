@@ -55,6 +55,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Hold Use to Pick up Items_** setting
 - **_View Height_** setting, which allows to enter a custom POV height value in the [32, 56] range [i.b. Brutal Doom]
 - **_Vertical Target Lock-on_** setting, to make the camera automatically lock onto targets vertically [i.b. Rise of the Triad]
+  - Speed configurable through the CFG-only `vertical_lockon_speed_pct` CVAR
 - **Flinching** setting, to flinch upon landing and/or taking damage
 - **_Screen-Shake Effects_** setting [i.b. Doom Retro]
   - Configurable through the CFG-only `screen_shake_#` CVARs

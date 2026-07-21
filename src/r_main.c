@@ -194,6 +194,7 @@ static int num_colormap_rows;
 skyprojection_t sky_projection;
 
 boolean vertical_lockon;
+int vertical_lockon_speed_pct;
 
 boolean allow_hires_graphics;
 spriteshadows_t sprite_shadows;
@@ -2460,12 +2461,17 @@ void R_BindRenderVariables(void)
             "Height of player's POV");
 
   M_BindNum("flinching", &flinching, NULL,
-            0, 0, 3, ss_view, wad_yes,
+            FLINCH_OFF, FLINCH_OFF, NUM_FLINCHS-1, ss_view, wad_yes,
             "Flinch player view (0 = Off; 1 = Upon landing; 2 = Upon taking damage; 3 = Upon either)");
 
   M_BindBool("vertical_lockon", &vertical_lockon, NULL,
              false, ss_view, wad_no,
              "Camera automatically locks onto targets vertically");
+
+  // (CFG-only)
+  M_BindNum("vertical_lockon_speed_pct", &vertical_lockon_speed_pct, NULL,
+            100, 50, 100, ss_none, wad_no,
+            "Vertical-lockon speed percent");
 
   M_BindBool("screen_shake", &screen_shake, NULL,
              false, ss_view, wad_yes,

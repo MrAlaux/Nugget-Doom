@@ -11,6 +11,10 @@
 - **Improved _Radial Fog_ for planes**
   - As a result, it no longer overrides the lighting fidelity of planes as set by the _Lighting Mode_ setting,
     so it ought to look rougher with lesser modes, especially with _Vanilla_ lighting
+- **_Vertical Target Lock-on_ improvements**:
+  - Made speed configurable through the `vertical_lockon_speed_pct` CVAR
+  - Improved support for modded weapons, and made it respect _Smart Autoaim_
+  - Improved easing
 
 ## Bug Fixes
 

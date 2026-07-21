@@ -157,6 +157,7 @@ typedef enum fakecontrast_s {
 extern skyprojection_t sky_projection;
 
 extern boolean vertical_lockon;
+extern int vertical_lockon_speed_pct;
 
 extern boolean allow_hires_graphics;
 extern spriteshadows_t sprite_shadows;
