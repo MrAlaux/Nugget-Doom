@@ -262,6 +262,18 @@ static boolean VX_Load (int spr, int frame)
 		return false;
 	}
 
+	// [Nugget] Don't load the voxel if the sprite comes later in the load order
+	// /------------------------------------------------------------------------
+
+	const spritedef_t   *const sprdef = &sprites[spr];
+	const spriteframe_t *const sprframe = &sprdef->spriteframes[frame];
+	const int sprite_lumpnum = sprframe->lump[0] + firstspritelump;
+
+	if (W_WadNumForLump(lumpnum) < W_WadNumForLump(sprite_lumpnum))
+	{ return false; }
+
+	// [Nugget] ---------------------------------------------------------------/
+
 	byte *buf = W_CacheLumpNum(lumpnum, PU_STATIC);
 	int len   = W_LumpLength(lumpnum);
 

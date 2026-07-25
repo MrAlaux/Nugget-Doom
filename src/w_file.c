@@ -205,6 +205,9 @@ static w_type_t W_FILE_Open(const char *path, w_handle_t *handle)
     const char *wadname = M_StringDuplicate(M_BaseName(path));
     array_push(wadfiles, wadname);
 
+    // [Nugget]
+    const int wad_file_index = array_size(wadfiles) - 1;
+
     for (int i = 0; i < header.numlumps; i++)
     {
         lumpinfo_t item = {0};
@@ -217,6 +220,10 @@ static w_type_t W_FILE_Open(const char *path, w_handle_t *handle)
 
         // [FG] WAD file that contains the lump
         item.wad_file = wadname;
+
+        // [Nugget]
+        item.wad_file_index = wad_file_index;
+
         array_push(lumpinfo, item);
     }
 
