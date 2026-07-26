@@ -481,14 +481,17 @@ int     P_FaceMobj(mobj_t *source, mobj_t *target, angle_t *delta);
 
 extern boolean cheese, frights, flakes, allow_flakes, faint_flakes;
 
-enum {
+typedef enum flinching_s {
   FLINCH_OFF,
   FLINCH_LANDING,
   FLINCH_DAMAGE,
   FLINCH_BOTH,
-}; extern int flinching;
+
+  NUM_FLINCHS
+} flinching_t;
 
 extern int viewheight_value;
+extern flinching_t flinching;
 extern int damagecount_cap;
 extern int bonuscount_cap;
 extern boolean no_hor_autoaim;

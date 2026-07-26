@@ -570,6 +570,12 @@ const char *W_WadNameForLump (const int lump)
   }
 }
 
+// [Nugget]
+int W_WadNumForLump(const int lump)
+{
+  return lumpinfo[lump].wad_file_index;
+}
+
 boolean W_IsIWADLump (const int lump)
 {
 	return lump >= 0 && lump < numlumps &&

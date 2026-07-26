@@ -54,7 +54,7 @@
 
 // [Nugget] CVARs
 int viewheight_value;
-int flinching;
+flinching_t flinching;
 int damagecount_cap;
 int bonuscount_cap;
 boolean comp_fuzzyblood;

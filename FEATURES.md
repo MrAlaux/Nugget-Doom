@@ -40,6 +40,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
 - **_Bounded Voxel Rendering_** setting, to draw each voxel as a rectangular sprite
 - **FOV-based sky stretching** setting (CFG-only: `fov_stretchsky`)
+- **_Sky Projection_** setting, featuring **_Cylindrical_ projection**
 - **Tweaked _Stretch Short Skies_ algorithm**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
@@ -54,6 +55,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Hold Use to Pick up Items_** setting
 - **_View Height_** setting, which allows to enter a custom POV height value in the [32, 56] range [i.b. Brutal Doom]
 - **_Vertical Target Lock-on_** setting, to make the camera automatically lock onto targets vertically [i.b. Rise of the Triad]
+  - Speed configurable through the CFG-only `vertical_lockon_speed_pct` CVAR
 - **Flinching** setting, to flinch upon landing and/or taking damage
 - **_Screen-Shake Effects_** setting [i.b. Doom Retro]
   - Configurable through the CFG-only `screen_shake_#` CVARs
@@ -314,6 +316,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
     so e.g. `rgb(0, 64, 128)` from a `PLAYPAL` palette is rendered as `rgb(1, 65, 128)` in-game;
     many source ports, including this one, retain this behavior, but this setting allows to disable it
 - **FPS-counter update time** setting (CFG-only: `fps_counter_update_time`)
+- **Fixed voxels overriding sprites regardless of load order**
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
 - Restored menu items for various Woof! settings
 - Restored `-cdrom` command-line parameter

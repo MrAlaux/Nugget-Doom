@@ -110,7 +110,7 @@ static fixed_t xoffs,yoffs;    // killough 2/28/98: flat offsets
 fixed_t *yslope = NULL, *distscale = NULL;
 
 // [FG] linear horizontal sky scrolling
-boolean linearsky;
+// [Nugget] Sky projection: replaced `linearsky`
 static angle_t *xtoskyangle;
 
 //
@@ -119,7 +119,8 @@ static angle_t *xtoskyangle;
 //
 void R_InitPlanes (void)
 {
-  xtoskyangle = linearsky ? linearskyangle : xtoviewangle;
+  // [Nugget] Sky projection: replaced `linearsky`
+  xtoskyangle = (sky_projection == SKYPROJ_LINEAR) ? linearskyangle : xtoviewangle;
 }
 
 void R_InitPlanesRes(void)
@@ -498,11 +499,18 @@ static void DrawSkyFire(visplane_t *pl, fire_t *fire)
     dc_iscale = skyiscale;
     dc_texheight = FIRE_HEIGHT;
 
+    // [Nugget] Sky projection
+    const fixed_t base_iscale = dc_iscale;
+
     for (int x = pl->minx; x <= pl->maxx; x++)
     {
         dc_x = x;
         dc_yl = pl->top[x];
         dc_yh = pl->bottom[x];
+
+        // [Nugget] Sky projection
+        if (sky_projection == SKYPROJ_CYLINDRICAL)
+        { dc_iscale = base_iscale * floatcosine[xtoviewangle[x] >> ANGLETOFINESHIFT]; }
 
         if (dc_yl != USHRT_MAX && dc_yl <= dc_yh)
         {
@@ -537,11 +545,18 @@ static void DrawSkyTex(visplane_t *pl, skytex_t *skytex)
 
     angle_t an = viewangle + (deltax << (ANGLETOSKYSHIFT - FRACBITS));
 
+    // [Nugget] Sky projection
+    const fixed_t base_iscale = dc_iscale;
+
     for (int x = pl->minx; x <= pl->maxx; x++)
     {
         dc_x = x;
         dc_yl = pl->top[x];
         dc_yh = pl->bottom[x];
+
+        // [Nugget] Sky projection
+        if (sky_projection == SKYPROJ_CYLINDRICAL)
+        { dc_iscale = base_iscale * floatcosine[xtoviewangle[x] >> ANGLETOFINESHIFT]; }
 
         if (dc_yl != USHRT_MAX && dc_yl <= dc_yh)
         {
@@ -711,12 +726,19 @@ static void do_draw_mbf_sky(visplane_t *pl)
         colfunc = R_DrawSkyColumn;
     }
 
+    // [Nugget] Sky projection
+    const fixed_t base_iscale = dc_iscale;
+
     // killough 10/98: Use sky scrolling offset, and possibly flip picture
     for (int x = pl->minx; x <= pl->maxx; x++)
     {
         dc_x = x;
         dc_yl = pl->top[x];
         dc_yh = pl->bottom[x];
+
+        // [Nugget] Sky projection
+        if (sky_projection == SKYPROJ_CYLINDRICAL)
+        { dc_iscale = base_iscale * floatcosine[xtoviewangle[x] >> ANGLETOFINESHIFT]; }
 
         if (dc_yl != USHRT_MAX && dc_yl <= dc_yh)
         {

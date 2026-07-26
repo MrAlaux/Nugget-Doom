@@ -245,12 +245,17 @@ static short FindHiresSprite(const int lump)
 {
   for (int i = 0;  i < num_hires_lumps;  i++)
   {
-    if (memcmp(lumpinfo[lump].name, lumpinfo[first_hires_lump + i].name, 8))
+    const int hires_lump = first_hires_lump + i;
+
+    if (memcmp(lumpinfo[lump].name, lumpinfo[hires_lump].name, 8))
+    { continue; }
+
+    if (W_WadNumForLump(hires_lump) < W_WadNumForLump(lump))
     { continue; }
 
     if (hires_graphic_widths[i] == -1)
     {
-      const patch_t *const patch = V_CachePatchNum(first_hires_lump + i, PU_CACHE);
+      const patch_t *const patch = V_CachePatchNum(hires_lump, PU_CACHE);
 
       hires_graphic_widths[i]  = SHORT(patch->width)  << FRACBITS;
       hires_graphic_heights[i] = SHORT(patch->height) << FRACBITS;

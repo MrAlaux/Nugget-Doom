@@ -98,6 +98,9 @@ static void AddWadInMem(w_handle_t handle, const char *name, int index,
     const char *wadname = M_StringDuplicate(name);
     array_push(wadfiles, wadname);
 
+    // [Nugget]
+    const int wad_file_index = array_size(wadfiles) - 1;
+
     numlumps += header.numlumps;
 
     for (int i = 0; i < header.numlumps; i++)
@@ -117,6 +120,10 @@ static void AddWadInMem(w_handle_t handle, const char *name, int index,
  
         // [FG] WAD file that contains the lump
         item.wad_file = wadname;
+
+        // [Nugget]
+        item.wad_file_index = wad_file_index;
+
         array_push(lumpinfo, item);
     }
 }

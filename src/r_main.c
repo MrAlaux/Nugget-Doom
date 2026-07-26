@@ -188,7 +188,10 @@ int R_GetLightLevelInSector(
 
 // CVARs ---------------------------------------------------------------------
 
+skyprojection_t sky_projection;
+
 boolean vertical_lockon;
+int vertical_lockon_speed_pct;
 
 boolean allow_hires_graphics;
 static boolean cvar_dithered_lighting;
@@ -2567,10 +2570,14 @@ void R_BindRenderVariables(void)
 
   // [Nugget] FOV-based sky stretching (CFG-only)
   M_BindBool("fov_stretchsky", &fov_stretchsky, NULL,
-             true, ss_display, wad_no,
+             true, ss_none, wad_no,
              "Stretch skies based on FOV");
 
-  BIND_BOOL_GENERAL(linearsky, false, "Linear horizontal scrolling for skies");
+  // [Nugget] Sky projection: replaced `linearsky`
+  M_BindNum("sky_projection", &sky_projection, NULL,
+            SKYPROJ_VANILLA, SKYPROJ_VANILLA, NUM_SKYPROJS-1, ss_gen, wad_yes,
+            "Sky projection (0 = Vanilla; 1 = Linear; 2 = Cylindrical)");
+
   BIND_BOOL_GENERAL(r_swirl, false, "Swirling animated flats");
 
   // [Nugget] /---------------------------------------------------------------
@@ -2698,12 +2705,17 @@ void R_BindRenderVariables(void)
             "Height of player's POV");
 
   M_BindNum("flinching", &flinching, NULL,
-            0, 0, 3, ss_view, wad_yes,
+            FLINCH_OFF, FLINCH_OFF, NUM_FLINCHS-1, ss_view, wad_yes,
             "Flinch player view (0 = Off; 1 = Upon landing; 2 = Upon taking damage; 3 = Upon either)");
 
   M_BindBool("vertical_lockon", &vertical_lockon, NULL,
              false, ss_view, wad_no,
              "Camera automatically locks onto targets vertically");
+
+  // (CFG-only)
+  M_BindNum("vertical_lockon_speed_pct", &vertical_lockon_speed_pct, NULL,
+            100, 50, 100, ss_none, wad_no,
+            "Vertical-lockon speed percent");
 
   M_BindBool("screen_shake", &screen_shake, NULL,
              false, ss_view, wad_yes,

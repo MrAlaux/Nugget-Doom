@@ -105,6 +105,9 @@ typedef struct
 
   // [FG] WAD file that contains the lump
   const char *wad_file;
+
+  // [Nugget]
+  int wad_file_index;
 } lumpinfo_t;
 
 extern lumpinfo_t *lumpinfo;
@@ -136,6 +139,8 @@ extern const size_t num_predefined_lumps;
 extern const lumpinfo_t predefined_lumps[];
 
 void W_InitPredefinedLumps(void);
+
+int W_WadNumForLump(int lump);
 
 // [Nugget] -----------------------------------------------------------------/
 

@@ -122,6 +122,14 @@ void R_SetViewSize(int blocks);              // Called by M_Responder.
 
 // CVARs ---------------------------------------------------------------------
 
+typedef enum skyprojection_s {
+  SKYPROJ_VANILLA,
+  SKYPROJ_LINEAR,
+  SKYPROJ_CYLINDRICAL,
+
+  NUM_SKYPROJS
+} skyprojection_t;
+
 typedef enum spriteshadows_s {
   SPRITESHADOWS_OFF,
   SPRITESHADOWS_SIMPLE,
@@ -146,7 +154,10 @@ typedef enum fakecontrast_s {
   NUM_FAKECONTRAST
 } fakecontrast_t;
 
+extern skyprojection_t sky_projection;
+
 extern boolean vertical_lockon;
+extern int vertical_lockon_speed_pct;
 
 extern boolean allow_hires_graphics;
 extern boolean dithered_lighting;
