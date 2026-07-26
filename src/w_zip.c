@@ -98,9 +98,6 @@ static void AddWadInMem(w_handle_t handle, const char *name, int index,
     const char *wadname = M_StringDuplicate(name);
     array_push(wadfiles, wadname);
 
-    // [Nugget]
-    const int wad_file_index = array_size(wadfiles) - 1;
-
     numlumps += header.numlumps;
 
     for (int i = 0; i < header.numlumps; i++)
@@ -122,7 +119,7 @@ static void AddWadInMem(w_handle_t handle, const char *name, int index,
         item.wad_file = wadname;
 
         // [Nugget]
-        item.wad_file_index = wad_file_index;
+        item.file_index = numfiles - 1;
 
         array_push(lumpinfo, item);
     }
@@ -190,6 +187,9 @@ static boolean W_ZIP_AddDir(w_handle_t handle, const char *path,
                                    .priority = handle.priority};
         item.handle = local_handle;
 
+        // [Nugget]
+        item.file_index = numfiles - 1;
+
         array_push(lumpinfo, item);
         numlumps++;
     }
@@ -234,6 +234,9 @@ static w_type_t W_ZIP_Open(const char *path, w_handle_t *handle)
     qsort(directory, num_files, sizeof(*directory), compare_records);
 
     I_Printf(VB_INFO, " adding %s", path);
+
+    // [Nugget]
+    numfiles++;
 
     archive_t archive = {zip, directory};
     array_push(archives, archive);

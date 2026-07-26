@@ -87,6 +87,9 @@ static boolean W_FILE_AddDir(w_handle_t handle, const char *path,
 
         I_Printf(VB_INFO, " adding %s", filename);
 
+        // [Nugget]
+        numfiles++;
+
         lumpinfo_t item = {0};
         W_ExtractFileBase(filename, item.name);
         item.size = FileLength(descriptor);
@@ -95,6 +98,9 @@ static boolean W_FILE_AddDir(w_handle_t handle, const char *path,
         w_handle_t local_handle = {.p1.descriptor = descriptor,
                                    .priority = handle.priority};
         item.handle = local_handle;
+
+        // [Nugget]
+        item.file_index = numfiles - 1;
 
         array_push(lumpinfo, item);
         numlumps++;
@@ -126,6 +132,9 @@ static w_type_t W_FILE_Open(const char *path, w_handle_t *handle)
 
     I_Printf(VB_INFO, " adding %s", path); // killough 8/8/98
 
+    // [Nugget]
+    numfiles++;
+
     w_handle_t local_handle = {.p1.descriptor = descriptor,
                                .priority = handle->priority};
 
@@ -140,6 +149,10 @@ static w_type_t W_FILE_Open(const char *path, w_handle_t *handle)
         item.size = FileLength(descriptor);
         item.module = &w_file_module;
         item.handle = local_handle;
+
+        // [Nugget]
+        item.file_index = numfiles - 1;
+
         array_push(lumpinfo, item);
         numlumps++;
         return W_FILE;
@@ -205,9 +218,6 @@ static w_type_t W_FILE_Open(const char *path, w_handle_t *handle)
     const char *wadname = M_StringDuplicate(M_BaseName(path));
     array_push(wadfiles, wadname);
 
-    // [Nugget]
-    const int wad_file_index = array_size(wadfiles) - 1;
-
     for (int i = 0; i < header.numlumps; i++)
     {
         lumpinfo_t item = {0};
@@ -222,7 +232,7 @@ static w_type_t W_FILE_Open(const char *path, w_handle_t *handle)
         item.wad_file = wadname;
 
         // [Nugget]
-        item.wad_file_index = wad_file_index;
+        item.file_index = numfiles - 1;
 
         array_push(lumpinfo, item);
     }
