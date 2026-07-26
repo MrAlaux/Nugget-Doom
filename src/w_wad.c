@@ -43,6 +43,9 @@ void        **lumpcache;      // killough
 
 const char  **wadfiles;
 
+// [Nugget]
+int numfiles = 0;
+
 void W_ExtractFileBase(const char *path, char *dest)
 {
   const char *src;
@@ -571,9 +574,9 @@ const char *W_WadNameForLump (const int lump)
 }
 
 // [Nugget]
-int W_WadNumForLump(const int lump)
+int W_FileIndexForLump(const int lump)
 {
-  return lumpinfo[lump].wad_file_index;
+  return lumpinfo[lump].file_index;
 }
 
 boolean W_IsIWADLump (const int lump)

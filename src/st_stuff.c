@@ -3328,10 +3328,10 @@ static hudfont_t LoadNughudHUDFont(
     int uppercase_wadnum = 0, lowercase_wadnum = 0;
 
     M_snprintf(namebuf, sizeof(namebuf), "%s065", stem);
-    uppercase_wadnum = W_WadNumForLump((W_CheckNumForName)(namebuf, ns_global));
+    uppercase_wadnum = W_FileIndexForLump((W_CheckNumForName)(namebuf, ns_global));
 
     M_snprintf(namebuf, sizeof(namebuf), "%s097", stem);
-    lowercase_wadnum = W_WadNumForLump((W_CheckNumForName)(namebuf, ns_global));
+    lowercase_wadnum = W_FileIndexForLump((W_CheckNumForName)(namebuf, ns_global));
 
     use_lowercase = uppercase_wadnum <= lowercase_wadnum;
   }

@@ -250,7 +250,7 @@ static short FindHiresSprite(const int lump)
     if (memcmp(lumpinfo[lump].name, lumpinfo[hires_lump].name, 8))
     { continue; }
 
-    if (W_WadNumForLump(hires_lump) < W_WadNumForLump(lump))
+    if (W_FileIndexForLump(hires_lump) < W_FileIndexForLump(lump))
     { continue; }
 
     if (hires_graphic_widths[i] == -1)

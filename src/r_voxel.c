@@ -269,7 +269,7 @@ static boolean VX_Load (int spr, int frame)
 	const spriteframe_t *const sprframe = &sprdef->spriteframes[frame];
 	const int sprite_lumpnum = sprframe->lump[0] + firstspritelump;
 
-	if (W_WadNumForLump(lumpnum) < W_WadNumForLump(sprite_lumpnum))
+	if (W_FileIndexForLump(lumpnum) < W_FileIndexForLump(sprite_lumpnum))
 	{ return false; }
 
 	// [Nugget] ---------------------------------------------------------------/
