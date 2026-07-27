@@ -779,6 +779,28 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 static fixed_t  vx_eye_x;
 static fixed_t  vx_eye_y;
 
+// [Nugget] Factored out
+static void (*DrawColumnCubesLoop)(
+	const vissprite_t *const spr,
+	const struct Voxel *const v,
+	const int ofs1,
+	const int ofs2,
+	const fixed_t Ax,
+	const fixed_t Bx,
+	const fixed_t Cx,
+	const fixed_t Dx,
+	const fixed_t A_xscale,
+	const fixed_t B_xscale,
+	const fixed_t C_xscale,
+	const fixed_t D_xscale,
+	const byte A_face,
+	const byte B_face,
+	const boolean shadow,
+	fixed_t ux,
+	const fixed_t ux2,
+	const cmapoffset_t colormapoffset[2],
+	const boolean do_voxel_radial_fog
+) = NULL;
 
 // [Nugget] Voxel rendering mode: rename
 static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
@@ -879,9 +901,6 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
-	int linesize = video.pitch;
-	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
-
 	// iterate over screen columns
 	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
 
@@ -889,12 +908,10 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const lighttable_t *colormap[2];
+	cmapoffset_t colormapoffset[2];
 
-	colormap[0] = V_ColormapRowByIndex(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex(spr->colormap[1]);
-
-	byte lightnum = spr->lightnum;
+	colormapoffset[0] = spr->colormap[0];
+	colormapoffset[1] = spr->colormap[1];
 
 	boolean do_voxel_radial_fog = false;
 
@@ -918,20 +935,71 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
 			                       + extralight;
 
-			lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+			const byte lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
 
 			if (!do_voxel_radial_fog)
 			{
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(B_xscale, (ux2 - ux) / 2);
 
-				colormap[0] = V_ColormapRowByIndex(scalelight[lightnum][lightindex]);
+				colormapoffset[0] = scalelight[lightnum][lightindex];
 			}
 			else { spritelights = scalelight[lightnum]; }
 		}
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
+
+	DrawColumnCubesLoop(
+		spr,
+		v,
+		ofs1, ofs2,
+		Ax,
+		Bx,
+		Cx,
+		Dx,
+		A_xscale,
+		B_xscale,
+		C_xscale,
+		D_xscale,
+		A_face,
+		B_face,
+		shadow,
+		ux,
+		ux2,
+		colormapoffset,
+		do_voxel_radial_fog
+	);
+}
+
+static void DrawColumnCubesLoop8(
+	const vissprite_t *const spr,
+	const struct Voxel *const v,
+	const int ofs1,
+	const int ofs2,
+	const fixed_t Ax,
+	const fixed_t Bx,
+	const fixed_t Cx,
+	const fixed_t Dx,
+	const fixed_t A_xscale,
+	const fixed_t B_xscale,
+	const fixed_t C_xscale,
+	const fixed_t D_xscale,
+	const byte A_face,
+	const byte B_face,
+	const boolean shadow,
+	fixed_t ux,
+	const fixed_t ux2,
+	const cmapoffset_t colormapoffset[2],
+	const boolean do_voxel_radial_fog
+) {
+	const int linesize = video.pitch;
+	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const lighttable_t *colormap[2];
+
+	colormap[0] = V_ColormapRowByIndex(colormapoffset[0]);
+	colormap[1] = V_ColormapRowByIndex(colormapoffset[1]);
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1068,132 +1136,34 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 	}
 }
 
-static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
-{
-	struct VisVoxel * vv = &visvoxels[spr->voxel_index];
-	struct Voxel    * v  = vv->model;
-
-	int ofs1 = v->offsets[y     * v->x_size + x];
-	int ofs2 = v->offsets[(y+1) * v->x_size + x];
-
-	if (! (ofs1 < ofs2))
-		return;
-
-	int qu_x = vx_eye_x < (x << FRACBITS) ? 0 : vx_eye_x < ((x+1) << FRACBITS) ? 1 : 2;
-	int qu_y = vx_eye_y < (y << FRACBITS) ? 0 : vx_eye_y < ((y+1) << FRACBITS) ? 1 : 2;
-
-	int quadrant = qu_y * 3 + qu_x;
-
-	if (quadrant == 4)
-		return;
-
-	fixed_t c = vv->c;
-	fixed_t s = vv->s;
-
-	fixed_t tx[4];
-	fixed_t ty[4];
-
-	tx[0] = vv->TL_x + x * c + y * s;
-	ty[0] = vv->TL_y + x * s - y * c;
-
-	tx[1] = tx[0] + s;
-	ty[1] = ty[0] - c;
-
-	tx[2] = tx[1] + c;
-	ty[2] = ty[1] + s;
-
-	tx[3] = tx[0] + c;
-	ty[3] = ty[0] + s;
-
-	static const int A_corners[9] = { 3, 3, 2, 0, -1, 2, 0, 1, 1 };
-
-	int idx = A_corners[quadrant];
-
-	fixed_t Ax = tx[idx];
-	fixed_t Ay = ty[idx];  idx = (idx + 1) & 3;
-
-	fixed_t Bx = tx[idx];
-	fixed_t By = ty[idx];  idx = (idx + 1) & 3;
-
-	fixed_t Cx = tx[idx];
-	fixed_t Cy = ty[idx];  idx = (idx + 1) & 3;
-
-	fixed_t Dx = tx[idx];
-	fixed_t Dy = ty[idx];
-
-	if (By < VX_MINZ || Ay < VX_MINZ || Cy < VX_MINZ || Dy < VX_MINZ)
-		return;
-
-	fixed_t A_xscale = FixedDiv (projection, Ay);
-	fixed_t B_xscale = FixedDiv (projection, By);
-	fixed_t C_xscale = FixedDiv (projection, Cy);
-	fixed_t D_xscale = FixedDiv (projection, Dy);
-
-	Ax = centerxfrac + FixedMul (Ax, A_xscale);
-	Bx = centerxfrac + FixedMul (Bx, B_xscale);
-	Cx = centerxfrac + FixedMul (Cx, C_xscale);
-	Dx = centerxfrac + FixedMul (Dx, D_xscale);
-
-	static const byte A_faces[9] = { F_BACK, F_BACK, F_RIGHT, F_LEFT, 0, F_RIGHT, F_LEFT, F_FRONT, F_FRONT };
-	static const byte B_faces[9] = { F_LEFT, 0, F_BACK, 0, 0, 0, F_FRONT, 0, F_RIGHT };
-
-	byte A_face = A_faces[quadrant];
-	byte B_face = B_faces[quadrant];
-
-	boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
-
-	int linesize = video.pitch;
+static void DrawColumnCubesLoop32(
+	const vissprite_t *const spr,
+	const struct Voxel *const v,
+	const int ofs1,
+	const int ofs2,
+	const fixed_t Ax,
+	const fixed_t Bx,
+	const fixed_t Cx,
+	const fixed_t Dx,
+	const fixed_t A_xscale,
+	const fixed_t B_xscale,
+	const fixed_t C_xscale,
+	const fixed_t D_xscale,
+	const byte A_face,
+	const byte B_face,
+	const boolean shadow,
+	fixed_t ux,
+	const fixed_t ux2,
+	const cmapoffset_t colormapoffset[2],
+	const boolean do_voxel_radial_fog
+) {
+	const int linesize = video.pitch;
 	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
-
-	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
-
-	const fixed_t ux2 = MAX(Cx, Bx); // [Nugget] Calculate once
-
-	// [Nugget] Thing lighting, radial fog /------------------------------------
 
 	const lighttable32_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex32(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex32(spr->colormap[1]);
-
-	byte lightnum = spr->lightnum;
-
-	boolean do_voxel_radial_fog = false;
-
-	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
-	{
-		do_voxel_radial_fog = do_radial_fog;
-
-		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
-		{
-			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
-			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
-
-			const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
-
-			const fixed_t cosine = finecosine[angle],
-			                sine =   finesine[angle];
-
-			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
-			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
-
-			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-			                       + extralight;
-
-			lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
-
-			if (!do_voxel_radial_fog)
-			{
-				const int lightindex = STRICTMODE(!diminishing_lighting)
-				                       ? 0 : R_GetLightIndex(B_xscale, (ux2 - ux) / 2);
-
-				colormap[0] = V_ColormapRowByIndex32(scalelight[lightnum][lightindex]);
-			}
-			else { spritelights = scalelight[lightnum]; }
-		}
-	}
-
-	// [Nugget] ---------------------------------------------------------------/
+	colormap[0] = V_ColormapRowByIndex32(colormapoffset[0]);
+	colormap[1] = V_ColormapRowByIndex32(colormapoffset[1]);
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1328,7 +1298,25 @@ static void VX_DrawColumnCubes32(vissprite_t * spr, int x, int y)
 }
 
 
-// [Nugget] Voxel rendering mode: new function
+// [Nugget] Voxel rendering mode: new function /------------------------------
+
+static void (*DrawColumnBoundedLoop)(
+	const vissprite_t *const spr,
+	const struct Voxel *const v,
+	const int ofs1,
+	const int ofs2,
+	const fixed_t frontscale,
+	const fixed_t backscale,
+	const fixed_t midscale,
+	const fixed_t imidscale,
+	const byte visible_h_faces,
+	const boolean shadow,
+	fixed_t ux,
+	const fixed_t ux2,
+	const cmapoffset_t colormapoffset[2],
+	const boolean do_voxel_radial_fog
+) = NULL;
+
 static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int y)
 {
 	const struct VisVoxel *const vv = &visvoxels[spr->voxel_index];
@@ -1411,12 +1399,10 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	const lighttable_t *colormap[2];
+	cmapoffset_t colormapoffset[2];
 
-	colormap[0] = V_ColormapRowByIndex(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex(spr->colormap[1]);
-
-	byte lightnum = spr->lightnum;
+	colormapoffset[0] = spr->colormap[0];
+	colormapoffset[1] = spr->colormap[1];
 
 	boolean do_voxel_radial_fog = false;
 
@@ -1440,14 +1426,14 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
 			                       + extralight;
 
-			lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+			const byte lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
 
 			if (!do_voxel_radial_fog)
 			{
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(midscale, (ux2 - ux) / 2);
 
-				colormap[0] = V_ColormapRowByIndex(scalelight[lightnum][lightindex]);
+				colormapoffset[0] = scalelight[lightnum][lightindex];
 			}
 			else { spritelights = scalelight[lightnum]; }
 		}
@@ -1455,8 +1441,47 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] ---------------------------------------------------------------/
 
+	DrawColumnBoundedLoop(
+		spr,
+		v,
+		ofs1,
+		ofs2,
+		frontscale,
+		backscale,
+		midscale,
+		imidscale,
+		visible_h_faces,
+		shadow,
+		ux,
+		ux2,
+		colormapoffset,
+		do_voxel_radial_fog
+	);
+}
+
+static void DrawColumnBoundedLoop8(
+	const vissprite_t *const spr,
+	const struct Voxel *const v,
+	const int ofs1,
+	const int ofs2,
+	const fixed_t frontscale,
+	const fixed_t backscale,
+	const fixed_t midscale,
+	const fixed_t imidscale,
+	const byte visible_h_faces,
+	const boolean shadow,
+	fixed_t ux,
+	const fixed_t ux2,
+	const cmapoffset_t colormapoffset[2],
+	const boolean do_voxel_radial_fog
+) {
 	const int linesize = video.pitch;
 	pixel_t *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const lighttable_t *colormap[2];
+
+	colormap[0] = V_ColormapRowByIndex(colormapoffset[0]);
+	colormap[1] = V_ColormapRowByIndex(colormapoffset[1]);
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -1535,134 +1560,29 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	}
 }
 
-static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const int y)
-{
-	const struct VisVoxel *const vv = &visvoxels[spr->voxel_index];
-	const struct Voxel    *const v  = vv->model;
-
-	const int ofs1 = v->offsets[ y    * v->x_size + x];
-	const int ofs2 = v->offsets[(y+1) * v->x_size + x];
-
-	if (!(ofs1 < ofs2)) { return; }
-
-	const int qu_x = vx_eye_x < (x << FRACBITS) ? 0 : vx_eye_x < ((x+1) << FRACBITS) ? 1 : 2;
-	const int qu_y = vx_eye_y < (y << FRACBITS) ? 0 : vx_eye_y < ((y+1) << FRACBITS) ? 1 : 2;
-
-	const int quadrant = qu_y * 3 + qu_x;
-
-	if (quadrant == 4) { return; }
-
-	const fixed_t c = vv->c;
-	const fixed_t s = vv->s;
-
-	fixed_t tx[4];
-	fixed_t ty[4];
-
-	tx[0] = vv->TL_x + x * c + y * s;
-	ty[0] = vv->TL_y + x * s - y * c;
-
-	tx[1] = tx[0] + s;
-	ty[1] = ty[0] - c;
-
-	tx[2] = tx[1] + c;
-	ty[2] = ty[1] + s;
-
-	tx[3] = tx[0] + c;
-	ty[3] = ty[0] + s;
-
-	static const int A_corners[9] = { 3, 3, 2, 0, -1, 2, 0, 1, 1 };
-
-	int idx = A_corners[quadrant];
-
-	fixed_t       Ax = tx[idx];
-	fixed_t const Ay = ty[idx];
-	idx = (idx + 1) & 3;
-
-	fixed_t       Bx = tx[idx];
-	fixed_t const By = ty[idx];
-	idx = (idx + 1) & 3;
-
-	if (By < VX_MINZ) { return; }
-
-	fixed_t       Cx = tx[idx];
-	fixed_t const Cy = ty[idx];
-	idx = (idx + 1) & 3;
-
-	fixed_t const Dy = ty[idx];
-
-	const fixed_t A_xscale = FixedDiv(projection, Ay),
-	              B_xscale = FixedDiv(projection, By),
-	              C_xscale = FixedDiv(projection, Cy),
-	              D_xscale = FixedDiv(projection, Dy);
-
-	Ax = centerxfrac + FixedMul (Ax, A_xscale);
-	Bx = centerxfrac + FixedMul (Bx, B_xscale);
-	Cx = centerxfrac + FixedMul (Cx, C_xscale);
-
-	const fixed_t frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
-	               backscale = MIN(D_xscale, MIN(C_xscale, A_xscale)),
-	                midscale = ((int64_t) frontscale + backscale) / 2,
-	               imidscale = FixedDiv(FRACUNIT, midscale);
-
-	static const byte A_faces[9] = { F_BACK, F_BACK, F_RIGHT, F_LEFT, 0, F_RIGHT, F_LEFT,  F_FRONT, F_FRONT };
-	static const byte B_faces[9] = { F_LEFT,      0, F_BACK,       0, 0,       0, F_FRONT,       0, F_RIGHT };
-
-	const byte visible_h_faces = A_faces[quadrant] | B_faces[quadrant];
-
-	const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
-
-	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
-
-	const fixed_t ux2 = MAX(Cx, Bx);
-
-	// [Nugget] Thing lighting, radial fog /------------------------------------
+static void DrawColumnBoundedLoop32(
+	const vissprite_t *const spr,
+	const struct Voxel *const v,
+	const int ofs1,
+	const int ofs2,
+	const fixed_t frontscale,
+	const fixed_t backscale,
+	const fixed_t midscale,
+	const fixed_t imidscale,
+	const byte visible_h_faces,
+	const boolean shadow,
+	fixed_t ux,
+	const fixed_t ux2,
+	const cmapoffset_t colormapoffset[2],
+	const boolean do_voxel_radial_fog
+) {
+	const int linesize = video.pitch;
+	pixel32_t *const dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
 
 	const lighttable32_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex32(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex32(spr->colormap[1]);
-
-	byte lightnum = spr->lightnum;
-
-	boolean do_voxel_radial_fog = false;
-
-	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
-	{
-		do_voxel_radial_fog = do_radial_fog;
-
-		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
-		{
-			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
-			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
-
-			const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
-
-			const fixed_t cosine = finecosine[angle],
-			                sine =   finesine[angle];
-
-			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
-			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
-
-			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-			                       + extralight;
-
-			lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
-
-			if (!do_voxel_radial_fog)
-			{
-				const int lightindex = STRICTMODE(!diminishing_lighting)
-				                       ? 0 : R_GetLightIndex(midscale, (ux2 - ux) / 2);
-
-				colormap[0] = V_ColormapRowByIndex32(scalelight[lightnum][lightindex]);
-			}
-			else { spritelights = scalelight[lightnum]; }
-		}
-	}
-
-	// [Nugget] ---------------------------------------------------------------/
-
-	const int linesize = video.pitch;
-	pixel32_t *const dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	colormap[0] = V_ColormapRowByIndex32(colormapoffset[0]);
+	colormap[1] = V_ColormapRowByIndex32(colormapoffset[1]);
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -1741,6 +1661,8 @@ static void VX_DrawColumnBounded32(vissprite_t *const spr, const int x, const in
 	}
 }
 
+// [Nugget] -----------------------------------------------------------------/
+
 
 // [Nugget] Voxel rendering mode: function pointer /--------------------------
 
@@ -1748,10 +1670,15 @@ static void (*VX_DrawColumn) (vissprite_t*, int, int) = VX_DrawColumnCubes;
 
 void VX_SetVoxelRenderingMode(void)
 {
+  // [Nugget]
   if (truecolor_rendering)
   {
-    VX_DrawColumn = bounded_voxels_rendering ? VX_DrawColumnBounded32 : VX_DrawColumnCubes32;
-    return;
+    DrawColumnCubesLoop = DrawColumnCubesLoop32;
+    DrawColumnBoundedLoop = DrawColumnBoundedLoop32;
+  }
+  else {
+    DrawColumnCubesLoop = DrawColumnCubesLoop8;
+    DrawColumnBoundedLoop = DrawColumnBoundedLoop8;
   }
 
   VX_DrawColumn = bounded_voxels_rendering ? VX_DrawColumnBounded : VX_DrawColumnCubes;
