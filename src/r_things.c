@@ -715,14 +715,17 @@ static void DrawVisSpriteLoop8(
       {
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
-        // Dithered lighting /------------------------------------------------
+        // Dithered lighting
+        if (dithered_lighting)
+        {
+          do_dithered_lighting = lightindex < MAXLIGHTSCALE-1;
 
-        do_dithered_lighting = dithered_lighting && lightindex < MAXLIGHTSCALE-1;
-
-        if (do_dithered_lighting)
-        { R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]); }
-
-        // ------------------------------------------------------------------/
+          if (do_dithered_lighting)
+          {
+            R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+          }
+          else { R_SetDitherPattern(0); }
+        }
 
         if (!percolumn_lighting)
         {
@@ -815,14 +818,17 @@ static void DrawVisSpriteLoop32(
       {
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
-        // Dithered lighting /------------------------------------------------
+        // Dithered lighting
+        if (dithered_lighting)
+        {
+          do_dithered_lighting = lightindex < MAXLIGHTSCALE-1;
 
-        do_dithered_lighting = dithered_lighting && lightindex < MAXLIGHTSCALE-1;
-
-        if (do_dithered_lighting)
-        { R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]); }
-
-        // ------------------------------------------------------------------/
+          if (do_dithered_lighting)
+          {
+            R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+          }
+          else { R_SetDitherPattern(0); }
+        }
 
         if (!percolumn_lighting)
         {
