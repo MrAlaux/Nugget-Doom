@@ -1476,7 +1476,7 @@ static void DrawColumnBoundedLoop8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t *const dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
 
 	const lighttable_t *colormap[2];
 
@@ -1486,12 +1486,13 @@ static void DrawColumnBoundedLoop8(
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
 
-	for (; ux < ux2;  ux += FRACUNIT)
+	int uxi = ux >> FRACBITS;
+	dest += uxi;
+
+	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
 	{
 		if (ux >= x2) break;
 		if (ux <  x1) continue;
-
-		const int uxi = ux >> FRACBITS;
 
 		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
 		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
@@ -1543,9 +1544,10 @@ static void DrawColumnBoundedLoop8(
 				continue;
 			}
 
-			pixel_t *const dest2 = dest + uxi;
+			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
+			pixel_t *dest2 = dest + (uy >> FRACBITS) * linesize;
 
-			for (fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;  uy <= uy2;  uy += FRACUNIT)
+			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
@@ -1554,7 +1556,7 @@ static void DrawColumnBoundedLoop8(
 				const byte src = slab[i];
 				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
-				dest2[(uy >> FRACBITS) * linesize] = pix;
+				*dest2 = pix;
 			}
 		}
 	}
@@ -1577,7 +1579,7 @@ static void DrawColumnBoundedLoop32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t *const dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
 
 	const lighttable32_t *colormap[2];
 
@@ -1587,12 +1589,13 @@ static void DrawColumnBoundedLoop32(
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
 
-	for (; ux < ux2;  ux += FRACUNIT)
+	int uxi = ux >> FRACBITS;
+	dest += uxi;
+
+	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
 	{
 		if (ux >= x2) break;
 		if (ux <  x1) continue;
-
-		const int uxi = ux >> FRACBITS;
 
 		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
 		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
@@ -1644,9 +1647,10 @@ static void DrawColumnBoundedLoop32(
 				continue;
 			}
 
-			pixel32_t *const dest2 = dest + uxi;
+			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
+			pixel32_t *dest2 = dest + (uy >> FRACBITS) * linesize;
 
-			for (fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;  uy <= uy2;  uy += FRACUNIT)
+			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
@@ -1655,7 +1659,7 @@ static void DrawColumnBoundedLoop32(
 				const byte src = slab[i];
 				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
-				dest2[(uy >> FRACBITS) * linesize] = pix;
+				*dest2 = pix;
 			}
 		}
 	}
