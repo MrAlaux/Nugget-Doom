@@ -58,6 +58,10 @@ extern boolean flipcorpses;
 
 extern cmapoffset_t *spritelights;
 
+// [Nugget] Dithered lighting
+extern byte *spritelight_ditherlevel;
+extern cmapoffset_t *spritelight_nextcolormap;
+
 extern boolean draw_nearby_sprites;
 
 void R_DrawMaskedColumn(column_t *column);

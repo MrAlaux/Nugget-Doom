@@ -174,8 +174,8 @@ fixed_t pspriteiscale;
 cmapoffset_t *spritelights;        // killough 1/25/98 made static
 
 // [Nugget] Dithered lighting
-static byte *spritelight_ditherlevel = NULL;
-static cmapoffset_t *spritelight_nextcolormap = NULL;
+byte *spritelight_ditherlevel = NULL;
+cmapoffset_t *spritelight_nextcolormap = NULL;
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c

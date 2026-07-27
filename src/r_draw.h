@@ -111,9 +111,20 @@ extern void (*R_DrawSpanWithRadialFog)(void); // [Nugget] Radial fog
 boolean R_InitDrawFunctionsPending(void);
 void R_DeferredInitDrawFunctions(void);
 
-// Dithered lighting
+// Dithered lighting ---------------------------------------------------------
+
 #define NUM_DITHER_LEVELS_BITS 3
 #define NUM_DITHER_LEVELS (1 << NUM_DITHER_LEVELS_BITS)
+
+#define DITHER_PATTERN_WIDTH  4
+#define DITHER_PATTERN_HEIGHT 4
+
+#define DITHER_PATTERN_WIDTH_MASK  (DITHER_PATTERN_WIDTH  - 1)
+#define DITHER_PATTERN_HEIGHT_MASK (DITHER_PATTERN_HEIGHT - 1)
+
+extern const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITHER_PATTERN_WIDTH];
+extern const byte (*dither_pattern)[DITHER_PATTERN_WIDTH];
+
 void R_SetDitherPattern(int index);
 
 // [Nugget] =================================================================/

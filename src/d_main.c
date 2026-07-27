@@ -340,7 +340,10 @@ void D_Display (void)
 
   // [Nugget]
   if (R_InitDrawFunctionsPending())
-  { R_InitDrawFunctions(); }
+  {
+    R_InitDrawFunctions();
+    VX_SetVoxelRenderingMode();
+  }
 
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();

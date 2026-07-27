@@ -798,7 +798,6 @@ static void (*DrawColumnCubesLoop)(
 	const boolean shadow,
 	fixed_t ux,
 	const fixed_t ux2,
-	const cmapoffset_t colormapoffset[2],
 	const boolean do_voxel_radial_fog
 ) = NULL;
 
@@ -908,11 +907,6 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	cmapoffset_t colormapoffset[2];
-
-	colormapoffset[0] = spr->colormap[0];
-	colormapoffset[1] = spr->colormap[1];
-
 	boolean do_voxel_radial_fog = false;
 
 	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
@@ -942,7 +936,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(B_xscale, (ux2 - ux) / 2);
 
-				colormapoffset[0] = scalelight[lightnum][lightindex];
+				spr->colormap[0] = scalelight[lightnum][lightindex];
 			}
 			else { spritelights = scalelight[lightnum]; }
 		}
@@ -967,7 +961,6 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 		shadow,
 		ux,
 		ux2,
-		colormapoffset,
 		do_voxel_radial_fog
 	);
 }
@@ -990,7 +983,6 @@ static void DrawColumnCubesLoop8(
 	const boolean shadow,
 	fixed_t ux,
 	const fixed_t ux2,
-	const cmapoffset_t colormapoffset[2],
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
@@ -998,8 +990,8 @@ static void DrawColumnCubesLoop8(
 
 	const lighttable_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex(colormapoffset[0]);
-	colormap[1] = V_ColormapRowByIndex(colormapoffset[1]);
+	colormap[0] = V_ColormapRowByIndex(spr->colormap[0]);
+	colormap[1] = V_ColormapRowByIndex(spr->colormap[1]);
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1154,7 +1146,6 @@ static void DrawColumnCubesLoop32(
 	const boolean shadow,
 	fixed_t ux,
 	const fixed_t ux2,
-	const cmapoffset_t colormapoffset[2],
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
@@ -1162,8 +1153,8 @@ static void DrawColumnCubesLoop32(
 
 	const lighttable32_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex32(colormapoffset[0]);
-	colormap[1] = V_ColormapRowByIndex32(colormapoffset[1]);
+	colormap[0] = V_ColormapRowByIndex32(spr->colormap[0]);
+	colormap[1] = V_ColormapRowByIndex32(spr->colormap[1]);
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1298,7 +1289,7 @@ static void DrawColumnCubesLoop32(
 }
 
 
-// [Nugget] Voxel rendering mode: new function /------------------------------
+// [Nugget] Voxel rendering mode: new function /==============================
 
 static void (*DrawColumnBoundedLoop)(
 	const vissprite_t *const spr,
@@ -1313,7 +1304,6 @@ static void (*DrawColumnBoundedLoop)(
 	const boolean shadow,
 	fixed_t ux,
 	const fixed_t ux2,
-	const cmapoffset_t colormapoffset[2],
 	const boolean do_voxel_radial_fog
 ) = NULL;
 
@@ -1399,11 +1389,6 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	// [Nugget] Thing lighting, radial fog /------------------------------------
 
-	cmapoffset_t colormapoffset[2];
-
-	colormapoffset[0] = spr->colormap[0];
-	colormapoffset[1] = spr->colormap[1];
-
 	boolean do_voxel_radial_fog = false;
 
 	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
@@ -1433,7 +1418,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(midscale, (ux2 - ux) / 2);
 
-				colormapoffset[0] = scalelight[lightnum][lightindex];
+				spr->colormap[0] = scalelight[lightnum][lightindex];
 			}
 			else { spritelights = scalelight[lightnum]; }
 		}
@@ -1454,7 +1439,6 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 		shadow,
 		ux,
 		ux2,
-		colormapoffset,
 		do_voxel_radial_fog
 	);
 }
@@ -1472,7 +1456,6 @@ static void DrawColumnBoundedLoop8(
 	const boolean shadow,
 	fixed_t ux,
 	const fixed_t ux2,
-	const cmapoffset_t colormapoffset[2],
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
@@ -1480,8 +1463,8 @@ static void DrawColumnBoundedLoop8(
 
 	const lighttable_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex(colormapoffset[0]);
-	colormap[1] = V_ColormapRowByIndex(colormapoffset[1]);
+	colormap[0] = V_ColormapRowByIndex(spr->colormap[0]);
+	colormap[1] = V_ColormapRowByIndex(spr->colormap[1]);
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -1575,7 +1558,6 @@ static void DrawColumnBoundedLoop32(
 	const boolean shadow,
 	fixed_t ux,
 	const fixed_t ux2,
-	const cmapoffset_t colormapoffset[2],
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
@@ -1583,8 +1565,8 @@ static void DrawColumnBoundedLoop32(
 
 	const lighttable32_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex32(colormapoffset[0]);
-	colormap[1] = V_ColormapRowByIndex32(colormapoffset[1]);
+	colormap[0] = V_ColormapRowByIndex32(spr->colormap[0]);
+	colormap[1] = V_ColormapRowByIndex32(spr->colormap[1]);
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -1665,7 +1647,7 @@ static void DrawColumnBoundedLoop32(
 	}
 }
 
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 
 // [Nugget] Voxel rendering mode: function pointer /--------------------------
@@ -1677,12 +1659,26 @@ void VX_SetVoxelRenderingMode(void)
   // [Nugget]
   if (truecolor_rendering)
   {
-    DrawColumnCubesLoop = DrawColumnCubesLoop32;
-    DrawColumnBoundedLoop = DrawColumnBoundedLoop32;
+    if (dithered_lighting)
+    {
+      DrawColumnCubesLoop = DrawColumnCubesLoop32;
+      DrawColumnBoundedLoop = DrawColumnBoundedLoop32;
+    }
+    else {
+      DrawColumnCubesLoop = DrawColumnCubesLoop32;
+      DrawColumnBoundedLoop = DrawColumnBoundedLoop32;
+    }
   }
   else {
-    DrawColumnCubesLoop = DrawColumnCubesLoop8;
-    DrawColumnBoundedLoop = DrawColumnBoundedLoop8;
+    if (dithered_lighting)
+    {
+      DrawColumnCubesLoop = DrawColumnCubesLoop8;
+      DrawColumnBoundedLoop = DrawColumnBoundedLoop8;
+    }
+    else {
+      DrawColumnCubesLoop = DrawColumnCubesLoop8;
+      DrawColumnBoundedLoop = DrawColumnBoundedLoop8;
+    }
   }
 
   VX_DrawColumn = bounded_voxels_rendering ? VX_DrawColumnBounded : VX_DrawColumnCubes;

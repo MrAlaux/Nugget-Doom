@@ -87,13 +87,7 @@ void R_DeferredInitDrawFunctions(void)
 
 // Dithered lighting ---------------------------------------------------------
 
-#define DITHER_PATTERN_WIDTH  4
-#define DITHER_PATTERN_HEIGHT 4
-
-#define DITHER_PATTERN_WIDTH_MASK  (DITHER_PATTERN_WIDTH  - 1)
-#define DITHER_PATTERN_HEIGHT_MASK (DITHER_PATTERN_HEIGHT - 1)
-
-static const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITHER_PATTERN_WIDTH] =
+const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITHER_PATTERN_WIDTH] =
 {
   {
     { 0, 0, 0, 0 },
@@ -145,7 +139,7 @@ static const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITH
   }
 };
 
-static const byte (*dither_pattern)[DITHER_PATTERN_WIDTH] = dither_patterns[0];
+const byte (*dither_pattern)[DITHER_PATTERN_WIDTH] = dither_patterns[0];
 
 void R_SetDitherPattern(const int index)
 {
