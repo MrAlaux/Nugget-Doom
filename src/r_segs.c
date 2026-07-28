@@ -107,6 +107,10 @@ static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
     dc_nextcolormap[0] = dc_nextcolormap[1] = fixedcolormap;
   }
 
+  // [Nugget]
+  const boolean use_brightmaps =
+    !fixedcolormapoffset && (STRICTMODE(brightmaps) || force_brightmaps);
+
   // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != INT_MAX) // [FG] 32-bit integer math
@@ -124,16 +128,19 @@ static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
                               : dc_colormap[0];
 
             // [Nugget] Dithered lighting
-            if (dithered_lighting && index < MAXLIGHTSCALE-1)
+            if (dithered_lighting)
             {
-              dc_nextcolormap[0] = V_ColormapRowByIndex(walllight_nextcolormap[index]);
-              dc_nextcolormap[1] = fullcolormap;
+              if (index < MAXLIGHTSCALE-1)
+              {
+                dc_nextcolormap[0] = V_ColormapRowByIndex(walllight_nextcolormap[index]);
+                dc_nextcolormap[1] = use_brightmaps ? fullcolormap : dc_nextcolormap[0];
 
-              R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-            }
-            else {
-              dc_nextcolormap[0] = dc_colormap[0];
-              dc_nextcolormap[1] = dc_colormap[1];
+                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+              }
+              else {
+                dc_nextcolormap[0] = dc_colormap[0];
+                dc_nextcolormap[1] = dc_colormap[1];
+              }
             }
           }
 
@@ -185,6 +192,10 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
     dc_nextcolormap32[0] = dc_nextcolormap32[1] = fixedcolormap32;
   }
 
+  // [Nugget]
+  const boolean use_brightmaps =
+    !fixedcolormapoffset && (STRICTMODE(brightmaps) || force_brightmaps);
+
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != INT_MAX)
       {
@@ -195,21 +206,22 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
 
             dc_brightmap = texturebrightmap[texnum];
             dc_colormap32[0] = V_ColormapRowByIndex32(walllights[index]);
-            dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                              ? fullcolormap32
-                              : dc_colormap32[0];
+            dc_colormap32[1] = use_brightmaps ? fullcolormap32 : dc_colormap32[0];
 
             // [Nugget] Dithered lighting
-            if (dithered_lighting && index < MAXLIGHTSCALE-1)
+            if (dithered_lighting)
             {
-              dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllight_nextcolormap[index]);
-              dc_nextcolormap32[1] = fullcolormap32;
+              if (index < MAXLIGHTSCALE-1)
+              {
+                dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllight_nextcolormap[index]);
+                dc_nextcolormap32[1] = use_brightmaps ? fullcolormap32 : dc_nextcolormap32[0];
 
-              R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-            }
-            else {
-              dc_nextcolormap32[0] = dc_colormap32[0];
-              dc_nextcolormap32[1] = dc_colormap32[1];
+                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+              }
+              else {
+                dc_nextcolormap32[0] = dc_colormap32[0];
+                dc_nextcolormap32[1] = dc_colormap32[1];
+              }
             }
           }
 
@@ -431,6 +443,10 @@ static void R_RenderSegLoop (void)
 
   rendered_segs++;
 
+  // [Nugget]
+  const boolean use_brightmaps =
+    !fixedcolormapoffset && (STRICTMODE(brightmaps) || force_brightmaps);
+
   for ( ; rw_x < rw_stopx ; rw_x++)
     {
       // mark floor / ceiling areas
@@ -491,43 +507,43 @@ static void R_RenderSegLoop (void)
             if (truecolor_rendering)
             {
               dc_colormap32[0] = V_ColormapRowByIndex32(walllights[index]);
-              dc_colormap32[1] = (!fixedcolormap32 &&
-                                (STRICTMODE(brightmaps) || force_brightmaps))
-                                ? fullcolormap32
-                                : dc_colormap32[0];
+              dc_colormap32[1] = use_brightmaps ? fullcolormap32 : dc_colormap32[0];
 
               // [Nugget] Dithered lighting
-              if (dithered_lighting && index < MAXLIGHTSCALE-1)
+              if (dithered_lighting)
               {
-                dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllight_nextcolormap[index]);
-                dc_nextcolormap32[1] = (!fixedcolormap32) ? fullcolormap32 : dc_nextcolormap32[0];
+                if (index < MAXLIGHTSCALE-1)
+                {
+                  dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllight_nextcolormap[index]);
+                  dc_nextcolormap32[1] = use_brightmaps ? fullcolormap32 : dc_nextcolormap32[0];
 
-                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-              }
-              else {
-                dc_nextcolormap32[0] = dc_colormap32[0];
-                dc_nextcolormap32[1] = dc_colormap32[1];
+                  R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+                }
+                else {
+                  dc_nextcolormap32[0] = dc_colormap32[0];
+                  dc_nextcolormap32[1] = dc_colormap32[1];
+                }
               }
             }
             else
             {
               dc_colormap[0] = V_ColormapRowByIndex(walllights[index]);
-              dc_colormap[1] = (!fixedcolormap &&
-                                (STRICTMODE(brightmaps) || force_brightmaps))
-                                ? fullcolormap
-                                : dc_colormap[0];
+              dc_colormap[1] = use_brightmaps ? fullcolormap : dc_colormap[0];
 
               // [Nugget] Dithered lighting
-              if (dithered_lighting && index < MAXLIGHTSCALE-1)
+              if (dithered_lighting)
               {
-                dc_nextcolormap[0] = V_ColormapRowByIndex(walllight_nextcolormap[index]);
-                dc_nextcolormap[1] = (!fixedcolormap) ? fullcolormap : dc_nextcolormap[0];
+                if (index < MAXLIGHTSCALE-1)
+                {
+                  dc_nextcolormap[0] = V_ColormapRowByIndex(walllight_nextcolormap[index]);
+                  dc_nextcolormap[1] = use_brightmaps ? fullcolormap : dc_nextcolormap[0];
 
-                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-              }
-              else {
-                dc_nextcolormap[0] = dc_colormap[0];
-                dc_nextcolormap[1] = dc_colormap[1];
+                  R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+                }
+                else {
+                  dc_nextcolormap[0] = dc_colormap[0];
+                  dc_nextcolormap[1] = dc_colormap[1];
+                }
               }
             }
           }

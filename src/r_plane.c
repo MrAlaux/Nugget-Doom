@@ -222,7 +222,7 @@ static void DrawPlane8(fixed_t distance)
       }
 
       ds_colormap[1] = fullcolormap;
-      ds_nextcolormap[1] = fullcolormap; // [Nugget] Dithered lighting
+      ds_nextcolormap[1] = ds_colormap[1]; // [Nugget] Dithered lighting
     }
 
   DrawSpan();
@@ -278,7 +278,7 @@ static void DrawPlane32(fixed_t distance)
       }
 
       ds_colormap32[1] = fullcolormap32;
-      ds_nextcolormap32[1] = fullcolormap32; // [Nugget] Dithered lighting
+      ds_nextcolormap32[1] = ds_colormap32[1]; // [Nugget] Dithered lighting
     }
 
   DrawSpan();
