@@ -780,6 +780,8 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 	{
 		vis->nextcolormap[0] = vis->colormap[0];
 		vis->nextcolormap[1] = vis->colormap[1];
+
+		vis->ditherlevel = 0;
 	}
 
 	vis->brightmap = R_BrightmapForSprite(thing->sprite);

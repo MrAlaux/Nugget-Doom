@@ -1365,8 +1365,8 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   {
     vis->nextcolormap[0] = vis->colormap[0];
     vis->nextcolormap[1] = vis->colormap[1];
-    // Don't waste time zeroing `ditherlevel`, because reaching
-    // this block implies that we won't set a dither pattern
+
+    vis->ditherlevel = 0;
   }
 
   vis->brightmap = R_BrightmapForState(thing->state - states);
