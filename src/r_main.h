@@ -160,6 +160,7 @@ extern boolean vertical_lockon;
 extern int vertical_lockon_speed_pct;
 
 extern boolean allow_hires_graphics;
+extern boolean dithered_lighting;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
@@ -209,12 +210,29 @@ extern lightingmode_t lighting_mode;
 boolean R_InitLightTablesPending(void);
 void R_DeferredInitLightTables(void);
 
+// Dithered lighting ---------------------------------------------------------
+
+extern fixed_t dc_rawlightindex;
+
+extern int LIGHTSCALEDITHERSHIFT;
+extern byte **scalelight_ditherlevel;
+extern cmapoffset_t **scalelight_nextcolormap;
+
+extern int LIGHTZDITHERSHIFT;
+extern byte **zlight_ditherlevel;
+extern cmapoffset_t **zlight_nextcolormap;
+
 // Radial fog ----------------------------------------------------------------
 
 extern int light_distance_shift_bits;
 
 extern cmapoffset_t *planezlight;
 extern uint16_t **planedistlight, *spandistlight;
+
+// Dithered lighting
+extern byte *planezlight_ditherlevel;
+extern cmapoffset_t *planezlight_nextcolormap;
+extern uint16_t **planedistlight_ditherlevel, *spandistlight_ditherlevel;
 
 extern boolean do_radial_fog;
 

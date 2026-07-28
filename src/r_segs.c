@@ -59,6 +59,10 @@ int             rw_angle1;
 fixed_t         rw_distance;
 cmapoffset_t     *walllights;
 
+// [Nugget] Dithered lighting
+static byte *walllight_ditherlevel = NULL;
+static cmapoffset_t *walllight_nextcolormap = NULL;
+
 //
 // regular wall
 //
@@ -96,7 +100,12 @@ static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
   column_t *col;
 
   if (fixedcolormap)
+  {
     dc_colormap[0] = dc_colormap[1] = fixedcolormap;
+
+    // [Nugget] Dithered lighting
+    dc_nextcolormap[0] = dc_nextcolormap[1] = fixedcolormap;
+  }
 
   // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
@@ -113,6 +122,19 @@ static void RenderMaskedSegRangeLoop8(int x1, int x2, int texnum)
             dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                               ? fullcolormap
                               : dc_colormap[0];
+
+            // [Nugget] Dithered lighting
+            if (dithered_lighting && index < MAXLIGHTSCALE-1)
+            {
+              dc_nextcolormap[0] = V_ColormapRowByIndex(walllight_nextcolormap[index]);
+              dc_nextcolormap[1] = fullcolormap;
+
+              R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+            }
+            else {
+              dc_nextcolormap[0] = dc_colormap[0];
+              dc_nextcolormap[1] = dc_colormap[1];
+            }
           }
 
         // killough 3/2/98:
@@ -156,7 +178,12 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
   column_t *col;
 
   if (fixedcolormap32)
+  {
     dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
+
+    // [Nugget] Dithered lighting
+    dc_nextcolormap32[0] = dc_nextcolormap32[1] = fixedcolormap32;
+  }
 
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != INT_MAX)
@@ -171,6 +198,19 @@ static void RenderMaskedSegRangeLoop32(int x1, int x2, int texnum)
             dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                               ? fullcolormap32
                               : dc_colormap32[0];
+
+            // [Nugget] Dithered lighting
+            if (dithered_lighting && index < MAXLIGHTSCALE-1)
+            {
+              dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllight_nextcolormap[index]);
+              dc_nextcolormap32[1] = fullcolormap32;
+
+              R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+            }
+            else {
+              dc_nextcolormap32[0] = dc_colormap32[0];
+              dc_nextcolormap32[1] = dc_colormap32[1];
+            }
           }
 
         {
@@ -235,6 +275,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
   walllights = lightnum >= LIGHTLEVELS ? scalelight[LIGHTLEVELS-1] :
     lightnum <  0           ? scalelight[0] : scalelight[lightnum];
+
+  // [Nugget] Dithered lighting
+  if (dithered_lighting)
+  {
+    const int light = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+    walllight_ditherlevel = scalelight_ditherlevel[light];
+    walllight_nextcolormap = scalelight_nextcolormap[light];
+  }
 
   maskedtexturecol = ds->maskedtexturecol;
 
@@ -446,6 +495,19 @@ static void R_RenderSegLoop (void)
                                 (STRICTMODE(brightmaps) || force_brightmaps))
                                 ? fullcolormap32
                                 : dc_colormap32[0];
+
+              // [Nugget] Dithered lighting
+              if (dithered_lighting && index < MAXLIGHTSCALE-1)
+              {
+                dc_nextcolormap32[0] = V_ColormapRowByIndex32(walllight_nextcolormap[index]);
+                dc_nextcolormap32[1] = (!fixedcolormap32) ? fullcolormap32 : dc_nextcolormap32[0];
+
+                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+              }
+              else {
+                dc_nextcolormap32[0] = dc_colormap32[0];
+                dc_nextcolormap32[1] = dc_colormap32[1];
+              }
             }
             else
             {
@@ -454,6 +516,19 @@ static void R_RenderSegLoop (void)
                                 (STRICTMODE(brightmaps) || force_brightmaps))
                                 ? fullcolormap
                                 : dc_colormap[0];
+
+              // [Nugget] Dithered lighting
+              if (dithered_lighting && index < MAXLIGHTSCALE-1)
+              {
+                dc_nextcolormap[0] = V_ColormapRowByIndex(walllight_nextcolormap[index]);
+                dc_nextcolormap[1] = (!fixedcolormap) ? fullcolormap : dc_nextcolormap[0];
+
+                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+              }
+              else {
+                dc_nextcolormap[0] = dc_colormap[0];
+                dc_nextcolormap[1] = dc_colormap[1];
+              }
             }
           }
 
@@ -874,6 +949,15 @@ void R_StoreWallRange(const int start, const int stop)
             walllights = scalelight[LIGHTLEVELS-1];
           else
             walllights = scalelight[lightnum];
+
+          // [Nugget] Dithered lighting
+          if (dithered_lighting)
+          {
+            const int light = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+            walllight_ditherlevel = scalelight_ditherlevel[light];
+            walllight_nextcolormap = scalelight_nextcolormap[light];
+          }
         }
     }
 

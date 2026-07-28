@@ -173,6 +173,10 @@ fixed_t pspriteiscale;
 
 cmapoffset_t *spritelights;        // killough 1/25/98 made static
 
+// [Nugget] Dithered lighting
+byte *spritelight_ditherlevel = NULL;
+cmapoffset_t *spritelight_nextcolormap = NULL;
+
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c
 typedef struct drawseg_xrange_item_s
@@ -681,6 +685,20 @@ static void DrawVisSpriteLoop8(
   dc_colormap[0] = V_ColormapRowByIndex(vis->colormap[0]);
   dc_colormap[1] = V_ColormapRowByIndex(vis->colormap[1]);
 
+  // [Nugget] Dithered lighting /--------------------------------------------
+
+  boolean do_dithered_lighting = false;
+
+  if (dithered_lighting)
+  {
+    do_dithered_lighting = lightindex < MAXLIGHTSCALE-1;
+
+    dc_nextcolormap[0] = V_ColormapRowByIndex(vis->nextcolormap[0]);
+    dc_nextcolormap[1] = V_ColormapRowByIndex(vis->nextcolormap[1]);
+  }
+
+  // [Nugget] --------------------------------------------------------------/
+
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
       texturecolumn = frac>>FRACBITS;
@@ -697,8 +715,23 @@ static void DrawVisSpriteLoop8(
       {
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
+        do_dithered_lighting = dithered_lighting && lightindex < MAXLIGHTSCALE-1;
+
         if (!percolumn_lighting)
-        { dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]); }
+        {
+          dc_colormap[0] = V_ColormapRowByIndex(spritelights[lightindex]);
+
+          if (do_dithered_lighting)
+          {
+            dc_nextcolormap[0] = V_ColormapRowByIndex(spritelight_nextcolormap[lightindex]);
+            R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+          }
+          else if (dithered_lighting) { R_SetDitherPattern(0); }
+        }
+        else if (dithered_lighting && !do_dithered_lighting)
+        {
+          R_SetDitherPattern(0);
+        }
       }
 
       // Thing lighting
@@ -711,12 +744,18 @@ static void DrawVisSpriteLoop8(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
+        int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                     + extralight;
 
-        dc_colormap[0] = V_ColormapRowByIndex(
-          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
-        );
+        lightnum = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+        dc_colormap[0] = V_ColormapRowByIndex(scalelight[lightnum][lightindex]);
+
+        if (do_dithered_lighting)
+        {
+          dc_nextcolormap[0] = V_ColormapRowByIndex(scalelight_nextcolormap[lightnum][lightindex]);
+          R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+        }
       }
 
       // [Nugget] ===========================================================/
@@ -745,6 +784,20 @@ static void DrawVisSpriteLoop32(
   dc_colormap32[0] = V_ColormapRowByIndex32(vis->colormap[0]);
   dc_colormap32[1] = V_ColormapRowByIndex32(vis->colormap[1]);
 
+  // [Nugget] Dithered lighting /--------------------------------------------
+
+  boolean do_dithered_lighting = false;
+
+  if (dithered_lighting)
+  {
+    do_dithered_lighting = lightindex < MAXLIGHTSCALE-1;
+
+    dc_nextcolormap32[0] = V_ColormapRowByIndex32(vis->nextcolormap[0]);
+    dc_nextcolormap32[1] = V_ColormapRowByIndex32(vis->nextcolormap[1]);
+  }
+
+  // [Nugget] --------------------------------------------------------------/
+
   for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
       texturecolumn = frac>>FRACBITS;
@@ -761,8 +814,23 @@ static void DrawVisSpriteLoop32(
       {
         lightindex = R_GetLightIndex(vis->scale, dc_x);
 
+        do_dithered_lighting = dithered_lighting && lightindex < MAXLIGHTSCALE-1;
+
         if (!percolumn_lighting)
-        { dc_colormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex]); }
+        {
+          dc_colormap32[0] = V_ColormapRowByIndex32(spritelights[lightindex]);
+
+          if (do_dithered_lighting)
+          {
+            dc_nextcolormap32[0] = V_ColormapRowByIndex32(spritelight_nextcolormap[lightindex]);
+            R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+          }
+          else if (dithered_lighting) { R_SetDitherPattern(0); }
+        }
+        else if (dithered_lighting && !do_dithered_lighting)
+        {
+          R_SetDitherPattern(0);
+        }
       }
 
       // Thing lighting
@@ -775,12 +843,18 @@ static void DrawVisSpriteLoop32(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        const int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-                           + extralight;
+        int lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
+                     + extralight;
 
-        dc_colormap32[0] = V_ColormapRowByIndex32(
-          scalelight[BETWEEN(0, LIGHTLEVELS-1, lightnum)][lightindex]
-        );
+        lightnum = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+        dc_colormap32[0] = V_ColormapRowByIndex32(scalelight[lightnum][lightindex]);
+
+        if (do_dithered_lighting)
+        {
+          dc_nextcolormap32[0] = V_ColormapRowByIndex32(scalelight_nextcolormap[lightnum][lightindex]);
+          R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+        }
       }
 
       // [Nugget] ===========================================================/
@@ -857,7 +931,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
     dc_texturemid = FixedMul(dc_texturemid, FixedMul(dc_iscale, vis->scale));
   }
 
-  // Thing lighting, radial fog ----------------------------------------------
+  // Thing lighting, radial fog, dithered lighting --------------------------
 
   int lightindex = 0;
 
@@ -877,15 +951,30 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
       pcl_offset = vis->leftoffset - vis->xiscale/2;
 
-      const int angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
+      const int fineangle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
 
-      pcl_cosine = finecosine[angle];
-      pcl_sine   =   finesine[angle];
+      pcl_cosine = finecosine[fineangle];
+      pcl_sine   =   finesine[fineangle];
 
-      if (diminishing_lighting && !do_sprite_radial_fog)
-      { lightindex = R_GetLightIndex(vis->scale, 0); }
+      if (!do_sprite_radial_fog)
+      {
+        lightindex = R_GetLightIndex(vis->scale, 0);
+
+        if (dithered_lighting && lightindex >= MAXLIGHTSCALE-1)
+        { R_SetDitherPattern(0); }
+      }
     }
-    else { spritelights = scalelight[vis->lightnum]; }
+    else if (do_sprite_radial_fog)
+    {
+      spritelights = scalelight[vis->lightnum];
+
+      if (dithered_lighting)
+      {
+        spritelight_ditherlevel = scalelight_ditherlevel[vis->lightnum];
+        spritelight_nextcolormap = scalelight_nextcolormap[vis->lightnum];
+      }
+    }
+    else if (dithered_lighting) { R_SetDitherPattern(vis->ditherlevel); }
   }
 
   // [Nugget] ===============================================================/
@@ -1219,6 +1308,9 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
   if (hires_lump >= 0)
   { vis->patch = first_hires_lump + hires_lump - firstspritelump; }
 
+  // [Nugget] Dithered lighting
+  boolean do_dithered_lighting = false;
+
   // get light level
   if (thing->flags & MF_SHADOW)
     vis->colormap[0] = vis->colormap[1] = 0;               // shadow draw
@@ -1244,11 +1336,38 @@ static void R_ProjectSprite (mobj_t* thing, byte lightnum) // [Nugget] Lightnum
 
         vis->lightnum = new_lightnum;
         spritelights = scalelight[new_lightnum];
+
+        // Dithered lighting
+        if (dithered_lighting)
+        {
+          spritelight_ditherlevel = scalelight_ditherlevel[new_lightnum];
+          spritelight_nextcolormap = scalelight_nextcolormap[new_lightnum];
+        }
       }
 
       vis->colormap[0] = spritelights[index];
       vis->colormap[1] = 0;
+
+      // [Nugget] Dithered lighting
+      if (dithered_lighting && index < MAXLIGHTSCALE-1)
+      {
+        do_dithered_lighting = true;
+
+        vis->nextcolormap[0] = spritelight_nextcolormap[index];
+        vis->nextcolormap[1] = vis->colormap[1];
+
+        vis->ditherlevel = spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
+      }
     }
+
+  // [Nugget] Dithered lighting
+  if (!do_dithered_lighting)
+  {
+    vis->nextcolormap[0] = vis->colormap[0];
+    vis->nextcolormap[1] = vis->colormap[1];
+    // Don't waste time zeroing `ditherlevel`, because reaching
+    // this block implies that we won't set a dither pattern
+  }
 
   vis->brightmap = R_BrightmapForState(thing->state - states);
   if (vis->brightmap == nobrightmap)
@@ -1457,6 +1576,15 @@ void R_AddSprites(sector_t* sec, int lightlevel)
   else
     spritelights = scalelight[lightnum];
 
+  // [Nugget] Dithered lighting
+  if (dithered_lighting)
+  {
+    const int light = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+    spritelight_ditherlevel = scalelight_ditherlevel[light];
+    spritelight_nextcolormap = scalelight_nextcolormap[light];
+  }
+
   // Handle all things in sector.
 
   for (thing = sec->thinglist; thing; thing = thing->snext)
@@ -1495,6 +1623,15 @@ void R_NearbySprites (void)
         spritelights = scalelight[LIGHTLEVELS-1];
       else
         spritelights = scalelight[lightnum];
+
+      // [Nugget] Dithered lighting
+      if (dithered_lighting)
+      {
+        const int light = BETWEEN(0, LIGHTLEVELS-1, lightnum);
+
+        spritelight_ditherlevel = scalelight_ditherlevel[light];
+        spritelight_nextcolormap = scalelight_nextcolormap[light];
+      }
 
       R_ProjectSprite(thing, BETWEEN(0, LIGHTLEVELS-1, lightnum)); // [Nugget] Pass lightnum
     }
@@ -1704,6 +1841,12 @@ void R_DrawPSprite (pspdef_t *psp, const boolean is_flash) // [Nugget] Transluce
     vis->colormap[0] = spritelights[index];  // local light
     vis->colormap[1] = 0;
   }
+
+  // [Nugget] Dithered lighting
+  vis->nextcolormap[0] = vis->colormap[0];
+  vis->nextcolormap[1] = vis->colormap[1];
+  vis->ditherlevel = 0;
+
   vis->brightmap = R_BrightmapForState(psp->state - states);
 
   // [Nugget] /---------------------------------------------------------------
