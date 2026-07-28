@@ -2320,6 +2320,7 @@ void R_SetupFrame (player_t *player)
 
         // [Nugget] Dithered lighting
         dc_nextcolormap32[0] = dc_nextcolormap32[1] = fixedcolormap32;
+        R_SetDitherPattern(0);
       }
     else
       fixedcolormap32 = NULL;
@@ -2343,6 +2344,7 @@ void R_SetupFrame (player_t *player)
 
         // [Nugget] Dithered lighting
         dc_nextcolormap[0] = dc_nextcolormap[1] = fixedcolormap;
+        R_SetDitherPattern(0);
       }
     else
       fixedcolormap = 0;
