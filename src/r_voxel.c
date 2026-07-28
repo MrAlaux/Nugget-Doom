@@ -715,7 +715,6 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 	// [Nugget]
 	vis->yscale = vis->scale;
 	vis->lightnum = lightnum;
-	vis->ditherlevel = 0;
 	vis->flags = 0;
 
 	// get light level...
@@ -770,7 +769,7 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 			do_dithered_lighting = true;
 
 			vis->nextcolormap[0] = spritelight_nextcolormap[index];
-			vis->nextcolormap[1] = 0;
+			vis->nextcolormap[1] = vis->colormap[1];
 
 			vis->ditherlevel = spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
 		}
@@ -934,7 +933,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	const fixed_t ux2 = MAX(Cx, Bx); // [Nugget] Calculate once
 
-	// [Nugget] Thing lighting, radial fog /------------------------------------
+	// [Nugget] Thing lighting, radial fog, dithered lighting /-----------------
 
 	boolean do_voxel_radial_fog = false;
 
@@ -947,10 +946,10 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
 			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
 
-			const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
+			const int fineangle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
 
-			const fixed_t cosine = finecosine[angle],
-			                sine =   finesine[angle];
+			const fixed_t cosine = finecosine[fineangle],
+			                sine =   finesine[fineangle];
 
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
@@ -963,26 +962,23 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 			if (!do_voxel_radial_fog)
 			{
 				const int lightindex = STRICTMODE(!diminishing_lighting)
-				                       ? 0 : R_GetLightIndex(B_xscale, (ux2 - ux) / 2);
+				                       ? 0 : R_GetLightIndex(B_xscale, 0);
 
 				spr->colormap[0] = scalelight[lightnum][lightindex];
 
-				// Dithered lighting
 				if (dithered_lighting)
 				{
-					spr->nextcolormap[0] = scalelight_nextcolormap[lightnum][lightindex];
-
 					if (lightindex < MAXLIGHTSCALE-1)
 					{
-						spr->ditherlevel = scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
+						spr->nextcolormap[0] = scalelight_nextcolormap[lightnum][lightindex];
+						R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 					}
-					else { spr->ditherlevel = 0; }
+					else { R_SetDitherPattern(0); }
 				}
 			}
 			else {
 				spritelights = scalelight[lightnum];
 
-				// Dithered lighting
 				if (dithered_lighting)
 				{
 					spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
@@ -990,10 +986,17 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 				}
 			}
 		}
+		else if (do_voxel_radial_fog)
+		{
+			spritelights = scalelight[spr->lightnum];
 
-		// Dithered lighting
-		if (!do_voxel_radial_fog)
-		{ R_SetDitherPattern(spr->ditherlevel); }
+			if (dithered_lighting)
+			{
+				spritelight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+				spritelight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+			}
+		}
+		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
@@ -1825,7 +1828,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	const fixed_t ux2 = MAX(Cx, Bx);
 
-	// [Nugget] Thing lighting, radial fog /------------------------------------
+	// [Nugget] Thing lighting, radial fog, dithered lighting /-----------------
 
 	boolean do_voxel_radial_fog = false;
 
@@ -1838,10 +1841,10 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
 			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
 
-			const angle_t angle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
+			const int fineangle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
 
-			const fixed_t cosine = finecosine[angle],
-			                sine =   finesine[angle];
+			const fixed_t cosine = finecosine[fineangle],
+			                sine =   finesine[fineangle];
 
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
@@ -1854,26 +1857,23 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			if (!do_voxel_radial_fog)
 			{
 				const int lightindex = STRICTMODE(!diminishing_lighting)
-				                       ? 0 : R_GetLightIndex(midscale, (ux2 - ux) / 2);
+				                       ? 0 : R_GetLightIndex(midscale, 0);
 
 				spr->colormap[0] = scalelight[lightnum][lightindex];
 
-				// Dithered lighting
 				if (dithered_lighting)
 				{
-					spr->nextcolormap[0] = scalelight_nextcolormap[lightnum][lightindex];
-
 					if (lightindex < MAXLIGHTSCALE-1)
 					{
-						spr->ditherlevel = scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
+						spr->nextcolormap[0] = scalelight_nextcolormap[lightnum][lightindex];
+						R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 					}
-					else { spr->ditherlevel = 0; }
+					else { R_SetDitherPattern(0); }
 				}
 			}
 			else {
 				spritelights = scalelight[lightnum];
 
-				// Dithered lighting
 				if (dithered_lighting)
 				{
 					spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
@@ -1881,10 +1881,17 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				}
 			}
 		}
+		else if (do_voxel_radial_fog)
+		{
+			spritelights = scalelight[spr->lightnum];
 
-		// Dithered lighting
-		if (!do_voxel_radial_fog)
-		{ R_SetDitherPattern(spr->ditherlevel); }
+			if (dithered_lighting)
+			{
+				spritelight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+				spritelight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+			}
+		}
+		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
 	}
 
 	// [Nugget] ---------------------------------------------------------------/
@@ -2486,18 +2493,6 @@ void VX_DrawVoxel (vissprite_t * spr)
 
 	vx_eye_x = v->x_pivot + FixedMul (delta_x, c) + FixedMul (delta_y, s);
 	vx_eye_y = v->y_pivot + FixedMul (delta_x, s) - FixedMul (delta_y, c);
-
-	// [Nugget] Radial fog
-	spritelights = scalelight[spr->lightnum];
-
-	// [Nugget] Dithered lighting
-	if (dithered_lighting)
-	{
-		const int light = spr->lightnum;
-
-		spritelight_ditherlevel = scalelight_ditherlevel[light];
-		spritelight_nextcolormap = scalelight_nextcolormap[light];
-	}
 
 	VX_RecursiveDraw (spr, 0, 0, v->x_size, v->y_size);
 }
