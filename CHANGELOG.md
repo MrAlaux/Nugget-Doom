@@ -1,5 +1,6 @@
 ## New Features
 
+- **_Dithered Lighting_** setting
 - **_Sky Projection_** setting, featuring **_Cylindrical_ projection**
   - Replaces _Linear Sky Scrolling_ setting [^1]
 - **_Hold Use to Pick up Items_** setting

@@ -71,6 +71,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Chasecam_** [i.b. ZDoom]
 - **Slow Motion** button
 - **Zoom** button
+- **_Dithered Lighting_** setting [i.b. Doom Retro]
 - **_HUD/Menu Shadows_** setting [i.b. CRL]
   - Opacity level determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR
 - **_Sprite Shadows_** setting [i.b. Doom Retro]
