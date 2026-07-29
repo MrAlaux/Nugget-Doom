@@ -41,7 +41,7 @@ extern boolean fov_stretchsky; // [Nugget]
 void R_StretchSky(skytex_t *skytex, fixed_t *skymid_p, fixed_t *skyscaley_p);
 
 // [FG] linear horizontal sky scrolling
-extern boolean linearsky;
+// [Nugget] Sky projection: replaced `linearsky`
 
 extern sky_t *levelskies;
 void R_ClearLevelskies(void);

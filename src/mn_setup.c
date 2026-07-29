@@ -406,6 +406,7 @@ enum
     // [Nugget] --------------------------------------------------------------
 
     str_lighting_mode,
+    str_sky_projection,
     str_bobbing_style,
     str_force_carousel,
     str_crosshair_lockon,
@@ -3895,6 +3896,11 @@ static const char *fuzzmode_strings[] = {
     "Blocky", "Refraction", "Shadow", "Original"
 };
 
+// [Nugget] Sky projection
+static const char *sky_projection_strings[] = {
+  "Vanilla", "Linear", "Cylindrical"
+};
+
 static setup_menu_t gen_settings5[] = {
 
     {"Smooth Pixel Scaling", S_ONOFF, OFF_CNTR_X, M_SPC, {"smooth_scaling"},
@@ -3920,8 +3926,9 @@ static setup_menu_t gen_settings5[] = {
     {"Stretch Short Skies", S_ONOFF, OFF_CNTR_X, M_SPC, {"stretchsky"},
      .action = R_UpdateStretchSkies},
 
-    {"Linear Sky Scrolling", S_ONOFF, OFF_CNTR_X, M_SPC, {"linearsky"},
-     .action = R_InitPlanes},
+    // [Nugget] Replaced `linearsky` with `sky_projection`
+    {"Sky Projection", S_CHOICE, OFF_CNTR_X, M_SPC, {"sky_projection"},
+     .action = R_InitPlanes, .strings_id = str_sky_projection},
 
     {"Swirling Flats", S_ONOFF, OFF_CNTR_X, M_SPC, {"r_swirl"}},
 
@@ -5962,6 +5969,7 @@ static const char **selectstrings[] = {
     // [Nugget] --------------------------------------------------------------
 
     [str_lighting_mode] = lighting_mode_strings,
+    [str_sky_projection] = sky_projection_strings,
     [str_bobbing_style] = bobbing_style_strings,
     [str_force_carousel] = force_carousel_strings,
     [str_crosshair_lockon] = crosshair_lockon_strings,

@@ -108,6 +108,9 @@ typedef struct
 
   // [FG] WAD file that contains the lump
   const char *wad_file;
+
+  // [Nugget] Index of the file that this lump belongs to
+  int file_index;
 } lumpinfo_t;
 
 extern lumpinfo_t *lumpinfo;
@@ -115,6 +118,9 @@ extern int        numlumps;
 extern void       **lumpcache;
 
 extern const char **wadfiles;
+
+// [Nugget]
+extern int numfiles;
 
 boolean W_InitBaseFile(const char *path);
 void W_AddBaseDir(const char *path);
@@ -139,6 +145,8 @@ extern const size_t num_predefined_lumps;
 extern const lumpinfo_t predefined_lumps[];
 
 void W_InitPredefinedLumps(void);
+
+int W_FileIndexForLump(int lump);
 
 // [Nugget] -----------------------------------------------------------------/
 

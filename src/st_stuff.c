@@ -3824,19 +3824,20 @@ static hudfont_t LoadNughudHUDFont(
 
   if (use_lowercase)
   {
-    // All lowercase characters are present; now check if they were loaded
-    // after the uppercase ones to guess if they're from the same set
+    // All lowercase characters are present; now check if they come from
+    // the same WAD as the uppercase ones or a later one in the load order
+    // to guess if they're from the same set
 
     char namebuf[16];
-    int upper_lumpnum = 0, lower_lumpnum = 0;
+    int uppercase_wadnum = 0, lowercase_wadnum = 0;
 
     M_snprintf(namebuf, sizeof(namebuf), "%s065", stem);
-    upper_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+    uppercase_wadnum = W_FileIndexForLump((W_CheckNumForName)(namebuf, ns_global));
 
     M_snprintf(namebuf, sizeof(namebuf), "%s097", stem);
-    lower_lumpnum = (W_CheckNumForName)(namebuf, ns_global);
+    lowercase_wadnum = W_FileIndexForLump((W_CheckNumForName)(namebuf, ns_global));
 
-    use_lowercase = upper_lumpnum < lower_lumpnum;
+    use_lowercase = uppercase_wadnum <= lowercase_wadnum;
   }
 
   if (!use_lowercase)

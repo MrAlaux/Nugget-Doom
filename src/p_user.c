@@ -772,6 +772,7 @@ void P_PlayerThink (player_t* player)
       return;
     }
 
+  // [Nugget]
   if (STRICTMODE(vertical_lockon) && !freelook)
   {
     if (player != &players[displayplayer])
@@ -784,14 +785,28 @@ void P_PlayerThink (player_t* player)
 
       if (gametic - oldtic > 1) { lock_time = 0; }
 
-      {
+      { // Get linetarget
+        const weaponattributes_t *const attributes = &weaponinfo[player->readyweapon].attributes;
+        const boolean is_projectile_weapon = attributes->projectiles != NULL;
+        const fixed_t range = (attributes->range == WEAPON_INFINITE_RANGE)
+                            ? AUTOAIM_RANGE()
+                            : MIN(AUTOAIM_RANGE(), attributes->range);
+
+        // Smart autoaim
+        if (!attributes->is_hitscan && is_projectile_weapon)
+        {
+            const mobjinfo_t *const info = &mobjinfo[attributes->projectile_largest];
+
+            P_SetProjectileInfo(
+                player->mo->x,
+                player->mo->y,
+                player->mo->z + (4*8*FRACUNIT) - player->crouchoffset,
+                info->radius,
+                info->height
+            );
+        }
+
         const angle_t an = player->mo->angle;
-        const ammotype_t ammo = weaponinfo[player->readyweapon].ammo;
-        const fixed_t range = (ammo == am_noammo
-                               && !(player->readyweapon == wp_fist
-                                    && player->cheats & CF_SAITAMA))
-                              ? MELEERANGE
-                              : 16 * 64 * FRACUNIT * NOTCASUALPLAY(comp_longautoaim+1);
 
         const boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
         overflow[emu_intercepts].enabled = false;
@@ -801,7 +816,7 @@ void P_PlayerThink (player_t* player)
         do {
           P_AimLineAttack(player->mo, an, range, mask);
 
-          if (!vertical_aiming && (!no_hor_autoaim || ammo == am_clip || ammo == am_shell))
+          if (!vertical_aiming && is_projectile_weapon && !no_hor_autoaim)
           {
               if (!linetarget)
               { P_AimLineAttack(player->mo, an + (1 << 26), range, mask); }
@@ -812,6 +827,8 @@ void P_PlayerThink (player_t* player)
         } while (mask && (mask = 0, !linetarget));
 
         overflow[emu_intercepts].enabled = intercepts_overflow_enabled;
+
+        P_ClearProjectileInfo(); // [Nugget] Smart autoaim
       }
 
       fixed_t target_pitch = 0;
@@ -833,9 +850,13 @@ void P_PlayerThink (player_t* player)
       }
       else if (lock_time) { target_pitch = player->pitch; }
 
-      if (abs(target_pitch) < 8*ANG1) { target_pitch = 0; }
+      if (abs(target_pitch) < ANG1*8) { target_pitch = 0; }
 
-      const fixed_t step = MAX(ANG1, abs(player->pitch - target_pitch) / 4);
+      const angle_t max_step = (ANG1 * 8) * (vertical_lockon_speed_pct / 100.0f),
+                    min_step = ANG1 / 4;
+
+      fixed_t step = abs(player->pitch - target_pitch) / 4;
+              step = CLAMP(step, min_step, max_step);
 
       if (player->pitch < target_pitch)
       {
