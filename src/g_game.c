@@ -2070,6 +2070,7 @@ static void G_PlayerFinishLevel(int player)
   p->slope = 0;
   p->recoilpitch = p->oldrecoilpitch = 0;
   p->ticangle = p->oldticangle = 0;
+  ST_ResetMessages();
 
   // [Nugget] Reset more additional player properties ------------------------
 
@@ -2999,7 +3000,14 @@ char* G_MBFSaveGameName(int slot)
 
 void G_Rewind(void)
 {
-    gameaction = ga_rewind;
+    if (!strictmode)
+    {
+        gameaction = ga_rewind;
+    }
+    else
+    {
+        displaymsg("Rewind is disabled in strict mode");
+    }
 }
 
 // killough 12/98:

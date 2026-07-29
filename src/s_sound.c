@@ -1189,6 +1189,11 @@ void S_RestartMusic(void)
     {
         S_ChangeMusic(current_musicnum, true);
     }
+
+    if (paused)
+    {
+        S_PauseMusic();
+    }
 }
 
 //

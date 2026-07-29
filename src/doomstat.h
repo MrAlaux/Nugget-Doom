@@ -224,6 +224,8 @@ extern boolean x2monsters;
 
 // [Nugget] -----------------------------------------------------------------/
 
+extern int cshelperdogs;
+
 // Netgame? Only true if >1 player.
 extern  boolean netgame;
 extern  boolean solonet;
