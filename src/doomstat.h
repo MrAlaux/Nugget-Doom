@@ -222,9 +222,9 @@ extern boolean fastmonsters;
 extern boolean aggromonsters;
 extern boolean x2monsters;
 
-// [Nugget] -----------------------------------------------------------------/
+// Removed helper dogs from custom skill
 
-extern int cshelperdogs;
+// [Nugget] -----------------------------------------------------------------/
 
 // Netgame? Only true if >1 player.
 extern  boolean netgame;

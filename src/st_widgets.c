@@ -471,8 +471,7 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
 
 void ST_ResetMessages(void)
 {
-    message_duration_left = 0;
-    announce_duration_left = 0;
+    // [Nugget] No-op
 }
 
 // key tables
