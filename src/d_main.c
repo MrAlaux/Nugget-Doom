@@ -2887,6 +2887,10 @@ void D_BindMiscVariables(void)
   M_BindStr("net_player_name", &net_player_name, DEFAULT_PLAYER_NAME, wad_no,
     "Network setup player name");
 
+  // [Nugget]
+  M_BindStr("pronouns", &cvar_pronouns, "they/them/their/theirs/they're", wad_no,
+    "Player pronouns, separated by slashes");
+
   M_BindBool("colored_blood", &colored_blood, NULL, false, ss_enem, wad_no,
              "Allow colored blood");
 }

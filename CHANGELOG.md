@@ -5,6 +5,7 @@
   - Replaces _Linear Sky Scrolling_ setting [^1]
 - **_Hold Use to Pick up Items_** setting
 - **FPS-counter update time** setting
+- **Customizable pronouns**
 
 ## Changes
 
