@@ -1568,10 +1568,15 @@ void A_FireCGun(player_t *player, pspdef_t *psp)
 {
   // [Nugget] /===============================================================
 
+  const boolean have_ammo = player->ammo[weaponinfo[player->readyweapon].ammo] != 0
+                            || player->cheats & CF_INFAMMO;
+
   // Fix "Chaingun sound without ammo" bug
   if (!(strictmode || comp_cgundblsnd))
-    if (!player->ammo[weaponinfo[player->readyweapon].ammo])
-      return;
+  {
+    if (!have_ammo)
+    { return; }
+  }
 
   // Use DSCHGUN if available ------------------------------------------------
 
@@ -1588,7 +1593,7 @@ void A_FireCGun(player_t *player, pspdef_t *psp)
 
   S_StartSoundCGun(player->mo, !strictmode ? sound : sfx_pistol); // [Nugget]
 
-  if (!player->ammo[weaponinfo[player->readyweapon].ammo])
+  if (!have_ammo)
     return;
 
   // killough 8/2/98: workaround for beta chaingun sprites missing at bottom

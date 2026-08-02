@@ -37,6 +37,7 @@
 - **Quick-save/load prompts not being replaced by DeHackEd**
 - **Quick-save/load prompts sometimes showing the wrong savegame name**
 - **Made increased intermission "Entering" delay not apply when the intermission becomes blank**
+- **Chaingun not firing when out of ammo while the Infinite Ammo cheat were enabled**
 
 [^1]: This might affect existing config files.
 [^2]: This will only affect new config files.
