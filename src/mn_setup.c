@@ -6108,7 +6108,7 @@ void MN_BindMenuVariables(void)
                "Disable palette tint in menus");
 
     M_BindBool("hud_menu_shadows", &hud_menu_shadows, NULL,
-               false, ss_display, wad_yes,
+               true, ss_display, wad_yes,
                "Shadows for HUD/menu graphics");
 
     // (CFG-only)

@@ -2868,7 +2868,7 @@ void D_BindMiscVariables(void)
 
   // (CFG-only)
   M_BindBool("inter_entering_delay", &inter_entering_delay, NULL,
-             false, ss_none, wad_yes,
+             true, ss_none, wad_yes,
              "Increase the duration of the \"Entering\" screen in Doom 2's intermission screen");
 
   M_BindNum("no_page_ticking", &no_page_ticking, NULL,

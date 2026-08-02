@@ -6274,7 +6274,7 @@ void G_BindEnemVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindBool("extra_gibbing", &extra_gibbing_on, NULL,
-             false, ss_enem, wad_yes,
+             true, ss_enem, wad_yes,
              "Enable extra gibbing in general (affected by CVARs below)");
 
   // (CFG-only)
@@ -6420,16 +6420,16 @@ void G_BindCompVariables(void)
   BIND_COMP_NUG(comp_nonbleeders,  false, "Non-bleeders don't bleed when crushed");
   BIND_COMP_NUG(comp_iosdeath,     false, "Fix lopsided Icon of Sin explosions");
   BIND_COMP_NUG(comp_choppers,     false, "Permanent IDCHOPPERS invulnerability");
-  BIND_COMP_NUG(comp_manualdoor,   true,  "Manually toggled moving doors are silent");
+  BIND_COMP_NUG(comp_manualdoor,   false, "Manually toggled moving doors are silent");
   BIND_COMP_NUG(comp_switchsource, false, "Corrected switch sound source");
-  BIND_COMP_NUG(comp_cgundblsnd,   true,  "Chaingun makes two sounds with one bullet");
+  BIND_COMP_NUG(comp_cgundblsnd,   false, "Chaingun makes two sounds with one bullet");
   BIND_COMP_NUG(comp_cgunnersfx,   false, "Chaingunner uses pistol/chaingun sound");
   BIND_COMP_NUG(comp_flamst,       false, "Arch-Vile fire plays flame-start sound");
   BIND_COMP_NUG(comp_keynoway,     false, "Play DSNOWAY instead of DSOOF when failing to use key-locked triggers");
   BIND_COMP_NUG(comp_godface,      false, "Higher god-mode face priority");
   BIND_COMP_NUG(comp_deadoof,      true,  "Dead players can still play oof sound");
-  BIND_COMP_NUG(comp_powerrunout,  false, "Use improved powerup run-out effect");
-  BIND_COMP_NUG(comp_unusedpals,   false, "Use unused pain/bonus palettes");
+  BIND_COMP_NUG(comp_powerrunout,  true,  "Use improved powerup run-out effect");
+  BIND_COMP_NUG(comp_unusedpals,   true,  "Use unused pain/bonus palettes");
   BIND_COMP_NUG(comp_keypal,       true,  "Key pickup resets palette");
 }
 

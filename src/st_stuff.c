@@ -4002,7 +4002,7 @@ void ST_BindSTSVariables(void)
              "Show Berserk on the status bar when using the Fist, if available");
 
   M_BindBool("hud_blink_keys", &hud_blink_keys, NULL,
-             false, ss_stat, wad_yes,
+             true, ss_stat, wad_yes,
              "Make missing keys blink when trying to trigger linedef actions");
 
   // [Nugget] ---------------------------------------------------------------/
