@@ -469,7 +469,7 @@ void P_MovePlayer (player_t* player)
 
           signed char forwardmove = cmd->forwardmove,
                       sidemove    = cmd->sidemove;
-                  
+
           if (mo->intflags & MIF_CROUCHING)
           {
             forwardmove /= 2;
@@ -478,20 +478,16 @@ void P_MovePlayer (player_t* player)
 
           // [Nugget] -------------------------------------------------------/
 
-          // [Nugget] Freecam
-          const angle_t angle = (casual_play && R_FreecamOn() && player == &players[consoleplayer])
-                                ? R_GetFreecamAngle() : mo->angle;
-
           if (cmd->forwardmove)
             {
-              P_Bob(player,angle,forwardmove*bobfactor);
-              P_Thrust(player,angle,forwardmove*movefactor);
+              P_Bob(player,mo->angle,forwardmove*bobfactor);
+              P_Thrust(player,mo->angle,forwardmove*movefactor);
             }
 
           if (cmd->sidemove)
             {
-              P_Bob(player,angle-ANG90,sidemove*bobfactor);
-              P_Thrust(player,angle-ANG90,sidemove*movefactor);
+              P_Bob(player,mo->angle-ANG90,sidemove*bobfactor);
+              P_Thrust(player,mo->angle-ANG90,sidemove*movefactor);
             }
         }
       // [Nugget] Allow minimal mid-air movement if Jumping is enabled

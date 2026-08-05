@@ -114,6 +114,8 @@ boolean nugget_devmode;
 
 // ---------------------------------------------------------------------------
 
+static ticcmd_t current_ticcmd = {0};
+
 static boolean minimap_was_on = false; // Minimap: keep it when advancing through levels
 
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
@@ -1093,7 +1095,8 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   // Update/reset
 
   // [Nugget] Flip levels
-  if (STRICTMODE(flip_levels)) {
+  if (STRICTMODE(flip_levels))
+  {
     angle = -angle;
     side  = -side;
   }
@@ -1103,6 +1106,27 @@ void G_BuildTiccmd(ticcmd_t* cmd)
     const short old_angleturn = cmd->angleturn;
     cmd->angleturn = G_CarryAngleTic(localview.rawangle + angle);
     cmd->ticangleturn = cmd->angleturn - old_angleturn;
+  }
+
+  // [Nugget] Freecam
+  if (R_GetFreecamMode() == FREECAM_PLAYER && gamestate == GS_LEVEL)
+  {
+    const int old_forward = forward, old_side = side;
+
+    const angle_t player_angle =
+      players[consoleplayer].mo->angle + (cmd->angleturn << 16);
+
+    const angle_t anglediff = player_angle - R_GetFreecamAngle();
+
+    int fineangle = anglediff >> ANGLETOFINESHIFT;
+
+    forward = (old_forward * finecosine[fineangle] / FRACUNIT)
+            - (old_side    *   finesine[fineangle] / FRACUNIT);
+
+    fineangle = (anglediff - ANG90) >> ANGLETOFINESHIFT;
+
+    side = (old_forward * finecosine[fineangle] / FRACUNIT)
+         - (old_side    *   finesine[fineangle] / FRACUNIT);
   }
 
   if (forward > MAXPLMOVE)
@@ -1291,6 +1315,20 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   {
     sendjoin = false;
     cmd->buttons |= BT_JOIN;
+  }
+
+  // [Nugget] Freecam
+  if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL)
+  {
+    current_ticcmd = *cmd;
+
+    memset(cmd, 0, sizeof(ticcmd_t));
+
+    cmd->consistancy = current_ticcmd.consistancy;
+    cmd->chatchar = current_ticcmd.chatchar;
+
+    if (current_ticcmd.buttons & BT_SPECIAL)
+    { cmd->buttons = current_ticcmd.buttons; }
   }
 }
 
@@ -4288,11 +4326,6 @@ void G_Ticker(void)
     setrefreshneeded = false;
   }
 
-  // Freecam -----------------------------------------------------------------
-
-  if (casual_play && R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL)
-  { memset(&players[consoleplayer].cmd, 0, sizeof(ticcmd_t)); }
-
   // [Nugget] ===============================================================/
 
   oldleveltime = leveltime;
@@ -4322,7 +4355,7 @@ void G_Ticker(void)
 
     if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL && !menuactive)
     {
-      const ticcmd_t *const cmd = &netcmds[consoleplayer];
+      const ticcmd_t *const cmd = &current_ticcmd;
 
       #define INPUT(input) M_InputGameActive(input)
 

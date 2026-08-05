@@ -33,6 +33,7 @@
 - **Voxels overriding sprites regardless of load order**
 - **High-resolution sprites overriding normal sprites regardless of load order**
 - **Lowercase characters not working if they came before uppercase characters in the same WAD**
+- **Wrong player controls when using freecam during netgames**
 - **Key-binding menu items not working when backing from a submenu**
 - **Quick-save/load prompts not playing a sound when brought up**
 - **Quick-save/load prompts not being replaced by DeHackEd**
