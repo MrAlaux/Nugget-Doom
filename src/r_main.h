@@ -275,17 +275,19 @@ extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 
 // Chasecam ------------------------------------------------------------------
 
-enum {
+typedef enum chasecammode_s {
   CHASECAMMODE_OFF,
   CHASECAMMODE_BACK,
   CHASECAMMODE_FRONT,
 
   NUM_CHASECAMMODES
-}; extern int chasecam_mode;
+} chasecammode_t;
+
+extern chasecammode_t chasecam_mode;
 extern boolean chasecam_crosshair;
 
 extern boolean R_ChasecamOn(void);
-extern void    R_SetChasecamHit(const boolean value);
+extern void    R_SetChasecamHit(boolean value);
 extern void    R_UpdateChasecam(fixed_t x, fixed_t y, fixed_t z);
 
 // Freecam -------------------------------------------------------------------

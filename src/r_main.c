@@ -832,7 +832,7 @@ void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 
 // Chasecam ------------------------------------------------------------------
 
-int chasecam_mode;
+chasecammode_t chasecam_mode;
 static int chasecam_distance;
 static int chasecam_height;
 boolean chasecam_crosshair;
@@ -859,7 +859,7 @@ void R_SetChasecamHit(const boolean value)
   chasecam.hit = value;
 }
 
-void R_UpdateChasecam(fixed_t x, fixed_t y, fixed_t z)
+void R_UpdateChasecam(const fixed_t x, const fixed_t y, const fixed_t z)
 {
   chasecam.x = x;
   chasecam.y = y;
@@ -966,7 +966,8 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 
   if (lock)
   {
-    if (freecam.mobj) {
+    if (freecam.mobj)
+    {
       freecam.angle += freecam.mobj->angle;
       R_UpdateFreecamMobj(NULL);
     }
