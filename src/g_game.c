@@ -3506,7 +3506,10 @@ static boolean DoLoadGame(boolean do_load_autosave)
       if (demorecording) // So this can only possibly be a -recordfrom command.
 	G_BeginRecording();// Start the -recordfrom, since the game was loaded.
 
+  // TODO: Why does `AM_MiniStart()` set `automapactive = false`?
+  const boolean saved_automapactive = automapactive;
   ST_Start();
+  automapactive = saved_automapactive;
 
   return true;
 }
