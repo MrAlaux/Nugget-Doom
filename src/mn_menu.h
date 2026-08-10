@@ -31,6 +31,7 @@ extern boolean quick_quitgame;
 
 void MN_UpdateDoom1SSGItem(void);
 void MN_UpdateImprovedWeaponTogglesItem(void);
+void MN_UpdateDitheredLightingItem(void);
 
 // [Nugget] -----------------------------------------------------------------/
 

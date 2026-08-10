@@ -196,6 +196,7 @@ int vertical_lockon_speed_pct;
 boolean allow_hires_graphics;
 static boolean cvar_dithered_lighting;
 boolean dithered_lighting;
+boolean allow_truecolor_dithering;
 spriteshadows_t sprite_shadows;
 int sprite_shadows_tran_pct;
 thinglighting_t thing_lighting_mode;
@@ -1434,9 +1435,14 @@ void R_InitLightTables (void)
     scalelight_ditherlevel = NULL;
   }
 
-  if (dithered_lighting != cvar_dithered_lighting)
+  static boolean old_dithered_lighting = false;
+
+  dithered_lighting =
+    cvar_dithered_lighting && (!truecolor_rendering || allow_truecolor_dithering);
+
+  if (old_dithered_lighting != dithered_lighting)
   {
-    dithered_lighting = cvar_dithered_lighting;
+    old_dithered_lighting = dithered_lighting;
     R_DeferredInitDrawFunctions();
   }
 
@@ -2597,6 +2603,11 @@ void R_BindRenderVariables(void)
   M_BindBool("dithered_lighting", &cvar_dithered_lighting, NULL,
              false, ss_display, wad_yes,
              "Dithered lighting");
+
+  // (CFG-only)
+  M_BindBool("allow_truecolor_dithering", &allow_truecolor_dithering, NULL,
+             false, ss_none, wad_no,
+             "Allow dithered lighting for true-color rendering");
 
   M_BindNum("sprite_shadows", &sprite_shadows, NULL,
             SPRITESHADOWS_OFF, SPRITESHADOWS_OFF, NUM_SPRITESHADOWS-1, ss_display, wad_yes,

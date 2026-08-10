@@ -161,6 +161,7 @@ extern int vertical_lockon_speed_pct;
 
 extern boolean allow_hires_graphics;
 extern boolean dithered_lighting;
+extern boolean allow_truecolor_dithering;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;

@@ -4093,6 +4093,12 @@ setup_menu_t display_settings1[] = {
 
 #undef N_X
 
+void MN_UpdateDitheredLightingItem(void)
+{
+    DisableItem(truecolor_rendering && !allow_truecolor_dithering,
+                display_settings1, "dithered_lighting");
+}
+
 // Page 7: Display (2) -------------------------------------------------------
 
 static const char *alt_interpic_strings[] = {
@@ -6080,6 +6086,7 @@ void MN_SetupResetMenu(void)
                 enem_settings1, "extra_gibbing");
 
     UpdateVerticalLockonItem();
+    MN_UpdateDitheredLightingItem();
     UpdatePaletteItems();
     MN_UpdateDoom1SSGItem();
     MN_UpdateImprovedWeaponTogglesItem();
