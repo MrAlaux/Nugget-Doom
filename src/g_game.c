@@ -1312,6 +1312,7 @@ static void G_DoLoadLevel(void)
   static int lastepisode = -1, lastmap = -1;
 
   S_StopAmbientSounds();
+  ST_ResetMessages();
 
   // Set the sky map.
   // First thing, we have a dummy sky texture name,
@@ -1464,9 +1465,6 @@ static void G_DoLoadLevel(void)
 
   // Periodic auto save
   G_SetAutoSaveCountdown(autosave_interval * TICRATE);
-
-  // Hide messages (but don't delete them outright)
-  ST_HideMessages();
 
   // Slow Motion
   G_ResetSlowMotion();
@@ -2108,7 +2106,6 @@ static void G_PlayerFinishLevel(int player)
   p->slope = 0;
   p->recoilpitch = p->oldrecoilpitch = 0;
   p->ticangle = p->oldticangle = 0;
-  ST_ResetMessages();
 
   // [Nugget] Reset more additional player properties ------------------------
 
