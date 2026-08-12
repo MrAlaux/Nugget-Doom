@@ -173,6 +173,8 @@ extern boolean vertical_lockon;
 extern int vertical_lockon_speed_pct;
 
 extern boolean allow_hires_graphics;
+extern boolean dithered_lighting;
+extern boolean allow_truecolor_dithering;
 extern spriteshadows_t sprite_shadows;
 extern int sprite_shadows_tran_pct;
 extern thinglighting_t thing_lighting_mode;
@@ -238,11 +240,28 @@ extern int num_colormap_rows;
 boolean R_InitLightTablesPending(void);
 void R_DeferredInitLightTables(void);
 
+// Dithered lighting ---------------------------------------------------------
+
+extern fixed_t dc_rawlightindex;
+
+extern int LIGHTSCALEDITHERSHIFT;
+extern byte **scalelight_ditherlevel;
+extern cmapoffset_t **scalelight_nextcolormap;
+
+extern int LIGHTZDITHERSHIFT;
+extern byte **zlight_ditherlevel;
+extern cmapoffset_t **zlight_nextcolormap;
+
 // Radial fog ----------------------------------------------------------------
 
 extern int light_distance_shift_bits;
 
 extern uint16_t **planedistlight, *spandistlight;
+
+// Dithered lighting
+extern byte *planezlight_ditherlevel;
+extern cmapoffset_t *planezlight_nextcolormap;
+extern uint16_t **planedistlight_ditherlevel, *spandistlight_ditherlevel;
 
 extern boolean do_radial_fog;
 
@@ -285,17 +304,19 @@ extern void R_ExplosionShake(fixed_t bombx, fixed_t bomby, int force, int range)
 
 // Chasecam ------------------------------------------------------------------
 
-enum {
+typedef enum chasecammode_s {
   CHASECAMMODE_OFF,
   CHASECAMMODE_BACK,
   CHASECAMMODE_FRONT,
 
   NUM_CHASECAMMODES
-}; extern int chasecam_mode;
+} chasecammode_t;
+
+extern chasecammode_t chasecam_mode;
 extern boolean chasecam_crosshair;
 
 extern boolean R_ChasecamOn(void);
-extern void    R_SetChasecamHit(const boolean value);
+extern void    R_SetChasecamHit(boolean value);
 extern void    R_UpdateChasecam(fixed_t x, fixed_t y, fixed_t z);
 
 // Freecam -------------------------------------------------------------------

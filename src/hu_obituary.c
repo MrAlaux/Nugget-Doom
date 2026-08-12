@@ -33,13 +33,17 @@
 boolean show_obituary_messages;
 int hudcolor_obituary;
 
+// [Nugget]
+const char *cvar_pronouns = NULL;
+
 // [FG] gender-neutral pronouns
+// [Nugget] Customizable
 
 struct
 {
     const char *const from;
-    const char *const to;
-} static const pronouns[] = {
+    const char *to;
+} static pronouns[] = {
     {"%g", "they"   },
     {"%h", "them"   },
     {"%p", "their"  },
@@ -90,6 +94,30 @@ void HU_InitObituaries(void)
     //           but at least we know ours...
 
     playerstr[consoleplayer] = net_player_name;
+
+    // [Nugget] --------------------------------------------------------------
+
+    if (cvar_pronouns && cvar_pronouns[0])
+    {
+      char *const player_pronouns = M_StringDuplicate(cvar_pronouns),
+           *      player_pronouns_p = player_pronouns;
+
+      for (int i = 0;  i < 5;  i++)
+      {
+        pronouns[i].to = player_pronouns_p;
+
+        while (*player_pronouns_p != '\0' && *player_pronouns_p != '/')
+        { player_pronouns_p++; }
+
+        if (*player_pronouns_p == '/')
+        {
+          *player_pronouns_p = '\0';
+          player_pronouns_p++;
+        }
+
+        if (*player_pronouns_p == '\0') { break; }
+      }
+    }
 }
 
 static inline char *StrReplace(char *str, const char *from, const char *to)

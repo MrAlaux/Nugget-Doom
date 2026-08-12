@@ -120,6 +120,8 @@ boolean nugget_devmode;
 
 // ---------------------------------------------------------------------------
 
+static ticcmd_t current_ticcmd = {0};
+
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
 
 static float mouse_h_modifier = 1.0f,
@@ -1047,7 +1049,8 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   // Update/reset
 
   // [Nugget] Flip levels
-  if (STRICTMODE(flip_levels)) {
+  if (STRICTMODE(flip_levels))
+  {
     angle = -angle;
     side  = -side;
   }
@@ -1057,6 +1060,27 @@ void G_BuildTiccmd(ticcmd_t* cmd)
     const short old_angleturn = cmd->angleturn;
     cmd->angleturn = G_CarryAngleTic(localview.rawangle + angle);
     cmd->ticangleturn = cmd->angleturn - old_angleturn;
+  }
+
+  // [Nugget] Freecam
+  if (R_GetFreecamMode() == FREECAM_PLAYER && gamestate == GS_LEVEL)
+  {
+    const int old_forward = forward, old_side = side;
+
+    const angle_t player_angle =
+      players[consoleplayer].mo->angle + (cmd->angleturn << 16);
+
+    const angle_t anglediff = player_angle - R_GetFreecamAngle();
+
+    int fineangle = anglediff >> ANGLETOFINESHIFT;
+
+    forward = (old_forward * finecosine[fineangle] / FRACUNIT)
+            - (old_side    *   finesine[fineangle] / FRACUNIT);
+
+    fineangle = (anglediff - ANG90) >> ANGLETOFINESHIFT;
+
+    side = (old_forward * finecosine[fineangle] / FRACUNIT)
+         - (old_side    *   finesine[fineangle] / FRACUNIT);
   }
 
   if (forward > MAXPLMOVE)
@@ -1245,6 +1269,20 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   {
     sendjoin = false;
     cmd->buttons |= BT_JOIN;
+  }
+
+  // [Nugget] Freecam
+  if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL)
+  {
+    current_ticcmd = *cmd;
+
+    memset(cmd, 0, sizeof(ticcmd_t));
+
+    cmd->consistancy = current_ticcmd.consistancy;
+    cmd->chatchar = current_ticcmd.chatchar;
+
+    if (current_ticcmd.buttons & BT_SPECIAL)
+    { cmd->buttons = current_ticcmd.buttons; }
   }
 }
 
@@ -3897,11 +3935,6 @@ void G_Ticker(void)
     setrefreshneeded = false;
   }
 
-  // Freecam -----------------------------------------------------------------
-
-  if (casual_play && R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL)
-  { memset(&players[consoleplayer].cmd, 0, sizeof(ticcmd_t)); }
-
   // [Nugget] ===============================================================/
 
   oldleveltime = leveltime;
@@ -3931,7 +3964,7 @@ void G_Ticker(void)
 
     if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL && !menuactive)
     {
-      const ticcmd_t *const cmd = &netcmds[consoleplayer];
+      const ticcmd_t *const cmd = &current_ticcmd;
 
       #define INPUT(input) M_InputGameActive(input)
 
@@ -5997,7 +6030,7 @@ void G_BindEnemVariables(void)
   // [Nugget] ----------------------------------------------------------------
 
   M_BindBool("extra_gibbing", &extra_gibbing_on, NULL,
-             false, ss_enem, wad_yes,
+             true, ss_enem, wad_yes,
              "Enable extra gibbing in general (affected by CVARs below)");
 
   // (CFG-only)
@@ -6138,15 +6171,15 @@ void G_BindCompVariables(void)
   BIND_COMP_NUG(comp_nonbleeders,  false, "Non-bleeders don't bleed when crushed");
   BIND_COMP_NUG(comp_iosdeath,     false, "Fix lopsided Icon of Sin explosions");
   BIND_COMP_NUG(comp_choppers,     false, "Permanent IDCHOPPERS invulnerability");
-  BIND_COMP_NUG(comp_manualdoor,   true,  "Manually toggled moving doors are silent");
-  BIND_COMP_NUG(comp_cgundblsnd,   true,  "Chaingun makes two sounds with one bullet");
+  BIND_COMP_NUG(comp_manualdoor,   false, "Manually toggled moving doors are silent");
+  BIND_COMP_NUG(comp_cgundblsnd,   false, "Chaingun makes two sounds with one bullet");
   BIND_COMP_NUG(comp_cgunnersfx,   false, "Chaingunner uses pistol/chaingun sound");
   BIND_COMP_NUG(comp_flamst,       false, "Arch-Vile fire plays flame-start sound");
   BIND_COMP_NUG(comp_keynoway,     false, "Play DSNOWAY instead of DSOOF when failing to use key-locked triggers");
   BIND_COMP_NUG(comp_godface,      false, "Higher god-mode face priority");
   BIND_COMP_NUG(comp_deadoof,      true,  "Dead players can still play oof sound");
-  BIND_COMP_NUG(comp_powerrunout,  false, "Use improved powerup run-out effect");
-  BIND_COMP_NUG(comp_unusedpals,   false, "Use unused pain/bonus palettes");
+  BIND_COMP_NUG(comp_powerrunout,  true,  "Use improved powerup run-out effect");
+  BIND_COMP_NUG(comp_unusedpals,   true,  "Use unused pain/bonus palettes");
   BIND_COMP_NUG(comp_keypal,       true,  "Key pickup resets palette");
 }
 

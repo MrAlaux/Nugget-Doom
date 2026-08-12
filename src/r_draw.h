@@ -25,6 +25,11 @@
 
 extern const lighttable_t *dc_colormap[2];
 extern const lighttable32_t *dc_colormap32[2];
+
+// [Nugget] Dithered lighting
+extern const lighttable_t *dc_nextcolormap[2];
+extern const lighttable32_t *dc_nextcolormap32[2];
+
 extern int      dc_x;
 extern int      dc_yl;
 extern int      dc_yh;
@@ -79,6 +84,10 @@ extern void (*R_DrawTRTLColumn)(void);
 extern const lighttable_t *ds_colormap[2];
 extern const lighttable32_t *ds_colormap32[2];
 
+// [Nugget] Dithered lighting
+extern const lighttable_t *ds_nextcolormap[2];
+extern const lighttable32_t *ds_nextcolormap32[2];
+
 extern int     ds_y;
 extern int     ds_x1;
 extern int     ds_x2;
@@ -97,6 +106,29 @@ extern const byte *ds_brightmap;
 extern void (*R_DrawSpan)(void);
 
 extern void (*R_DrawSpanWithRadialFog)(void); // [Nugget] Radial fog
+
+// [Nugget] /=================================================================
+
+boolean R_InitDrawFunctionsPending(void);
+void R_DeferredInitDrawFunctions(void);
+
+// Dithered lighting ---------------------------------------------------------
+
+#define NUM_DITHER_LEVELS_BITS 3
+#define NUM_DITHER_LEVELS (1 << NUM_DITHER_LEVELS_BITS)
+
+#define DITHER_PATTERN_WIDTH  4
+#define DITHER_PATTERN_HEIGHT 4
+
+#define DITHER_PATTERN_WIDTH_MASK  (DITHER_PATTERN_WIDTH  - 1)
+#define DITHER_PATTERN_HEIGHT_MASK (DITHER_PATTERN_HEIGHT - 1)
+
+extern const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITHER_PATTERN_WIDTH];
+extern const byte (*dither_pattern)[DITHER_PATTERN_WIDTH];
+
+void R_SetDitherPattern(int index);
+
+// [Nugget] =================================================================/
 
 void R_InitBuffer(void);
 

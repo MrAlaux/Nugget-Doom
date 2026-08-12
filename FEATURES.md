@@ -71,8 +71,10 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Chasecam_** [i.b. ZDoom]
 - **Slow Motion** button
 - **Zoom** button
-- **_Backdrop for all menus_** setting
-- **_No Palette Tint in Menus_** setting [i.b. Crispy Doom]
+- **_Dithered Lighting_** setting [i.b. Doom Retro]
+  - Note: normally, this setting is disabled when using _Interpolated/True-color Lighting_,
+    since it is barely noticeable visually while still posing a significant performance impact;
+    if you wish to use it anyways, enable the CFG-only `allow_truecolor_dithering` CVAR
 - **_HUD/Menu Shadows_** setting [i.b. CRL]
   - Opacity level determined by the CFG-only `hud_menu_shadows_filter_pct` CVAR
 - **_Sprite Shadows_** setting [i.b. Doom Retro]
@@ -83,17 +85,19 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Radial Fog_** setting
   - The fidelity of the effect on floors and ceilings can be tuned through the CFG-only `radial_plane_fog_fidelity` CVAR;
     greater values increase fidelity but cause more stutter
+- **_Fake Contrast_** setting
+- Toggle for **diminishing lighting** (CFG-only: `diminishing_lighting`)
+  - _Diminishing lighting_ (a.k.a. fog) refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Flip Levels_** setting
 - **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution
   (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
+- **_Backdrop for all menus_** setting
+- **_No Palette Tint in Menus_** setting [i.b. Crispy Doom]
 - **_No Berserk Tint_** setting
 - **_No Radiation Suit Tint_** setting
 - **_Night-Vision Visor Effect_** setting [i.b. International Doom]
 - **_Smooth Palette Tinting_** setting
 - **_Damage Tint Cap_** and **_Bonus Tint Cap_**, to attenuate or disable said screen tinting
-- **_Fake Contrast_** setting
-- Toggle for **diminishing lighting** (CFG-only: `diminishing_lighting`)
-  - _Diminishing lighting_ (a.k.a. fog) refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Screen Wipe speed percentage_** setting
 - **_Alternative Intermission Background_** setting, to replace the intermission graphic with a darkened rotating camera view
 - **Color settings** [p.f. International Doom]
@@ -312,6 +316,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
     so e.g. `rgb(0, 64, 128)` from a `PLAYPAL` palette is rendered as `rgb(1, 65, 128)` in-game;
     many source ports, including this one, retain this behavior, but this setting allows to disable it
 - **FPS-counter update time** setting (CFG-only: `fps_counter_update_time`)
+- **Customizable pronouns** (CFG-only: `pronouns`)
 - **Fixed voxels overriding sprites regardless of load order**
 - Made `force_flip_pan` affect the _OpenAL 3D_ sound module [by _ceski_]
 - Restored menu items for various Woof! settings

@@ -1318,7 +1318,8 @@ static boolean F_FancyCastTicker(void)
       if (fc_state == FCSTATE_SPAWN && casttics > 0)
       { casttics = 1 + (Woof_Random() % casttics); }
 
-      castflip = flipcorpses && state == info->deathstate
+      castflip = flipcorpses
+                 && (state == info->deathstate || state == info->xdeathstate)
                  && (info->flags_extra & MFX_MIRROREDCORPSE)
                  && (Woof_Random() & 1);
 
@@ -1333,6 +1334,7 @@ static boolean F_FancyCastTicker(void)
         S_StartSound(NULL, F_RandomizeSound(statesound));
       }
     }
+    else { fc_state = FCSTATE_NONE; }
   }
   else if (casttics != -1 && !fc_paused)
   {

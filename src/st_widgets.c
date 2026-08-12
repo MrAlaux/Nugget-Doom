@@ -1807,7 +1807,7 @@ void ST_BindHUDVariables(void)
 
   // Message fadeout
   M_BindBool("message_fadeout", &message_fadeout, NULL,
-             false, ss_stat, wad_yes,
+             true, ss_stat, wad_yes,
              "Messages fade out");
 
   // Message flash

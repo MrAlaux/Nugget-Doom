@@ -27,6 +27,7 @@ struct event_s;
 // [Nugget]
 void MN_UpdateDoom1SSGItem(void);
 void MN_UpdateImprovedWeaponTogglesItem(void);
+void MN_UpdateDitheredLightingItem(void);
 
 //
 // MENUS

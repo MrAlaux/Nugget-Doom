@@ -57,6 +57,10 @@ extern fixed_t pspriteiscale;
 
 extern boolean flipcorpses;
 
+// [Nugget] Dithered lighting
+extern byte *spritelight_ditherlevel;
+extern int *spritelight_nextcolormap;
+
 extern boolean draw_nearby_sprites;
 
 void R_DrawMaskedColumn(column_t *column);

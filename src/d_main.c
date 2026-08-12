@@ -311,6 +311,13 @@ void D_Display (void)
   if (R_InitDistLightTablesPending())
   { R_InitDistLightTables(); }
 
+  // [Nugget]
+  if (R_InitDrawFunctionsPending())
+  {
+    R_InitDrawFunctions();
+    VX_SetVoxelRenderingMode();
+  }
+
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
 
@@ -2719,7 +2726,7 @@ void D_BindMiscVariables(void)
 
   // (CFG-only)
   M_BindBool("inter_entering_delay", &inter_entering_delay, NULL,
-             false, ss_none, wad_yes,
+             true, ss_none, wad_yes,
              "Increase the duration of the \"Entering\" screen in Doom 2's intermission screen");
 
   // [Nugget] ---------------------------------------------------------------/
@@ -2734,6 +2741,10 @@ void D_BindMiscVariables(void)
 
   M_BindStr("net_player_name", &net_player_name, DEFAULT_PLAYER_NAME, wad_no,
     "Network setup player name");
+
+  // [Nugget]
+  M_BindStr("pronouns", &cvar_pronouns, "they/them/their/theirs/they're", wad_no,
+    "Player pronouns, separated by slashes");
 
   M_BindBool("colored_blood", &colored_blood, NULL, false, ss_enem, wad_no,
              "Allow colored blood");

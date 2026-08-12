@@ -37,4 +37,7 @@ void HU_Obituary(struct mobj_s *target, struct mobj_s *inflictor, struct mobj_s 
 extern boolean show_obituary_messages;
 extern int hudcolor_obituary;
 
+// [Nugget]
+extern const char *cvar_pronouns;
+
 #endif

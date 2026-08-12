@@ -1339,6 +1339,29 @@ static void WI_End(void)
 }
 
 
+// [Nugget]
+static boolean DoLongWait(const boolean long_wait)
+{
+  if (casual_play && inter_entering_delay && long_wait)
+  {
+    // If the intermission is going to be blank or only have the background,
+    // don't do the longer wait
+
+    if (gamemapinfo && gamemapinfo->flags & MapInfo_EndGame)
+    {
+      return false;
+    }
+
+    if (exitpic || (enterpic && state != StatCount)
+        || gamemode != commercial || wbs->next != 30)
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // ====================================================================
 // WI_initNoState
 // Purpose: Clear state, ready for end of level activity
@@ -1351,7 +1374,7 @@ static void WI_initNoState(const boolean long_wait) // [Nugget] Parameter
   acceleratestage = 0;
 
   // [Nugget] Optional longer delay
-  cnt = (casual_play && inter_entering_delay && long_wait) ? TICRATE*3 : 10;
+  cnt = DoLongWait(long_wait) ? TICRATE*3 : 10;
 }
 
 

@@ -269,6 +269,8 @@ static void InitColor(void)
     R_DeferredInitLightTables();
 
     InitColorFunctions();
+
+    MN_UpdateDitheredLightingItem(); // Dithered lighting
 }
 
 static const char *sdl_renderdriver = "";
