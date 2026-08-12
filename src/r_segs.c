@@ -59,6 +59,10 @@ angle_t         rw_normalangle; // angle to line origin
 int             rw_angle1;
 fixed_t         rw_distance;
 
+// [Nugget] Dithered lighting
+static byte *walllight_ditherlevel = NULL;
+static int *walllight_nextcolormap = NULL;
+
 //
 // regular wall
 //
@@ -98,6 +102,13 @@ static void SetLight(const int32_t lightlevel)
         // [crispy]
         lightnum += curline->fakecontrast;
         walllightindex = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+
+        // [Nugget] Dithered lighting
+        if (dithered_lighting)
+        {
+            walllight_ditherlevel = scalelight_ditherlevel[walllightindex];
+            walllight_nextcolormap = scalelight_nextcolormap[walllightindex];
+        }
     }
     else
     {
@@ -108,16 +119,26 @@ static void SetLight(const int32_t lightlevel)
 
 static void CalculateLighting(const int tint, fixed_t scale, int x) // [Nugget] X
 {
+    // [Nugget]
+    int32_t lightindex = 0; // Factored out
+    boolean do_dithered_lighting = false; // Dithered lighting
+
     // dimishing
     int32_t colormapindex = fixedcolormapindex;
     if (!fixedcolormapindex)
     {
-        int32_t lightindex = STRICTMODE(!diminishing_lighting) // [Nugget]
-                             ? 0 : R_GetLightIndex(scale, x); // [Nugget] X
+        lightindex = STRICTMODE(!diminishing_lighting) // [Nugget]
+                     ? 0 : R_GetLightIndex(scale, x); // [Nugget] X
 
         colormapindex = walllightindex < num_colormap_rows
                       ? scalelightindex[walllightindex * MAXLIGHTSCALE + lightindex]
                       : walllightindex;
+
+        if (dithered_lighting && lightindex < MAXLIGHTSCALE-1)
+        {
+            do_dithered_lighting = true;
+            R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+        }
     }
 
     // per-sector colormap
@@ -131,6 +152,20 @@ static void CalculateLighting(const int tint, fixed_t scale, int x) // [Nugget] 
         dc_colormap32[1] = (!fixedcolormap32 && (STRICTMODE(brightmaps) || force_brightmaps))
                          ? thiscolormap
                          : dc_colormap32[0];
+
+        // [Nugget] Dithered lighting
+        if (do_dithered_lighting)
+        {
+            dc_nextcolormap32[0] = thiscolormap + walllight_nextcolormap[lightindex];
+            dc_nextcolormap32[1] = (!fixedcolormap32 && (STRICTMODE(brightmaps) || force_brightmaps))
+                                 ? thiscolormap
+                                 : dc_nextcolormap32[0];
+        }
+        else if (dithered_lighting)
+        {
+            dc_nextcolormap32[0] = dc_colormap32[0];
+            dc_nextcolormap32[1] = dc_colormap32[1];
+        }
     }
     else
     {
@@ -141,6 +176,20 @@ static void CalculateLighting(const int tint, fixed_t scale, int x) // [Nugget] 
         dc_colormap[1] = (!fixedcolormap && (STRICTMODE(brightmaps) || force_brightmaps))
                        ? thiscolormap
                        : dc_colormap[0];
+
+        // [Nugget] Dithered lighting
+        if (do_dithered_lighting)
+        {
+            dc_nextcolormap[0] = thiscolormap + walllight_nextcolormap[lightindex];
+            dc_nextcolormap[1] = (!fixedcolormap && (STRICTMODE(brightmaps) || force_brightmaps))
+                               ? thiscolormap
+                               : dc_nextcolormap[0];
+        }
+        else if (dithered_lighting)
+        {
+            dc_nextcolormap[0] = dc_colormap[0];
+            dc_nextcolormap[1] = dc_colormap[1];
+        }
     }
 }
 

@@ -246,11 +246,11 @@ extern fixed_t dc_rawlightindex;
 
 extern int LIGHTSCALEDITHERSHIFT;
 extern byte **scalelight_ditherlevel;
-extern cmapoffset_t **scalelight_nextcolormap;
+extern int **scalelight_nextcolormap;
 
 extern int LIGHTZDITHERSHIFT;
 extern byte **zlight_ditherlevel;
-extern cmapoffset_t **zlight_nextcolormap;
+extern int **zlight_nextcolormap;
 
 // Radial fog ----------------------------------------------------------------
 
@@ -260,7 +260,7 @@ extern uint16_t **planedistlight, *spandistlight;
 
 // Dithered lighting
 extern byte *planezlight_ditherlevel;
-extern cmapoffset_t *planezlight_nextcolormap;
+extern int *planezlight_nextcolormap;
 extern uint16_t **planedistlight_ditherlevel, *spandistlight_ditherlevel;
 
 extern boolean do_radial_fog;

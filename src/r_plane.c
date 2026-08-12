@@ -101,6 +101,10 @@ static int *spanstart = NULL;                // killough 2/8/98
 
 static fixed_t planeheight;
 
+// [Nugget] Dithered lighting
+byte *planezlight_ditherlevel = NULL;
+int *planezlight_nextcolormap = NULL;
+
 // killough 2/8/98: make variables static
 
 static fixed_t *cachedheight = NULL;
@@ -203,7 +207,9 @@ static void DrawPlane8(fixed_t distance, const int tint)
   }
   else
   {
-    boolean do_plane_radial_fog = do_radial_fog; // [Nugget] Radial fog
+    // [Nugget]
+    boolean do_plane_radial_fog = do_radial_fog; // Radial fog
+    boolean do_dithered_lighting = dithered_lighting; // Dithered lighting
 
     lookup = distance >> LIGHTZSHIFT;
 
@@ -211,7 +217,11 @@ static void DrawPlane8(fixed_t distance, const int tint)
 
     if (STRICTMODE(!diminishing_lighting)) { lookup = MAXLIGHTZ; }
 
-    if (lookup >= MAXLIGHTZ) { do_plane_radial_fog = false; }
+    if (lookup >= MAXLIGHTZ)
+    {
+      do_plane_radial_fog = false;
+      do_dithered_lighting = false;
+    }
 
     // [Nugget] -------------------------------------------------------------/
 
@@ -221,6 +231,16 @@ static void DrawPlane8(fixed_t distance, const int tint)
       DrawSpan = R_DrawSpanWithRadialFog;
       spandistlight = planedistlight[distance >> light_distance_shift_bits];
       ds_colormap[0] = ds_colormap[1] = thiscolormap;
+
+      // Dithered lighting
+      if (do_dithered_lighting)
+      {
+        spandistlight_ditherlevel = planedistlight_ditherlevel[
+          distance >> light_distance_shift_bits
+        ];
+
+        ds_nextcolormap[0] = ds_nextcolormap[1] = thiscolormap;
+      }
     }
     else
     {
@@ -230,8 +250,19 @@ static void DrawPlane8(fixed_t distance, const int tint)
       ds_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                         ? thiscolormap
                         : ds_colormap[0];
+
+      // [Nugget] Dithered lighting
+      if (do_dithered_lighting)
+      {
+        ds_nextcolormap[0] = thiscolormap + planezlight_nextcolormap[lookup];
+
+        R_SetDitherPattern(planezlight_ditherlevel[distance >> LIGHTZDITHERSHIFT]);
+      }
+      else { ds_nextcolormap[0] = ds_colormap[0]; }
     }
   }
+
+  ds_nextcolormap[1] = ds_colormap[1]; // [Nugget] Dithered lighting
 
   DrawSpan();
 }
@@ -255,7 +286,9 @@ static void DrawPlane32(fixed_t distance, const int tint)
   }
   else
   {
-    boolean do_plane_radial_fog = do_radial_fog; // [Nugget] Radial fog
+    // [Nugget]
+    boolean do_plane_radial_fog = do_radial_fog; // Radial fog
+    boolean do_dithered_lighting = dithered_lighting; // Dithered lighting
 
     lookup = distance >> LIGHTZSHIFT;
 
@@ -263,7 +296,11 @@ static void DrawPlane32(fixed_t distance, const int tint)
 
     if (STRICTMODE(!diminishing_lighting)) { lookup = MAXLIGHTZ; }
 
-    if (lookup >= MAXLIGHTZ) { do_plane_radial_fog = false; }
+    if (lookup >= MAXLIGHTZ)
+    {
+      do_plane_radial_fog = false;
+      do_dithered_lighting = false;
+    }
 
     // [Nugget] -------------------------------------------------------------/
 
@@ -273,6 +310,16 @@ static void DrawPlane32(fixed_t distance, const int tint)
       DrawSpan = R_DrawSpanWithRadialFog;
       spandistlight = planedistlight[distance >> light_distance_shift_bits];
       ds_colormap32[0] = ds_colormap32[1] = thiscolormap;
+
+      // Dithered lighting
+      if (do_dithered_lighting)
+      {
+        spandistlight_ditherlevel = planedistlight_ditherlevel[
+          distance >> light_distance_shift_bits
+        ];
+
+        ds_nextcolormap32[0] = ds_nextcolormap32[1] = thiscolormap;
+      }
     }
     else
     {
@@ -282,8 +329,19 @@ static void DrawPlane32(fixed_t distance, const int tint)
       ds_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
                           ? thiscolormap
                           : ds_colormap32[0];
+
+      // [Nugget] Dithered lighting
+      if (do_dithered_lighting)
+      {
+        ds_nextcolormap32[0] = thiscolormap + planezlight_nextcolormap[lookup];
+
+        R_SetDitherPattern(planezlight_ditherlevel[distance >> LIGHTZDITHERSHIFT]);
+      }
+      else { ds_nextcolormap32[0] = ds_colormap32[0]; }
     }
   }
+
+  ds_nextcolormap32[1] = ds_colormap32[1]; // [Nugget] Dithered lighting
 
   DrawSpan();
 }
@@ -730,6 +788,13 @@ static void do_draw_plane(visplane_t *pl)
     planezlightindex = light;
     planezlightoffset = &zlightoffset[light * MAXLIGHTZ];
     const int thiscolormap = pl->tint;
+
+    // [Nugget] Dithered lighting
+    if (dithered_lighting)
+    {
+      planezlight_ditherlevel = zlight_ditherlevel[light];
+      planezlight_nextcolormap = zlight_nextcolormap[light];
+    }
 
     for (int x = pl->minx; x <= stop; x++)
     {

@@ -65,6 +65,83 @@ static int linesize; // killough 11/98
 static pixel_t *background_buffer = NULL;
 static pixel32_t *background_buffer32 = NULL;
 
+// [Nugget] /=================================================================
+
+static boolean init_draw_functions = false;
+
+boolean R_InitDrawFunctionsPending(void)
+{
+  return init_draw_functions;
+}
+
+void R_DeferredInitDrawFunctions(void)
+{
+  init_draw_functions = true;
+}
+
+// Dithered lighting ---------------------------------------------------------
+
+const byte dither_patterns[NUM_DITHER_LEVELS][DITHER_PATTERN_HEIGHT][DITHER_PATTERN_WIDTH] =
+{
+  {
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 },
+  },
+  {
+    { 0, 0, 1, 0 },
+    { 0, 0, 0, 0 },
+    { 1, 0, 0, 0 },
+    { 0, 0, 0, 0 },
+  },
+  {
+    { 1, 0, 1, 0 },
+    { 0, 0, 0, 0 },
+    { 1, 0, 1, 0 },
+    { 0, 0, 0, 0 },
+  },
+  {
+    { 1, 0, 1, 0 },
+    { 0, 1, 0, 0 },
+    { 1, 0, 1, 0 },
+    { 0, 0, 0, 0 },
+  },
+  {
+    { 1, 0, 1, 0 },
+    { 0, 1, 0, 1 },
+    { 1, 0, 1, 0 },
+    { 0, 1, 0, 1 },
+  },
+  {
+    { 0, 1, 0, 1 },
+    { 1, 0, 1, 1 },
+    { 0, 1, 0, 1 },
+    { 1, 1, 1, 0 },
+  },
+  {
+    { 0, 1, 0, 1 },
+    { 1, 1, 1, 1 },
+    { 0, 1, 0, 1 },
+    { 1, 1, 1, 1 },
+  },
+  {
+    { 0, 1, 1, 1 },
+    { 1, 1, 1, 1 },
+    { 1, 1, 0, 1 },
+    { 1, 1, 1, 1 },
+  }
+};
+
+const byte (*dither_pattern)[DITHER_PATTERN_WIDTH] = dither_patterns[0];
+
+void R_SetDitherPattern(const int index)
+{
+  dither_pattern = dither_patterns[index];
+}
+
+// [Nugget] =================================================================/
+
 //
 // R_DrawColumn
 // Source is the top of the column to scale.
@@ -72,6 +149,11 @@ static pixel32_t *background_buffer32 = NULL;
 
 const lighttable_t *dc_colormap[2]; // [crispy] brightmaps
 const lighttable32_t *dc_colormap32[2];
+
+// [Nugget] Dithered lighting
+const lighttable_t *dc_nextcolormap[2];
+const lighttable32_t *dc_nextcolormap32[2];
+
 int dc_x;
 int dc_yl;
 int dc_yh;
@@ -384,7 +466,7 @@ static void DrawTLColumn32(void)
                 V_TranMapRowFromRGB(*dest) \
                 + V_IndexFromRGB(colormap[brightmap[src]][src]) \
             ] \
-         )
+        )
 
     if (dc_texheight & heightmask)
     {
@@ -1524,7 +1606,6 @@ static void DrawTranslatedColumn8(void)
     }
 }
 
-// [Nugget]
 static void DrawTranslatedColumn32(void)
 {
     int count = dc_yh - dc_yl + 1;
@@ -1759,7 +1840,7 @@ static void DrawTRTLColumn32(void)
                 V_TranMapRowFromRGB(*dest) \
                 + V_IndexFromRGB(colormap[brightmap[src]][translation[src]]) \
             ] \
-         )
+        )
 
     if (dc_texheight & heightmask)
     {
@@ -1816,6 +1897,150 @@ static void DrawTRTLColumn32(void)
     #undef SRCPIXEL
 }
 
+// [Nugget] /=================================================================
+
+// Dithered lighting ---------------------------------------------------------
+
+#ifdef RANGECHECK
+    #define RANGECHECK_CODE \
+        if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height) \
+        { \
+            I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); \
+        }
+#else
+    #define RANGECHECK_CODE
+#endif
+
+#define DRAW_COLUMN_DITHERED(NAME, DEPTH, SRCPIXEL) \
+    static void NAME(void) \
+    { \
+        int count = dc_yh - dc_yl + 1; \
+        if (count <= 0) \
+        { \
+            return; \
+        } \
+    \
+        RANGECHECK_CODE \
+    \
+        pixel##DEPTH##_t *dest = ylookup##DEPTH[dc_yl] + columnofs[dc_x]; \
+        const fixed_t fracstep = dc_iscale; \
+        fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep; \
+    \
+        const byte *source = dc_source; \
+        const byte *brightmap = dc_brightmap; \
+        int heightmask = dc_texheight - 1; \
+    \
+        const lighttable##DEPTH##_t **const colormap[2] = { \
+            dc_colormap##DEPTH, dc_nextcolormap##DEPTH \
+        }; \
+    \
+        byte       dx = dc_yl & DITHER_PATTERN_WIDTH_MASK; \
+        byte const dy = dc_x  & DITHER_PATTERN_HEIGHT_MASK; \
+    \
+        const byte *const dither_pattern_row = dither_pattern[dy]; \
+    \
+        byte src; \
+    \
+        if (dc_texheight & heightmask) \
+        { \
+            heightmask++; \
+            heightmask <<= 16; \
+            if (frac < 0) \
+            { \
+                while ((frac += heightmask) < 0) \
+                    ; \
+            } \
+            else \
+            { \
+                while (frac >= heightmask) \
+                { \
+                    frac -= heightmask; \
+                } \
+            } \
+    \
+            do \
+            { \
+                src = source[frac >> 16]; \
+                *dest = SRCPIXEL; \
+                dest += linesize; \
+                if ((frac += fracstep) >= heightmask) \
+                { \
+                    frac -= heightmask; \
+                } \
+                if (frac < 0) \
+                { \
+                    frac += heightmask; \
+                } \
+                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+            } while (--count); \
+        } \
+        else \
+        { \
+            while (count--) \
+            { \
+                src = source[(frac >> FRACBITS) & heightmask]; \
+                *dest = SRCPIXEL; \
+                dest += linesize; \
+                frac += fracstep; \
+                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+            } \
+        } \
+    }
+
+DRAW_COLUMN_DITHERED(
+    DrawColumnDithered8, ,
+    colormap[dither_pattern_row[dx]][brightmap[src]][src]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTLColumnDithered8, ,
+    tranmap[(*dest << 8) + colormap[dither_pattern_row[dx]][brightmap[src]][src]]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTranslatedColumnDithered8, ,
+    colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTRTLColumnDithered8, ,
+    tranmap[(*dest << 8) + colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]]]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawColumnDithered32, 32,
+    colormap[dither_pattern_row[dx]][brightmap[src]][src]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTLColumnDithered32, 32,
+    V_IndexToRGB(
+        tranmap[
+            V_TranMapRowFromRGB(*dest)
+            + V_IndexFromRGB(colormap[dither_pattern_row[dx]][brightmap[src]][src])
+        ]
+    )
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTranslatedColumnDithered32, 32,
+    colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTRTLColumnDithered32, 32,
+    V_IndexToRGB(
+        tranmap[
+            V_TranMapRowFromRGB(*dest)
+            + V_IndexFromRGB(colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]])
+        ]
+    )
+)
+
+#undef RANGECHECK_CODE
+
+// [Nugget] =================================================================/
+
 //
 // R_DrawSpan 
 // With DOOM style restrictions on view orientation,
@@ -1836,6 +2061,10 @@ int ds_x2;
 const lighttable_t *ds_colormap[2];
 const lighttable32_t *ds_colormap32[2];
 const byte *ds_brightmap;
+
+// [Nugget] Dithered lighting
+const lighttable_t *ds_nextcolormap[2];
+const lighttable32_t *ds_nextcolormap32[2];
 
 uint32_t ds_xfrac;
 uint32_t ds_yfrac;
@@ -1910,6 +2139,10 @@ static void DrawSpan8(void)
 
 // [Nugget] /=================================================================
 
+#define XSHIFT (32 - 6)
+#define YSHIFT (32 - 6 - 6)
+#define YMASK  (63 * 64)
+
 static void DrawSpan32(void)
 {
     int count = ds_x2 - ds_x1 + 1;
@@ -1920,10 +2153,6 @@ static void DrawSpan32(void)
 
     unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
     const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
-
-    #define XSHIFT (32 - 6)
-    #define YSHIFT (32 - 6 - 6)
-    #define YMASK  (63 * 64)
 
     byte src;
 
@@ -1952,11 +2181,44 @@ static void DrawSpan32(void)
     }
 
     #undef DRAW_PIXEL
-
-    #undef YSHIFT
-    #undef YMASK
-    #undef XSHIFT
 }
+
+// Dithered lighting ---------------------------------------------------------
+
+#define DRAW_SPAN_DITHERED(NAME, DEPTH) \
+    static void NAME(void) \
+    { \
+        int count = ds_x2 - ds_x1 + 1; \
+        pixel##DEPTH##_t *dest = ylookup##DEPTH[ds_y] + columnofs[ds_x1]; \
+        const byte *source = ds_source; \
+        const byte *brightmap = ds_brightmap; \
+    \
+        const lighttable##DEPTH##_t **const colormap[2] = { \
+            ds_colormap##DEPTH, ds_nextcolormap##DEPTH \
+        }; \
+    \
+        byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK; \
+        byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK; \
+    \
+        const byte *const dither_pattern_row = dither_pattern[dy]; \
+    \
+        unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10; \
+        const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10; \
+    \
+        byte src; \
+    \
+        while (count--) \
+        { \
+            src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+            *dest++ = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            xf += xs; \
+            yf += ys; \
+            dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+        } \
+    }
+
+DRAW_SPAN_DITHERED(DrawSpanDithered8, )
+DRAW_SPAN_DITHERED(DrawSpanDithered32, 32)
 
 // Radial fog ----------------------------------------------------------------
 
@@ -1975,10 +2237,6 @@ static void DrawSpanWithRadialFog8(void)
 
     const uint16_t *sdl = spandistlight + ds_x1;
 
-    #define XSHIFT (32 - 6)
-    #define YSHIFT (32 - 6 - 6)
-    #define YMASK  (63 * 64)
-
     byte src;
 
     #define DRAW_PIXEL(dest_index) \
@@ -2009,10 +2267,6 @@ static void DrawSpanWithRadialFog8(void)
     }
 
     #undef DRAW_PIXEL
-
-    #undef YSHIFT
-    #undef YMASK
-    #undef XSHIFT
 }
 
 static void DrawSpanWithRadialFog32(void)
@@ -2028,10 +2282,6 @@ static void DrawSpanWithRadialFog32(void)
 
     const uint16_t *sdl = spandistlight + ds_x1;
 
-    #define XSHIFT (32 - 6)
-    #define YSHIFT (32 - 6 - 6)
-    #define YMASK  (63 * 64)
-
     byte src;
 
     #define DRAW_PIXEL(dest_index) \
@@ -2062,11 +2312,55 @@ static void DrawSpanWithRadialFog32(void)
     }
 
     #undef DRAW_PIXEL
-
-    #undef YSHIFT
-    #undef YMASK
-    #undef XSHIFT
 }
+
+#define DRAW_SPAN_DITHERED_RADFOG(NAME, DEPTH) \
+    static void NAME(void) \
+    { \
+        int count = ds_x2 - ds_x1 + 1; \
+        pixel##DEPTH##_t *dest = ylookup##DEPTH[ds_y] + columnofs[ds_x1]; \
+        const byte *const source = ds_source; \
+        const byte *const brightmap = ds_brightmap; \
+    \
+        const lighttable##DEPTH##_t **const colormap[2] = { \
+            ds_colormap##DEPTH, ds_nextcolormap##DEPTH \
+        }; \
+    \
+        byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK; \
+        byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK; \
+    \
+        unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10; \
+        const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10; \
+    \
+        const uint16_t *sdl = spandistlight + ds_x1; \
+        const uint16_t *sdld = spandistlight_ditherlevel + ds_x1; \
+    \
+        byte src; \
+    \
+        while (count--) \
+        { \
+            src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+    \
+            colormap[0][0] = colormap[0][1] + planezlightoffset[*sdl]; \
+            colormap[1][0] = colormap[1][1] + planezlight_nextcolormap[*sdl]; \
+            sdl++; \
+    \
+            const byte *const dither_pattern_row = \
+              dither_patterns[planezlight_ditherlevel[*sdld++]][dy]; \
+    \
+            *dest++ = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            xf += xs; \
+            yf += ys; \
+            dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+        } \
+    }
+
+DRAW_SPAN_DITHERED_RADFOG(DrawSpanDitheredWithRadialFog8, )
+DRAW_SPAN_DITHERED_RADFOG(DrawSpanDitheredWithRadialFog32, 32)
+
+#undef YSHIFT
+#undef YMASK
+#undef XSHIFT
 
 // [Nugget] =================================================================/
 
@@ -2287,29 +2581,56 @@ void R_InitDrawColorFunctions(void)
 {
     if (truecolor_rendering)
     {
-        R_DrawColumn = DrawColumn32;
-        R_DrawTranslatedColumn = DrawTranslatedColumn32;
-        R_DrawTLColumn = DrawTLColumn32;
-        R_DrawTRTLColumn = DrawTRTLColumn32;
+        if (dithered_lighting)
+        {
+            R_DrawColumn = DrawColumnDithered32;
+            R_DrawTranslatedColumn = DrawTranslatedColumnDithered32;
+            R_DrawTLColumn = DrawTLColumnDithered32;
+            R_DrawTRTLColumn = DrawTRTLColumnDithered32;
+
+            R_DrawSpan = DrawSpanDithered32;
+            R_DrawSpanWithRadialFog = DrawSpanDitheredWithRadialFog32;
+        }
+        else {
+            R_DrawColumn = DrawColumn32;
+            R_DrawTranslatedColumn = DrawTranslatedColumn32;
+            R_DrawTLColumn = DrawTLColumn32;
+            R_DrawTRTLColumn = DrawTRTLColumn32;
+
+            R_DrawSpan = DrawSpan32;
+            R_DrawSpanWithRadialFog = DrawSpanWithRadialFog32;
+        }
 
         R_DrawColumnShadow = DrawColumnShadow32;
         R_DrawSkyColumn = DrawSkyColumn32;
-
-        R_DrawSpan = DrawSpan32;
-        R_DrawSpanWithRadialFog = DrawSpanWithRadialFog32;
     }
     else
     {
-        R_DrawColumn = DrawColumn8;
-        R_DrawTranslatedColumn = DrawTranslatedColumn8;
-        R_DrawTLColumn = DrawTLColumn8;
-        R_DrawTRTLColumn = DrawTRTLColumn8;
+        if (dithered_lighting)
+        {
+            R_DrawColumn = DrawColumnDithered8;
+            R_DrawTranslatedColumn = DrawTranslatedColumnDithered8;
+            R_DrawTLColumn = DrawTLColumnDithered8;
+            R_DrawTRTLColumn = DrawTRTLColumnDithered8;
+
+            R_DrawSpan = DrawSpanDithered8;
+            R_DrawSpanWithRadialFog = DrawSpanDitheredWithRadialFog8;
+        }
+        else {
+            R_DrawColumn = DrawColumn8;
+            R_DrawTranslatedColumn = DrawTranslatedColumn8;
+            R_DrawTLColumn = DrawTLColumn8;
+            R_DrawTRTLColumn = DrawTRTLColumn8;
+
+            R_DrawColumnShadow = DrawColumnShadow8;
+            R_DrawSkyColumn = DrawSkyColumn8;
+
+            R_DrawSpan = DrawSpan8;
+            R_DrawSpanWithRadialFog = DrawSpanWithRadialFog8;
+        }
 
         R_DrawColumnShadow = DrawColumnShadow8;
         R_DrawSkyColumn = DrawSkyColumn8;
-
-        R_DrawSpan = DrawSpan8;
-        R_DrawSpanWithRadialFog = DrawSpanWithRadialFog8;
     }
 
     colfunc = R_DrawColumn;

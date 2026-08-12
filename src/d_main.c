@@ -95,6 +95,7 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "hu_obituary.h"
 #include "i_thread.h"
 #include "m_nughud.h"
 #include "p_mobj.h"
@@ -314,7 +315,7 @@ void D_Display (void)
   // [Nugget]
   if (R_InitDrawFunctionsPending())
   {
-    R_InitDrawFunctions();
+    R_InitDrawColorFunctions();
     VX_SetVoxelRenderingMode();
   }
 
