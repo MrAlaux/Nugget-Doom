@@ -30,7 +30,6 @@ boolean ST_GetChatOn(void);
 boolean ST_MessageFadeoutOn(void);
 int ST_GetNumMessageLines(void);
 void ST_ClearMessages(void);
-void ST_HideMessages(void);
 
 // [Nugget] =================================================================/
 

@@ -303,19 +303,6 @@ void ST_ClearMessages(void)
     message_review_duration_left = 0;
 }
 
-void ST_HideMessages(void)
-{
-    linkedmessage_t *m = message_list_head;
-
-    while (m)
-    {
-        m->duration_left = 0;
-        m = m->next;
-    }
-
-    message_review_duration_left = 0;
-}
-
 // [Nugget] -----------------------------------------------------------------/
 
 static void UpdateMessage(sbe_widget_t *widget, player_t *player)
@@ -471,7 +458,17 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
 
 void ST_ResetMessages(void)
 {
-    // [Nugget] No-op
+    // [Nugget] Rewritten
+
+    linkedmessage_t *m = message_list_head;
+
+    while (m)
+    {
+        m->duration_left = 0;
+        m = m->next;
+    }
+
+    message_review_duration_left = 0;
 }
 
 // key tables
