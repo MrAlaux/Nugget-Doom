@@ -3812,8 +3812,18 @@ static hudfont_t LoadNughudHUDFont(
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
       font.characters[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(font.characters[i]->width));
-      maxheight = MAX(maxheight, SHORT(font.characters[i]->height));
+
+      // As defined in st_sbardef.c
+      static int MAXWIDTH = 8 * SPACEWIDTH;
+      static int MAXHEIGHT = ST_HEIGHT;
+
+      const short width = SHORT(font.characters[i]->width);
+
+      if (width <= MAXWIDTH) { maxwidth = MAX(maxwidth, width); }
+
+      const short height = SHORT(font.characters[i]->height);
+
+      if (height <= MAXHEIGHT) { maxheight = MAX(maxheight, height); }
     }
     else {
       const char c = i + HU_FONTSTART;
