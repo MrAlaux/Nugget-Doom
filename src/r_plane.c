@@ -582,6 +582,10 @@ static void DrawSkyDef(visplane_t *pl)
         {
             dc_colormap32[0] = dc_colormap32[1] = fullcolormap32;
         }
+
+        // [Nugget]
+        dc_nextcolormap32[0] = dc_colormap32[0];
+        dc_nextcolormap32[1] = dc_colormap32[1];
     }
     else
     {
@@ -590,6 +594,10 @@ static void DrawSkyDef(visplane_t *pl)
         {
             dc_colormap[0] = dc_colormap[1] = fullcolormap; // killough 3/20/98
         }
+
+        // [Nugget]
+        dc_nextcolormap[0] = dc_colormap[0];
+        dc_nextcolormap[1] = dc_colormap[1];
     }
 
     if (sky->type == SkyType_Fire)
