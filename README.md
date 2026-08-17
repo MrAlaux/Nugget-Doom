@@ -253,9 +253,9 @@ Copyright:
  © TobiasKosmos.  
 License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/) and [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
-Files: `base/all-all/sm*.png`  
+Files: `base/all-all/sprites/bon*`  
 Copyright:  
- © 2024 Julia Nechaevskaya.  
+ © 2026 Amaruq Wulfe.  
 License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/)
 
 Files: `base/all-all/sbardef.lmp`  
@@ -267,6 +267,11 @@ Files: `base/all-all/dmxopl.op2`
 Copyright:  
  © 2017 Shannon Freeman.  
 License: [MIT](https://github.com/sneakernets/DMXOPL/blob/DMXOPL3/LICENSE)
+
+Files: `base/all-all/sm*.png`  
+Copyright:  
+ © 2024 Julia Nechaevskaya.  
+License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/)
 
 Files: `data/nugget-doom.ico, data/nugget-doom.png, src/icon.c, data/setup.ico, data/nugget-doom-setup.png, setup/setup_icon.c`  
 Copyright:  
