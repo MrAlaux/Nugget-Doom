@@ -1062,7 +1062,10 @@ void A_Lower(player_t *player, pspdef_t *psp)
 void A_Raise(player_t *player, pspdef_t *psp)
 {
   // [Nugget] Weapon-switch interruption
-  if (CASUALPLAY(weapswitch_interruption) && player->pendingweapon != wp_nochange)
+  if (CASUALPLAY(weapswitch_interruption)
+      && player->pendingweapon != wp_nochange
+      && !(player->pendingweapon == player->readyweapon
+           && player->switching == weapswitch_raising))
   {
     switch_interrupted = true;
     P_SetPsprite(player, ps_weapon, weaponinfo[player->readyweapon].downstate);
