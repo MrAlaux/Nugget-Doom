@@ -1121,6 +1121,20 @@ static boolean CheckQuickMapButtonDoublePress(void)
 //
 // Passed an input event, returns true if its handled
 //
+
+void AM_EnableFullAutomap(boolean enable)
+{
+  if (enable)
+  {
+      minimap.active = false;
+      AM_Start ();
+      SwapScale();
+      viewactive = false;
+      am_refresh_background = true;
+      st_refresh_background = true;
+  }
+}
+
 boolean AM_Responder
 ( event_t*  ev )
 {
@@ -1152,12 +1166,7 @@ boolean AM_Responder
     {
       if (!CheckQuickMapButtonDoublePress()) // [Nugget]
       {
-        minimap.active = false;
-        AM_Start ();
-        SwapScale();
-        viewactive = false;
-        am_refresh_background = true;
-        st_refresh_background = true;
+        AM_EnableFullAutomap(true);
       }
 
       rc = true;

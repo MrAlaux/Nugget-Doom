@@ -338,6 +338,8 @@ static void saveg_read_mobj_t(mobj_t *str)
         str->bloodcolor = 0;
     }
 
+    str->tint = NO_INDEX;
+
     // [Nugget] Removed `actualheight`
 
     // [Nugget] --------------------------------------------------------------

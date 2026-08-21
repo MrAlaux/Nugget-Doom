@@ -213,7 +213,7 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     // [Nugget] -------------------------------------------------------------/
 
-    V_DrawPatchGeneralSH(x, y, xoffset, yoffset, tranmap, cr, patch, zero_crop); // [Nugget] HUD/menu shadows
+    V_DrawPatchGeneralSH(x, y, xoffset, yoffset, tranmap, cr, patch, no_crop); // [Nugget] HUD/menu shadows
 
     // [Nugget] HUD/menu shadows
     V_SetShadowColormap(100);

@@ -1914,7 +1914,7 @@ static void DrawGlyphNumber(int x1, int y1, int *x2, int *y2, boolean dry,
 
     if (glyph)
     {
-        DrawPatch(x1 + number->xoffset, y1, x2, y2, dry, zero_crop,
+        DrawPatch(x1 + number->xoffset, y1, x2, y2, dry, no_crop,
                   font->maxheight, elem->alignment, glyph,
                   elem->crboom == CR_NONE ? elem->cr : elem->crboom,
                   elem->tranmap);
@@ -1978,7 +1978,7 @@ static void DrawGlyphLine(int x1, int y1, int *x2, int *y2, boolean dry,
 
         // [Nugget] =========================================================/
 
-        DrawPatchEx(x1 + line->xoffset, y1, x2, y2, dry, zero_crop,
+        DrawPatchEx(x1 + line->xoffset, y1, x2, y2, dry, no_crop,
                     font->maxheight, elem->alignment, glyph, elem->cr, cr2,
                     tl);
 
@@ -2225,7 +2225,7 @@ static void DrawElem(int x1, int y1, int *x2, int *y2, boolean dry,
                 sbe_animation_t *animation = elem->subtype.animation;
                 patch_t *patch =
                     animation->frames[animation->frame_index].patch;
-                DrawPatch(x1, y1, x2, y2, dry, zero_crop, 0, elem->alignment,
+                DrawPatch(x1, y1, x2, y2, dry, no_crop, 0, elem->alignment,
                           patch, elem->cr, elem->tranmap);
             }
             break;
