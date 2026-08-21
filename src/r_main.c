@@ -567,6 +567,8 @@ void R_InitDistLightTables(void)
 
   for (int i = 1;  i < idlt_iterations;  i++)
   { I_SemaphoreWait(I_MainSemaphoreIndex()); }
+
+  drs_skip_frame = true;
 }
 
 // FOV effects ---------------------------------------------------------------
