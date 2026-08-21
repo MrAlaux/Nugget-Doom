@@ -78,6 +78,8 @@ extern boolean screenvisible;
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
 
+void I_DRSSkipFrame(void);
+
 boolean I_SmoothPaletteTinting(void);
 int I_GetNumPalettes(void);
 void I_DeferredInitPalettes(void);

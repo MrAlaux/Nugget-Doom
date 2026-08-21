@@ -317,6 +317,12 @@ boolean screenvisible = true;
 
 static boolean drs_skip_frame;
 
+// [Nugget]
+void I_DRSSkipFrame(void)
+{
+    drs_skip_frame = true;
+}
+
 void *I_GetSDLWindow(void)
 {
     return screen;
