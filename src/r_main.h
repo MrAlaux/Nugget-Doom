@@ -325,23 +325,24 @@ typedef enum freecammode_s {
   FREECAM_OFF,
   FREECAM_CAM,
   FREECAM_PLAYER,
-  
-  NUMFREECAMMODES
+
+  NUM_FREECAMMODES
 } freecammode_t;
 
-extern boolean       R_FreecamOn(void);
-extern void          R_SetFreecamOn(const boolean value);
-extern freecammode_t R_GetFreecamMode(void);
-extern freecammode_t R_CycleFreecamMode(void);
-extern angle_t       R_GetFreecamAngle(void);
-extern void          R_ResetFreecam(const boolean newmap);
-extern void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
+boolean       R_FreecamOn(void);
+void          R_ToggleFreecam(void);
+void          R_DisableFreecamIfStrictMode(void);
+freecammode_t R_GetFreecamMode(void);
+freecammode_t R_CycleFreecamMode(void);
+angle_t       R_GetFreecamAngle(void);
+void          R_ResetFreecam(const boolean newmap);
+void          R_MoveFreecam(fixed_t x, fixed_t y, fixed_t z);
 
-extern void                 R_UpdateFreecamMobj(struct mobj_s *const mobj);
-extern const struct mobj_s *R_GetFreecamMobj(void);
+void                 R_UpdateFreecamMobj(struct mobj_s *const mobj);
+const struct mobj_s *R_GetFreecamMobj(void);
 
-extern void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
-                            angle_t ticangle, fixed_t pitch, boolean center, boolean lock);
+void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
+                     angle_t ticangle, fixed_t pitch, boolean center, boolean lock);
 
 // [Nugget] =================================================================/
 

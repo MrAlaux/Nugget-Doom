@@ -2947,7 +2947,7 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (STRICTMODE(M_InputActivated(input_freecam)))
     {
-        R_SetFreecamOn(!R_FreecamOn());
+        R_ToggleFreecam();
     }
 
     // [Nugget] -------------------------------------------------------------/

@@ -2777,8 +2777,15 @@ static void AM_drawWalls(void)
     // [Nugget] Tag Finder from PrBoomX
     for (int i = 0;  i < array_size(crossmarks);  i++)
     {
-        AM_drawLineCharacter(tf_cross, NUM_TF_CROSS_LINES, 128<<MAPBITS, 0,
-                             crossmarks[i].color, crossmarks[i].x, crossmarks[i].y);
+        AM_drawLineCharacter(
+            tf_cross,
+            NUM_TF_CROSS_LINES,
+            ((int64_t) scale_ftom * 24) * current_video_height / SCREENHEIGHT,
+            0,
+            crossmarks[i].color,
+            crossmarks[i].x,
+            crossmarks[i].y
+        );
     }
     array_clear(crossmarks);
 }

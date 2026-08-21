@@ -28,6 +28,8 @@
   - Improved support for modded weapons, and made it respect _Smart Autoaim_
   - Improved easing
 - **Optimized initialization of generic tranmaps by caching them in files**
+- **Fixed scale for _Tag Finder_ cross marks**
+- **Made initialization of _Radial Fog_ not trigger dynamic resolution changes**
 - **Changed the default values of the following settings**: [^2]
   - Set _Auto Save Interval_ to 300s, enabling periodic auto-saves
   - Enabled _Extra Gibbing_
@@ -52,6 +54,7 @@
 - **Weapon-translucency menu items not generating tranmaps immediately**
 - **Key-binding menu items not working when backing from a submenu**
 - **Weapon-switch interruption allowing to switch to an already-raising weapon**
+- **_Freecam_ making _Alt. Intermission Background_ jitter**
 - **Quick-save/load prompts not playing a sound when brought up**
 - **Quick-save/load prompts not being replaced by DeHackEd**
 - **Quick-save/load prompts sometimes showing the wrong savegame name**

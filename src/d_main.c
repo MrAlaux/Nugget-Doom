@@ -1734,7 +1734,7 @@ void D_UpdateCasualPlay(void)
 
     R_SetFuzzColumnMode();
     R_SetZoom(ZOOM_RESET); // Reset FOV
-    R_SetFreecamOn(R_FreecamOn());
+    R_DisableFreecamIfStrictMode();
 
     MN_SetupResetMenu();
   }
