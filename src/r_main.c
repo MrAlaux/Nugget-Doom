@@ -886,12 +886,17 @@ static struct {
 
 boolean R_FreecamOn(void)
 {
-  return freecam_on;
+  return freecam_on && gamestate == GS_LEVEL;
 }
 
-void R_SetFreecamOn(const boolean value)
+void R_ToggleFreecam(void)
 {
-  freecam_on = STRICTMODE(value);
+  freecam_on = STRICTMODE(!freecam_on);
+}
+
+void R_DisableFreecamIfStrictMode(void)
+{
+  freecam_on = STRICTMODE(freecam_on);
 }
 
 freecammode_t R_GetFreecamMode(void)
@@ -901,7 +906,7 @@ freecammode_t R_GetFreecamMode(void)
 
 freecammode_t R_CycleFreecamMode(void)
 {
-  return (++freecam_mode >= NUMFREECAMMODES) ? freecam_mode = FREECAM_OFF + 1 : freecam_mode;
+  return (++freecam_mode >= NUM_FREECAMMODES) ? freecam_mode = FREECAM_OFF + 1 : freecam_mode;
 }
 
 angle_t R_GetFreecamAngle(void)
@@ -1936,7 +1941,7 @@ void R_SetupFrame (player_t *player)
                                                 && !R_FreecamOn()));
 
   // Freecam
-  if (R_FreecamOn() && gamestate == GS_LEVEL)
+  if (R_FreecamOn())
   {
     static player_t dummyplayer = {0};
     static mobj_t dummymobj = {0};
@@ -2034,7 +2039,7 @@ void R_SetupFrame (player_t *player)
   {
     if ((use_localview
          // [Nugget] Freecam
-         || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM
+         || (R_GetFreecamMode() == FREECAM_CAM
              && (!R_GetFreecamMobj() || R_ChasecamOn())))
         && CalcViewAngle)
     {
@@ -2045,7 +2050,7 @@ void R_SetupFrame (player_t *player)
       viewangle = LerpAngle(player->mo->oldangle, player->mo->angle);
     }
 
-    if ((use_localview || (R_FreecamOn() && R_GetFreecamMode() == FREECAM_CAM)) // [Nugget] Freecam
+    if ((use_localview || R_GetFreecamMode() == FREECAM_CAM) // [Nugget] Freecam
         && raw_input && !player->centering && (mouselook || padlook)) // [Nugget] Freelook checks
     {
       basepitch = player->pitch + localview.pitch;

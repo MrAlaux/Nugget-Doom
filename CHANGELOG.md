@@ -38,6 +38,7 @@
 - **Wrong player controls when using freecam during netgames**
 - **Key-binding menu items not working when backing from a submenu**
 - **Weapon-switch interruption allowing to switch to an already-raising weapon**
+- **_Freecam_ making _Alt. Intermission Background_ jitter**
 - **Quick-save/load prompts not playing a sound when brought up**
 - **Quick-save/load prompts not being replaced by DeHackEd**
 - **Quick-save/load prompts sometimes showing the wrong savegame name**
