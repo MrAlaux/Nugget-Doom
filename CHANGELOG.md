@@ -16,6 +16,7 @@
   - Made speed configurable through the `vertical_lockon_speed_pct` CVAR
   - Improved support for modded weapons, and made it respect _Smart Autoaim_
   - Improved easing
+- **Fixed scale for _Tag Finder_ cross marks**
 - **Changed the default values of the following settings**: [^2]
   - Set _Auto Save Interval_ to 300s, enabling periodic auto-saves
   - Enabled _Extra Gibbing_
