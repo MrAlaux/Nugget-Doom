@@ -377,7 +377,7 @@ void HU_DrawCrosshair(void)
 
         V_DrawPatchGeneral(
             crosshair.x - hlx,
-            y - crosshair.hlh,
+            y - crosshair.hlh + crosshair.hlc,
             SHORT(crosshair.hlpatch->leftoffset),
             SHORT(crosshair.hlpatch->topoffset),
             xhair_tranmap,
@@ -388,7 +388,7 @@ void HU_DrawCrosshair(void)
 
         V_DrawPatchGeneral(
             crosshair.x + amx,
-            y - crosshair.amh,
+            y - crosshair.amh + crosshair.amc,
             SHORT(crosshair.ampatch->leftoffset),
             SHORT(crosshair.ampatch->topoffset),
             xhair_tranmap,

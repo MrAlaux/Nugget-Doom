@@ -1774,7 +1774,7 @@ static void F_CastDrawer(void)
         170 - fc_spriteoffset,
         SHORT(patch->leftoffset),
         SHORT(patch->topoffset),
-        zero_crop,
+        no_crop,
         patch,
         flip,
         NULL,

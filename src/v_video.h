@@ -213,7 +213,7 @@ void V_DrawPatchAll(
 );
 
 #define V_DrawPatchTRTL2(x, y, patch, xlat, tranmap) \
-  V_DrawPatchAll(x, y, 0, 0, zero_crop, patch, false, xlat, NULL, tranmap)
+  V_DrawPatchAll(x, y, 0, 0, no_crop, patch, false, xlat, NULL, tranmap)
 
 void V_DrawPatchShadow(
     int x,
@@ -238,13 +238,13 @@ void V_DrawPatchShadowed(
 
 #define V_DrawPatchSH(x, y, patch) \
     V_DrawPatchShadowed( \
-      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), no_crop, \
       patch, false, NULL, NULL, NULL \
     )
 
 #define V_DrawPatchCastCallSH(patch, tranmap, xlat, flip) \
     V_DrawPatchShadowed( \
-      160, 170, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      160, 170, SHORT(patch->leftoffset), SHORT(patch->topoffset), no_crop, \
       patch, flip, xlat, NULL, tranmap \
     )
 
@@ -262,13 +262,13 @@ void V_DrawPatchShadowed(
 
 #define V_DrawPatchTranslatedSH(x, y, patch, xlat) \
     V_DrawPatchShadowed( \
-      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), no_crop, \
       patch, false, xlat, NULL, NULL \
     )
 
 #define V_DrawPatchTranslatedTwiceSH(x, y, patch, xlat, xlat2) \
     V_DrawPatchShadowed( \
-      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), zero_crop, \
+      x, y, SHORT(patch->leftoffset), SHORT(patch->topoffset), no_crop, \
       patch, false, xlat, xlat2, NULL \
     )
 
