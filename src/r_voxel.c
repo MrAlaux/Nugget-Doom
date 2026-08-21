@@ -21,12 +21,12 @@
 #include "i_printf.h"
 #include "i_video.h"
 #include "info.h"
-#include "m_array.h"
 #include "m_fixed.h"
-#include "mn_menu.h"
 #include "m_misc.h"
+#include "mn_menu.h"
 #include "p_mobj.h"
 #include "r_bmaps.h"
+#include "r_data.h"
 #include "r_defs.h"
 #include "r_draw.h"
 #include "r_main.h"
@@ -345,21 +345,18 @@ void VX_Init (void)
 #define VX_MINZ         (   4 * FRACUNIT)
 #define VX_MAX_DIST     (2048 * FRACUNIT)
 #define VX_MIN_DIST     ( 512 * FRACUNIT)
+#define VX_DIST_STEP    ( 512 * FRACUNIT)
 
 static int vx_max_dist = VX_MAX_DIST;
 
-void VX_IncreaseMaxDist (void)
+void VX_IncreaseMaxDist (int step_multipler)
 {
-	vx_max_dist *= 2;
-	if (vx_max_dist > VX_MAX_DIST)
-		vx_max_dist = VX_MAX_DIST;
+	vx_max_dist = MIN (VX_MAX_DIST, vx_max_dist + VX_DIST_STEP * step_multipler);
 }
 
-void VX_DecreaseMaxDist (void)
+void VX_DecreaseMaxDist (int step_multipler)
 {
-	vx_max_dist /= 2;
-	if (vx_max_dist < VX_MIN_DIST)
-		vx_max_dist = VX_MIN_DIST;
+	vx_max_dist = MAX (VX_MIN_DIST, vx_max_dist - VX_DIST_STEP * step_multipler);
 }
 
 void VX_ResetMaxDist (void)
@@ -528,14 +525,21 @@ static boolean VX_CheckFrustum (fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
 }
 
 
-boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
+// [Nugget]
+static int const *voxellightoffset = NULL;
+
+// [Nugget] Dithered lighting
+static byte const *voxellight_ditherlevel = NULL;
+static int const *voxellight_nextcolormap = NULL;
+
+boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 {
 	if (!STRICTMODE(voxels_rendering))
 		return false;
 
 	// skip the player thing we are viewing from
 	// [Nugget] Unless using chasecam or freecam
-	if (thing->player == viewplayer && !(R_ChasecamOn() || R_FreecamOn()))
+	if (thing == viewplayer->mo && !(R_ChasecamOn() || R_FreecamOn()))
 		return true;
 
 	// does the voxel model exist?
@@ -702,6 +706,7 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 
 	vis->mobjflags = thing->flags;
 	vis->mobjflags2 = thing->flags2;
+	vis->mobjflags_extra = thing->flags_extra;
 	vis->scale = xscale;
 
 	vis->gx  = gx;
@@ -714,10 +719,14 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 
 	// [Nugget]
 	vis->yscale = vis->scale;
-	vis->lightnum = lightnum;
+	vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
 	vis->flags = 0;
 
 	// get light level...
+	vis->tint = GetThingTint(thing, thing->subsector->sector);
+
+	// [Nugget] Thing lighting
+	if (thing->tint >= 0) { vis->flags |= VSF_OWN_TINT; }
 
 	// [Nugget] Dithered lighting
 	boolean do_dithered_lighting = false;
@@ -733,46 +742,56 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 	else if (thing->frame & FF_FULLBRIGHT)
 	{
 		vis->colormap[0] = vis->colormap[1] = 0;
+
 		vis->flags |= VSF_FULLBRIGHT; // [Nugget]
 	}
 	else
 	{
 		// diminished light
-		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-		                  ? 0 : R_GetLightIndex(xscale, 0);
+
+		int lightnum;
 
 		// [Nugget] Thing lighting
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_HITBOX)
 		{
-			int new_lightnum = R_CalculateHitboxLightNum(vis->gx, vis->gy, thing->radius, false)
-			                 + extralight;
-
-			new_lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
-
-			vis->lightnum = new_lightnum;
-			spritelights = scalelight[new_lightnum];
-
-			// Dithered lighting
-			if (dithered_lighting)
-			{
-				spritelight_ditherlevel = scalelight_ditherlevel[new_lightnum];
-				spritelight_nextcolormap = scalelight_nextcolormap[new_lightnum];
-			}
+			lightnum = R_CalculateHitboxLightLevel(vis->gx, vis->gy, thing->radius, false)
+			           >> LIGHTSEGSHIFT;
+		}
+		else
+		{
+			lightnum = (demo_version >= DV_MBF)
+			         ? (lightlevel_override >> LIGHTSEGSHIFT)
+			         : (thing->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
 		}
 
-		vis->colormap[0] = spritelights[index];
+		lightnum += extralight;
+		lightnum = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+
+		const int *const spritelightoffsets = scalelightoffset[lightnum];
+		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+		                  ? 0 : R_GetLightIndex(xscale, 0);
+
+		vis->colormap[0] = spritelightoffsets[index];
 		vis->colormap[1] = 0;
 
 		// [Nugget] Dithered lighting
-		if (dithered_lighting && index < MAXLIGHTSCALE-1)
+		if (dithered_lighting)
 		{
-			do_dithered_lighting = true;
+			voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+			voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
 
-			vis->nextcolormap[0] = spritelight_nextcolormap[index];
-			vis->nextcolormap[1] = vis->colormap[1];
+			if (index < MAXLIGHTSCALE-1)
+			{
+				do_dithered_lighting = true;
 
-			vis->ditherlevel = spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
+				vis->nextcolormap[0] = voxellight_nextcolormap[index];
+				vis->nextcolormap[1] = vis->colormap[1];
+
+				vis->ditherlevel = voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
+			}
 		}
+
+		vis->lightnum = lightnum; // [Nugget]
 	}
 
 	// [Nugget] Dithered lighting
@@ -784,19 +803,22 @@ boolean VX_ProjectVoxel (mobj_t * thing, byte lightnum)
 		vis->ditherlevel = 0;
 	}
 
+	// ID24 per-state tranmap
+	// tranmaps do not work with Voxels yet
+	vis->tranmap = NULL;
+
 	vis->brightmap = R_BrightmapForSprite(thing->sprite);
 	vis->color = thing->bloodcolor;
 
 	// [Alaux] Lock crosshair on target
 	if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target)
 	{
-		HU_UpdateCrosshairLock
-		(
-			BETWEEN(0, viewwidth  - 1, (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS),
-			// [Nugget] Removed `actualheight`
-			BETWEEN(0, viewheight - 1, (centeryfrac + FixedMul(viewz - gz - crosshair_target->height/2, xscale)) >> FRACBITS)
-		);
-
+		int x = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS;
+		// [Nugget] Removed `actualheight`
+		int y = (centeryfrac + FixedMul(viewz - gz - crosshair_target->height / 2, xscale)) >> FRACBITS;
+		x = clampi(x, 0, viewwidth - 1);
+		y = clampi(y, 0, viewheight - 1);
+		HU_UpdateCrosshairLock(x, y);
 		crosshair_target = NULL; // Don't update it again until next tic
 	}
 
@@ -939,9 +961,9 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapoffset)
 	{
-		do_voxel_radial_fog = do_radial_fog;
+		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
 		{
@@ -956,17 +978,26 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-			                       + extralight;
+			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			const byte lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+			int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
+
+			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
+
+			lightnum = (spr->flags & VSF_FULLBRIGHT)
+			         ? LIGHTLEVELS-1
+			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
+
+			spr->lightnum = lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
+
+			if (!own_tint) { spr->tint = tint; }
 
 			if (!do_voxel_radial_fog)
 			{
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(B_xscale, 0);
 
-				spr->colormap[0] = scalelight[lightnum][lightindex];
+				spr->colormap[0] = scalelightoffset[lightnum][lightindex];
 
 				if (dithered_lighting)
 				{
@@ -979,23 +1010,23 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 				}
 			}
 			else {
-				spritelights = scalelight[lightnum];
+				voxellightoffset = scalelightoffset[lightnum];
 
 				if (dithered_lighting)
 				{
-					spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
-					spritelight_nextcolormap = scalelight_nextcolormap[lightnum];
+					voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+					voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
 				}
 			}
 		}
 		else if (do_voxel_radial_fog)
 		{
-			spritelights = scalelight[spr->lightnum];
+			voxellightoffset = scalelightoffset[spr->lightnum];
 
 			if (dithered_lighting)
 			{
-				spritelight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
-				spritelight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+				voxellight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+				voxellight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
 			}
 		}
 		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
@@ -1044,13 +1075,16 @@ static void DrawColumnCubesLoop8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const lighttable_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
 	const lighttable_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex(spr->colormap[1]);
+	colormap[0] = thiscolormap + spr->colormap[0];
+	colormap[1] = thiscolormap + spr->colormap[1];
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1078,7 +1112,9 @@ static void DrawColumnCubesLoop8(
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = V_ColormapRowByIndex(spritelights[R_GetLightIndex(scale, ux >> FRACBITS)]); }
+		{
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(scale, ux >> FRACBITS)];
+		}
 
 		for (; slab < end ; slab += len)
 		{
@@ -1207,13 +1243,16 @@ static void DrawColumnCubesLoop32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+
+	const lighttable32_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
 	const lighttable32_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex32(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex32(spr->colormap[1]);
+	colormap[0] = thiscolormap + spr->colormap[0];
+	colormap[1] = thiscolormap + spr->colormap[1];
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1240,7 +1279,9 @@ static void DrawColumnCubesLoop32(
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = V_ColormapRowByIndex32(spritelights[R_GetLightIndex(scale, ux >> FRACBITS)]); }
+		{
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(scale, ux >> FRACBITS)];
+		}
 
 		for (; slab < end ; slab += len)
 		{
@@ -1369,15 +1410,18 @@ static void DrawColumnCubesLoopDithered8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const lighttable_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
 	const lighttable_t *colormap[2][2];
 
-	colormap[0][0] = V_ColormapRowByIndex(spr->colormap[0]);
-	colormap[0][1] = V_ColormapRowByIndex(spr->colormap[1]);
-	colormap[1][0] = V_ColormapRowByIndex(spr->nextcolormap[0]);
-	colormap[1][1] = V_ColormapRowByIndex(spr->nextcolormap[1]);
+	colormap[0][0] = thiscolormap + spr->colormap[0];
+	colormap[0][1] = thiscolormap + spr->colormap[1];
+	colormap[1][0] = thiscolormap + spr->nextcolormap[0];
+	colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1407,12 +1451,12 @@ static void DrawColumnCubesLoopDithered8(
 		{
 			const int index = R_GetLightIndex(scale, ux >> FRACBITS);
 
-			colormap[0][0] = V_ColormapRowByIndex(spritelights[index]);
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = V_ColormapRowByIndex(spritelight_nextcolormap[index]);
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -1559,15 +1603,18 @@ static void DrawColumnCubesLoopDithered32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+
+	const lighttable32_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
 	const lighttable32_t *colormap[2][2];
 
-	colormap[0][0] = V_ColormapRowByIndex32(spr->colormap[0]);
-	colormap[0][1] = V_ColormapRowByIndex32(spr->colormap[1]);
-	colormap[1][0] = V_ColormapRowByIndex32(spr->nextcolormap[0]);
-	colormap[1][1] = V_ColormapRowByIndex32(spr->nextcolormap[1]);
+	colormap[0][0] = thiscolormap + spr->colormap[0];
+	colormap[0][1] = thiscolormap + spr->colormap[1];
+	colormap[1][0] = thiscolormap + spr->nextcolormap[0];
+	colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
 	for (; ux < ux2 ; ux += FRACUNIT)
 	{
@@ -1597,12 +1644,12 @@ static void DrawColumnCubesLoopDithered32(
 		{
 			const int index = R_GetLightIndex(scale, ux >> FRACBITS);
 
-			colormap[0][0] = V_ColormapRowByIndex32(spritelights[index]);
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = V_ColormapRowByIndex32(spritelight_nextcolormap[index]);
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -1834,9 +1881,9 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!(spr->flags & VSF_FULLBRIGHT) && !shadow && !fixedcolormapoffset)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapoffset)
 	{
-		do_voxel_radial_fog = do_radial_fog;
+		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
 		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
 		{
@@ -1851,17 +1898,26 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
 			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			const int new_lightnum = (R_GetLightLevelInPoint(gx, gy, false) >> LIGHTSEGSHIFT)
-			                       + extralight;
+			const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			const byte lightnum = BETWEEN(0, LIGHTLEVELS-1, new_lightnum);
+			int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
+
+			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
+
+			lightnum = (spr->flags & VSF_FULLBRIGHT)
+			         ? LIGHTLEVELS-1
+			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
+
+			spr->lightnum = lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
+
+			if (!own_tint) { spr->tint = tint; }
 
 			if (!do_voxel_radial_fog)
 			{
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(midscale, 0);
 
-				spr->colormap[0] = scalelight[lightnum][lightindex];
+				spr->colormap[0] = scalelightoffset[lightnum][lightindex];
 
 				if (dithered_lighting)
 				{
@@ -1874,23 +1930,23 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				}
 			}
 			else {
-				spritelights = scalelight[lightnum];
+				voxellightoffset = scalelightoffset[lightnum];
 
 				if (dithered_lighting)
 				{
-					spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
-					spritelight_nextcolormap = scalelight_nextcolormap[lightnum];
+					voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+					voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
 				}
 			}
 		}
 		else if (do_voxel_radial_fog)
 		{
-			spritelights = scalelight[spr->lightnum];
+			voxellightoffset = scalelightoffset[spr->lightnum];
 
 			if (dithered_lighting)
 			{
-				spritelight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
-				spritelight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+				voxellight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+				voxellight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
 			}
 		}
 		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
@@ -1930,13 +1986,16 @@ static void DrawColumnBoundedLoop8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const lighttable_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
 	const lighttable_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex(spr->colormap[1]);
+	colormap[0] = thiscolormap + spr->colormap[0];
+	colormap[1] = thiscolormap + spr->colormap[1];
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -1957,7 +2016,9 @@ static void DrawColumnBoundedLoop8(
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = V_ColormapRowByIndex(spritelights[R_GetLightIndex(midscale, uxi)]); }
+		{
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
+		}
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{
@@ -2006,7 +2067,7 @@ static void DrawColumnBoundedLoop8(
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
-				i = BETWEEN(0, len - 1, i);
+				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i];
 				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
@@ -2032,13 +2093,16 @@ static void DrawColumnBoundedLoop32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+
+	const lighttable32_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
 	const lighttable32_t *colormap[2];
 
-	colormap[0] = V_ColormapRowByIndex32(spr->colormap[0]);
-	colormap[1] = V_ColormapRowByIndex32(spr->colormap[1]);
+	colormap[0] = thiscolormap + spr->colormap[0];
+	colormap[1] = thiscolormap + spr->colormap[1];
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -2059,7 +2123,9 @@ static void DrawColumnBoundedLoop32(
 
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
-		{ colormap[0] = V_ColormapRowByIndex32(spritelights[R_GetLightIndex(midscale, uxi)]); }
+		{
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
+		}
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{
@@ -2108,7 +2174,7 @@ static void DrawColumnBoundedLoop32(
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
-				i = BETWEEN(0, len - 1, i);
+				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i];
 				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
@@ -2136,15 +2202,18 @@ static void DrawColumnBoundedLoopDithered8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+
+	const lighttable_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
 	const lighttable_t *colormap[2][2];
 
-	colormap[0][0] = V_ColormapRowByIndex(spr->colormap[0]);
-	colormap[0][1] = V_ColormapRowByIndex(spr->colormap[1]);
-	colormap[1][0] = V_ColormapRowByIndex(spr->nextcolormap[0]);
-	colormap[1][1] = V_ColormapRowByIndex(spr->nextcolormap[1]);
+	colormap[0][0] = thiscolormap + spr->colormap[0];
+	colormap[0][1] = thiscolormap + spr->colormap[1];
+	colormap[1][0] = thiscolormap + spr->nextcolormap[0];
+	colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -2168,12 +2237,12 @@ static void DrawColumnBoundedLoopDithered8(
 		{
 			const int index = R_GetLightIndex(midscale, uxi);
 
-			colormap[0][0] = V_ColormapRowByIndex(spritelights[index]);
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = V_ColormapRowByIndex(spritelight_nextcolormap[index]);
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -2230,7 +2299,7 @@ static void DrawColumnBoundedLoopDithered8(
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
-				i = BETWEEN(0, len - 1, i);
+				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i];
 				const pixel_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
@@ -2257,15 +2326,18 @@ static void DrawColumnBoundedLoopDithered32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
+	const int linesize = video.width;
 	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+
+	const lighttable32_t *thiscolormap =
+		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
 	const lighttable32_t *colormap[2][2];
 
-	colormap[0][0] = V_ColormapRowByIndex32(spr->colormap[0]);
-	colormap[0][1] = V_ColormapRowByIndex32(spr->colormap[1]);
-	colormap[1][0] = V_ColormapRowByIndex32(spr->nextcolormap[0]);
-	colormap[1][1] = V_ColormapRowByIndex32(spr->nextcolormap[1]);
+	colormap[0][0] = thiscolormap + spr->colormap[0];
+	colormap[0][1] = thiscolormap + spr->colormap[1];
+	colormap[1][0] = thiscolormap + spr->nextcolormap[0];
+	colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
 	const fixed_t x1 =  spr->x1      << FRACBITS,
 	              x2 = (spr->x2 + 1) << FRACBITS;
@@ -2289,12 +2361,12 @@ static void DrawColumnBoundedLoopDithered32(
 		{
 			const int index = R_GetLightIndex(midscale, uxi);
 
-			colormap[0][0] = V_ColormapRowByIndex32(spritelights[index]);
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = V_ColormapRowByIndex32(spritelight_nextcolormap[index]);
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -2351,7 +2423,7 @@ static void DrawColumnBoundedLoopDithered32(
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
-				i = BETWEEN(0, len - 1, i);
+				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i];
 				const pixel32_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
@@ -2469,7 +2541,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 	// we build a new map, rather than complicate the slab drawing code.
 	// [Nugget] For simplicity, let's just "complicate the slab drawing code":
 	// always pass the source color through a translation table, selected here
-	if ((spr->mobjflags2 & MF2_COLOREDBLOOD) && !(spr->mobjflags & MF_SHADOW))
+	if ((spr->mobjflags_extra & MFX_COLOREDBLOOD) && !(spr->mobjflags & MF_SHADOW))
 	{
 		dc_translation = red2col[spr->color];
 	}
@@ -2501,6 +2573,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 
 // [Nugget] Weapon voxels
 boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
+                              const int lightlevel_override,
                               const boolean translucent)
 {
   if (STRICTMODE(hide_weapon)
@@ -2555,13 +2628,13 @@ boolean VX_ProjectWeaponVoxel(const pspdef_t *const psp,
   if (POWER_RUNOUT(viewplayer->powers[pw_invisibility]) && !beta_emulation)
   { thing.flags |= MF_SHADOW; }
 
+  const mobj_t *const playermo = players[displayplayer].mo;
+
+  thing.subsector = playermo->subsector;
+  thing.tint = playermo->tint;
+
   // Thing lighting: use the player's radius
-  thing.radius = players[displayplayer].mo->radius;
+  thing.radius = playermo->radius;
 
-  // Albeit unused, `R_ProjectVoxel()` accesses `heightsec`
-  sector_t sector = {0};
-  subsector_t sub = { .sector = &sector };
-  thing.subsector = &sub;
-
-  return VX_ProjectVoxel(&thing, 0);
+  return VX_ProjectVoxel(&thing, lightlevel_override);
 }

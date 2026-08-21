@@ -28,17 +28,14 @@
 #include "i_video.h"
 #include "m_fixed.h"
 #include "r_bsp.h"
-#include "r_bmaps.h"
 #include "r_defs.h"
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_state.h"
-#include "v_fmt.h"
+#include "r_tranmap.h"
+#include "v_patch.h"
 #include "v_video.h"
 #include "z_zone.h"
-
-// [Nugget]
-#include "r_data.h"
 
 //
 // All drawing to the view buffer is accomplished in this file.
@@ -61,9 +58,6 @@ static pixel_t **ylookup = NULL;
 static pixel32_t **ylookup32 = NULL;
 static int *columnofs = NULL;
 static int linesize; // killough 11/98
-
-byte *tranmap;          // translucency filter maps 256x256   // phares 
-byte *main_tranmap;     // killough 4/11/98
 
 // Backing buffer containing the bezel drawn around the screen and surrounding
 // background.
@@ -153,12 +147,12 @@ void R_SetDitherPattern(const int index)
 // Source is the top of the column to scale.
 //
 
-lighttable_t *dc_colormap[2]; // [crispy] brightmaps
-lighttable32_t *dc_colormap32[2];
+const lighttable_t *dc_colormap[2]; // [crispy] brightmaps
+const lighttable32_t *dc_colormap32[2];
 
 // [Nugget] Dithered lighting
-lighttable_t *dc_nextcolormap[2];
-lighttable32_t *dc_nextcolormap32[2];
+const lighttable_t *dc_nextcolormap[2];
+const lighttable32_t *dc_nextcolormap32[2];
 
 int dc_x;
 int dc_yl;
@@ -185,78 +179,86 @@ byte dc_skycolor;
 
 // heightmask is the Tutti-Frutti fix -- killough
 
-static void (*DrawColumn)(void) = NULL;
-static void (*DrawColumnBrightmap)(void) = NULL;
-static void (*DrawColumnTR)(void) = NULL;
-static void (*DrawColumnTRBrightmap)(void) = NULL;
-static void (*DrawColumnTL)(void) = NULL;
-static void (*DrawColumnTLBrightmap)(void) = NULL;
+void (*R_DrawColumn)(void) = NULL;
 
-#define DRAW_COLUMN(NAME, SRCPIXEL)                                      \
-    static void DrawColumn8##NAME(void)                                  \
-    {                                                                    \
-        int count = dc_yh - dc_yl + 1;                                   \
-                                                                         \
-        if (count <= 0)                                                  \
-            return;                                                      \
-                                                                         \
-        if ((unsigned)dc_x >= video.width || dc_yl < 0                   \
-            || dc_yh >= video.height)                                    \
-        {                                                                \
-            I_Error("DrawColumn" #NAME ": %i to %i at %i", dc_yl, dc_yh, \
-                    dc_x);                                               \
-        }                                                                \
-                                                                         \
-        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                \
-                                                                         \
-        const fixed_t fracstep = dc_iscale;                              \
-        fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
-                                                                         \
-        int heightmask = dc_texheight - 1;                               \
-                                                                         \
-        if (dc_texheight & heightmask)                                   \
-        {                                                                \
-            heightmask++;                                                \
-            heightmask <<= FRACBITS;                                     \
-                                                                         \
-            if (frac < 0)                                                \
-                while ((frac += heightmask) < 0)                         \
-                    ;                                                    \
-            else                                                         \
-                while (frac >= heightmask)                               \
-                    frac -= heightmask;                                  \
-            do                                                           \
-            {                                                            \
-                byte src = dc_source[frac >> FRACBITS];                  \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                if ((frac += fracstep) >= heightmask)                    \
-                    frac -= heightmask;                                  \
-            } while (--count);                                           \
-        }                                                                \
-        else                                                             \
-        {                                                                \
-            while ((count -= 2) >= 0)                                    \
-            {                                                            \
-                byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                frac += fracstep;                                        \
-                src = dc_source[(frac >> FRACBITS) & heightmask];        \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                frac += fracstep;                                        \
-            }                                                            \
-            if (count & 1)                                               \
-            {                                                            \
-                byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
-            }                                                            \
-        }                                                                \
+static void DrawColumn8(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
     }
 
-DRAW_COLUMN(, dc_colormap[0][src])
-DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *source = dc_source;
+    const lighttable_t *const *colormap = dc_colormap;
+    const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+        }
+    }
+}
 
 // Here is the version of R_DrawColumn that deals with translucent  // phares
 // textures and sprites. It's identical to R_DrawColumn except      //    |
@@ -270,83 +272,258 @@ DRAW_COLUMN(Brightmap, dc_colormap[dc_brightmap[src]][src])
 // opaque' decision is made outside this routine, not down where the
 // actual code differences are.
 
-DRAW_COLUMN(TL,
-    tranmap[(*dest << 8) + dc_colormap[0][src]])
-DRAW_COLUMN(TLBrightmap,
-    tranmap[(*dest << 8) + dc_colormap[dc_brightmap[src]][src]])
+void (*R_DrawTLColumn)(void) = NULL;
 
-#define DRAW_COLUMN32(NAME, SRCPIXEL)                                    \
-    static void DrawColumn32##NAME(void)                                 \
-    {                                                                    \
-        int count = dc_yh - dc_yl + 1;                                   \
-                                                                         \
-        if (count <= 0)                                                  \
-            return;                                                      \
-                                                                         \
-        if ((unsigned)dc_x >= video.width || dc_yl < 0                   \
-            || dc_yh >= video.height)                                    \
-        {                                                                \
-            I_Error("DrawColumn32" #NAME ": %i to %i at %i", dc_yl, dc_yh, \
-                    dc_x);                                               \
-        }                                                                \
-                                                                         \
-        pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];            \
-                                                                         \
-        const fixed_t fracstep = dc_iscale;                              \
-        fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
-                                                                         \
-        int heightmask = dc_texheight - 1;                               \
-                                                                         \
-        if (dc_texheight & heightmask)                                   \
-        {                                                                \
-            heightmask++;                                                \
-            heightmask <<= FRACBITS;                                     \
-                                                                         \
-            if (frac < 0)                                                \
-                while ((frac += heightmask) < 0)                         \
-                    ;                                                    \
-            else                                                         \
-                while (frac >= heightmask)                               \
-                    frac -= heightmask;                                  \
-            do                                                           \
-            {                                                            \
-                byte src = dc_source[frac >> FRACBITS];                  \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                if ((frac += fracstep) >= heightmask)                    \
-                    frac -= heightmask;                                  \
-            } while (--count);                                           \
-        }                                                                \
-        else                                                             \
-        {                                                                \
-            while ((count -= 2) >= 0)                                    \
-            {                                                            \
-                byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                frac += fracstep;                                        \
-                src = dc_source[(frac >> FRACBITS) & heightmask];        \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                frac += fracstep;                                        \
-            }                                                            \
-            if (count & 1)                                               \
-            {                                                            \
-                byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
-            }                                                            \
-        }                                                                \
+static void DrawTLColumn8(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
     }
 
-DRAW_COLUMN32(, dc_colormap32[0][src])
-DRAW_COLUMN32(Brightmap, dc_colormap32[dc_brightmap[src]][src])
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
 
-DRAW_COLUMN32(TL,
-    V_IndexToRGB(tranmap[V_TranMapRowFromRGB(*dest) + V_IndexFromRGB(dc_colormap32[0][src])]))
-DRAW_COLUMN32(TLBrightmap,
-    V_IndexToRGB(tranmap[V_TranMapRowFromRGB(*dest) + V_IndexFromRGB(dc_colormap32[dc_brightmap[src]][src])]))
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
-// [Nugget] Sprite shadows /--------------------------------------------------
+    const byte *source = dc_source;
+    const lighttable_t *const *colormap = dc_colormap;
+    const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = tranmap[(*dest << 8) + colormap[brightmap[src]][src]];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = tranmap[(*dest << 8) + colormap[brightmap[src]][src]];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = tranmap[(*dest << 8) + colormap[brightmap[src]][src]];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = tranmap[(*dest << 8) + colormap[brightmap[src]][src]];
+        }
+    }
+}
+
+// [Nugget] /=================================================================
+
+static void DrawColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][src];
+        }
+    }
+}
+
+static void DrawTLColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    #define SRCPIXEL \
+        V_IndexToRGB( \
+            tranmap[ \
+                V_TranMapRowFromRGB(*dest) \
+                + V_IndexFromRGB(colormap[brightmap[src]][src]) \
+            ] \
+        )
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+        }
+    }
+
+    #undef SRCPIXEL
+}
+
+// Sprite shadows ------------------------------------------------------------
 
 static byte sprite_shadows_colormap[256];
 
@@ -385,7 +562,7 @@ static void DrawColumnShadow8(void)
 
 #ifdef RANGECHECK
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
+    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
 #endif
 
     pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
@@ -404,7 +581,7 @@ static void DrawColumnShadow32(void)
 
 #ifdef RANGECHECK
     if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    { I_Error("%s: %i to %i at %i", __func__, dc_yl, dc_yh, dc_x); }
+    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
 #endif
 
     pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
@@ -415,7 +592,7 @@ static void DrawColumnShadow32(void)
     } while (--count);
 }
 
-// [Nugget] -----------------------------------------------------------------/
+// [Nugget] =================================================================/
 
 //
 // Sky drawing: for showing just a color above the texture
@@ -423,7 +600,7 @@ static void DrawColumnShadow32(void)
 
 void (*R_DrawSkyColumn)(void) = NULL;
 
-void DrawSkyColumn8(void)
+static void DrawSkyColumn8(void)
 {
     int count = dc_yh - dc_yl + 1;
 
@@ -435,7 +612,7 @@ void DrawSkyColumn8(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawSkyColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -561,7 +738,8 @@ void DrawSkyColumn8(void)
     }
 }
 
-void DrawSkyColumn32(void)
+// [Nugget]
+static void DrawSkyColumn32(void)
 {
     int count = dc_yh - dc_yl + 1;
 
@@ -573,7 +751,7 @@ void DrawSkyColumn32(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawSkyColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -582,8 +760,8 @@ void DrawSkyColumn32(void)
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
-    const byte *source = dc_source;
-    const lighttable32_t *colormap = dc_colormap32[0];
+    const byte *const source = dc_source;
+    const lighttable32_t *const colormap = dc_colormap32[0];
     const byte skycolor = dc_skycolor;
 
     int i, n;
@@ -776,7 +954,7 @@ static void DrawFuzzColumnOriginal(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -856,7 +1034,7 @@ static void DrawFuzzColumnBlocky(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -950,7 +1128,7 @@ static void DrawFuzzColumnRefraction(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -1018,7 +1196,7 @@ static void DrawFuzzColumnShadow(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -1033,6 +1211,8 @@ static void DrawFuzzColumnShadow(void)
         dest += linesize; // killough 11/98
     } while (--count);
 }
+
+// [Nugget] /=================================================================
 
 static void DrawFuzzColumn32Original(void)
 {
@@ -1059,7 +1239,7 @@ static void DrawFuzzColumn32Original(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -1115,7 +1295,7 @@ static void DrawFuzzColumn32Blocky(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -1189,7 +1369,7 @@ static void DrawFuzzColumn32Refraction(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -1250,7 +1430,7 @@ static void DrawFuzzColumn32Shadow(void)
 #ifdef RANGECHECK
     if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
     {
-        I_Error("R_DrawFuzzColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
     }
 #endif
 
@@ -1265,6 +1445,8 @@ static void DrawFuzzColumn32Shadow(void)
         dest += linesize;
     } while (--count);
 }
+
+// [Nugget] =================================================================/
 
 fuzzmode_t fuzzmode;
 void (*R_DrawFuzzColumn)(void) = DrawFuzzColumnOriginal;
@@ -1342,15 +1524,167 @@ void R_SetFuzzColumnMode(void)
 
 byte *dc_translation, *translationtables;
 
-DRAW_COLUMN(TR,
-    dc_colormap[0][dc_translation[src]])
-DRAW_COLUMN(TRBrightmap,
-    dc_colormap[dc_brightmap[src]][dc_translation[src]])
+void (*R_DrawTranslatedColumn)(void) = NULL;
 
-DRAW_COLUMN32(TR,
-    dc_colormap32[0][dc_translation[src]])
-DRAW_COLUMN32(TRBrightmap,
-    dc_colormap32[dc_brightmap[src]][dc_translation[src]])
+static void DrawTranslatedColumn8(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *source = dc_source;
+    const byte *translation = dc_translation;
+    const lighttable_t *const *colormap = dc_colormap;
+    const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+        }
+    }
+}
+
+static void DrawTranslatedColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const byte *const translation = dc_translation;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = colormap[brightmap[src]][translation[src]];
+        }
+    }
+}
 
 //
 // R_InitTranslationTables
@@ -1386,178 +1720,324 @@ void R_InitTranslationTables(void)
     }
 }
 
+void (*R_DrawTRTLColumn)(void) = NULL;
+
+static void DrawTRTLColumn8(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *source = dc_source;
+    const byte *translation = dc_translation;
+    const lighttable_t *const *colormap = dc_colormap;
+    const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    #define SRCPIXEL \
+      tranmap[(*dest << 8) + colormap[brightmap[src]][translation[src]]]
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+        }
+    }
+
+    #undef SRCPIXEL
+}
+
+static void DrawTRTLColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *source = dc_source;
+    const byte *translation = dc_translation;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    #define SRCPIXEL \
+        V_IndexToRGB( \
+            tranmap[ \
+                V_TranMapRowFromRGB(*dest) \
+                + V_IndexFromRGB(colormap[brightmap[src]][translation[src]]) \
+            ] \
+        )
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        while ((count -= 2) >= 0)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest += linesize;
+            frac += fracstep;
+        }
+        if (count & 1)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+        }
+    }
+
+    #undef SRCPIXEL
+}
+
 // [Nugget] /=================================================================
 
 // Dithered lighting ---------------------------------------------------------
 
-static void (*DrawColumnDithered)(void) = NULL;
-static void (*DrawColumnDitheredTR)(void) = NULL;
-static void (*DrawColumnDitheredTL)(void) = NULL;
+#ifdef RANGECHECK
+    #define RANGECHECK_CODE \
+        if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height) \
+        { \
+            I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); \
+        }
+#else
+    #define RANGECHECK_CODE
+#endif
 
-#define DRAW_COLUMN_DITHERED(NAME, SRCPIXEL)                             \
-    static void DrawColumnDithered8##NAME(void)                          \
-    {                                                                    \
-        int count = dc_yh - dc_yl + 1;                                   \
-                                                                         \
-        if (count <= 0)                                                  \
-            return;                                                      \
-                                                                         \
-        if ((unsigned)dc_x >= video.width || dc_yl < 0                   \
-            || dc_yh >= video.height)                                    \
-        {                                                                \
-            I_Error("DrawColumn" #NAME ": %i to %i at %i", dc_yl, dc_yh, \
-                    dc_x);                                               \
-        }                                                                \
-                                                                         \
-        pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];                \
-                                                                         \
-        lighttable_t **const colormap[2] = { dc_colormap, dc_nextcolormap }; \
-                                                                         \
-        byte       dx = dc_yl & DITHER_PATTERN_WIDTH_MASK;               \
-        byte const dy = dc_x  & DITHER_PATTERN_HEIGHT_MASK;              \
-                                                                         \
-        const byte *const dither_pattern_row = dither_pattern[dy];       \
-                                                                         \
-        const fixed_t fracstep = dc_iscale;                              \
-        fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
-                                                                         \
-        int heightmask = dc_texheight - 1;                               \
-                                                                         \
-        if (dc_texheight & heightmask)                                   \
-        {                                                                \
-            heightmask++;                                                \
-            heightmask <<= FRACBITS;                                     \
-                                                                         \
-            if (frac < 0)                                                \
-                while ((frac += heightmask) < 0)                         \
-                    ;                                                    \
-            else                                                         \
-                while (frac >= heightmask)                               \
-                    frac -= heightmask;                                  \
-            do                                                           \
-            {                                                            \
-                byte src = dc_source[frac >> FRACBITS];                  \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                if ((frac += fracstep) >= heightmask)                    \
-                    frac -= heightmask;                                  \
-                                                                         \
-                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;               \
-            } while (--count);                                           \
-        }                                                                \
-        else                                                             \
-        {                                                                \
-            while (count--)                                              \
-            {                                                            \
-                byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                frac += fracstep;                                        \
-                                                                         \
-                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;               \
-            }                                                            \
-        }                                                                \
+#define DRAW_COLUMN_DITHERED(NAME, DEPTH, SRCPIXEL) \
+    static void NAME(void) \
+    { \
+        int count = dc_yh - dc_yl + 1; \
+        if (count <= 0) \
+        { \
+            return; \
+        } \
+    \
+        RANGECHECK_CODE \
+    \
+        pixel##DEPTH##_t *dest = ylookup##DEPTH[dc_yl] + columnofs[dc_x]; \
+        const fixed_t fracstep = dc_iscale; \
+        fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep; \
+    \
+        const byte *source = dc_source; \
+        const byte *brightmap = dc_brightmap; \
+        int heightmask = dc_texheight - 1; \
+    \
+        const lighttable##DEPTH##_t **const colormap[2] = { \
+            dc_colormap##DEPTH, dc_nextcolormap##DEPTH \
+        }; \
+    \
+        byte       dx = dc_yl & DITHER_PATTERN_WIDTH_MASK; \
+        byte const dy = dc_x  & DITHER_PATTERN_HEIGHT_MASK; \
+    \
+        const byte *const dither_pattern_row = dither_pattern[dy]; \
+    \
+        byte src; \
+    \
+        if (dc_texheight & heightmask) \
+        { \
+            heightmask++; \
+            heightmask <<= 16; \
+            if (frac < 0) \
+            { \
+                while ((frac += heightmask) < 0) \
+                    ; \
+            } \
+            else \
+            { \
+                while (frac >= heightmask) \
+                { \
+                    frac -= heightmask; \
+                } \
+            } \
+    \
+            do \
+            { \
+                src = source[frac >> 16]; \
+                *dest = SRCPIXEL; \
+                dest += linesize; \
+                if ((frac += fracstep) >= heightmask) \
+                { \
+                    frac -= heightmask; \
+                } \
+                if (frac < 0) \
+                { \
+                    frac += heightmask; \
+                } \
+                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+            } while (--count); \
+        } \
+        else \
+        { \
+            while (count--) \
+            { \
+                src = source[(frac >> FRACBITS) & heightmask]; \
+                *dest = SRCPIXEL; \
+                dest += linesize; \
+                frac += fracstep; \
+                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+            } \
+        } \
     }
 
 DRAW_COLUMN_DITHERED(
-  ,
-  colormap[dither_pattern_row[dx]][dc_brightmap[src]][src]
+    DrawColumnDithered8, ,
+    colormap[dither_pattern_row[dx]][brightmap[src]][src]
 )
 
 DRAW_COLUMN_DITHERED(
-  TL,
-  tranmap[(*dest << 8) + colormap[dither_pattern_row[dx]][dc_brightmap[src]][src]]
+    DrawTLColumnDithered8, ,
+    tranmap[(*dest << 8) + colormap[dither_pattern_row[dx]][brightmap[src]][src]]
 )
 
 DRAW_COLUMN_DITHERED(
-  TR,
-  colormap[dither_pattern_row[dx]][dc_brightmap[src]][dc_translation[src]]
+    DrawTranslatedColumnDithered8, ,
+    colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]]
 )
 
-#define DRAW_COLUMN_DITHERED32(NAME, SRCPIXEL)                           \
-    static void DrawColumnDithered32##NAME(void)                         \
-    {                                                                    \
-        int count = dc_yh - dc_yl + 1;                                   \
-                                                                         \
-        if (count <= 0)                                                  \
-            return;                                                      \
-                                                                         \
-        if ((unsigned)dc_x >= video.width || dc_yl < 0                   \
-            || dc_yh >= video.height)                                    \
-        {                                                                \
-            I_Error("DrawColumn" #NAME ": %i to %i at %i", dc_yl, dc_yh, \
-                    dc_x);                                               \
-        }                                                                \
-                                                                         \
-        pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];            \
-                                                                         \
-        lighttable32_t **const colormap[2] = { dc_colormap32, dc_nextcolormap32 }; \
-                                                                         \
-        byte       dx = dc_yl & DITHER_PATTERN_WIDTH_MASK;               \
-        byte const dy = dc_x  & DITHER_PATTERN_HEIGHT_MASK;              \
-                                                                         \
-        const byte *const dither_pattern_row = dither_pattern[dy];       \
-                                                                         \
-        const fixed_t fracstep = dc_iscale;                              \
-        fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;     \
-                                                                         \
-        int heightmask = dc_texheight - 1;                               \
-                                                                         \
-        if (dc_texheight & heightmask)                                   \
-        {                                                                \
-            heightmask++;                                                \
-            heightmask <<= FRACBITS;                                     \
-                                                                         \
-            if (frac < 0)                                                \
-                while ((frac += heightmask) < 0)                         \
-                    ;                                                    \
-            else                                                         \
-                while (frac >= heightmask)                               \
-                    frac -= heightmask;                                  \
-            do                                                           \
-            {                                                            \
-                byte src = dc_source[frac >> FRACBITS];                  \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                if ((frac += fracstep) >= heightmask)                    \
-                    frac -= heightmask;                                  \
-                                                                         \
-                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;               \
-            } while (--count);                                           \
-        }                                                                \
-        else                                                             \
-        {                                                                \
-            while (count--)                                              \
-            {                                                            \
-                byte src = dc_source[(frac >> FRACBITS) & heightmask];   \
-                *dest = SRCPIXEL;                                        \
-                dest += linesize;                                        \
-                frac += fracstep;                                        \
-                                                                         \
-                dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;               \
-            }                                                            \
-        }                                                                \
-    }
-
-DRAW_COLUMN_DITHERED32(
-  ,
-  colormap[dither_pattern_row[dx]][dc_brightmap[src]][src]
+DRAW_COLUMN_DITHERED(
+    DrawTRTLColumnDithered8, ,
+    tranmap[(*dest << 8) + colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]]]
 )
 
-DRAW_COLUMN_DITHERED32(
-  TL,
-  V_IndexToRGB(
-    tranmap[
-      V_TranMapRowFromRGB(*dest)
-    + V_IndexFromRGB(colormap[dither_pattern_row[dx]][dc_brightmap[src]][src])
-    ]
-  )
+DRAW_COLUMN_DITHERED(
+    DrawColumnDithered32, 32,
+    colormap[dither_pattern_row[dx]][brightmap[src]][src]
 )
 
-DRAW_COLUMN_DITHERED32(
-  TR,
-  colormap[dither_pattern_row[dx]][dc_brightmap[src]][dc_translation[src]]
+DRAW_COLUMN_DITHERED(
+    DrawTLColumnDithered32, 32,
+    V_IndexToRGB(
+        tranmap[
+            V_TranMapRowFromRGB(*dest)
+            + V_IndexFromRGB(colormap[dither_pattern_row[dx]][brightmap[src]][src])
+        ]
+    )
 )
+
+DRAW_COLUMN_DITHERED(
+    DrawTranslatedColumnDithered32, 32,
+    colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]]
+)
+
+DRAW_COLUMN_DITHERED(
+    DrawTRTLColumnDithered32, 32,
+    V_IndexToRGB(
+        tranmap[
+            V_TranMapRowFromRGB(*dest)
+            + V_IndexFromRGB(colormap[dither_pattern_row[dx]][brightmap[src]][dc_translation[src]])
+        ]
+    )
+)
+
+#undef RANGECHECK_CODE
 
 // [Nugget] =================================================================/
 
@@ -1578,456 +2058,311 @@ int ds_y;
 int ds_x1;
 int ds_x2;
 
-lighttable_t *ds_colormap[2];
-lighttable32_t *ds_colormap32[2];
+const lighttable_t *ds_colormap[2];
+const lighttable32_t *ds_colormap32[2];
 const byte *ds_brightmap;
 
 // [Nugget] Dithered lighting
-lighttable_t *ds_nextcolormap[2];
-lighttable32_t *ds_nextcolormap32[2];
+const lighttable_t *ds_nextcolormap[2];
+const lighttable32_t *ds_nextcolormap32[2];
 
-fixed_t ds_xfrac;
-fixed_t ds_yfrac;
-fixed_t ds_xstep;
-fixed_t ds_ystep;
+uint32_t ds_xfrac;
+uint32_t ds_yfrac;
+uint32_t ds_xstep;
+uint32_t ds_ystep;
 
 // start of a 64*64 tile image
 byte *ds_source;
 
-static void (*DrawSpan)(void) = NULL;
-static void (*DrawSpanBrightmap)(void) = NULL;
-
-#define R_DRAW_SPAN(NAME, SRCPIXEL)                    \
-    static void DrawSpan8##NAME(void)                   \
-    {                                                  \
-        pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1]; \
-                                                       \
-        unsigned count = ds_x2 - ds_x1 + 1;            \
-                                                       \
-        unsigned xtemp, ytemp, spot;                   \
-                                                       \
-        while (count >= 4)                             \
-        {                                              \
-            byte src;                                  \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[0] = SRCPIXEL;                        \
-                                                       \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[1] = SRCPIXEL;                        \
-                                                       \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[2] = SRCPIXEL;                        \
-                                                       \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[3] = SRCPIXEL;                        \
-                                                       \
-            dest += 4;                                 \
-            count -= 4;                                \
-        }                                              \
-                                                       \
-        while (count)                                  \
-        {                                              \
-            byte src;                                  \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            *dest++ = SRCPIXEL;                        \
-            count--;                                   \
-        }                                              \
-    }
-
-R_DRAW_SPAN(, ds_colormap[0][src])
-R_DRAW_SPAN(Brightmap, ds_colormap[ds_brightmap[src]][src])
-
-#define R_DRAW_SPAN32(NAME, SRCPIXEL)                  \
-    static void DrawSpan32##NAME(void)                 \
-    {                                                  \
-        pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1]; \
-                                                       \
-        unsigned count = ds_x2 - ds_x1 + 1;            \
-                                                       \
-        unsigned xtemp, ytemp, spot;                   \
-                                                       \
-        while (count >= 4)                             \
-        {                                              \
-            byte src;                                  \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[0] = SRCPIXEL;                        \
-                                                       \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[1] = SRCPIXEL;                        \
-                                                       \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[2] = SRCPIXEL;                        \
-                                                       \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            dest[3] = SRCPIXEL;                        \
-                                                       \
-            dest += 4;                                 \
-            count -= 4;                                \
-        }                                              \
-                                                       \
-        while (count)                                  \
-        {                                              \
-            byte src;                                  \
-            ytemp = (ds_yfrac >> 10) & 0x0FC0;         \
-            xtemp = (ds_xfrac >> 16) & 0x003F;         \
-            spot = xtemp | ytemp;                      \
-            ds_xfrac += ds_xstep;                      \
-            ds_yfrac += ds_ystep;                      \
-            src = ds_source[spot];                     \
-            *dest++ = SRCPIXEL;                        \
-            count--;                                   \
-        }                                              \
-    }
-
-R_DRAW_SPAN32(, ds_colormap32[0][src])
-R_DRAW_SPAN32(Brightmap, ds_colormap32[ds_brightmap[src]][src])
-
-void (*R_DrawColumn)(void) = NULL;
-void (*R_DrawTLColumn)(void) = NULL;
-void (*R_DrawTranslatedColumn)(void) = NULL;
 void (*R_DrawSpan)(void) = NULL;
+
+static void DrawSpan8(void)
+{
+    int count = ds_x2 - ds_x1 + 1;
+    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
+    const byte *source = ds_source;
+    const lighttable_t *const *colormap = ds_colormap;
+    const byte *brightmap = ds_brightmap;
+
+    // SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
+    // can be used for the fraction part. This allows calculation of the memory
+    // address in the texture with two shifts, an OR and one AND.
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
+
+    #define XSHIFT (32 - 6)
+    #define YSHIFT (32 - 6 - 6)
+    #define YMASK  (63 * 64) // 0x0FC0
+
+    byte src;
+
+    while (count >= 4)
+    {
+        // SoM: Why didn't I see this earlier? the spot variable is a waste now
+        // because we don't have the uber complicated math to calculate it now,
+        // so that was a memory write we didn't need!
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        dest[0] = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        dest[1] = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        dest[2] = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        dest[3] = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        *dest++ = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+    }
+
+    #undef YSHIFT
+    #undef YMASK
+    #undef XSHIFT
+}
 
 // [Nugget] /=================================================================
 
+#define XSHIFT (32 - 6)
+#define YSHIFT (32 - 6 - 6)
+#define YMASK  (63 * 64)
+
+static void DrawSpan32(void)
+{
+    int count = ds_x2 - ds_x1 + 1;
+    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
+    const byte *const source = ds_source;
+    const lighttable32_t *const *colormap = ds_colormap32;
+    const byte *const brightmap = ds_brightmap;
+
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
+
+    byte src;
+
+    #define DRAW_PIXEL(dest_index) \
+    { \
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+        dest[dest_index] = colormap[brightmap[src]][src]; \
+        xf += xs; \
+        yf += ys; \
+    }
+
+    while (count >= 4)
+    {
+        DRAW_PIXEL(0);
+        DRAW_PIXEL(1);
+        DRAW_PIXEL(2);
+        DRAW_PIXEL(3);
+
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        DRAW_PIXEL(0);
+        dest++;
+    }
+
+    #undef DRAW_PIXEL
+}
+
 // Dithered lighting ---------------------------------------------------------
 
-static void (*DrawSpanDithered)(void) = NULL;
-
-static void DrawSpanDithered8(void)
-{
-    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
-
-    unsigned count = ds_x2 - ds_x1 + 1;
-
-    unsigned xtemp, ytemp, spot;
-
-    lighttable_t **const colormap[2] = { ds_colormap, ds_nextcolormap };
-
-    byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK;
-    byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK;
-
-    const byte *const dither_pattern_row = dither_pattern[dy];
-
-    while (count--)
-    {
-        byte src;
-        ytemp = (ds_yfrac >> 10) & 0x0FC0;
-        xtemp = (ds_xfrac >> 16) & 0x003F;
-        spot = xtemp | ytemp;
-        ds_xfrac += ds_xstep;
-        ds_yfrac += ds_ystep;
-        src = ds_source[spot];
-        *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
-        dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
+#define DRAW_SPAN_DITHERED(NAME, DEPTH) \
+    static void NAME(void) \
+    { \
+        int count = ds_x2 - ds_x1 + 1; \
+        pixel##DEPTH##_t *dest = ylookup##DEPTH[ds_y] + columnofs[ds_x1]; \
+        const byte *source = ds_source; \
+        const byte *brightmap = ds_brightmap; \
+    \
+        const lighttable##DEPTH##_t **const colormap[2] = { \
+            ds_colormap##DEPTH, ds_nextcolormap##DEPTH \
+        }; \
+    \
+        byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK; \
+        byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK; \
+    \
+        const byte *const dither_pattern_row = dither_pattern[dy]; \
+    \
+        unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10; \
+        const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10; \
+    \
+        byte src; \
+    \
+        while (count--) \
+        { \
+            src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+            *dest++ = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            xf += xs; \
+            yf += ys; \
+            dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+        } \
     }
-}
 
-static void DrawSpanDithered32(void)
-{
-    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
-
-    unsigned count = ds_x2 - ds_x1 + 1;
-
-    unsigned xtemp, ytemp, spot;
-
-    lighttable32_t **const colormap[2] = { ds_colormap32, ds_nextcolormap32 };
-
-    byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK;
-    byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK;
-
-    const byte *const dither_pattern_row = dither_pattern[dy];
-
-    while (count--)
-    {
-        byte src;
-        ytemp = (ds_yfrac >> 10) & 0x0FC0;
-        xtemp = (ds_xfrac >> 16) & 0x003F;
-        spot = xtemp | ytemp;
-        ds_xfrac += ds_xstep;
-        ds_yfrac += ds_ystep;
-        src = ds_source[spot];
-        *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
-        dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
-    }
-}
+DRAW_SPAN_DITHERED(DrawSpanDithered8, )
+DRAW_SPAN_DITHERED(DrawSpanDithered32, 32)
 
 // Radial fog ----------------------------------------------------------------
 
-static void (*DrawSpanWithRadialFog)(void) = NULL;
-static void (*DrawSpanWithRadialFogBrightmap)(void) = NULL;
-static void (*DrawSpanDitheredWithRadialFog)(void) = NULL;
-
-#define DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, dest_index) \
-{ \
-  ytemp = (ds_yfrac >> 10) & 0x0FC0; \
-  xtemp = (ds_xfrac >> 16) & 0x003F; \
-  spot = xtemp | ytemp; \
-  ds_xfrac += ds_xstep; \
-  ds_yfrac += ds_ystep; \
-  src = ds_source[spot]; \
-  \
-  ds_colormap[0] = V_ColormapRowByIndex(planezlight[*sdl++]); \
-  \
-  dest[dest_index] = SRCPIXEL; \
-}
-
-#define R_DRAW_SPAN_RADFOG(NAME, SRCPIXEL)             \
-    static void DrawSpanWithRadialFog8##NAME(void)      \
-    {                                                  \
-        pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1]; \
-        byte src;                                      \
-                                                       \
-        unsigned count = ds_x2 - ds_x1 + 1;            \
-                                                       \
-        unsigned xtemp, ytemp, spot;                   \
-                                                       \
-        const uint16_t *sdl = spandistlight + ds_x1;   \
-                                                       \
-        while (count >= 4)                             \
-        {                                              \
-            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 0);       \
-            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 1);       \
-            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 2);       \
-            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 3);       \
-                                                       \
-            dest += 4;                                 \
-            count -= 4;                                \
-        }                                              \
-                                                       \
-        while (count)                                  \
-        {                                              \
-            DRAW_SPAN_RADFOG_PIXEL(SRCPIXEL, 0);       \
-                                                       \
-            dest++;                                    \
-            count--;                                   \
-        }                                              \
-    }
-
-R_DRAW_SPAN_RADFOG(, ds_colormap[0][src])
-R_DRAW_SPAN_RADFOG(Brightmap, ds_colormap[ds_brightmap[src]][src])
-
-#undef DRAW_SPAN_RADFOG_PIXEL
-
-static void DrawSpanDitheredWithRadialFog8(void)
-{
-    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
-    byte src;
-
-    unsigned count = ds_x2 - ds_x1 + 1;
-
-    unsigned xtemp, ytemp, spot;
-
-    lighttable_t **const colormap[2] = { ds_colormap, ds_nextcolormap };
-
-    byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK;
-    byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK;
-
-    const uint16_t *sdl = spandistlight + ds_x1;
-    const uint16_t *sdld = spandistlight_ditherlevel + ds_x1;
-
-    while (count--)
-    {
-        ytemp = (ds_yfrac >> 10) & 0x0FC0;
-        xtemp = (ds_xfrac >> 16) & 0x003F;
-        spot = xtemp | ytemp;
-        ds_xfrac += ds_xstep;
-        ds_yfrac += ds_ystep;
-        src = ds_source[spot];
-
-        ds_colormap[0] = V_ColormapRowByIndex(planezlight[*sdl]);
-        ds_nextcolormap[0] = V_ColormapRowByIndex(planezlight_nextcolormap[*sdl]);
-        sdl++;
-
-        const byte *const dither_pattern_row =
-          dither_patterns[planezlight_ditherlevel[*sdld++]][dy];
-
-        *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
-        dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
-    }
-}
-
-#define DRAW_SPAN_RADFOG32_PIXEL(SRCPIXEL, dest_index) \
-{ \
-  ytemp = (ds_yfrac >> 10) & 0x0FC0; \
-  xtemp = (ds_xfrac >> 16) & 0x003F; \
-  spot = xtemp | ytemp; \
-  ds_xfrac += ds_xstep; \
-  ds_yfrac += ds_ystep; \
-  src = ds_source[spot]; \
-  \
-  ds_colormap32[0] = V_ColormapRowByIndex32(planezlight[*sdl++]); \
-  \
-  dest[dest_index] = SRCPIXEL; \
-}
-
-#define R_DRAW_SPAN_RADFOG32(NAME, SRCPIXEL)           \
-    static void DrawSpanWithRadialFog32##NAME(void)    \
-    {                                                  \
-        pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1]; \
-        byte src;                                      \
-                                                       \
-        unsigned count = ds_x2 - ds_x1 + 1;            \
-                                                       \
-        unsigned xtemp, ytemp, spot;                   \
-                                                       \
-        const uint16_t *sdl = spandistlight + ds_x1;   \
-                                                       \
-        while (count >= 4)                             \
-        {                                              \
-            DRAW_SPAN_RADFOG32_PIXEL(SRCPIXEL, 0);     \
-            DRAW_SPAN_RADFOG32_PIXEL(SRCPIXEL, 1);     \
-            DRAW_SPAN_RADFOG32_PIXEL(SRCPIXEL, 2);     \
-            DRAW_SPAN_RADFOG32_PIXEL(SRCPIXEL, 3);     \
-                                                       \
-            dest += 4;                                 \
-            count -= 4;                                \
-        }                                              \
-                                                       \
-        while (count)                                  \
-        {                                              \
-            DRAW_SPAN_RADFOG32_PIXEL(SRCPIXEL, 0);     \
-                                                       \
-            dest++;                                    \
-            count--;                                   \
-        }                                              \
-    }
-
-R_DRAW_SPAN_RADFOG32(, ds_colormap32[0][src])
-R_DRAW_SPAN_RADFOG32(Brightmap, ds_colormap32[ds_brightmap[src]][src])
-
-#undef DRAW_SPAN_RADFOG32_PIXEL
-
-static void DrawSpanDitheredWithRadialFog32(void)
-{
-    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
-    byte src;
-
-    unsigned count = ds_x2 - ds_x1 + 1;
-
-    unsigned xtemp, ytemp, spot;
-
-    lighttable32_t **const colormap[2] = { ds_colormap32, ds_nextcolormap32 };
-
-    byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK;
-    byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK;
-
-    const uint16_t *sdl = spandistlight + ds_x1;
-    const uint16_t *sdld = spandistlight_ditherlevel + ds_x1;
-
-    while (count--)
-    {
-        ytemp = (ds_yfrac >> 10) & 0x0FC0;
-        xtemp = (ds_xfrac >> 16) & 0x003F;
-        spot = xtemp | ytemp;
-        ds_xfrac += ds_xstep;
-        ds_yfrac += ds_ystep;
-        src = ds_source[spot];
-
-        ds_colormap32[0] = V_ColormapRowByIndex32(planezlight[*sdl]);
-        ds_nextcolormap32[0] = V_ColormapRowByIndex32(planezlight_nextcolormap[*sdl]);
-        sdl++;
-
-        const byte *const dither_pattern_row =
-          dither_patterns[planezlight_ditherlevel[*sdld++]][dy];
-
-        *dest++ = colormap[dither_pattern_row[dx]][ds_brightmap[src]][src];
-        dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
-    }
-}
-
 void (*R_DrawSpanWithRadialFog)(void) = NULL;
 
-// [Nugget] =================================================================/
-
-void R_InitDrawFunctions(void)
+static void DrawSpanWithRadialFog8(void)
 {
-    // [Nugget]
-    init_draw_functions = false;
+    int count = ds_x2 - ds_x1 + 1;
+    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
+    const byte *const source = ds_source;
+    const lighttable_t **const colormap = ds_colormap;
+    const byte *const brightmap = ds_brightmap;
 
-    boolean local_brightmaps = (STRICTMODE(brightmaps) || force_brightmaps);
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
 
-    // [Nugget] Dithered lighting
-    if (dithered_lighting)
-    {
-        R_DrawColumn = DrawColumnDithered;
-        R_DrawTLColumn = DrawColumnDitheredTL;
-        R_DrawTranslatedColumn = DrawColumnDitheredTR;
-        R_DrawSpan = DrawSpanDithered;
+    const uint16_t *sdl = spandistlight + ds_x1;
 
-        R_DrawSpanWithRadialFog = DrawSpanDitheredWithRadialFog;
-    }
-    else
+    byte src;
 
-    if (local_brightmaps)
-    {
-        R_DrawColumn = DrawColumnBrightmap;
-        R_DrawTLColumn = DrawColumnTLBrightmap;
-        R_DrawTranslatedColumn = DrawColumnTRBrightmap;
-        R_DrawSpan = DrawSpanBrightmap;
-
-        R_DrawSpanWithRadialFog = DrawSpanWithRadialFogBrightmap; // [Nugget] Radial fog
-    }
-    else
-    {
-        R_DrawColumn = DrawColumn;
-        R_DrawTLColumn = DrawColumnTL;
-        R_DrawTranslatedColumn = DrawColumnTR;
-        R_DrawSpan = DrawSpan;
-
-        R_DrawSpanWithRadialFog = DrawSpanWithRadialFog; // [Nugget] Radial fog
+    #define DRAW_PIXEL(dest_index) \
+    { \
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+        \
+        colormap[0] = colormap[1] + planezlightoffset[*sdl++]; \
+        \
+        dest[dest_index] = colormap[brightmap[src]][src]; \
+        xf += xs; \
+        yf += ys; \
     }
 
-    // [Nugget] Initialize here
-    colfunc = R_DrawColumn;
+    while (count >= 4)
+    {
+        DRAW_PIXEL(0);
+        DRAW_PIXEL(1);
+        DRAW_PIXEL(2);
+        DRAW_PIXEL(3);
 
-    // [Nugget] Sprite shadows
-    if (sprite_shadows) { R_InitSpriteShadowsColormap(); }
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        DRAW_PIXEL(0);
+        dest++;
+    }
+
+    #undef DRAW_PIXEL
 }
+
+static void DrawSpanWithRadialFog32(void)
+{
+    int count = ds_x2 - ds_x1 + 1;
+    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
+    const byte *const source = ds_source;
+    const lighttable32_t **const colormap = ds_colormap32;
+    const byte *const brightmap = ds_brightmap;
+
+    unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10;
+    const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10;
+
+    const uint16_t *sdl = spandistlight + ds_x1;
+
+    byte src;
+
+    #define DRAW_PIXEL(dest_index) \
+    { \
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+        \
+        colormap[0] = colormap[1] + planezlightoffset[*sdl++]; \
+        \
+        dest[dest_index] = colormap[brightmap[src]][src]; \
+        xf += xs; \
+        yf += ys; \
+    }
+
+    while (count >= 4)
+    {
+        DRAW_PIXEL(0);
+        DRAW_PIXEL(1);
+        DRAW_PIXEL(2);
+        DRAW_PIXEL(3);
+
+        dest += 4;
+        count -= 4;
+    }
+    while (count--)
+    {
+        DRAW_PIXEL(0);
+        dest++;
+    }
+
+    #undef DRAW_PIXEL
+}
+
+#define DRAW_SPAN_DITHERED_RADFOG(NAME, DEPTH) \
+    static void NAME(void) \
+    { \
+        int count = ds_x2 - ds_x1 + 1; \
+        pixel##DEPTH##_t *dest = ylookup##DEPTH[ds_y] + columnofs[ds_x1]; \
+        const byte *const source = ds_source; \
+        const byte *const brightmap = ds_brightmap; \
+    \
+        const lighttable##DEPTH##_t **const colormap[2] = { \
+            ds_colormap##DEPTH, ds_nextcolormap##DEPTH \
+        }; \
+    \
+        byte       dx = ds_x1 & DITHER_PATTERN_WIDTH_MASK; \
+        byte const dy = ds_y  & DITHER_PATTERN_HEIGHT_MASK; \
+    \
+        unsigned int       xf = ds_xfrac << 10, yf = ds_yfrac << 10; \
+        const unsigned int xs = ds_xstep << 10, ys = ds_ystep << 10; \
+    \
+        const uint16_t *sdl = spandistlight + ds_x1; \
+        const uint16_t *sdld = spandistlight_ditherlevel + ds_x1; \
+    \
+        byte src; \
+    \
+        while (count--) \
+        { \
+            src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
+    \
+            colormap[0][0] = colormap[0][1] + planezlightoffset[*sdl]; \
+            colormap[1][0] = colormap[1][1] + planezlight_nextcolormap[*sdl]; \
+            sdl++; \
+    \
+            const byte *const dither_pattern_row = \
+              dither_patterns[planezlight_ditherlevel[*sdld++]][dy]; \
+    \
+            *dest++ = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            xf += xs; \
+            yf += ys; \
+            dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
+        } \
+    }
+
+DRAW_SPAN_DITHERED_RADFOG(DrawSpanDitheredWithRadialFog8, )
+DRAW_SPAN_DITHERED_RADFOG(DrawSpanDitheredWithRadialFog32, 32)
+
+#undef YSHIFT
+#undef YMASK
+#undef XSHIFT
+
+// [Nugget] =================================================================/
 
 void R_InitBufferRes(void)
 {
@@ -2042,7 +2377,7 @@ void R_InitBufferRes(void)
         ylookup = Z_Malloc(video.height * sizeof(*ylookup), PU_RENDERER, NULL);
     }
 
-    solidcol = Z_Calloc(1, video.width * sizeof(*solidcol), PU_RENDERER, NULL);
+    solidcol = Z_Calloc(video.width, sizeof(*solidcol), PU_RENDERER, NULL);
 }
 
 //
@@ -2057,7 +2392,7 @@ void R_InitBuffer(void)
 {
     int i;
 
-    linesize = video.pitch; // killough 11/98
+    linesize = video.width; // killough 11/98
 
     // Handle resize,
     //  e.g. smaller view windows
@@ -2158,24 +2493,24 @@ void R_FillBackScreen(void)
     {
         if (background_buffer32 == NULL)
         {
-            int size = video.pitch * video.height;
+            int size = video.width * video.height;
             background_buffer32 =
                 Z_Malloc(size * sizeof(*background_buffer32), PU_STATIC, NULL);
         }
 
-        V_UseBuffer32(background_buffer32);
+        V_UseBuffer32(background_buffer32, video.width);
     }
     else
     {
         // Allocate the background buffer if necessary
         if (background_buffer == NULL)
         {
-            int size = video.pitch * video.height;
+            int size = video.width * video.height;
             background_buffer =
                 Z_Malloc(size * sizeof(*background_buffer), PU_STATIC, NULL);
         }
 
-        V_UseBuffer(background_buffer);
+        V_UseBuffer(background_buffer, video.width);
     }
 
     V_DrawBackground(gamemode == commercial ? "GRNROCK" : "FLOOR7_2");
@@ -2189,7 +2524,7 @@ void R_FillBackScreen(void)
 // Copy a screen buffer.
 //
 
-void R_VideoErase(int x, int y, int w, int h)
+static void R_VideoErase(int x, int y, int w, int h)
 {
     if (truecolor_rendering)
     {
@@ -2246,54 +2581,59 @@ void R_InitDrawColorFunctions(void)
 {
     if (truecolor_rendering)
     {
-        DrawColumn = DrawColumn32;
-        DrawColumnBrightmap = DrawColumn32Brightmap;
-        DrawColumnTR = DrawColumn32TR;
-        DrawColumnTRBrightmap = DrawColumn32TRBrightmap;
-        DrawColumnTL = DrawColumn32TL;
-        DrawColumnTLBrightmap = DrawColumn32TLBrightmap;
+        if (dithered_lighting)
+        {
+            R_DrawColumn = DrawColumnDithered32;
+            R_DrawTranslatedColumn = DrawTranslatedColumnDithered32;
+            R_DrawTLColumn = DrawTLColumnDithered32;
+            R_DrawTRTLColumn = DrawTRTLColumnDithered32;
 
-        DrawColumnDithered = DrawColumnDithered32;
-        DrawColumnDitheredTR = DrawColumnDithered32TR;
-        DrawColumnDitheredTL = DrawColumnDithered32TL;
+            R_DrawSpan = DrawSpanDithered32;
+            R_DrawSpanWithRadialFog = DrawSpanDitheredWithRadialFog32;
+        }
+        else {
+            R_DrawColumn = DrawColumn32;
+            R_DrawTranslatedColumn = DrawTranslatedColumn32;
+            R_DrawTLColumn = DrawTLColumn32;
+            R_DrawTRTLColumn = DrawTRTLColumn32;
+
+            R_DrawSpan = DrawSpan32;
+            R_DrawSpanWithRadialFog = DrawSpanWithRadialFog32;
+        }
 
         R_DrawColumnShadow = DrawColumnShadow32;
         R_DrawSkyColumn = DrawSkyColumn32;
-
-        DrawSpan = DrawSpan32;
-        DrawSpanBrightmap = DrawSpan32Brightmap;
-        DrawSpanDithered = DrawSpanDithered32;
-
-        DrawSpanWithRadialFog = DrawSpanWithRadialFog32;
-        DrawSpanWithRadialFogBrightmap = DrawSpanWithRadialFog32Brightmap;
-        DrawSpanDitheredWithRadialFog = DrawSpanDitheredWithRadialFog32;
     }
     else
     {
-        DrawColumn = DrawColumn8;
-        DrawColumnBrightmap = DrawColumn8Brightmap;
-        DrawColumnTR = DrawColumn8TR;
-        DrawColumnTRBrightmap = DrawColumn8TRBrightmap;
-        DrawColumnTL = DrawColumn8TL;
-        DrawColumnTLBrightmap = DrawColumn8TLBrightmap;
+        if (dithered_lighting)
+        {
+            R_DrawColumn = DrawColumnDithered8;
+            R_DrawTranslatedColumn = DrawTranslatedColumnDithered8;
+            R_DrawTLColumn = DrawTLColumnDithered8;
+            R_DrawTRTLColumn = DrawTRTLColumnDithered8;
 
-        DrawColumnDithered = DrawColumnDithered8;
-        DrawColumnDitheredTR = DrawColumnDithered8TR;
-        DrawColumnDitheredTL = DrawColumnDithered8TL;
+            R_DrawSpan = DrawSpanDithered8;
+            R_DrawSpanWithRadialFog = DrawSpanDitheredWithRadialFog8;
+        }
+        else {
+            R_DrawColumn = DrawColumn8;
+            R_DrawTranslatedColumn = DrawTranslatedColumn8;
+            R_DrawTLColumn = DrawTLColumn8;
+            R_DrawTRTLColumn = DrawTRTLColumn8;
+
+            R_DrawColumnShadow = DrawColumnShadow8;
+            R_DrawSkyColumn = DrawSkyColumn8;
+
+            R_DrawSpan = DrawSpan8;
+            R_DrawSpanWithRadialFog = DrawSpanWithRadialFog8;
+        }
 
         R_DrawColumnShadow = DrawColumnShadow8;
         R_DrawSkyColumn = DrawSkyColumn8;
-
-        DrawSpan = DrawSpan8;
-        DrawSpanBrightmap = DrawSpan8Brightmap;
-        DrawSpanDithered = DrawSpanDithered8;
-
-        DrawSpanWithRadialFog = DrawSpanWithRadialFog8;
-        DrawSpanWithRadialFogBrightmap = DrawSpanWithRadialFog8Brightmap;
-        DrawSpanDitheredWithRadialFog = DrawSpanDitheredWithRadialFog8;
     }
 
-    R_DeferredInitDrawFunctions();
+    colfunc = R_DrawColumn;
 }
 
 //----------------------------------------------------------------------------
