@@ -112,6 +112,9 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Rewind improvements:**
   - Made the current key frame be deleted only when quickly rewinding twice
   - Made storing resume upon rewinding
+  - Raised max. _Rewind Interval_ to 600 seconds
+  - Raised max. _Rewind Depth_ to 3000 key frames
+  - Raised max. _Rewind Timeout_ to 50 milliseconds
 - **Fixed bullet puffs not spawning when firing at planes far away from lines**
 - **Fixed bullet puffs not spawning when "hitting" the sky behind a line if said sky were the ceiling of the line's front sector**
 - **Made blood-colored entities transfer their color to `A_SpawnObject` spawnees**

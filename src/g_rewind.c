@@ -275,11 +275,13 @@ void G_ResetRewind(boolean force)
 
 void G_BindRewindVariables(void)
 {
-    BIND_NUM(rewind_interval, 1000, 100, 10000,
+    // [Nugget] Raised limits for the first three
+
+    BIND_NUM(rewind_interval, 1000, 100, 600000,
         "Rewind interval in miliseconds");
-    BIND_NUM(rewind_depth, 60, 10, 1000,
+    BIND_NUM(rewind_depth, 60, 10, 3000,
         "Number of rewind key frames to be stored");
-    BIND_NUM(rewind_timeout, 10, 0, 25,
+    BIND_NUM(rewind_timeout, 10, 0, 50,
         "Time to store a key frame [ms]; if exceeded, storing "
         "will stop (0 = No limit)");
     BIND_BOOL(rewind_auto, true, "Enable storing rewind key frames");
