@@ -176,11 +176,12 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 
-lighttable_t *spritelights;        // killough 1/25/98 made static
+// [Nugget]
+static int const *spritelightoffset = NULL;
 
 // [Nugget] Dithered lighting
-byte *spritelight_ditherlevel = NULL;
-int *spritelight_nextcolormap = NULL;
+static byte const *spritelight_ditherlevel = NULL;
+static int const *spritelight_nextcolormap = NULL;
 
 // [Woof!] optimization for drawing huge amount of drawsegs.
 // adapted from prboom-plus/src/r_things.c
@@ -729,8 +730,7 @@ static void DrawVisSpriteLoop8(
 
         if (!percolumn_lighting)
         {
-          dc_colormap[0] =
-            thiscolormap + (scalelightoffset + MAXLIGHTSCALE * vis->lightnum)[lightindex];
+          dc_colormap[0] = thiscolormap + spritelightoffset[lightindex];
 
           if (do_dithered_lighting)
           {
@@ -755,7 +755,7 @@ static void DrawVisSpriteLoop8(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
+        int lightnum, tint = -1, *const tint_p = own_tint ? NULL : &tint;
 
         R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
@@ -768,11 +768,8 @@ static void DrawVisSpriteLoop8(
         if (!own_tint)
         { thiscolormap = (tint >= 0) ? colormaps[tint] : fullcolormap; }
 
-        dc_colormap[0] = thiscolormap
-                       + (scalelightoffset + MAXLIGHTSCALE * lightnum)[lightindex];
-
-        dc_colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                         ? thiscolormap : dc_colormap[0];
+        dc_colormap[0] = thiscolormap + scalelightoffset[lightnum][lightindex];
+        dc_colormap[1] = thiscolormap;
 
         if (do_dithered_lighting)
         {
@@ -847,8 +844,7 @@ static void DrawVisSpriteLoop32(
 
         if (!percolumn_lighting)
         {
-          dc_colormap32[0] =
-            thiscolormap + (scalelightoffset + MAXLIGHTSCALE * vis->lightnum)[lightindex];
+          dc_colormap32[0] = thiscolormap + spritelightoffset[lightindex];;
 
           if (do_dithered_lighting)
           {
@@ -873,7 +869,7 @@ static void DrawVisSpriteLoop32(
         const fixed_t gx = vis->gx + FixedMul(offset, pcl_cosine),
                       gy = vis->gy + FixedMul(offset, pcl_sine);
 
-        int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
+        int lightnum, tint = -1, *const tint_p = own_tint ? NULL : &tint;
 
         R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
@@ -886,11 +882,8 @@ static void DrawVisSpriteLoop32(
         if (!own_tint)
         { thiscolormap = (tint >= 0) ? colormaps32[tint] : fullcolormap32; }
 
-        dc_colormap32[0] = thiscolormap
-                         + (scalelightoffset + MAXLIGHTSCALE * lightnum)[lightindex];
-
-        dc_colormap32[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                           ? thiscolormap : dc_colormap32[0];
+        dc_colormap32[0] = thiscolormap + scalelightoffset[lightnum][lightindex];
+        dc_colormap32[1] = thiscolormap;
 
         if (do_dithered_lighting)
         {
@@ -986,7 +979,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   fixed_t pcl_offset = 0;
   fixed_t pcl_cosine = 0, pcl_sine = 0;
 
-  if (!(vis->flags & VSF_NO_PERC) && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapindex)
+  if (!(vis->flags & VSF_NO_PERC) && !(vis->mobjflags & MF_SHADOW) && !fixedcolormapoffset)
   {
     do_sprite_radial_fog = do_radial_fog && !(vis->flags & VSF_FULLBRIGHT);
 
@@ -1011,6 +1004,8 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
     }
     else if (do_sprite_radial_fog)
     {
+      spritelightoffset = scalelightoffset[vis->lightnum];
+
       if (dithered_lighting)
       {
         spritelight_ditherlevel = scalelight_ditherlevel[vis->lightnum];
@@ -1158,7 +1153,8 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] ---------------------------------------------------------------/
 
-    // decide which patch to use for sprite relative to player
+  // decide which patch to use for sprite relative to player
+
   if ((unsigned) thing->sprite >= num_sprites)
     I_Error ("invalid sprite number %i", thing->sprite);
 
@@ -1374,10 +1370,10 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
     // shadow draw
     vis->colormap[0] = vis->colormap[1] = 0;
   }
-  else if (fixedcolormapindex)
+  else if (fixedcolormapoffset)
   {
     // fixed map
-    vis->colormap[0] = vis->colormap[1] = fixedcolormapindex * 256;
+    vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;
   }
   else if (frame & FF_FULLBRIGHT)
   {
@@ -1390,8 +1386,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   else
   {
     // diminished light
-    const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-                      ? 0 : R_GetLightIndex(vis->scale, 0); // [Nugget]
 
     int lightnum;
 
@@ -1408,13 +1402,15 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
                : (thing->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
     }
 
-    lightnum = CLAMP(lightnum + extralight, 0, LIGHTLEVELS - 1);
-    int* spritelightoffsets = &scalelightoffset[MAXLIGHTSCALE * lightnum];
+    lightnum += extralight;
+    lightnum = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+
+    const int *const spritelightoffsets = scalelightoffset[lightnum];
+    const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                      ? 0 : R_GetLightIndex(vis->scale, 0); // [Nugget]
 
     vis->colormap[0] = spritelightoffsets[index];
-    vis->colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                       ? 0
-                       : vis->colormap[0];
+    vis->colormap[1] = 0;
 
     // [Nugget] Dithered lighting
     if (dithered_lighting)
@@ -1725,19 +1721,15 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   // decide which patch to use
 
-#ifdef RANGECHECK
   if ((unsigned) psp->state->sprite >= num_sprites)
     I_Error ("invalid sprite number %i", psp->state->sprite);
-#endif
 
   sprdef = &sprites[psp->state->sprite];
 
-#ifdef RANGECHECK
   if ((psp->state->frame&FF_FRAMEMASK) >= sprdef->numframes)
     I_Error ("invalid frame %i for sprite %s",
              (int)(psp->state->frame & FF_FRAMEMASK),
              sprnames[psp->state->sprite]);
-#endif
 
   sprframe = &sprdef->spriteframes[psp->state->frame & FF_FRAMEMASK];
 
@@ -1898,10 +1890,10 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
     vis->colormap[0] = vis->colormap[1] = 0;
     vis->mobjflags |= MF_SHADOW; // [Nugget] Give corresponding flag
   }
-  else if (fixedcolormapindex)
+  else if (fixedcolormapoffset)
   {
     // fixed color
-    vis->colormap[0] = vis->colormap[1] = fixedcolormapindex * 256;
+    vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;
   }
   else if (psp->state->frame & FF_FULLBRIGHT)
   {
@@ -1918,16 +1910,16 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
                  ? (lightlevel_override >> LIGHTSEGSHIFT)
                  : (viewplayer->mo->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
 
-    lightnum = CLAMP(lightnum + extralight, 0, LIGHTLEVELS - 1);
-    int* spritelightoffsets = &scalelightoffset[MAXLIGHTSCALE * lightnum];
+    lightnum += extralight;
+    lightnum = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+
+    const int *const spritelightoffsets = scalelightoffset[lightnum];
 
     // [Nugget]
     const int index = STRICTMODE(!diminishing_lighting) ? 0 : MAXLIGHTSCALE-1;
 
     vis->colormap[0] = spritelightoffsets[index];
-    vis->colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-                        ? 0
-                        : vis->colormap[0];
+    vis->colormap[1] = 0;
   }
 
   // [Nugget] /---------------------------------------------------------------

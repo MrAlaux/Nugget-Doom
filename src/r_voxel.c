@@ -525,6 +525,13 @@ static boolean VX_CheckFrustum (fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
 }
 
 
+// [Nugget]
+static int const *voxellightoffset = NULL;
+
+// [Nugget] Dithered lighting
+static byte const *voxellight_ditherlevel = NULL;
+static int const *voxellight_nextcolormap = NULL;
+
 boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 {
 	if (!STRICTMODE(voxels_rendering))
@@ -728,9 +735,9 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 	{
 		vis->colormap[0] = vis->colormap[1] = 0;
 	}
-	else if (fixedcolormapindex)
+	else if (fixedcolormapoffset)
 	{
-		vis->colormap[0] = vis->colormap[1] = fixedcolormapindex * 256;
+		vis->colormap[0] = vis->colormap[1] = fixedcolormapoffset;
 	}
 	else if (thing->frame & FF_FULLBRIGHT)
 	{
@@ -741,8 +748,6 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 	else
 	{
 		// diminished light
-		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
-		                  ? 0 : R_GetLightIndex(xscale, 0);
 
 		int lightnum;
 
@@ -759,28 +764,30 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 			         : (thing->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
 		}
 
-		lightnum = CLAMP(lightnum + extralight, 0, LIGHTLEVELS - 1);
-		int* spritelightoffsets = &scalelightoffset[MAXLIGHTSCALE * lightnum];
+		lightnum += extralight;
+		lightnum = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+
+		const int *const spritelightoffsets = scalelightoffset[lightnum];
+		const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+		                  ? 0 : R_GetLightIndex(xscale, 0);
 
 		vis->colormap[0] = spritelightoffsets[index];
-		vis->colormap[1] = (STRICTMODE(brightmaps) || force_brightmaps)
-				? 0
-				: vis->colormap[0];
+		vis->colormap[1] = 0;
 
 		// [Nugget] Dithered lighting
 		if (dithered_lighting)
 		{
-			spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
-			spritelight_nextcolormap = scalelight_nextcolormap[lightnum];
+			voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+			voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
 				do_dithered_lighting = true;
 
-				vis->nextcolormap[0] = spritelight_nextcolormap[index];
+				vis->nextcolormap[0] = voxellight_nextcolormap[index];
 				vis->nextcolormap[1] = vis->colormap[1];
 
-				vis->ditherlevel = spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
+				vis->ditherlevel = voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT];
 			}
 		}
 
@@ -954,7 +961,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapindex)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapoffset)
 	{
 		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
@@ -990,7 +997,7 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(B_xscale, 0);
 
-				spr->colormap[0] = (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)[lightindex];
+				spr->colormap[0] = scalelightoffset[lightnum][lightindex];
 
 				if (dithered_lighting)
 				{
@@ -1003,19 +1010,23 @@ static void VX_DrawColumnCubes (vissprite_t * spr, int x, int y)
 				}
 			}
 			else {
+				voxellightoffset = scalelightoffset[lightnum];
+
 				if (dithered_lighting)
 				{
-					spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
-					spritelight_nextcolormap = scalelight_nextcolormap[lightnum];
+					voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+					voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
 				}
 			}
 		}
 		else if (do_voxel_radial_fog)
 		{
+			voxellightoffset = scalelightoffset[spr->lightnum];
+
 			if (dithered_lighting)
 			{
-				spritelight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
-				spritelight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+				voxellight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+				voxellight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
 			}
 		}
 		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
@@ -1102,9 +1113,7 @@ static void DrawColumnCubesLoop8(
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
 		{
-			colormap[0] = thiscolormap
-			            + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)
-			              [R_GetLightIndex(scale, ux >> FRACBITS)];
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(scale, ux >> FRACBITS)];
 		}
 
 		for (; slab < end ; slab += len)
@@ -1271,9 +1280,7 @@ static void DrawColumnCubesLoop32(
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
 		{
-			colormap[0] = thiscolormap
-			            + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)
-			              [R_GetLightIndex(scale, ux >> FRACBITS)];
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(scale, ux >> FRACBITS)];
 		}
 
 		for (; slab < end ; slab += len)
@@ -1444,13 +1451,12 @@ static void DrawColumnCubesLoopDithered8(
 		{
 			const int index = R_GetLightIndex(scale, ux >> FRACBITS);
 
-			colormap[0][0] = thiscolormap
-			               + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)[index];
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = thiscolormap + spritelight_nextcolormap[index];
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -1638,13 +1644,12 @@ static void DrawColumnCubesLoopDithered32(
 		{
 			const int index = R_GetLightIndex(scale, ux >> FRACBITS);
 
-			colormap[0][0] = thiscolormap
-			               + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)[index];
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = thiscolormap + spritelight_nextcolormap[index];
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -1876,7 +1881,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
 	boolean do_voxel_radial_fog = false;
 
-	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapindex)
+	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapoffset)
 	{
 		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
@@ -1912,7 +1917,7 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				const int lightindex = STRICTMODE(!diminishing_lighting)
 				                       ? 0 : R_GetLightIndex(midscale, 0);
 
-				spr->colormap[0] = (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)[lightindex];
+				spr->colormap[0] = scalelightoffset[lightnum][lightindex];
 
 				if (dithered_lighting)
 				{
@@ -1925,19 +1930,23 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 				}
 			}
 			else {
+				voxellightoffset = scalelightoffset[lightnum];
+
 				if (dithered_lighting)
 				{
-					spritelight_ditherlevel = scalelight_ditherlevel[lightnum];
-					spritelight_nextcolormap = scalelight_nextcolormap[lightnum];
+					voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+					voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
 				}
 			}
 		}
 		else if (do_voxel_radial_fog)
 		{
+			voxellightoffset = scalelightoffset[spr->lightnum];
+
 			if (dithered_lighting)
 			{
-				spritelight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
-				spritelight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+				voxellight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+				voxellight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
 			}
 		}
 		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
@@ -2008,9 +2017,7 @@ static void DrawColumnBoundedLoop8(
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
 		{
-			colormap[0] = thiscolormap
-			            + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)
-			              [R_GetLightIndex(midscale, uxi)];
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
 		}
 
 		for (byte top, len, face;  slab < end;  slab += len)
@@ -2117,9 +2124,7 @@ static void DrawColumnBoundedLoop32(
 		// [Nugget] Radial fog
 		if (do_voxel_radial_fog)
 		{
-			colormap[0] = thiscolormap
-			            + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)
-			              [R_GetLightIndex(midscale, uxi)];
+			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
 		}
 
 		for (byte top, len, face;  slab < end;  slab += len)
@@ -2232,13 +2237,12 @@ static void DrawColumnBoundedLoopDithered8(
 		{
 			const int index = R_GetLightIndex(midscale, uxi);
 
-			colormap[0][0] = thiscolormap
-			               + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)[index];
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = thiscolormap + spritelight_nextcolormap[index];
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}
@@ -2357,13 +2361,12 @@ static void DrawColumnBoundedLoopDithered32(
 		{
 			const int index = R_GetLightIndex(midscale, uxi);
 
-			colormap[0][0] = thiscolormap
-			               + (scalelightoffset + MAXLIGHTSCALE * spr->lightnum)[index];
+			colormap[0][0] = thiscolormap + voxellightoffset[index];
 
 			if (index < MAXLIGHTSCALE-1)
 			{
-				colormap[1][0] = thiscolormap + spritelight_nextcolormap[index];
-				R_SetDitherPattern(spritelight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
 			}
 			else { R_SetDitherPattern(0); }
 		}

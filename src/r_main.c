@@ -72,9 +72,9 @@
 
 int viewangleoffset;
 int validcount = 1;         // increment every time a check is made
-lighttable_t *fixedcolormap;
-lighttable32_t *fixedcolormap32 = NULL;
-int fixedcolormapindex;
+const lighttable_t *fixedcolormap;
+const lighttable32_t *fixedcolormap32 = NULL;
+int fixedcolormapoffset;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
 fixed_t  projection;
@@ -125,15 +125,10 @@ lighttable32_t ***pal_colormaps = NULL;
 lighttable32_t *fullcolormap32 = NULL;
 lighttable32_t **colormaps32 = NULL;
 
-// updated thanks to Rum-and-Raisin Doom, Ethan Watson
-int* scalelightoffset;
-int* scalelightindex;
-int* zlightoffset;
-int* zlightindex;
-int* planezlightoffset;
-int  planezlightindex;
-int* walllightoffset;
-int  walllightindex;
+int       ** scalelightoffset = NULL;
+int       ** zlightoffset = NULL;
+int const  * planezlightoffset = NULL;
+int const  * walllightoffset = NULL;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
@@ -397,15 +392,15 @@ int (*R_GetLightIndex)(fixed_t scale, int x) = R_GetLightIndexVanilla;
 
 int light_distance_shift_bits;
 
-uint16_t ** planedistlight = NULL,
-          *  spandistlight = NULL;
+uint16_t       ** planedistlight = NULL;
+uint16_t const  * spandistlight = NULL;
 
 static float *plane_radfog_multipliers = NULL;
 
 // Dithered lighting /--------------------------------------------------------
 
-uint16_t ** planedistlight_ditherlevel = NULL,
-          *  spandistlight_ditherlevel = NULL;
+uint16_t       ** planedistlight_ditherlevel = NULL;
+uint16_t const  * spandistlight_ditherlevel = NULL;
 
 static float *plane_radfog_dither_multipliers = NULL;
 
@@ -1375,6 +1370,22 @@ void R_InitLightTables (void)
 
   init_light_tables = false;
 
+  if (zlightoffset)
+  {
+    Z_Free(zlightoffset[0]);
+    Z_Free(zlightoffset);
+
+    zlightoffset = NULL;
+  }
+
+  if (scalelightoffset)
+  {
+    Z_Free(scalelightoffset[0]);
+    Z_Free(scalelightoffset);
+
+    scalelightoffset = NULL;
+  }
+
   if (lighting_mode >= LIGHTINGMODE_INTERPOLATED) // True color
   {
     num_colormap_rows = 256;
@@ -1407,53 +1418,56 @@ void R_InitLightTables (void)
   // [Nugget] ---------------------------------------------------------------/
 
   // killough 4/4/98: dynamic colormaps
-  // ScaleLight calculated below
-  int NumZLightEntries = LIGHTLEVELS * MAXLIGHTZ;
-  zlightoffset = (int*)Z_Malloc(sizeof(int) * NumZLightEntries, PU_STATIC, NULL);
-  zlightindex  = (int*)Z_Malloc(sizeof(int) * NumZLightEntries, PU_STATIC, NULL);
+
+  zlightoffset = Z_Malloc(sizeof(*zlightoffset) * LIGHTLEVELS, PU_STATIC, NULL);
+
+  int *const all_zlightoffsets =
+    Z_Malloc(sizeof(**zlightoffset) * LIGHTLEVELS * MAXLIGHTZ, PU_STATIC, NULL);
 
   // Calculate the light levels to use
   //  for each level / distance combination.
   for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
   {
-    int lightz, startmap = ((LIGHTLEVELS-LIGHTBRIGHT-lightlevel)*2)*num_colormap_rows/LIGHTLEVELS;
-    for (lightz = 0; lightz < MAXLIGHTZ; lightz++)
+    zlightoffset[lightlevel] = all_zlightoffsets + MAXLIGHTZ * lightlevel;
+
+    const int startmap =
+      ((LIGHTLEVELS - 1 - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+
+    for (int lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
-      int scale = FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (lightz + 1) << LIGHTZSHIFT);
+      const int scale =
+        FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (lightz + 1) << LIGHTZSHIFT);
+
       int level = startmap - (scale >> LIGHTSCALESHIFT) / DISTMAP;
       level = CLAMP(level, 0, num_colormap_rows - 1);
 
-      // killough 3/20/98: Initialize multiple colormaps
-      // killough 4/4/98
-      // updated thanks to Rum-and-Raisin Doom
-      zlightindex[lightlevel * MAXLIGHTZ + lightz] = level;
-      zlightoffset[lightlevel * MAXLIGHTZ + lightz] = level * 256;
+      zlightoffset[lightlevel][lightz] = level * 256;
     }
   }
 
   // [Woof!] scalelight has been made independent of view size,
   // so we initialize it here
 
-  int NumScaleLightEntries = LIGHTLEVELS * MAXLIGHTSCALE;
-  scalelightindex  = (int*)Z_Malloc(sizeof(int) * NumScaleLightEntries, PU_STATIC, NULL);
-  scalelightoffset = (int*)Z_Malloc(sizeof(int) * NumScaleLightEntries, PU_STATIC, NULL);
+  scalelightoffset = Z_Malloc(sizeof(*scalelightoffset) * LIGHTLEVELS, PU_STATIC, NULL);
+
+  int *const all_scalelightoffsets =
+    Z_Malloc(sizeof(**scalelightoffset) * LIGHTLEVELS * MAXLIGHTSCALE, PU_STATIC, NULL);
 
   // Calculate the light levels to use
   //  for each level / scale combination.
   for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
   {
-    int startmap = ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+    scalelightoffset[lightlevel] = all_scalelightoffsets + MAXLIGHTSCALE * lightlevel;
+
+    const int startmap =
+      ((LIGHTLEVELS - 1 - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+
     for (int lightscale = 0; lightscale < MAXLIGHTSCALE; lightscale++)
     {
-      // killough 11/98:
       int level = startmap - lightscale / DISTMAP;
       level = CLAMP(level, 0, num_colormap_rows - 1);
 
-      // killough 3/20/98: initialize multiple colormaps
-      // killough 4/4/98
-      // updated thanks to Rum-and-Raisin Doom
-      scalelightindex[lightlevel * MAXLIGHTSCALE + lightscale] = level;
-      scalelightoffset[lightlevel * MAXLIGHTSCALE + lightscale] = level * 256;
+      scalelightoffset[lightlevel][lightscale] = level * 256;
     }
   }
 
@@ -1528,7 +1542,7 @@ void R_InitLightTables (void)
       zlight_ditherlevel[i] = all_planezlight_ditherlevels + (MAXLIGHTZDITHER * i);
       zlight_nextcolormap[i] = all_planezlight_nextcolormaps + (MAXLIGHTZ * i);
 
-      int *const curr_planezlight = zlightoffset + (MAXLIGHTZ * i);
+      int *const curr_planezlight = zlightoffset[i];
 
       for (int j = 0, next_j = j;  j < MAXLIGHTZ-1;  j = next_j)
       {
@@ -1566,7 +1580,7 @@ void R_InitLightTables (void)
       scalelight_ditherlevel[i] = all_scalelight_ditherlevels + (MAXLIGHTSCALEDITHER * i);
       scalelight_nextcolormap[i] = all_scalelight_nextcolormaps + (MAXLIGHTSCALE * i);
 
-      int *const curr_scalelight = scalelightoffset + (MAXLIGHTSCALE * i);
+      int *const curr_scalelight = scalelightoffset[i];
 
       for (int j = MAXLIGHTSCALE-1, next_j = j;  j > 0;  j = next_j)
       {
@@ -2326,18 +2340,21 @@ void R_SetupFrame (player_t *player)
 
   V_SetCurrentColormap(cm);
 
-  fixedcolormapindex = player->fixedcolormap;
+  fixedcolormapoffset = player->fixedcolormap * 256;
 
   if (truecolor_rendering)
   {
-    if (fixedcolormapindex)
+    if (fixedcolormapoffset)
     {
       // Only the first 32 original rows are expanded and should be shifted
-      fixedcolormapindex = (MIN(32, fixedcolormapindex) << COLORMAP_ROW_SHIFT_BITS)
-                         + MAX(0, fixedcolormapindex - 32);
+      const int fixedcolormapindex =
+        (MIN(32, player->fixedcolormap) << COLORMAP_ROW_SHIFT_BITS)
+        + MAX(0, player->fixedcolormap - 32);
+
+      fixedcolormapoffset = fixedcolormapindex * 256;
 
       // killough 3/20/98: use fullcolormap
-      fixedcolormap32 = fullcolormap32 + fixedcolormapindex * 256;
+      fixedcolormap32 = fullcolormap32 + fixedcolormapoffset;
 
       // [Nugget] Set `dc_colormap` here
       dc_colormap32[0] = dc_colormap32[1] = fixedcolormap32;
@@ -2353,10 +2370,10 @@ void R_SetupFrame (player_t *player)
   }
   else
   {
-    if (fixedcolormapindex)
+    if (fixedcolormapoffset)
     {
       // killough 3/20/98: use fullcolormap
-      fixedcolormap = fullcolormap + fixedcolormapindex * 256;
+      fixedcolormap = fullcolormap + fixedcolormapoffset;
 
       // [Nugget] Set `dc_colormap` here
       dc_colormap[0] = dc_colormap[1] = fixedcolormap;
@@ -2367,7 +2384,7 @@ void R_SetupFrame (player_t *player)
     }
     else
     {
-      fixedcolormap = 0;
+      fixedcolormap = NULL;
     }
   }
 

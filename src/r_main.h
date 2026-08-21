@@ -81,22 +81,17 @@ extern int LIGHTZSHIFT;
 // killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
 
-// updated thanks to Rum-and-Raisin Doom, Ethan Watson
-extern int* scalelightoffset;
-extern int* scalelightindex;
-extern int* zlightoffset;
-extern int* zlightindex;
-extern int* planezlightoffset;
-extern int  planezlightindex;
-extern int* walllightoffset;
-extern int  walllightindex;
+extern int       ** scalelightoffset;
+extern int       ** zlightoffset;
+extern int const *  planezlightoffset;
+extern int const *  walllightoffset;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
-extern int          extralight;
-extern lighttable_t *fixedcolormap;
-extern lighttable32_t *fixedcolormap32;
-extern int           fixedcolormapindex;
+extern int extralight;
+extern const lighttable_t *fixedcolormap;
+extern const lighttable32_t *fixedcolormap32;
+extern int fixedcolormapoffset;
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
@@ -256,12 +251,14 @@ extern int **zlight_nextcolormap;
 
 extern int light_distance_shift_bits;
 
-extern uint16_t **planedistlight, *spandistlight;
+extern uint16_t       ** planedistlight;
+extern uint16_t const  * spandistlight;
 
 // Dithered lighting
-extern byte *planezlight_ditherlevel;
-extern int *planezlight_nextcolormap;
-extern uint16_t **planedistlight_ditherlevel, *spandistlight_ditherlevel;
+extern byte const *planezlight_ditherlevel;
+extern int const *planezlight_nextcolormap;
+extern uint16_t       ** planedistlight_ditherlevel;
+extern uint16_t const  * spandistlight_ditherlevel;
 
 extern boolean do_radial_fog;
 

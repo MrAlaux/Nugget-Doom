@@ -60,8 +60,8 @@ int             rw_angle1;
 fixed_t         rw_distance;
 
 // [Nugget] Dithered lighting
-static byte *walllight_ditherlevel = NULL;
-static int *walllight_nextcolormap = NULL;
+static byte const *walllight_ditherlevel = NULL;
+static int const *walllight_nextcolormap = NULL;
 
 //
 // regular wall
@@ -96,99 +96,96 @@ static int    *maskedtexturecol; // [FG] 32-bit integer math
 
 static void SetLight(const int32_t lightlevel)
 {
-    if (!fixedcolormapindex)
+    if (!fixedcolormapoffset)
     {
-        int32_t lightnum = (lightlevel >> LIGHTSEGSHIFT) + extralight;
-        // [crispy]
-        lightnum += curline->fakecontrast;
-        walllightindex = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+        int32_t lightnum = (lightlevel >> LIGHTSEGSHIFT)
+                         + extralight
+                         + curline->fakecontrast; // [crispy]
+
+        lightnum = CLAMP(lightnum, 0, LIGHTLEVELS - 1);
+
+        walllightoffset = scalelightoffset[lightnum];
 
         // [Nugget] Dithered lighting
         if (dithered_lighting)
         {
-            walllight_ditherlevel = scalelight_ditherlevel[walllightindex];
-            walllight_nextcolormap = scalelight_nextcolormap[walllightindex];
+            walllight_ditherlevel = scalelight_ditherlevel[lightnum];
+            walllight_nextcolormap = scalelight_nextcolormap[lightnum];
         }
     }
-    else
-    {
-        walllightindex = fixedcolormapindex;
-    }
-    walllightoffset = &scalelightoffset[walllightindex * MAXLIGHTSCALE];
 }
 
-static void CalculateLighting(const int tint, fixed_t scale, int x) // [Nugget] X
+static void (*CalculateLighting)(const int tint, const fixed_t scale, const int x) = NULL;
+
+static void CalculateLighting8(const int tint, const fixed_t scale, const int x) // [Nugget] X
 {
-    // [Nugget]
-    int32_t lightindex = 0; // Factored out
-    boolean do_dithered_lighting = false; // Dithered lighting
+    const lighttable_t *const thiscolormap =
+        (tint >= 0) ? colormaps[tint] : fullcolormap;
 
-    // dimishing
-    int32_t colormapindex = fixedcolormapindex;
-    if (!fixedcolormapindex)
+    if (fixedcolormapoffset)
     {
-        lightindex = STRICTMODE(!diminishing_lighting) // [Nugget]
-                     ? 0 : R_GetLightIndex(scale, x); // [Nugget] X
-
-        colormapindex = walllightindex < num_colormap_rows
-                      ? scalelightindex[walllightindex * MAXLIGHTSCALE + lightindex]
-                      : walllightindex;
-
-        if (dithered_lighting && lightindex < MAXLIGHTSCALE-1)
-        {
-            do_dithered_lighting = true;
-            R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-        }
-    }
-
-    // per-sector colormap
-
-    if (truecolor_rendering)
-    {
-        const lighttable32_t *const thiscolormap =
-            (tint >= 0) ? colormaps32[tint] : fullcolormap32;
-
-        dc_colormap32[0] = thiscolormap + colormapindex * 256;
-        dc_colormap32[1] = (!fixedcolormap32 && (STRICTMODE(brightmaps) || force_brightmaps))
-                         ? thiscolormap
-                         : dc_colormap32[0];
-
-        // [Nugget] Dithered lighting
-        if (do_dithered_lighting)
-        {
-            dc_nextcolormap32[0] = thiscolormap + walllight_nextcolormap[lightindex];
-            dc_nextcolormap32[1] = (!fixedcolormap32 && (STRICTMODE(brightmaps) || force_brightmaps))
-                                 ? thiscolormap
-                                 : dc_nextcolormap32[0];
-        }
-        else if (dithered_lighting)
-        {
-            dc_nextcolormap32[0] = dc_colormap32[0];
-            dc_nextcolormap32[1] = dc_colormap32[1];
-        }
+        dc_colormap[0] = dc_colormap[1] = thiscolormap + fixedcolormapoffset;
     }
     else
     {
-        const lighttable_t *const thiscolormap =
-            (tint >= 0) ? colormaps[tint] : fullcolormap;
+        // [Nugget]
+        const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                          ? 0 : R_GetLightIndex(scale, x); // [Nugget] X
 
-        dc_colormap[0] = thiscolormap + colormapindex * 256;
-        dc_colormap[1] = (!fixedcolormap && (STRICTMODE(brightmaps) || force_brightmaps))
-                       ? thiscolormap
-                       : dc_colormap[0];
+        // per-sector colormap
+        dc_colormap[0] = thiscolormap + walllightoffset[index];
+        dc_colormap[1] = thiscolormap;
 
         // [Nugget] Dithered lighting
-        if (do_dithered_lighting)
+        if (dithered_lighting)
         {
-            dc_nextcolormap[0] = thiscolormap + walllight_nextcolormap[lightindex];
-            dc_nextcolormap[1] = (!fixedcolormap && (STRICTMODE(brightmaps) || force_brightmaps))
-                               ? thiscolormap
-                               : dc_nextcolormap[0];
+            if (index < MAXLIGHTSCALE-1)
+            {
+                dc_nextcolormap[0] = thiscolormap + walllight_nextcolormap[index];
+                dc_nextcolormap[1] = thiscolormap;
+
+                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+            }
+            else {
+                dc_nextcolormap[0] = dc_colormap[0];
+                dc_nextcolormap[1] = dc_colormap[1];
+            }
         }
-        else if (dithered_lighting)
+    }
+}
+
+static void CalculateLighting32(const int tint, const fixed_t scale, const int x)
+{
+    const lighttable32_t *const thiscolormap =
+        (tint >= 0) ? colormaps32[tint] : fullcolormap32;
+
+    if (fixedcolormapoffset)
+    {
+        dc_colormap32[0] = dc_colormap32[1] = thiscolormap + fixedcolormapoffset;
+    }
+    else
+    {
+        // [Nugget]
+        const int index = STRICTMODE(!diminishing_lighting) // [Nugget]
+                          ? 0 : R_GetLightIndex(scale, x); // [Nugget] X
+
+        dc_colormap32[0] = thiscolormap + walllightoffset[index];
+        dc_colormap32[1] = thiscolormap;
+
+        // [Nugget] Dithered lighting
+        if (dithered_lighting)
         {
-            dc_nextcolormap[0] = dc_colormap[0];
-            dc_nextcolormap[1] = dc_colormap[1];
+            if (index < MAXLIGHTSCALE-1)
+            {
+                dc_nextcolormap32[0] = thiscolormap + walllight_nextcolormap[index];
+                dc_nextcolormap32[1] = thiscolormap;
+
+                R_SetDitherPattern(walllight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+            }
+            else {
+                dc_nextcolormap32[0] = dc_colormap32[0];
+                dc_nextcolormap32[1] = dc_colormap32[1];
+            }
         }
     }
 }
@@ -292,7 +289,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
     }
 
   dc_texturemid += side->interprowoffset + side->offsety_mid;
-  dc_brightmap = texturebrightmap[texnum];
+
+  dc_brightmap = (STRICTMODE(brightmaps) || force_brightmaps)
+               ? texturebrightmap[texnum]
+               : nobrightmap;
 
   // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
@@ -454,6 +454,8 @@ static void R_RenderSegLoop(const int thiscolormap)
 
   rendered_segs++;
 
+  const boolean use_brightmaps = (STRICTMODE(brightmaps) || force_brightmaps);
+
   for ( ; rw_x < rw_stopx ; rw_x++)
     {
       // mark floor / ceiling areas
@@ -515,7 +517,7 @@ static void R_RenderSegLoop(const int thiscolormap)
           dc_texturemid = rw_midtexturemid;
           dc_source = R_GetColumn(midtexture, texturecolumn + FixedToInt(curline->sidedef->offsetx_mid));
           dc_texheight = textureheight[midtexture]>>FRACBITS; // killough
-          dc_brightmap = texturebrightmap[midtexture];
+          dc_brightmap = use_brightmaps ? texturebrightmap[midtexture] : nobrightmap;
           SideLightLevel_Mid(curline->sidedef);
           CalculateLighting(thiscolormap, rw_scale, rw_x); // [Nugget] X
           colfunc ();
@@ -541,7 +543,7 @@ static void R_RenderSegLoop(const int thiscolormap)
                   dc_texturemid = rw_toptexturemid;
                   dc_source = R_GetColumn(toptexture, texturecolumn + FixedToInt(curline->sidedef->offsetx_top));
                   dc_texheight = textureheight[toptexture]>>FRACBITS;//killough
-                  dc_brightmap = texturebrightmap[toptexture];
+                  dc_brightmap = use_brightmaps ? texturebrightmap[toptexture] : nobrightmap;
                   SideLightLevel_Top(curline->sidedef);
                   CalculateLighting(thiscolormap, rw_scale, rw_x); // [Nugget] X
                   colfunc ();
@@ -570,7 +572,7 @@ static void R_RenderSegLoop(const int thiscolormap)
                   dc_texturemid = rw_bottomtexturemid;
                   dc_source = R_GetColumn(bottomtexture, texturecolumn + FixedToInt(curline->sidedef->offsetx_bottom));
                   dc_texheight = textureheight[bottomtexture]>>FRACBITS; // killough
-                  dc_brightmap = texturebrightmap[bottomtexture];
+                  dc_brightmap = use_brightmaps ? texturebrightmap[bottomtexture] : nobrightmap;
                   SideLightLevel_Bottom(curline->sidedef);
                   CalculateLighting(thiscolormap, rw_scale, rw_x); // [Nugget] X
                   colfunc ();
@@ -1036,7 +1038,14 @@ void R_StoreWallRange(const int start, const int stop)
 
 void R_InitSegsColorFunctions(void)
 {
-  
+  if (truecolor_rendering)
+  {
+    CalculateLighting = CalculateLighting32;
+  }
+  else
+  {
+    CalculateLighting = CalculateLighting8;
+  }
 }
 
 //----------------------------------------------------------------------------
