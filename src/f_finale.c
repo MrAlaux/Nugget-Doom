@@ -421,7 +421,7 @@ static boolean MapInfo_Ticker()
                 {
                     finalecount = 0;
                     finalestage = FINALE_STAGE_ART;
-                    F_SetWipe(wipe_Melt); // force a wipe
+                    F_SetWipe(); // force a wipe
                     S_ChangeMusInfoMusic(W_GetNumForName(endfinale->music), 
                                          endfinale->musicloops);
                     if (endfinale->type == END_ART)
@@ -438,7 +438,7 @@ static boolean MapInfo_Ticker()
             {
                 finalecount = 0;
                 finalestage = FINALE_STAGE_ART;
-                F_SetWipe(wipe_Melt); // force a wipe
+                F_SetWipe(); // force a wipe
                 if (gamemapinfo->flags & MapInfo_EndGameBunny)
                 {
                     S_StartMusic(mus_bunny);
@@ -682,7 +682,7 @@ void F_Ticker(void)
           {                               // with enough time, it's automatic
             finalecount = 0;
             finalestage = FINALE_STAGE_ART;
-            F_SetWipe(wipe_Melt); // force a wipe
+            F_SetWipe(); // force a wipe
             if (gameepisode == 3)
               S_StartMusic(mus_bunny);
           }
@@ -1034,7 +1034,7 @@ static int F_SoundForState (int st)
 //
 void F_StartCast(void) // [Nugget] Global
 {
-  F_SetWipe(wipe_Melt); // force a screen wipe
+  F_SetWipe(); // force a screen wipe
   finalestage = FINALE_STAGE_CAST;
 
   if (gamemapinfo && gamemapinfo->flags & MapInfo_EndGameCustomFinale)

@@ -1058,7 +1058,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   spritedef_t   *sprdef;
   spriteframe_t *sprframe;
   int       lump;
-  boolean   flip;
   vissprite_t *vis;
   fixed_t   iscale;
   int heightsec;      // killough 3/27/98
@@ -1184,8 +1183,21 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   sprframe = &sprdef->spriteframes[frame & FF_FRAMEMASK];
 
+  boolean flip = false;
+
   // [Nugget]
   unsigned rotation = 0;
+
+  // [crispy] randomly flip corpse, blood and death animation sprites
+  if (STRICTMODE(flipcorpses) &&
+      (thing->flags_extra & MFX_MIRROREDCORPSE) &&
+      !(thing->flags & MF_SHOOTABLE) &&
+      (thing->intflags & MIF_FLIP))
+  {
+    flip = !flip;
+  }
+
+  if (STRICTMODE(flip_levels)) { flip = !flip; } // [Nugget] Flip levels
 
   if (sprframe->rotate)
     {
@@ -1193,10 +1205,14 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
       angle_t ang = R_PointToAngle(interpx, interpy);
       unsigned rot = (ang-interpangle+(unsigned)(ANG45/2)*9)>>29;
 
-      if (STRICTMODE(flip_levels)) { rot = (8 - rot) & 7; } // [Nugget] Flip levels
+      // [Alaux] Proper rotation for flipped things
+      if (flip)
+      {
+        rot = (8 - rot) & 7;
+      }
 
       lump = sprframe->lump[rot];
-      flip = (boolean) sprframe->flip[rot];
+      flip ^= (boolean) sprframe->flip[rot];
 
       rotation = rot;
     }
@@ -1204,7 +1220,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
     {
       // use single rotation for all views
       lump = sprframe->lump[0];
-      flip = (boolean) sprframe->flip[0];
+      flip ^= (boolean) sprframe->flip[0];
 
       rotation = 0;
     }
@@ -1237,17 +1253,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   }
 
   // [Nugget] Hi-res graphics -----------------------------------------------/
-
-  // [crispy] randomly flip corpse, blood and death animation sprites
-  if (STRICTMODE(flipcorpses) &&
-      (thing->flags_extra & MFX_MIRROREDCORPSE) &&
-      !(thing->flags & MF_SHOOTABLE) &&
-      (thing->intflags & MIF_FLIP))
-    {
-      flip = !flip;
-    }
-
-  if (STRICTMODE(flip_levels)) { flip = !flip; } // [Nugget] Flip levels
 
   txc = tx; // [FG] sprite center coordinate
 

@@ -28,7 +28,7 @@ extern int wipe_speed_percentage; // [Nugget]
 
 typedef enum wipefx_e
 {
-  wipe_Invalid = -1, // falls back on user setting
+  wipe_Default = -1, // falls back on user setting
   wipe_None,         // no effect
   wipe_Melt,         // weird screen melt
   wipe_Crossfade,    // transparency-based fade through
@@ -42,7 +42,7 @@ int wipe_ScreenWipe (int x, int y, int width, int height, int ticks);
 int wipe_StartScreen(int x, int y, int width, int height);
 int wipe_EndScreen  (int x, int y, int width, int height);
 
-extern void F_SetWipe(wipefx_t wipe);
+extern void F_SetWipe(void);
 
 #endif
 

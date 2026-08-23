@@ -61,7 +61,7 @@ static pixel32_t *wipe_scr32;
 
 static int fade_tick;
 
-static int wipe_initCrossfade(int width, int height, int ticks)
+static int wipe_init(int width, int height, int ticks)
 {
     if (truecolor_rendering)
     {
@@ -468,7 +468,7 @@ int wipe_EndScreen(int x, int y, int width, int height)
 
 static int wipe_NOP(int width, int height, int tics)
 {
-    return 0;
+    return tics > 0;
 }
 
 /*
@@ -692,7 +692,7 @@ static int wipe_doFade(int width, int height, int ticks)
 
     static int screenshade = 1;
     static const int targshade = 31;
-    
+
     ticks *= 2; // Speed it up, to match "Melt" wipe speed
 
     // [Nugget] Screen Wipe speed
@@ -751,21 +751,21 @@ typedef struct
 } wipe_t;
 
 static wipe_t wipes[] = {
-    {wipe_NOP,           wipe_NOP,         wipe_NOP,        wipe_exit    },
-    {wipe_initMelt,      wipe_doMelt,      wipe_renderMelt, wipe_exitMelt},
-    {wipe_initCrossfade, wipe_doCrossfade, wipe_NOP,        wipe_exit    },
-    {wipe_initFizzle,    wipe_doFizzle,    wipe_NOP,        wipe_exit    },
+    {wipe_init,       wipe_NOP,         wipe_NOP,        wipe_exit    },
+    {wipe_initMelt,   wipe_doMelt,      wipe_renderMelt, wipe_exitMelt},
+    {wipe_init,       wipe_doCrossfade, wipe_NOP,        wipe_exit    },
+    {wipe_initFizzle, wipe_doFizzle,    wipe_NOP,        wipe_exit    },
 
     // [Nugget] "Black Fade" wipe
-    {wipe_initFade,      wipe_doFade,      wipe_NOP,        wipe_exit    },
+    {wipe_initFade,   wipe_doFade,      wipe_NOP,        wipe_exit    },
 };
 
 // killough 3/5/98: reformatted and cleaned up
 int wipe_ScreenWipe(int x, int y, int width, int height, int ticks)
 {
-    wipefx_t wipeno = (screen_wipe_internal == wipe_Invalid)
-                    ? wipe_Melt
-                    : screen_wipe_internal;
+    wipefx_t wipeno = (screen_wipe_internal == wipe_Default)
+                          ? screen_wipe
+                          : screen_wipe_internal;
     static boolean go; // when zero, stop the wipe
 
     if (!go) // initial stuff
@@ -795,10 +795,10 @@ int wipe_ScreenWipe(int x, int y, int width, int height, int ticks)
     return !go;
 }
 
-void F_SetWipe(wipefx_t wipe)
+void F_SetWipe(void)
 {
-  wipegamestate = -1;
-  screen_wipe_internal = (strictmode) ? wipe : screen_wipe;
+    wipegamestate = GS_NONE;
+    screen_wipe_internal = (strictmode) ? wipe_Melt : screen_wipe;
 }
 
 //----------------------------------------------------------------------------
