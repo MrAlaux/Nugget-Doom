@@ -273,6 +273,11 @@ Copyright:
  © 2024 Julia Nechaevskaya.  
 License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/)
 
+Files: `base/id1.wad/sm*.png`  
+Copyright:  
+ © 2026 DragonKnightKX.  
+License: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/)
+
 Files: `data/nugget-doom.ico, data/nugget-doom.png, src/icon.c, data/setup.ico, data/nugget-doom-setup.png, setup/setup_icon.c`  
 Copyright:  
  © 2022 Korp.  
