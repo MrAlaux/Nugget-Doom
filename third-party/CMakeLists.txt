@@ -1,7 +1,7 @@
 include(NuggetDoomSettings)
 
 add_library(base64 STATIC base64/base64.c)
-target_woof_settings(base64)
+target_nuggetdoom_settings(base64)
 target_include_directories(base64 INTERFACE base64)
 
 add_library(md5 STATIC md5/md5.c)
