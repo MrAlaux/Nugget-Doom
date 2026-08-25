@@ -1,7 +1,7 @@
 //
 //  Copyright (C) 1999 by
 //  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
-//  Copyright(C) 2020-2021 Fabian Greffrath
+//  Copyright(C) 2020-2026 Fabian Greffrath
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -23,7 +23,6 @@
 //-----------------------------------------------------------------------------
 
 #include <ctype.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -45,6 +44,7 @@
 #include "i_video.h"
 #include "m_input.h"
 #include "m_io.h"
+#include "m_json.h"
 #include "m_misc.h"
 #include "m_swap.h"
 #include "mn_font.h"
@@ -73,6 +73,8 @@
 #include "p_inter.h"
 #include "st_stuff.h"
 
+#include "miniz.h"
+
 // [crispy] remove DOS reference from the game quit confirmation dialogs
 #ifndef _WIN32
 #  include <unistd.h> // [FG] isatty()
@@ -86,7 +88,7 @@
 // int     detailLevel;    obsolete -- killough
 int screenblocks, maxscreenblocks; // has default
 
-static int quickSaveSlot; // -1 = no quicksave slot picked!
+static int quickSavePage, quickSaveSlot; // -1 = no quicksave slot picked!
 
 static int messageToPrint; // 1 = message to be printed
 
@@ -980,7 +982,7 @@ static void DeleteSaveGame(int slot)
     M_remove(name);
     free(name);
 
-    if (slot == quickSaveSlot)
+    if (savepage == quickSavePage && slot == quickSaveSlot)
     {
         quickSaveSlot = -1;
     }
@@ -1055,7 +1057,13 @@ static void M_DrawSaveLoadBorders(void)
         byte *cr = (item->flags & MF_HILITE) ? cr_bright : NULL;
 
         M_DrawSaveLoadBorder(x, y, cr);
-        WriteText(x, y, savegamestrings[i]);
+
+        int cr2 = (savepage == quickSavePage
+                   && (currentMenu == &LoadAutoSaveDef ? i - 1 == quickSaveSlot
+                                                       : i == quickSaveSlot))
+                      ? CR_GOLD
+                      : CR_NONE;
+        MN_DrawString(x, y, cr2, savegamestrings[i]);
     }
 }
 
@@ -1286,47 +1294,124 @@ static void EmptySaveString(char *name, boolean is_autosave)
 static void M_ReadSaveString(char *name, int menu_slot, int save_slot,
                              boolean is_autosave)
 {
-    FILE *fp = M_fopen(name, "rb");
     MN_ReadSavegameTime(menu_slot, name);
-    free(name);
-
     MN_ResetSnapshot(menu_slot);
 
-    if (!fp)
+    // Check if file exists
+
+    if (!M_FileExistsNotDir(name))
     {
         if (!is_autosave)
         {
-            name = G_MBFSaveGameName(save_slot);
-            fp = M_fopen(name, "rb");
             free(name);
+            name = G_MBFSaveGameName(save_slot);
         }
 
-        if (!fp)
+        if (!M_FileExistsNotDir(name))
         {
             EmptySaveString(savegamestrings[menu_slot], is_autosave);
             SetLoadSlotStatus(menu_slot, 0);
+            free(name);
             return;
         }
     }
 
-    // [FG] check return value
-    if (!fread(&savegamestrings[menu_slot], SAVESTRINGSIZE, 1, fp))
+    // Open file and read content
+
+    int savegamesize = M_ReadFile(name, &save_p);
+    savebuffer = save_p;
+    free(name);
+
+    if (savegamesize < SAVESTRINGSIZE)
     {
-        fclose(fp);
         EmptySaveString(savegamestrings[menu_slot], is_autosave);
         SetLoadSlotStatus(menu_slot, 0);
+        Z_Free(save_p);
         return;
     }
 
-    // Ensure that string is terminated
-    savegamestrings[menu_slot][SAVESTRINGSIZE - 1] = '\0';
+    // Check for zlib-compressed JSON stream
 
-    if (!MN_ReadSnapshot(menu_slot, fp))
+    unsigned char *decomp_str = NULL;
+    mz_ulong decomp_len = (mz_ulong)saveg_read32();
+
+    if (CheckStreamLength((int32_t)decomp_len) && CheckZlibHeader(save_p))
     {
-        MN_ResetSnapshot(menu_slot);
+        decomp_str = malloc((size_t)decomp_len);
+
+        if (decomp_str)
+        {
+            mz_ulong actual_len = decomp_len;
+            int mz_ret = mz_uncompress(
+                decomp_str, &actual_len, (const unsigned char *)save_p,
+                (mz_ulong)savegamesize - sizeof(int32_t));
+
+            if (mz_ret != MZ_OK || actual_len != decomp_len)
+            {
+                free(decomp_str);
+                decomp_str = NULL;
+            }
+        }
     }
 
-    fclose(fp);
+    // Uncompressed stream
+
+    unsigned char *json_str = decomp_str;
+    size_t json_len = (size_t)decomp_len;
+
+    if (json_str == NULL)
+    {
+        json_str = savebuffer;
+        json_len = savegamesize - 1;
+    }
+
+    // Check for JSON stream
+
+    json_t *root = NULL;
+    if (CheckJSONStream(json_str, json_len))
+    {
+        root = JS_OpenString((char *)json_str, json_len);
+    }
+
+    // Parse JSON stream or legacy binary savegame
+
+    if (root)
+    {
+        const char *savegamestring = JS_GetStringValue(root, "savedescription");
+        const char *snapshot = JS_GetStringValue(root, "snapshot");
+
+        M_snprintf(savegamestrings[menu_slot], SAVESTRINGSIZE, "%s",
+                   savegamestring ? savegamestring : DEH_String(EMPTYSTRING));
+
+        if (!MN_ReadSnapshot(menu_slot, (byte *)snapshot, 0))
+        {
+            MN_ResetSnapshot(menu_slot);
+        }
+
+        JS_CloseOptions(NO_INDEX);
+    }
+    else
+    {
+        M_snprintf(savegamestrings[menu_slot], SAVESTRINGSIZE, "%s",
+                   (char *)savebuffer);
+
+        if (!MN_ReadSnapshot(menu_slot, savebuffer, savegamesize))
+        {
+            MN_ResetSnapshot(menu_slot);
+        }
+    }
+
+    if (decomp_str)
+    {
+        free(decomp_str);
+    }
+
+    if (savebuffer)
+    {
+        Z_Free(savebuffer);
+        savebuffer = save_p = NULL;
+    }
+
     SetLoadSlotStatus(menu_slot, 1);
 }
 
@@ -1424,6 +1509,7 @@ void MN_SetQuickSaveSlot(int slot)
 {
     if (quickSaveSlot == -2)
     {
+        quickSavePage = savepage;
         quickSaveSlot = slot;
     }
 }
@@ -1769,6 +1855,7 @@ static void M_QuickSaveResponse(int ch)
 {
     if (ch == 'y')
     {
+        quickSavePage = savepage;
         if (MN_StartsWithMapIdentifier(savegamestrings[quickSaveSlot]))
         {
             SetDefaultSaveName(savegamestrings[quickSaveSlot], NULL);
@@ -1847,6 +1934,7 @@ static void M_QuickLoadResponse(int ch)
 {
     if (ch == 'y')
     {
+        savepage = quickSavePage;
         M_LoadSelect(quickSaveSlot);
         M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
     }
@@ -3069,7 +3157,6 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
         if (savepage > 0)
         {
             savepage--;
-            quickSaveSlot = -1;
             M_UpdateLoadMenu();
             M_ReadSaveStrings();
             M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
@@ -3081,7 +3168,6 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
         if (savepage < savepage_max)
         {
             savepage++;
-            quickSaveSlot = -1;
             M_UpdateLoadMenu();
             M_ReadSaveStrings();
             M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.

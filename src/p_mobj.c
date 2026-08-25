@@ -1919,6 +1919,24 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
   if (vertical_aiming == VERTAIM_DIRECT)
   {
     slope = source->player->slope;
+
+    // [Alaux] Even though we're aiming directly,
+    // we still need to set a linetarget,
+    // because it might be used for MBF21 homing projectiles
+
+    int mask = demo_version < DV_MBF ? 0 : MF_FRIEND;
+
+    mask |= CROSSHAIR_AIM; // Prefer target aimed at by the player
+
+    // [Nugget] Double Autoaim range
+
+    P_AimLineAttack(source, an, AUTOAIM_RANGE(), mask);
+
+    if (!linetarget && mask & MF_FRIEND)
+    {
+      mask &= ~MF_FRIEND;
+      P_AimLineAttack(source, an, AUTOAIM_RANGE(), mask);
+    }
   }
   else
   // killough 7/19/98: autoaiming was not in original beta
@@ -1935,24 +1953,22 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
 
       // killough 8/2/98: prefer autoaiming at enemies
       int mask = demo_version < DV_MBF ? 0 : MF_FRIEND;
-      // [Nugget] Moved vertical aiming code above
+
+      // [Nugget] Moved vertical-aiming code above
       do
-        {
-          // [Nugget] Double Autoaim range
-          slope = P_AimLineAttack(source, an, AUTOAIM_RANGE(), mask);
-          if (!linetarget)
-            // [Nugget] Disable horizontal autoaim
-            if (!casual_play || !no_hor_autoaim)
-              slope = P_AimLineAttack(source, an += 1<<26, AUTOAIM_RANGE(), mask);
-          if (!linetarget)
-            // [Nugget] Disable horizontal autoaim
-            if (!casual_play || !no_hor_autoaim)
-              slope = P_AimLineAttack(source, an -= 2<<26, AUTOAIM_RANGE(), mask);
-          if (!linetarget)
-            an = source->angle,
-            // [Nugget] Vertical aiming
-            slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? source->player->slope : 0;
-        }
+      {
+        // [Nugget] Double Autoaim range | Disable horizontal autoaim
+
+        slope = P_AimLineAttack(source, an, AUTOAIM_RANGE(), mask);
+        if (!linetarget && NOTCASUALPLAY(!no_hor_autoaim))
+          slope = P_AimLineAttack(source, an += 1<<26, AUTOAIM_RANGE(), mask);
+        if (!linetarget && NOTCASUALPLAY(!no_hor_autoaim))
+          slope = P_AimLineAttack(source, an -= 2<<26, AUTOAIM_RANGE(), mask);
+        if (!linetarget)
+          an = source->angle,
+          // [Nugget] Vertical aiming
+          slope = (vertical_aiming == VERTAIM_DIRECTAUTO) ? source->player->slope : 0;
+      }
       while (mask && (mask=0, !linetarget));  // killough 8/2/98
 
       P_ClearProjectileInfo(); // [Nugget] Smart autoaim
