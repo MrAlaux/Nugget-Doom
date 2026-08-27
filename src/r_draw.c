@@ -399,21 +399,13 @@ static void DrawColumn32(void)
     }
     else
     {
-        while ((count -= 2) >= 0)
+        UNROLL_LOOP_BY(2)
+        while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = colormap[brightmap[src]][src];
             dest += linesize;
             frac += fracstep;
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][src];
-            dest += linesize;
-            frac += fracstep;
-        }
-        if (count & 1)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][src];
         }
     }
 }
@@ -486,21 +478,13 @@ static void DrawTLColumn32(void)
     }
     else
     {
-        while ((count -= 2) >= 0)
+        UNROLL_LOOP_BY(2)
+        while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = SRCPIXEL;
             dest += linesize;
             frac += fracstep;
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = SRCPIXEL;
-            dest += linesize;
-            frac += fracstep;
-        }
-        if (count & 1)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = SRCPIXEL;
         }
     }
 
@@ -840,18 +824,12 @@ static void DrawSkyColumn32(void)
     }
     else
     {
-        while ((count -= 2) >= 0)
+        UNROLL_LOOP_BY(2)
+        while (count--)
         {
             *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
             dest += linesize;
             frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += linesize;
-            frac += fracstep;
-        }
-        if (count & 1)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
         }
     }
 }
@@ -1637,21 +1615,13 @@ static void DrawTranslatedColumn32(void)
     }
     else
     {
-        while ((count -= 2) >= 0)
+        UNROLL_LOOP_BY(2)
+        while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = colormap[brightmap[src]][translation[src]];
             dest += linesize;
             frac += fracstep;
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][translation[src]];
-            dest += linesize;
-            frac += fracstep;
-        }
-        if (count & 1)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][translation[src]];
         }
     }
 }
@@ -1838,21 +1808,13 @@ static void DrawTRTLColumn32(void)
     }
     else
     {
-        while ((count -= 2) >= 0)
+        UNROLL_LOOP_BY(2)
+        while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = SRCPIXEL;
             dest += linesize;
             frac += fracstep;
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = SRCPIXEL;
-            dest += linesize;
-            frac += fracstep;
-        }
-        if (count & 1)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = SRCPIXEL;
         }
     }
 
@@ -2094,31 +2056,14 @@ static void DrawSpan32(void)
 
     byte src;
 
-    #define DRAW_PIXEL(dest_index) \
-    { \
-        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
-        dest[dest_index] = colormap[brightmap[src]][src]; \
-        xf += xs; \
-        yf += ys; \
-    }
-
-    while (count >= 4)
-    {
-        DRAW_PIXEL(0);
-        DRAW_PIXEL(1);
-        DRAW_PIXEL(2);
-        DRAW_PIXEL(3);
-
-        dest += 4;
-        count -= 4;
-    }
+    UNROLL_LOOP_BY(4)
     while (count--)
     {
-        DRAW_PIXEL(0);
-        dest++;
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        *dest++ = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
     }
-
-    #undef DRAW_PIXEL
 }
 
 // Dithered lighting ---------------------------------------------------------
@@ -2177,34 +2122,15 @@ static void DrawSpanWithRadialFog8(void)
 
     byte src;
 
-    #define DRAW_PIXEL(dest_index) \
-    { \
-        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
-        \
-        colormap[0] = colormap[1] + planezlightoffset[*sdl++]; \
-        \
-        dest[dest_index] = colormap[brightmap[src]][src]; \
-        xf += xs; \
-        yf += ys; \
-    }
-
-    while (count >= 4)
-    {
-        DRAW_PIXEL(0);
-        DRAW_PIXEL(1);
-        DRAW_PIXEL(2);
-        DRAW_PIXEL(3);
-
-        dest += 4;
-        count -= 4;
-    }
     while (count--)
     {
-        DRAW_PIXEL(0);
-        dest++;
-    }
+        colormap[0] = colormap[1] + planezlightoffset[*sdl++];
 
-    #undef DRAW_PIXEL
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        *dest++ = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+    }
 }
 
 static void DrawSpanWithRadialFog32(void)
@@ -2222,34 +2148,15 @@ static void DrawSpanWithRadialFog32(void)
 
     byte src;
 
-    #define DRAW_PIXEL(dest_index) \
-    { \
-        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
-        \
-        colormap[0] = colormap[1] + planezlightoffset[*sdl++]; \
-        \
-        dest[dest_index] = colormap[brightmap[src]][src]; \
-        xf += xs; \
-        yf += ys; \
-    }
-
-    while (count >= 4)
-    {
-        DRAW_PIXEL(0);
-        DRAW_PIXEL(1);
-        DRAW_PIXEL(2);
-        DRAW_PIXEL(3);
-
-        dest += 4;
-        count -= 4;
-    }
     while (count--)
     {
-        DRAW_PIXEL(0);
-        dest++;
-    }
+        colormap[0] = colormap[1] + planezlightoffset[*sdl++];
 
-    #undef DRAW_PIXEL
+        src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
+        *dest++ = colormap[brightmap[src]][src];
+        xf += xs;
+        yf += ys;
+    }
 }
 
 #define DRAW_SPAN_DITHERED_RADFOG(NAME, DEPTH) \
@@ -2277,11 +2184,11 @@ static void DrawSpanWithRadialFog32(void)
     \
         while (count--) \
         { \
-            src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
-    \
             colormap[0][0] = colormap[0][1] + planezlightoffset[*sdl]; \
             colormap[1][0] = colormap[1][1] + planezlight_nextcolormap[*sdl]; \
             sdl++; \
+    \
+            src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
     \
             const byte *const dither_pattern_row = \
               dither_patterns[planezlight_ditherlevel[*sdld++]][dy]; \
