@@ -253,6 +253,7 @@ static void M_DrawSetup(void); // phares 3/21/98
 
 static void M_DrawSaveLoadBorder(int x, int y, byte *cr);
 static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr);
+static void WriteTextCR(int x, int y, byte *cr, const char *string);
 static void WriteText(int x, int y, const char *string);
 static void M_StartMessage(const char *string, void (*routine)(int), boolean input);
 
@@ -984,6 +985,7 @@ static void DeleteSaveGame(int slot)
 
     if (savepage == quickSavePage && slot == quickSaveSlot)
     {
+        quickSavePage = -1;
         quickSaveSlot = -1;
     }
 
@@ -1049,6 +1051,13 @@ static void M_DrawSaveLoadBorders(void)
     const int num_slots = currentMenu->numitems - 1;
     const int x = currentMenu->x;
 
+    int slot = quickSaveSlot;
+
+    if (menuactive && currentMenu == &LoadAutoSaveDef)
+    {
+        slot++;
+    }
+
     for (int i = 0; i < num_slots; i++)
     {
         const int y = currentMenu->y + LINEHEIGHT * i;
@@ -1058,12 +1067,9 @@ static void M_DrawSaveLoadBorders(void)
 
         M_DrawSaveLoadBorder(x, y, cr);
 
-        int cr2 = (savepage == quickSavePage
-                   && (currentMenu == &LoadAutoSaveDef ? i - 1 == quickSaveSlot
-                                                       : i == quickSaveSlot))
-                      ? CR_GOLD
-                      : CR_NONE;
-        MN_DrawString(x, y, cr2, savegamestrings[i]);
+        byte *cr2 =
+            (savepage == quickSavePage && i == slot) ? cr_gold : NULL;
+        WriteTextCR(x, y, cr2, savegamestrings[i]);
     }
 }
 
@@ -1482,8 +1488,11 @@ static void M_DrawSave(void)
     if (saveStringEnter)
     {
         i = MN_StringWidth(savegamestrings[saveSlot]);
-        WriteText(currentMenu->x + i, currentMenu->y + LINEHEIGHT * saveSlot,
-                  "_");
+        byte *cr = (savepage == quickSavePage && itemOn == quickSaveSlot)
+                       ? cr_gold
+                       : NULL;
+        WriteTextCR(currentMenu->x + i, currentMenu->y + LINEHEIGHT * saveSlot,
+                    cr, "_");
     }
 
     int index = (menu_input == mouse_mode ? highlight_item : itemOn);
@@ -1505,8 +1514,15 @@ static void M_DoSave(int slot)
     MN_ClearMenus();
 }
 
-void MN_SetQuickSaveSlot(int slot)
+void MN_SetQuickSaveSlot(int choice)
 {
+    int slot = choice;
+
+    if (menuactive && currentMenu == &LoadAutoSaveDef)
+    {
+        slot--;
+    }
+
     if (quickSaveSlot == -2)
     {
         quickSavePage = savepage;
@@ -1855,7 +1871,13 @@ static void M_QuickSaveResponse(int ch)
 {
     if (ch == 'y')
     {
-        quickSavePage = savepage;
+        if (currentMenu != &SaveDef || savepage != quickSavePage)
+        {
+            savepage = quickSavePage;
+            SetNextMenu(&SaveDef);
+            M_ReadSaveStrings();
+        }
+
         if (MN_StartsWithMapIdentifier(savegamestrings[quickSaveSlot]))
         {
             SetDefaultSaveName(savegamestrings[quickSaveSlot], NULL);
@@ -2001,6 +2023,7 @@ static void M_EndGameResponse(int ch)
     G_ResetSlowMotion(); // [Nugget] Slow Motion
 
     // [crispy] clear quicksave slot
+    quickSavePage = -1;
     quickSaveSlot = -1;
 
     currentMenu->lastOn = itemOn;
@@ -2579,6 +2602,7 @@ void M_Init(void)
     messageToPrint = 0;
     messageString = NULL;
     messageLastMenuActive = menuactive;
+    quickSavePage = -1;
     quickSaveSlot = -1;
     M_ResetAutoSave();
 
@@ -4054,7 +4078,7 @@ static void M_DrawThermo(int x, int y, int thermWidth, int thermDot, byte *cr)
 //    Write a string using the hu_font
 //
 
-static void WriteText(int x, int y, const char *string)
+static void WriteTextCR(int x, int y, byte *cr, const char *string)
 {
     int w;
     const char *ch;
@@ -4092,9 +4116,23 @@ static void WriteText(int x, int y, const char *string)
         {
             break;
         }
-        V_DrawPatchSH(cx, cy, hu_font[c]); // [Nugget] HUD/menu shadows
+
+        if (cr)
+        {
+            V_DrawPatchTranslatedSH(cx, cy, hu_font[c], cr); // [Nugget] HUD/menu shadows
+        }
+        else
+        {
+            V_DrawPatchSH(cx, cy, hu_font[c]); // [Nugget] HUD/menu shadows
+        }
+
         cx += w;
     }
+}
+
+static void WriteText(int x, int y, const char *string)
+{
+    WriteTextCR(x, y, NULL, string);
 }
 
 void M_StartSound(int sound_id)
