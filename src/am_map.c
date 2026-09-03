@@ -1561,44 +1561,49 @@ void AM_Ticker (void)
 
     if (subsec && subsec->sector)
     {
-      // if we are close to a tagged line in the sector, choose it instead
-      float min_distance = MAX(followplayer ? 24 << MAPBITS : 0,
-                               8 * FixedMul(scale_ftom, video.xscale));
-      short int min_tag = 0;
-
       magic_sector = (subsec->sector->tag > 0) ? subsec->sector : NULL;
       magic_tag = -1;
 
-      for (int i = 0;  i < subsec->sector->linecount;  i++)
+      if (!M_ShiftPressed())
       {
-        const line_t *const l = subsec->sector->lines[i];
+        // if we are close to a tagged line in the sector, choose it instead
 
-        if (l && l->tag > 0)
+        float min_distance = MAX(followplayer ? 24 << MAPBITS : 0,
+                                 8 * FixedMul(scale_ftom, video.xscale));
+
+        short int min_tag = 0;
+
+        for (int i = 0;  i < subsec->sector->linecount;  i++)
         {
-          if (l->v1 && l->v2)
-          {
-            const float
-              x1 = (l->v1->x >> FRACTOMAPBITS),
-              x2 = (l->v2->x >> FRACTOMAPBITS),
-              y1 = (l->v1->y >> FRACTOMAPBITS),
-              y2 = (l->v2->y >> FRACTOMAPBITS),
-              dist = fabs((y2 - y1) * tmapx - (x2 - x1) * tmapy + x2*y1 - y2*x1)
-                   / sqrtf(powf(y2 - y1, 2) + powf(x2 - x1, 2));
+          const line_t *const l = subsec->sector->lines[i];
 
-            if (dist < min_distance)
+          if (l && l->tag > 0)
+          {
+            if (l->v1 && l->v2)
             {
-              min_distance = dist;
-              min_tag = l->tag;
+              const float
+                x1 = (l->v1->x >> FRACTOMAPBITS),
+                x2 = (l->v2->x >> FRACTOMAPBITS),
+                y1 = (l->v1->y >> FRACTOMAPBITS),
+                y2 = (l->v2->y >> FRACTOMAPBITS),
+                dist = fabs((y2 - y1) * tmapx - (x2 - x1) * tmapy + x2*y1 - y2*x1)
+                     / sqrtf(powf(y2 - y1, 2) + powf(x2 - x1, 2));
+
+              if (dist < min_distance)
+              {
+                min_distance = dist;
+                min_tag = l->tag;
+              }
             }
           }
         }
-      }
 
-      // only pick the line if the crosshair is "close" to it
-      if (min_tag > 0)
-      {
-        magic_tag = min_tag;
-        magic_sector = NULL;
+        // only pick the line if the crosshair is "close" to it
+        if (min_tag > 0)
+        {
+          magic_tag = min_tag;
+          magic_sector = NULL;
+        }
       }
     }
   }

@@ -208,6 +208,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Tag Finder_** button [p.f. PrBoomX]
   - Position the automap pointer over a sector and press this button
     to highlight its activator line(s), and vice versa
+  - Hold <kbd>Shift</kbd> while pressing the button to avoid searching for lines,
+    thus always highlighting the sector under the crosshair instead
 - Button to **_Teleport to automap pointer_**
 - **The _Clear [Automap] Mark_ button now clears the mark under the crosshair when over one**
 - **Pressing _Place Mark_ while over a mark changes that mark's color**

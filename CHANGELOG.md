@@ -16,7 +16,8 @@
   - Made speed configurable through the `vertical_lockon_speed_pct` CVAR
   - Improved support for modded weapons, and made it respect _Smart Autoaim_
   - Improved easing
-- **Fixed scale for _Tag Finder_ cross marks**
+- **Made the _Tag Finder_ not search for tagged lines when holding <kbd>Shift</kbd>**
+- **Made _Tag Finder_/_Highlight P.O.I.'s_ cross marks have a fixed scale**
 - **Made initialization of _Radial Fog_ not trigger dynamic resolution changes**
 - **Changed the default values of the following settings**: [^2]
   - Set _Auto Save Interval_ to 300s, enabling periodic auto-saves
