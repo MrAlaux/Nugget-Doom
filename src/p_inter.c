@@ -788,28 +788,30 @@ static boolean P_NuggetForceGibbing(
   {
     const state_t *const state = source->player->psprites->state;
 
+    const fixed_t meleerange = (mbf21 ? source->info->meleerange : MELEERANGE);
+
     if (extra_gibbing[EXGIB_FIST])
     {
       if (state->action.p2 == (actionf_p2) A_Punch
           && source->player->powers[pw_strength]
           && (P_AproxDistance(target->x - source->x, target->y - source->y)
-              < (64*FRACUNIT + target->info->radius)))
+              < (meleerange + target->info->radius)))
       {
         return true;
       }
 
       if (state->action.p2 == (actionf_p2) A_WeaponMeleeAttack)
       {
-        const unsigned damagebase = state->args[0],
-                       damagemod  = state->args[1];
+        const int damagebase = state->args[0],
+                  damagemod  = state->args[1];
 
         const fixed_t zerkfactor = source->player->powers[pw_strength]
                                  ? state->args[2] : FRACUNIT;
 
         const fixed_t range = state->args[4] ? state->args[4] : source->info->meleerange;
 
-        const int average_damage = ((int) (damagebase * ((damagemod + 1) / 2.0f))
-                                    * zerkfactor) >> FRACBITS;
+        const int average_damage =
+          FixedToInt((int) (damagebase * ((damagemod + 1) / 2.0f)) * zerkfactor);
 
         if (average_damage >= 100 // Just below theoretical avg. damage of berserk fist
             && (P_AproxDistance(target->x - source->x, target->y - source->y)
@@ -823,7 +825,7 @@ static boolean P_NuggetForceGibbing(
     if (extra_gibbing[EXGIB_CSAW]
         && state->action.p2 == (actionf_p2) A_Saw
         && (P_AproxDistance(target->x - source->x, target->y - source->y)
-            < (65*FRACUNIT + target->info->radius)))
+            < (meleerange+1 + target->info->radius)))
     {
       return true;
     }
@@ -839,9 +841,9 @@ static boolean P_NuggetForceGibbing(
 
       if (state->action.p2 == (actionf_p2) A_WeaponBulletAttack)
       {
-        const unsigned numbullets = state->args[2],
-                       damagebase = state->args[3],
-                       damagemod  = state->args[4];
+        const int numbullets = state->args[2],
+                  damagebase = state->args[3],
+                  damagemod  = state->args[4];
 
         const int average_damage = damagebase * ((damagemod + 1) / 2.0f) * numbullets;
 

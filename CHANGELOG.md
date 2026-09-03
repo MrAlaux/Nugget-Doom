@@ -28,7 +28,8 @@
   - Improved support for modded weapons, and made it respect _Smart Autoaim_
   - Improved easing
 - **Optimized initialization of generic tranmaps by caching them in files**
-- **Fixed scale for _Tag Finder_ cross marks**
+- **Made the _Tag Finder_ not search for tagged lines when holding <kbd>Shift</kbd>**
+- **Made _Tag Finder_/_Highlight P.O.I.'s_ cross marks have a fixed scale**
 - **Made initialization of _Radial Fog_ not trigger dynamic resolution changes**
 - **Changed the default values of the following settings**: [^2]
   - Set _Auto Save Interval_ to 300s, enabling periodic auto-saves
@@ -50,6 +51,7 @@
 - **_Invulnerability Colormap_ setting affecting light-amp flashing and disabling _Night-Vision Visor Effect_**
 - **Lowercase characters not working if they came before uppercase characters in the same WAD**
 - **Wrong player controls when using freecam during netgames**
+- **_Extra Gibbing_ for fist and chainsaw not respecting the player's melee range in complevel MBF21**
 - **Quick-double-press actions being affected by game speed**
 - **Weapon-translucency menu items not generating tranmaps immediately**
 - **Key-binding menu items not working when backing from a submenu**
