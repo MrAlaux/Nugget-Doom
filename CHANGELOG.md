@@ -36,6 +36,7 @@
 - **High-resolution sprites overriding normal sprites regardless of load order**
 - **Lowercase characters not working if they came before uppercase characters in the same WAD**
 - **Wrong player controls when using freecam during netgames**
+- **_Extra Gibbing_ for fist and chainsaw not respecting the player's melee range in complevel MBF21**
 - **Key-binding menu items not working when backing from a submenu**
 - **Weapon-switch interruption allowing to switch to an already-raising weapon**
 - **_Freecam_ making _Alt. Intermission Background_ jitter**
