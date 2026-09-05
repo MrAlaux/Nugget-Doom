@@ -40,8 +40,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
 - **_Bounded Voxel Rendering_** setting, to draw each voxel as a rectangular sprite
 - **FOV-based sky stretching** setting (CFG-only: `fov_stretchsky`)
-- **_Sky Projection_** setting, featuring **_Cylindrical_ projection**
 - **Tweaked _Stretch Short Skies_ algorithm**
+- **_Sky Projection_** setting, featuring **_Cylindrical_ projection**
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **Support for SSG in Doom 1** [p.f. Woof! 15.2.0]
@@ -81,7 +81,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Opacity level determined by the CFG-only `sprite_shadows_tran_pct` CVAR
 - **_Thing Lighting Mode_** setting
   - _Hitbox_ suggested by [@fragglet](https://github.com/fragglet)
-  - _Per-column_ inspired by PSX Hexen
+  - _Per-column_ i.b. PSX Hexen
 - **_Radial Fog_** setting
   - The fidelity of the effect on floors and ceilings can be tuned through the CFG-only `radial_plane_fog_fidelity` CVAR;
     greater values increase fidelity but cause more stutter
@@ -133,7 +133,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Allow [Weapon] Switch Interruption_** setting
 - **_Prev/Next Skip Ammoless Weapons_** setting, to make the previous/next-weapon buttons skip weapons with insufficient ammo
 - **_Horizontal_ Weapon Centering** setting [i.b. DSDA-Doom]
-- **Made _Bobbing Weapon Alignment_ respect DeHackEd-set sprite offsets**
 - **Always Bob** setting (CFG-only: `always_bob`)
   - This setting forces the weapon to bob in every tic of its ready state,
     whether or not the `A_WeaponReady` action is called in said tic,
@@ -155,8 +154,6 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 ## Status Bar/HUD
 
 - **NUGHUD**, an alternative lump for HUD customization (see `docs/nughud.md`)
-- **SBARDEF:**
-  - Chat hack to move it vertically based on the height of the message list
 - **Crosshair:**
   - Opacity setting
   - Vertical-only target lock-on
@@ -186,7 +183,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Level-Stats Selection** settings (CFG-only: `hud_stats_#[_map]`)
 - **Event Timers:**
   - _Teleport Timer_ [i.b. Crispy Doom];
-  - _Key-Pickup Timer_ [same as above].
+  - _Key-Pickup Timer_ [i.b. Crispy Doom].
 - **Extended HUD color customization**
 - **Armor count is colored gray only when in God Mode** when _Colored Numbers_ are enabled
 - **Support for Berserk (`STBERSRK`) and Infinite Ammo (`STINFNTY`) icons**
@@ -282,6 +279,9 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - _Restart [Current] Level_ options
   - Settings are saved in the config file
   - Its menu item uses the `M_CSTSKL` graphic if found
+- **Support for high-resolution sprites between `HI_START`/`HI_END` markers**
+- **Support for the DeHackEd thing `Scale` property**, as featured in ZDoom and derivatives
+  - Does not work with voxel models
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]
 - **Setting of savegame and screenshot paths in config file** (CFG-only: `savegame_dir` and `screenshot_dir`)
 - **Keep palette changes in screenshots** setting (CFG-only: `screenshot_palette`)
@@ -295,9 +295,6 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - _Run_ button to gib
   - _Strafe_ buttons to skip
   - Press `0` to toggle fancy mode
-- **Support for high-resolution sprites between `HI_START`/`HI_END` markers**
-- **Support for the DeHackEd thing `Scale` property**, as featured in ZDoom and derivatives
-  - Does not work with voxel models
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
   - Jumping: `DSPLJUMP`
   - Landing: `DSPLLAND`
