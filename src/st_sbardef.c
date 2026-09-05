@@ -307,11 +307,6 @@ static boolean ParseSbarElemType(json_t *json, sbarelementtype_t type,
                         }
                         break;
 
-                    // [Nugget]
-                    case sbw_chat:
-                        widget->under_messages = JS_GetBooleanValue(json, "under_messages");
-                        break;
-
                     default:
                         break;
                 }

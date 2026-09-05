@@ -324,7 +324,6 @@ typedef struct sbe_widget_s
 
     // [Nugget]
     int duration_left;
-    boolean under_messages;
 } sbe_widget_t;
 
 typedef struct

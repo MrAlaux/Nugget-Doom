@@ -2926,9 +2926,9 @@ void ST_Ticker(void)
 
     UpdateStatusBar(player);
 
-    // [Nugget] Chat hack
-    if (st_message_elem && st_chat_elem && st_chat_elem->subtype.widget->under_messages
-        && (!st_nughud || (nughud.message.x != -1 && nughud.message.y != -1)))
+    // [Nugget] NUGHUD chat hack
+    if (st_nughud && st_message_elem && st_chat_elem
+        && nughud.message.x != -1 && nughud.message.y != -1)
     {
         static int orig_y = -1;
 
@@ -4542,8 +4542,6 @@ end_amnum:
 
     elem.cr = CR_GOLD;
     elem.y_pos = 0;
-
-    elem.subtype.widget->under_messages = true;
 
     array_push(sb.children, elem);
   }
