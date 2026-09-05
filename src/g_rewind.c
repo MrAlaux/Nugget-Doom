@@ -32,6 +32,18 @@ static int rewind_depth;
 static int rewind_timeout;
 static boolean rewind_auto;
 
+// [Nugget] Multi-frame timeout /---------------------------------------------
+
+static int rewind_multiframe_timeout;
+
+// Change CVAR description accordingly if this is changed
+#define LAST_KEYFRAME_TIMES_COUNT_MAX 4
+
+static int last_keyframe_times[LAST_KEYFRAME_TIMES_COUNT_MAX] = {0},
+           last_keyframe_times_count = 0;
+
+// [Nugget] -----------------------------------------------------------------/
+
 static boolean disable_rewind;
 static int interval_tics;
 
@@ -140,16 +152,50 @@ void G_SaveAutoKeyframe(void)
         
         Push(P_SaveKeyframe(current_tic));
 
+        // [Nugget]
+        const int store_time = I_GetTimeMS() - time;
+
         if (rewind_timeout)
         {
-            disable_rewind = (I_GetTimeMS() - time > rewind_timeout);
+            disable_rewind = (store_time > rewind_timeout);
         }
+
+        // [Nugget] Multi-frame timeout /-------------------------------------
+
+        if (last_keyframe_times_count >= LAST_KEYFRAME_TIMES_COUNT_MAX)
+        {
+          memmove(
+            last_keyframe_times,
+            last_keyframe_times + 1,
+            sizeof(*last_keyframe_times) * (LAST_KEYFRAME_TIMES_COUNT_MAX-1)
+          );
+
+          last_keyframe_times_count--;
+        }
+
+        last_keyframe_times[last_keyframe_times_count++] = store_time;
+
+        if (!disable_rewind && rewind_multiframe_timeout)
+        {
+            int total_store_time = 0;
+
+            for (int i = 0;  i < last_keyframe_times_count;  i++)
+            { total_store_time += last_keyframe_times[i]; }
+
+            disable_rewind = total_store_time > rewind_multiframe_timeout;
+        }
+
+        // [Nugget] ---------------------------------------------------------/
+
         if (disable_rewind)
         {
             displaymsg("Slow key framing: storing stopped"); // [Nugget] Different message
         }
     }
 }
+
+// [Nugget]
+void G_ResetRewind(boolean force);
 
 void G_LoadAutoKeyframe(void)
 {
@@ -158,7 +204,7 @@ void G_LoadAutoKeyframe(void)
     gameaction = ga_nothing;
 
     // [Nugget] Reenable if user attempts to rewind
-    disable_rewind = false;
+    G_ResetRewind(false);
 
     if (IsEmpty())
     {
@@ -271,6 +317,10 @@ void G_ResetRewind(boolean force)
     {
         FreeKeyframeQueue();
     }
+
+    // [Nugget] Multi-frame timeout
+    memset(last_keyframe_times, 0, sizeof(*last_keyframe_times) * LAST_KEYFRAME_TIMES_COUNT_MAX);
+    last_keyframe_times_count = 0;
 }
 
 void G_BindRewindVariables(void)
@@ -284,5 +334,12 @@ void G_BindRewindVariables(void)
     BIND_NUM(rewind_timeout, 10, 0, 50,
         "Time to store a key frame [ms]; if exceeded, storing "
         "will stop (0 = No limit)");
+
+    // [Nugget] Multi-frame timeout
+    BIND_NUM(
+        rewind_multiframe_timeout, 50, 0, 250,
+        "Time to store the last 4 key frames [ms] (0 = No limit)"
+    );
+
     BIND_BOOL(rewind_auto, true, "Enable storing rewind key frames");
 }

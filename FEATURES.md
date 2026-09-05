@@ -112,6 +112,11 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **Rewind improvements:**
   - Made the current key frame be deleted only when quickly rewinding twice
   - Made storing resume upon rewinding
+  - _Rewind 4-Frame Timeout_ setting
+    - This is the number of maximum milliseconds that the game can have spent storing the last 4 key frames;
+      if exceeded, storing of further key frames is stopped
+    - The single-frame timeout can be set to a higher value to allow flukes in key-frame storage time,
+      while the multi-frame timeout can stop storing if it is consistently slow
   - Raised max. _Rewind Interval_ to 600 seconds
   - Raised max. _Rewind Depth_ to 3000 key frames
   - Raised max. _Rewind Timeout_ to 50 milliseconds
