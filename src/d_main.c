@@ -1294,7 +1294,8 @@ static void LoadIWadBase(void)
     D_GetModeAndMissionByIWADName(M_BaseName(wadfiles[0]), &local_gamemode,
                                   &local_gamemission);
 
-    if (local_gamemission == none || local_gamemode == indetermined)
+    if (local_gamemission == none
+        || (local_gamemode == indetermined && local_gamemission != doom))
     {
         return;
     }
@@ -2641,7 +2642,11 @@ void D_DoomMain(void)
 	  G_InitNew(startskill, startepisode, startmap);
 	  // [crispy] no need to write a demo header in demo continue mode
 	  if (demorecording && gameaction != ga_playdemo)
+	  {
 	    G_BeginRecording();
+	    // enforce melt as first screen wipe for demorecording
+	    screen_wipe_internal = wipe_Melt;
+	  }
 	}
       else
 	D_StartTitle();                 // start up intro loop
