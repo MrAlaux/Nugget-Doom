@@ -30,7 +30,6 @@ boolean ST_GetChatOn(void);
 boolean ST_MessageFadeoutOn(void);
 int ST_GetNumMessageLines(void);
 void ST_ClearMessages(void);
-void ST_HideMessages(void);
 
 // [Nugget] =================================================================/
 
@@ -93,6 +92,7 @@ extern boolean message_centered;
 extern struct sbarelem_s *st_msg_elem;
 
 void ST_ResetTitle(void);
+void ST_ResetMessages(void);
 
 void ST_ClearLines(struct sbe_widget_s *widget);
 void ST_AddLine(struct sbe_widget_s *widget, const char *string);
@@ -103,15 +103,12 @@ boolean ST_MessagesResponder(struct event_s *ev);
 
 char ST_DequeueChatChar(void);
 
-extern char **player_names[];
 extern int speedometer;
 
 extern int playback_tic, playback_totaltics;
 boolean ST_DemoProgressBar(boolean force);
 
 void ST_InitWidgets(void);
-void ST_ResetMessageColors(void);
-
 void ST_BindHUDVariables(void);
 
 #endif
