@@ -3886,7 +3886,8 @@ static void UpdateNughudStacks(void)
 
           if (!secondtime)
           {
-            switch (stack->vlign) {
+            switch (stack->vlign)
+            {
               case -1:  nughud_stackqueues[i].offset += lineheight;      break;
               case  0:  nughud_stackqueues[i].offset += lineheight / 2;  break;
               case  1:  default:                                         break;
@@ -4558,14 +4559,16 @@ end_amnum:
 
   // Carousel ----------------------------------------------------------------
 
+  if (nughud.carousel.x > -1)
   {
     sbarelem_t elem = {0};
     elem.cr = elem.crboom = CR_NONE;
 
     elem.type = sbe_carousel;
 
-    elem.x_pos = 0;
-    elem.y_pos = 18;
+    elem.x_pos = nughud.carousel.x;
+    elem.y_pos = nughud.carousel.y;
+    elem.alignment = NughudConvertAlignment(nughud.carousel.wide, -1);
 
     array_push(sb.children, elem);
   }

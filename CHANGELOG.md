@@ -27,10 +27,11 @@
   - Made speed configurable through the `vertical_lockon_speed_pct` CVAR
   - Improved support for modded weapons, and made it respect _Smart Autoaim_
   - Improved easing
-- **Added support for an optional `DSMILEST` sound for _Milestone-Completion Announcements_**
 - **Optimized initialization of generic tranmaps by caching them in files**
 - **Made the _Tag Finder_ not search for tagged lines when holding <kbd>Shift</kbd>**
 - **Made _Tag Finder_/_Highlight P.O.I.'s_ cross marks have a fixed scale**
+- **Added support for an optional `DSMILEST` sound for _Milestone-Completion Announcements_**
+- **Made the weapon carousel partially customizable through NUGHUD**
 - **Made initialization of _Radial Fog_ not trigger dynamic resolution changes**
 - **Changed the default values of the following settings**: [^2]
   - Set _Auto Save Interval_ to 300s, enabling periodic auto-saves

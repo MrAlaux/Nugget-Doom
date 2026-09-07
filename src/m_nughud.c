@@ -146,6 +146,8 @@ default_t nughud_defaults[] = {
   WIDGET2( "nughud_maxammo2", nughud.maxammos[2], 314, 191, 1, 1 ),
   WIDGET2( "nughud_maxammo3", nughud.maxammos[3], 314, 185, 1, 1 ),
 
+  WIDGET( "nughud_carousel", nughud.carousel, 0, 18, -1 ),
+
   TEXTLINE( "nughud_time", nughud.time, -1, -1, -1, -1, 3, 2 ),
 
   TEXTLINE( "nughud_sts",    nughud.sts,    -1, -1, -1, -1, 3, 1 ),
@@ -202,7 +204,7 @@ default_t nughud_defaults[] = {
   SBCHUNK( "nughud_sbchunk7", 6 ),
   SBCHUNK( "nughud_sbchunk8", 7 ),
 
-  WIDGET( "nughud_minimap", nughud.minimap, 8, 0, -2),
+  WIDGET( "nughud_minimap", nughud.minimap, 8, 0, -2 ),
   { "nughud_minimap_w",       { .i = &nughud.minimap.w       }, {0}, { .number = 80 }, { 32, 96  }, number },
   { "nughud_minimap_h",       { .i = &nughud.minimap.h       }, {0}, { .number = 80 }, { 32, 96  }, number },
   { "nughud_minimap_undmess", { .i = &nughud.minimap.undmess }, {0}, { .number =  1 }, {  0, 1   }, number },
