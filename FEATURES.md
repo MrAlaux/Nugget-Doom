@@ -300,6 +300,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - _Run_ button to gib
   - _Strafe_ buttons to skip
   - Press `0` to toggle fancy mode
+    - The custom-background option requires an optional `NGCASTBG` graphic
 - **Support for optional sounds:** [partially p.f. Crispy Doom]
   - Jumping: `DSPLJUMP`
   - Landing: `DSPLLAND`
