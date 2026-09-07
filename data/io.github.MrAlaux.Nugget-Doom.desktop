@@ -4,7 +4,13 @@ Exec=nugget-doom %F
 Icon=nugget-doom
 TryExec=nugget-doom
 Type=Application
-Comment=Nugget Doom is a fork of Woof! with additional features.
+Comment=Nugget Doom is a Doom source port forked from Woof! with additional features.
 Categories=Game;ActionGame;
 MimeType=application/x-doom-wad;
 Keywords=first;person;shooter;vanilla;doom;boom;mbf;woof;
+StartupWMClass=io.github.MrAlaux.Nugget-Doom
+Actions=launch-setup
+
+[Desktop Action launch-setup]
+Name=Nugget Doom Setup
+Exec=nugget-doom -setup

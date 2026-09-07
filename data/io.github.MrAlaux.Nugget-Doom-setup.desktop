@@ -6,3 +6,4 @@ Type=Application
 Comment=Setup tool for Nugget Doom
 Categories=Settings;
 Keywords=first;person;shooter;vanilla;doom;boom;mbf;woof;
+StartupWMClass=io.github.MrAlaux.Nugget-Doom
