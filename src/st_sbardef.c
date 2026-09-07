@@ -687,26 +687,23 @@ sbardef_t *ST_ParseSbarDef(void)
 
     boolean load_nugget_defaults = false;
 
-    const int max_nugver = 2;
+    static const int MAX_NUGVER = 3;
     int nugver = 0;
 
     json_t *const js_nugver = JS_GetObject(json, "nugget_version");
 
-    if (JS_IsNumber(js_nugver))
+    if (JS_IsNumber(js_nugver)) { nugver = JS_GetInteger(js_nugver); }
+
+    if (nugver != MAX_NUGVER)
     {
-        nugver = JS_GetInteger(js_nugver);
+        load_nugget_defaults = true;
 
-        if (nugver != max_nugver)
-        {
-            I_Printf(
-               VB_WARNING,
-               "SBARDEF: outdated/unsupported Nugget version (%i, expected %i)",
-               nugver, max_nugver
-            );
-        }
+        I_Printf(
+            VB_WARNING,
+            "SBARDEF: outdated/unsupported Nugget version (%i, expected %i)",
+            nugver, MAX_NUGVER
+        );
     }
-
-    if (nugver != max_nugver) { load_nugget_defaults = true; }
 
     // [Nugget] -------------------------------------------------------------/
 
@@ -827,7 +824,7 @@ nugget_defaults:
 
     json = JS_Open("SBNUGDEF", "nugget", (version_t){1, 0, 0});
 
-    if (json == NULL) { return NULL; }
+    if (json == NULL) { goto end; }
 
     data = JS_GetObject(json, "data");
 
