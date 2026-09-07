@@ -311,6 +311,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS` (last three unused)
   - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
+  - Milestone-completion announcements: `DSMILEST`
 - **Support for lowercase characters in console font** (CFG-only: `hud_menu_allow_lowercase`)
 - **Customizable darkening level for dark menu background and Automap overlay**
   (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]

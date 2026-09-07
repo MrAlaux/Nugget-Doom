@@ -387,6 +387,9 @@ typedef enum {
   sfx_ngslon,
   sfx_ngslof,
 
+  // Announce milestone completion
+  sfx_milest,
+
   NUG_SFX_END,
 
   // [Nugget] ---------------------------------------------------------------/

@@ -42,10 +42,10 @@
 #include "tables.h"
 
 // [Nugget]
+#include "g_game.h"
 #include "p_map.h"
 #include "p_maputl.h"
 #include "p_user.h"
-#include "st_widgets.h"
 #include "v_video.h"
 
 #define BONUSADD        6
@@ -729,10 +729,7 @@ picked_up: // [Nugget]
         complete_milestones |= MILESTONE_ITEMS;
 
         if (announce_milestones && announce_milestone_items)
-        {
-          players[displayplayer].secretmessage = "All items acquired!";
-          S_StartSound(NULL, sfx_secret);
-        }
+        { G_AnnounceMilestoneCompletion(MILESTONE_ITEMS); }
       }
     }
   }
@@ -1025,10 +1022,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *inflictor, mobj_t *target, method
       complete_milestones |= MILESTONE_KILLS;
 
       if (announce_milestones && announce_milestone_kills)
-      {
-        players[displayplayer].secretmessage = "All enemies killed!";
-        S_StartSound(NULL, sfx_secret);
-      }
+      { G_AnnounceMilestoneCompletion(MILESTONE_KILLS); }
     }
   }
 

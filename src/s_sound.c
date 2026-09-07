@@ -47,7 +47,7 @@
 #include "r_main.h"
 #include "r_state.h"
 
-static int optionals[NUG_SFX_END - NUG_SFX_START]; // [Nugget]
+static int optional_sounds[NUG_SFX_END - NUG_SFX_START]; // [Nugget]
 
 // jff end sound enabling variables readable here
 
@@ -662,9 +662,9 @@ void S_StartSoundPain(const mobj_t *origin, int sfx_id)
         int i = (origin->health - 1) / 25;
             i = CLAMP(i, 0, 3);
 
-        while (optionals[sfx_ppai25 + i - NUG_SFX_START] == -1)
+        while (optional_sounds[sfx_ppai25 + i - NUG_SFX_START] == -1)
         {
-          if (3 < ++i) { break; }
+            if (3 < ++i) { break; }
         }
 
         if (i <= 3) { sfx_id = sfx_ppai25 + i; }
@@ -725,8 +725,8 @@ static int OptionalOrFallback(const int opt_sound_id, const int sound_id)
 {
     // If `opt_sound_id` corresponds to a non-optional sound, use it without checking,
     // otherwise use the optional sound if present
-    if (   !(NUG_SFX_START <= opt_sound_id && opt_sound_id < NUG_SFX_END)
-        ||  (optionals[opt_sound_id - NUG_SFX_START] >= 0))
+    if (!(NUG_SFX_START <= opt_sound_id && opt_sound_id < NUG_SFX_END)
+        || (optional_sounds[opt_sound_id - NUG_SFX_START] >= 0))
     {
         return opt_sound_id;
     }
@@ -1523,7 +1523,7 @@ void S_Init(int sfxVolume, int musicVolume)
 
     // [Nugget] Get lump nums for optional sounds
     for (int i = NUG_SFX_START;  i < NUG_SFX_END;  i++)
-    { optionals[i - NUG_SFX_START] = I_GetSfxLumpNum(&S_sfx[i]); }
+    { optional_sounds[i - NUG_SFX_START] = I_GetSfxLumpNum(&S_sfx[i]); }
 }
 
 void S_BindSoundVariables(void)

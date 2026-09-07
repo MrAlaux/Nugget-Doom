@@ -280,14 +280,17 @@ sfxinfo_t original_S_sfx[NUMSFX] = {
   SOUND("intnet", sg_none,   60),
   SOUND("intdms", sg_none,   60),
 
-  SOUND("ppai25", sg_none,   96),
-  SOUND("ppai50", sg_none,   96),
-  SOUND("ppai75", sg_none,   96),
-  SOUND("ppa100", sg_none,   96),
+  SOUND("ppai25", sg_none, 96),
+  SOUND("ppai50", sg_none, 96),
+  SOUND("ppai75", sg_none, 96),
+  SOUND("ppa100", sg_none, 96),
 
   // Slow Motion
   SOUND("ngslon", sg_none, 60),
   SOUND("ngslof", sg_none, 60),
+
+  // Announce milestone completion
+  SOUND("milest", sg_none, 100),
 
   // [Nugget] ---------------------------------------------------------------/
 

@@ -127,6 +127,34 @@ boolean nugget_devmode;
 
 static ticcmd_t current_ticcmd = {0};
 
+milestone_t complete_milestones;
+
+void G_AnnounceMilestoneCompletion(const milestone_t milestone)
+{
+  const char *message;
+
+  switch (milestone)
+  {
+    case MILESTONE_KILLS:
+      message = "All enemies killed!";
+      break;
+
+    case MILESTONE_ITEMS:
+      message = "All items acquired!";
+      break;
+
+    case MILESTONE_SECRETS:
+      message = "All secrets revealed!";
+      break;
+
+    default: return;
+  }
+
+  players[displayplayer].secretmessage = message;
+
+  S_StartSoundOptional(NULL, sfx_milest, sfx_secret);
+}
+
 boolean ignore_pistolstart = false; // Custom Skill: ignore pistol-start setting
 
 static float mouse_h_modifier = 1.0f,
@@ -451,7 +479,6 @@ int             boom_basetic;       // killough 9/29/98: for demo sync
 int             true_basetic;
 int             totalkills, totalitems, totalsecret;    // for intermission
 int             max_kill_requirement; // DSDA UV Max category requirements
-milestone_t     complete_milestones; // [Nugget]
 int             totalleveltimes; // [FG] total time for all completed levels
 boolean         demorecording;
 boolean         longtics;             // cph's doom 1.91 longtics hack

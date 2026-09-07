@@ -161,6 +161,10 @@ extern boolean default_pistolstart;
 
 extern boolean nugget_devmode;
 
+// ---------------------------------------------------------------------------
+
+void G_AnnounceMilestoneCompletion(milestone_t milestone);
+
 // Periodic auto save --------------------------------------------------------
 
 extern int autosave_interval;
