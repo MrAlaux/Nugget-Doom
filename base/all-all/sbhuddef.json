@@ -65,6 +65,21 @@
           "tranmap": null,
           "translation": null,
           "translucency": false,
+          "conditions": [],
+          "children": [],
+          "type": "powerup_timers",
+          "font": "Digits",
+          "vertical": false
+        }
+      },
+      {
+        "component": {
+          "x": 318,
+          "y": 16,
+          "alignment": 130,
+          "tranmap": null,
+          "translation": null,
+          "translucency": false,
           "conditions": [
             {
               "condition": 19,
@@ -81,7 +96,7 @@
       {
         "component": {
           "x": 256,
-          "y": 8,
+          "y": 16,
           "alignment": 128,
           "tranmap": null,
           "translation": null,

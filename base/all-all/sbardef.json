@@ -1,7 +1,6 @@
 {
   "type": "statusbar",
   "version": "1.2.0",
-  "nugget_version": 3,
   "data": {
     "numberfonts": [
       {

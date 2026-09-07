@@ -683,30 +683,6 @@ sbardef_t *ST_ParseSbarDef(void)
         I_Error("SBARDEF v1.1.0 is not supported.");
     }
 
-    // [Nugget] /-------------------------------------------------------------
-
-    boolean load_nugget_defaults = false;
-
-    static const int MAX_NUGVER = 3;
-    int nugver = 0;
-
-    json_t *const js_nugver = JS_GetObject(json, "nugget_version");
-
-    if (JS_IsNumber(js_nugver)) { nugver = JS_GetInteger(js_nugver); }
-
-    if (nugver != MAX_NUGVER)
-    {
-        load_nugget_defaults = true;
-
-        I_Printf(
-            VB_WARNING,
-            "SBARDEF: outdated/unsupported Nugget version (%i, expected %i)",
-            nugver, MAX_NUGVER
-        );
-    }
-
-    // [Nugget] -------------------------------------------------------------/
-
     json_t *data = JS_GetObject(json, "data");
     if (JS_IsNull(data) || !JS_IsObject(data))
     {
@@ -757,7 +733,7 @@ sbardef_t *ST_ParseSbarDef(void)
 
     if (!load_defaults)
     {
-        goto nugget_defaults; // [Nugget]
+        return out;
     }
 
     json = JS_Open("SBHUDDEF", "hud", (version_t){1, 0, 0});
@@ -815,40 +791,6 @@ sbardef_t *ST_ParseSbarDef(void)
     }
 
     JS_Close("SBHUDDEF");
-
-    // [Nugget] /-------------------------------------------------------------
-
-nugget_defaults:
-
-    if (!load_nugget_defaults) { goto end; }
-
-    json = JS_Open("SBNUGDEF", "nugget", (version_t){1, 0, 0});
-
-    if (json == NULL) { goto end; }
-
-    data = JS_GetObject(json, "data");
-
-    array_foreach(statusbar, out->statusbars)
-    {
-        json_t *js_elems = JS_GetObject(data, "elements");
-        json_t *js_elem = NULL;
-
-        JS_ArrayForEach(js_elem, js_elems)
-        {
-            sbarelem_t elem = {0};
-            if (ParseSbarElem(js_elem, &elem))
-            {
-                elem.y_pos += (statusbar->height - SCREENHEIGHT);
-                array_push(statusbar->children, elem);
-            }
-        }
-    }
-
-    JS_Close("SBNUGDEF");
-
-end:
-
-    // [Nugget] -------------------------------------------------------------/
 
     return out;
 }

@@ -240,7 +240,6 @@ set(BASE_SOURCES
     all-all/sprites/ngtre0.png
     all-all/sprites/ngtrf0.png
     all-all/sprites/ngtrg0.png
-    all-all/sbnugdef.json
 
     betalevl.wad/umapinfo.lmp
 
