@@ -1785,14 +1785,9 @@ void D_DoomMain(void)
 
   #ifdef __linux__
 
-  //!
-  //
-  // Launch nugget-doom-setup.
-  //
-
   if (M_ParmExists("-setup"))
   {
-    const char* setup_path = M_StringJoin(D_DoomExeDir(), DIR_SEPARATOR_S, "nugget-doom-setup");
+    const char* setup_path = M_StringJoin(D_DoomExeDir(), DIR_SEPARATOR_S, PROJECT_SHORTNAME "-setup");
     const char* args[] = { setup_path, NULL };
     SDL_Process* process = SDL_CreateProcess(args, false);
     I_SafeExit(process ? 0 : 1);
