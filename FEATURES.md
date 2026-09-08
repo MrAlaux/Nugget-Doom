@@ -1,6 +1,6 @@
 ﻿# Nugget Doom Features
 
-Note that this feature list is relative to [Woof!'s](https://github.com/fabiangreffrath/woof/blob/woof_15.3.0/README.md#key-features);
+Note that this feature list is relative to [Woof!'s](https://github.com/fabiangreffrath/woof/blob/woof_16.0.0/README.md#key-features);
 read the latter for more details.
 Some features were first implemented in Nugget Doom and later in Woof!, so they're not listed here anymore.
 
