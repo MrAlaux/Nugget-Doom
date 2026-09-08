@@ -68,6 +68,7 @@
 - **Fancy Cast:**
   - Gibbing state not being flippable
   - Monster disappearing when trying to display its gibbing state if it didn't have one
+- **Fixed setup desktop action exiting immediately when run from the AppImage** (by @electricbrass, from Woof! post-16.0.0)
 - **UI/HUD updating before game world when changing gamma and color settings**
 - **_Tag Finder_ memory leak**
 
