@@ -313,6 +313,7 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
   - Milestone-completion announcements: `DSMILEST`
 - **Support for lowercase characters in console font** (CFG-only: `hud_menu_allow_lowercase`)
+- **Improved palettization of true-color PNG graphics**
 - **Customizable darkening level for dark menu background and Automap overlay**
   (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
 - The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump

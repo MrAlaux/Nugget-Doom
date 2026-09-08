@@ -267,6 +267,8 @@ static void *DummyFlat(int lump, pu_tag tag)
     return lumpcache[lump];
 }
 
+#if 0 // [Nugget] Disabled
+
 // Uniform Color Quantization
 //
 // Each color component axis (red, green and blue) is divided into a few fixed
@@ -343,6 +345,8 @@ static int GetPaletteIndex(int r, int g, int b)
     return (red_index << 6) + (green_index << 3) + blue_index;
 }
 
+#endif // [Nugget]
+
 typedef struct
 {
     spng_ctx *ctx;
@@ -408,6 +412,57 @@ static void FreePNG(png_t *png)
     }
 }
 
+// [Nugget] Better palettization /--------------------------------------------
+
+#define RGB2PAL_BPC 6 // Bits per channel
+#define RGB2PAL_IBPC (8 - RGB2PAL_BPC) // Inverse bits per channel (i.e. how many missing)
+#define RGB2PAL_SPC (1 << RGB2PAL_BPC) // Shades per channel
+
+#define RGB2PAL_SIZE (RGB2PAL_SPC * RGB2PAL_SPC * RGB2PAL_SPC)
+
+static byte ***rgb2pal = NULL;
+
+static void InitRGB2Pal(void)
+{
+    if (rgb2pal) { return; }
+
+    byte *const all_rgb2pal_b = malloc(sizeof(***rgb2pal) * RGB2PAL_SIZE);
+    byte **const all_rgb2pal_g = malloc(sizeof(**rgb2pal) * RGB2PAL_SPC * RGB2PAL_SPC);
+
+    rgb2pal = malloc(sizeof(*rgb2pal) * RGB2PAL_SPC);
+
+    byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
+
+    for (int r = 0;  r < RGB2PAL_SPC;  r++)
+    {
+        byte **const rgb2pal_r = rgb2pal[r] = all_rgb2pal_g + (r * RGB2PAL_SPC);
+
+        const int sr = r << RGB2PAL_IBPC;
+
+        for (int g = 0;  g < RGB2PAL_SPC;  g++)
+        {
+            byte *const rgb2pal_g =
+                rgb2pal_r[g] = all_rgb2pal_b + ((r * RGB2PAL_SPC + g) * RGB2PAL_SPC);
+
+            const int sg = g << RGB2PAL_IBPC;
+
+            for (int b = 0;  b < RGB2PAL_SPC;  b++)
+            {
+                const int sb = b << RGB2PAL_IBPC;
+
+                rgb2pal_g[b] = I_GetNearestColor(playpal, sr, sg, sb);
+            }
+        }
+    }
+}
+
+static inline byte RGBToPalette(const int r, const int g, const int b)
+{
+  return rgb2pal[r >> RGB2PAL_IBPC][g >> RGB2PAL_IBPC][b >> RGB2PAL_IBPC];
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 static boolean DecodePNG(png_t *png)
 {
     struct spng_ihdr ihdr = {0};
@@ -458,12 +513,17 @@ static boolean DecodePNG(png_t *png)
         return false;
     }
 
+    // [Nugget]
+    InitRGB2Pal();
+
     byte *playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
 
     if (fmt == SPNG_FMT_RGB8)
     {
         int indexed_size = image_size / 3;
         byte *indexed_image = malloc(indexed_size);
+
+#if 0 // [Nugget] Disabled
 
         uniform_quantizer_t q = {0};
 
@@ -502,6 +562,24 @@ static boolean DecodePNG(png_t *png)
             indexed_image[i] = translate[GetPaletteIndex(r, g, b)];
         }
 
+#endif // [Nugget]
+
+        // [Nugget] /---------------------------------------------------------
+
+        const byte *roller = image;
+
+        for (int i = 0;  i < indexed_size;  i++)
+        {
+            const int
+                r = *roller++,
+                g = *roller++,
+                b = *roller++;
+
+            indexed_image[i] = RGBToPalette(r, g, b);
+        }
+
+        // [Nugget] ---------------------------------------------------------/
+
         free(image);
 
         png->image = indexed_image;
@@ -511,6 +589,8 @@ static boolean DecodePNG(png_t *png)
     {
         int indexed_size = image_size / 4;
         byte *indexed_image = malloc(indexed_size);
+
+#if 0 // [Nugget] Disabled
 
         uniform_quantizer_t q = {0};
 
@@ -580,6 +660,71 @@ static boolean DecodePNG(png_t *png)
 
             indexed_image[i] = translate[GetPaletteIndex(r, g, b)];
         }
+
+#endif // [Nugget]
+
+        // [Nugget] /---------------------------------------------------------
+
+        const byte *roller = image;
+
+        static unsigned *alpha_pixels = NULL;
+        static int alpha_pixels_capacity = 0;
+
+        if (alpha_pixels_capacity < indexed_size)
+        {
+            alpha_pixels_capacity = indexed_size;
+
+            // Don't use `realloc()`, we don't need to keep the previous contents
+            if (alpha_pixels) { free(alpha_pixels); }
+
+            alpha_pixels = malloc(sizeof(*alpha_pixels) * alpha_pixels_capacity);
+        }
+
+        unsigned num_alpha_pixels = 0;
+        byte used_colors[256] = {0};
+
+        for (int i = 0;  i < indexed_size;  i++)
+        {
+            const int
+                r = *roller++,
+                g = *roller++,
+                b = *roller++,
+                a = *roller++;
+
+            if (a < 255)
+            {
+                alpha_pixels[num_alpha_pixels++] = i;
+                continue;
+            }
+
+            const byte c = RGBToPalette(r, g, b);
+
+            indexed_image[i] = c;
+            used_colors[c] = 1;
+        }
+
+        if (num_alpha_pixels)
+        {
+            int color_key = 255;
+
+            for (int i = 0;  i < 256;  i++)
+            {
+                if (used_colors[i] == 0)
+                {
+                    color_key = i;
+                    break;
+                }
+            }
+
+            png->color_key = color_key;
+
+            for (int i = 0;  i < num_alpha_pixels;  i++)
+            {
+                indexed_image[alpha_pixels[i]] = color_key;
+            }
+        }
+
+        // [Nugget] ---------------------------------------------------------/
 
         free(image);
 
