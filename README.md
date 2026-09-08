@@ -13,7 +13,7 @@ Nugget Doom is a source port of Doom forked from [Woof!](https://github.com/fabi
 meaning that they may not correspond to the latest release of Nugget Doom.
 If you're seeking information on the version you're using, please refer to the documentation included with it.
 
-The build corresponding to this documentation is based on [Woof! 15.3.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_15.3.0).
+The build corresponding to this documentation is based on [Woof! 16.0.0](https://github.com/fabiangreffrath/woof/releases/tag/woof_16.0.0).
 
 ### DISCLAIMER
 
@@ -68,7 +68,7 @@ See `FEATURES.md` for more information.
 Source code and Windows binaries (MSVC builds for Windows 7 and newer)
 for the latest release can be found on the [Release](https://github.com/MrAlaux/Nugget-Doom/releases/latest) page.
 
-The most recent list of changes can be found in the [Changelog](https://github.com/MrAlaux/Nugget-Doom/blob/master/CHANGELOG.md).
+The changes currently in progress since the latest release can be found in the [Changelog](https://github.com/MrAlaux/Nugget-Doom/blob/master/CHANGELOG.md).
 
 A complete history of changes and releases can be found on the [Releases](https://github.com/MrAlaux/Nugget-Doom/releases) page.
 
