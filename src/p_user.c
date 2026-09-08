@@ -31,6 +31,7 @@
 #include "g_nextweapon.h"
 #include "info.h"
 #include "m_cheat.h"
+#include "m_fixed.h"
 #include "p_map.h"
 #include "p_mobj.h"
 #include "p_pspr.h"
@@ -66,14 +67,11 @@ boolean breathing;
 // Flinching
 void P_SetFlinch(player_t *const player, int pitch)
 {
-  player->flinch = BETWEEN(-12*ANG1, 12*ANG1, player->flinch + pitch*ANG1/2);
+  player->flinch += pitch * ANG1/2;
+  player->flinch  = CLAMP(player->flinch, -12*ANG1, 12*ANG1);
 }
 
 // [Nugget] =================================================================/
-
-// Index of the special effects (INVUL inverse) map.
-
-#define INVERSECOLORMAP 32
 
 //
 // Movement.
@@ -267,7 +265,7 @@ void P_MovePlayer (player_t* player)
   ticcmd_t *cmd = &player->cmd;
   mobj_t *mo = player->mo;
 
-  mo->angle += cmd->angleturn << 16;
+  mo->angle += IntToFixed(cmd->angleturn);
   onground = mo->z <= mo->floorz;
 
   // [Nugget] /---------------------------------------------------------------
@@ -442,7 +440,7 @@ void P_MovePlayer (player_t* player)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  player->ticangle += cmd->ticangleturn << FRACBITS;
+  player->ticangle += IntToFixed(cmd->ticangleturn);
 
   // killough 10/98:
   //
@@ -506,8 +504,8 @@ void P_MovePlayer (player_t* player)
 
   if (!menuactive && !demoplayback && !player->centering)
   {
-    player->pitch += cmd->pitch << FRACBITS;
-    player->pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, player->pitch);
+    player->pitch += IntToFixed(cmd->pitch);
+    player->pitch = CLAMP(player->pitch, -max_pitch_angle, max_pitch_angle);
     player->slope = PlayerSlope(player);
   }
 }
@@ -579,7 +577,7 @@ void P_DeathThink (player_t* player)
           player->mo->angle -= ANG5;
 
       // [Nugget] Look at killer vertically
-      if ((mouselook || padlook))
+      if (freelook)
       {
         player->centering = false;
 
@@ -598,7 +596,7 @@ void P_DeathThink (player_t* player)
 
           pitch = P_SlopeToPitch(slope);
 
-          pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, pitch);
+          pitch = CLAMP(pitch, -max_pitch_angle, max_pitch_angle);
         }
         else { pitch = 0; }
 
@@ -706,7 +704,7 @@ void P_PlayerThink (player_t* player)
       player->mo->flags &= ~MF_JUSTATTACKED;
     }
 
-  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  if (STRICTMODE(vertical_lockon) && !freelook)
   { player->centering = false; }
 
   // [crispy] center view
@@ -771,7 +769,7 @@ void P_PlayerThink (player_t* player)
     }
 
   // [Nugget]
-  if (STRICTMODE(vertical_lockon) && !(mouselook || padlook))
+  if (STRICTMODE(vertical_lockon) && !freelook)
   {
     if (player != &players[displayplayer])
     {
@@ -839,12 +837,12 @@ void P_PlayerThink (player_t* player)
                                  P_AproxDistance(player->mo->x - linetarget->x,
                                                  player->mo->y - linetarget->y));
 
-        slope = BETWEEN(P_GetLinetargetBottomSlope(),
-                        P_GetLinetargetTopSlope(),
-                        slope);
+        slope = CLAMP(
+          slope, P_GetLinetargetBottomSlope(), P_GetLinetargetTopSlope()
+        );
 
         target_pitch = P_SlopeToPitch(slope);
-        target_pitch = BETWEEN(-max_pitch_angle, max_pitch_angle, target_pitch);
+        target_pitch = CLAMP(target_pitch, -max_pitch_angle, max_pitch_angle);
       }
       else if (lock_time) { target_pitch = player->pitch; }
 
@@ -854,7 +852,7 @@ void P_PlayerThink (player_t* player)
                     min_step = ANG1 / 4;
 
       fixed_t step = abs(player->pitch - target_pitch) / 4;
-              step = BETWEEN(min_step, max_step, step);
+              step = CLAMP(step, min_step, max_step);
 
       if (player->pitch < target_pitch)
       {
@@ -964,7 +962,7 @@ void P_PlayerThink (player_t* player)
 
 	if ((newweapon != wp_plasma && newweapon != wp_bfg)
 	    || (gamemode != shareware) )
-	  player->nextweapon = player->pendingweapon = newweapon;
+	  player->pendingweapon = newweapon;
     }
 
   // check for use
@@ -1058,12 +1056,22 @@ void P_PlayerThink (player_t* player)
   // But white flashes occurred when invulnerability wore off.
 
   // [Nugget]: [crispy] A11Y
-  if (STRICTMODE(!a11y_invul_colormap))
+  if (STRICTMODE(!a11y_invul_colormap) && player->powers[pw_invulnerability])
   {
-    if (player->powers[pw_invulnerability] || player->powers[pw_infrared])
-    { player->fixedcolormap = 1; }
+    player->fixedcolormap = 1;
+  }
+  else
+
+  if (STRICTMODE(palette_changes == PAL_CHANGE_OFF))
+  {
+    // [Nugget] Separated invuln from light-amp
+
+    if (player->powers[pw_invulnerability])
+      player->fixedcolormap = 1;
+    else if (player->powers[pw_infrared])
+      player->fixedcolormap = STRICTMODE(nightvision_visor) ? 33 : 1;
     else
-    { player->fixedcolormap = 0; }
+      player->fixedcolormap = 0;
   }
   else
   player->fixedcolormap = 
@@ -1117,7 +1125,8 @@ boolean P_EvaluateItemOwned(itemtype_t item, player_t *player)
             return player->powers[pw_ironfeet] != 0;
 
         case item_invulnerability:
-            return player->powers[pw_invulnerability] != 0;
+            return player->powers[pw_invulnerability]
+                   || (player->cheats & CF_GODMODE);
 
         case item_healthbonus:
         case item_stimpack:
@@ -1132,6 +1141,15 @@ boolean P_EvaluateItemOwned(itemtype_t item, player_t *player)
     }
 
     return false;
+}
+
+int P_GetPowerDuration(powertype_t power)
+{
+    static const int tics[NUMPOWERS] = {
+        INVULNTICS, 1 /* strength */, INVISTICS,
+        IRONTICS, 1 /* allmap */, INFRATICS,
+    };
+    return tics[power];
 }
 
 //----------------------------------------------------------------------------

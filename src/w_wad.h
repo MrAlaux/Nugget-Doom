@@ -20,6 +20,8 @@
 #ifndef __W_WAD__
 #define __W_WAD__
 
+#include <stdio.h>
+
 #include "doomtype.h"
 #include "z_zone.h"
 
@@ -58,6 +60,8 @@ typedef PACKED_PREFIX struct
 typedef enum
 {
   ns_global,
+  ns_actors,
+  ns_textures,
   ns_sprites,
   ns_flats,
   ns_colormaps,
@@ -73,7 +77,7 @@ typedef struct
     {
         archive_t *archive;
         const char *base_path;
-        int descriptor;
+        FILE *descriptor;
     } p1;
 
     union
@@ -155,6 +159,7 @@ int     (W_CheckNumForName)(const char* name, int);   // killough 4/17/98
 int     W_GetNumForName (const char* name);
 int     W_LumpLength (int lump);
 void    W_ReadLump (int lump, void *dest);
+void    W_ReadLumpSize(int lump, void *dest, int size);
 void    *W_CacheLumpNum(int lump, pu_tag tag);
 
 #define W_CacheLumpName(name,tag) W_CacheLumpNum (W_GetNumForName(name),(tag))
@@ -168,6 +173,7 @@ void I_BeginRead(unsigned int bytes), I_EndRead(void); // killough 10/98
 
 // [FG] name of the WAD file that contains the lump
 const char *W_WadNameForLump (const int lump);
+boolean W_LumpExists(const int lump);
 boolean W_IsIWADLump (const int lump);
 // check if lump is from WAD
 boolean W_IsWADLump (const int lump);

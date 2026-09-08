@@ -185,6 +185,11 @@ nughud_maxammo3_y     185
 nughud_maxammo3_wide  1
 nughud_maxammo3_align 1
 
+; Carousel
+nughud_carousel_x     0
+nughud_carousel_y     18
+nughud_carousel_wide  -1
+
 ; Time display
 nughud_time_x     -1
 nughud_time_y     -1

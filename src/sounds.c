@@ -28,7 +28,7 @@
 // Information about all the music
 //
 
-musicinfo_t original_S_music[] = {
+musicinfo_t S_music[] = {
   { 0 },
   { "e1m1", 0 },
   { "e1m2", 0 },
@@ -280,14 +280,17 @@ sfxinfo_t original_S_sfx[NUMSFX] = {
   SOUND("intnet", sg_none,   60),
   SOUND("intdms", sg_none,   60),
 
-  SOUND("ppai25", sg_none,   96),
-  SOUND("ppai50", sg_none,   96),
-  SOUND("ppai75", sg_none,   96),
-  SOUND("ppa100", sg_none,   96),
+  SOUND("ppai25", sg_none, 96),
+  SOUND("ppai50", sg_none, 96),
+  SOUND("ppai75", sg_none, 96),
+  SOUND("ppa100", sg_none, 96),
 
   // Slow Motion
   SOUND("ngslon", sg_none, 60),
   SOUND("ngslof", sg_none, 60),
+
+  // Announce milestone completion
+  SOUND("milest", sg_none, 100),
 
   // [Nugget] ---------------------------------------------------------------/
 

@@ -83,7 +83,7 @@ void W_AddMarker(const char *name)
 boolean W_SkipFile(const char *filename)
 {
     static const char *ext[] = { ".wad", ".zip", ".pk3", ".deh", ".exe",
-                                 ".bat", ".txt" };
+                                 ".bat" };
 
     for (int i = 0; i < arrlen(ext); ++i)
     {
@@ -104,6 +104,9 @@ static struct
 } subdirs[] = {
     {"music",     NULL,       NULL,     ns_global   },
     {"graphics",  NULL,       NULL,     ns_global   },
+    {"actors",    "AC_START", "AC_END", ns_actors   },
+    {"sounds",    NULL,       NULL,     ns_global   },
+    {"textures",  "TX_START", "TX_END", ns_textures },
     {"sprites",   "S_START",  "S_END",  ns_sprites  },
     {"flats",     "F_START",  "F_END",  ns_flats    },
     {"colormaps", "C_START",  "C_END",  ns_colormaps},
@@ -384,7 +387,7 @@ int W_GetNumForName (const char* name)     // killough -- const added
 {
   int i = W_CheckNumForName (name);
   if (i == -1)
-    I_Error ("W_GetNumForName: %.8s not found!", name); // killough .8 added
+    I_Error ("%.8s not found!", name); // killough .8 added
   return i;
 }
 
@@ -459,7 +462,7 @@ void W_InitPredefinedLumps(void)
 void W_InitMultipleFiles(void)
 {
   if (!numlumps)
-    I_Error ("W_InitFiles: no files found");
+    I_Error ("no files found");
 
   //jff 1/23/98
   // get all the sprites and flats into one marked block each
@@ -480,7 +483,7 @@ void W_InitMultipleFiles(void)
   W_CoalesceMarkedResource("HI_START", "HI_END", ns_hires);
 
   // set up caching
-  lumpcache = Z_Calloc(sizeof *lumpcache, numlumps, PU_STATIC, 0); // killough
+  lumpcache = Z_Calloc(numlumps, sizeof(*lumpcache), PU_STATIC, 0); // killough
 
   if (!lumpcache)
     I_Error ("Couldn't allocate lumpcache");
@@ -493,11 +496,19 @@ void W_InitMultipleFiles(void)
 // W_LumpLength
 // Returns the buffer size needed to load the given lump.
 //
+static inline int LumpLength(int lump)
+{
+  return lumpinfo[lump].size;
+}
+
 int W_LumpLength (int lump)
 {
+#ifdef RANGECHECK
   if (lump >= numlumps)
-    I_Error ("W_LumpLength: %i >= numlumps",lump);
-  return lumpinfo[lump].size;
+    I_Error ("%i >= numlumps",lump);
+#endif
+
+  return LumpLength(lump);
 }
 
 //
@@ -506,33 +517,53 @@ int W_LumpLength (int lump)
 //  which must be >= W_LumpLength().
 //
 
-void W_ReadLump(int lump, void *dest)
+static inline void ReadLumpSize(int lump, void *dest, int size)
 {
     lumpinfo_t *info = lumpinfo + lump;
 
-#ifdef RANGECHECK
-    if (lump >= numlumps)
-    {
-        I_Error("W_ReadLump: %i >= numlumps", lump);
-    }
-#endif
-
-    if (!info->size)
+    if (!size || !info->size)
     {
         return;
+    }
+
+    if (size < 0)
+    {
+        size = info->size;
     }
 
     if (info->data) // killough 1/31/98: predefined lump data
     {
-        memcpy(dest, info->data, info->size);
+        memcpy(dest, info->data, size);
         return;
     }
 
-    I_BeginRead(info->size);
+    I_BeginRead(size);
 
-    info->module->Read(info->handle, dest, info->size);
+    info->module->Read(info->handle, dest, size);
 
     I_EndRead();
+}
+
+void W_ReadLumpSize(int lump, void *dest, int size)
+{
+#ifdef RANGECHECK
+    if (lump >= numlumps)
+    {
+        I_Error("%i >= numlumps", lump);
+    }
+#endif
+
+    ReadLumpSize(lump, dest, size);
+}
+
+static void ReadLump(int lump, void *dest)
+{
+    ReadLumpSize(lump, dest, -1);
+}
+
+void W_ReadLump(int lump, void *dest)
+{
+    W_ReadLumpSize(lump, dest, -1);
 }
 
 //
@@ -544,11 +575,11 @@ void *W_CacheLumpNum(int lump, pu_tag tag)
 {
 #ifdef RANGECHECK
   if ((unsigned)lump >= numlumps)
-    I_Error ("W_CacheLumpNum: %i >= numlumps",lump);
+    I_Error ("%i >= numlumps",lump);
 #endif
 
   if (!lumpcache[lump])      // read the lump in
-    W_ReadLump(lump, Z_Malloc(W_LumpLength(lump), tag, &lumpcache[lump]));
+    ReadLump(lump, Z_Malloc(LumpLength(lump), tag, &lumpcache[lump]));
   else
     Z_ChangeTag(lumpcache[lump],tag);
 
@@ -560,7 +591,7 @@ void *W_CacheLumpNum(int lump, pu_tag tag)
 // [FG] name of the WAD file that contains the lump
 const char *W_WadNameForLump (const int lump)
 {
-  if (lump < 0 || lump >= numlumps)
+  if (!W_LumpExists(lump))
     return "invalid";
   else
   {
@@ -573,6 +604,11 @@ const char *W_WadNameForLump (const int lump)
   }
 }
 
+boolean W_LumpExists(const int lump)
+{
+  return 0 <= lump && lump < numlumps;
+}
+
 // [Nugget]
 int W_FileIndexForLump(const int lump)
 {
@@ -581,19 +617,18 @@ int W_FileIndexForLump(const int lump)
 
 boolean W_IsIWADLump (const int lump)
 {
-	return lump >= 0 && lump < numlumps &&
-	       lumpinfo[lump].wad_file == wadfiles[0];
+	return W_LumpExists(lump) && lumpinfo[lump].wad_file == wadfiles[0];
 }
 
 // check if lump is from WAD
 boolean W_IsWADLump (const int lump)
 {
-	return lump >= 0 && lump < numlumps && lumpinfo[lump].wad_file;
+	return W_LumpExists(lump) && lumpinfo[lump].wad_file;
 }
 
 boolean W_LumpExistsWithName(int lump, char *name)
 {
-  if (lump < 0 || lump >= numlumps)
+  if (!W_LumpExists(lump))
     return false;
 
   if (name && strncasecmp(lumpinfo[lump].name, name, 8))
@@ -607,7 +642,7 @@ int W_LumpLengthWithName(int lump, char *name)
   if (!W_LumpExistsWithName(lump, name))
     return 0;
 
-  return W_LumpLength(lump);
+  return LumpLength(lump);
 }
 
 // killough 10/98: support .deh from wads
@@ -716,4 +751,3 @@ void W_Close(void)
 // Improve hashing algorithm
 //
 //----------------------------------------------------------------------------
-

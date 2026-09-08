@@ -74,10 +74,11 @@ The following status-bar widgets are available:
 | `nughud_key#`       | No        | Key display, where `#` is an integer in the [0, 2] range (in order: Blue Key; Yellow Key; Red Key) |
 | `nughud_ammo#`      | Yes       | Ammo count for each type, where `#` is an integer in the [0, 3] range (in order: Bullets; Shells; Cells; Rockets) |
 | `nughud_maxammo#`   | Yes       | Same as the above, but for Max. Ammo |
+| `nughud_carousel`   | No        | Weapon carousel |
 
 **All status-bar widgets can be disabled** by setting `_x` to `-1`.
 
-**The _Ammo_, _Weapon_, _Health_ and _Armor_ icons are vertically alignable.**
+**Only the _Ammo_, _Weapon_, _Health_ and _Armor_ icons are vertically alignable.**
 Additionally, **the offsets of the graphics used by these icons will be ignored, unless a custom font is being used** (see details below).
 
 **The _Ammo_, _Health_ and _Armor bars_ support additional properties:**
@@ -99,7 +100,7 @@ There are some additional toggles (value of `0` or `1`) for some specific widget
 - `nughud_ammobar_resize`: Resize the _Ammo_ bar when the player has the backpack.
 - `nughud_ammoicon_big`: Toggle usage of big-ammo-pickup sprites for the _Ammo_ icon.
 - `nughud_face_bg`: Toggle the _Face_ background, whose position is linked to that of the _Face_ itself.
-- `nughud_armor_hide`: Hide the _Armor_ count, icon and bar when the player has zero armor.
+- `nughud_armor_hide`: Hide the _Armor_ count, icon and bar when the player has no armor.
 
 ## Text lines
 
