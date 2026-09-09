@@ -32,8 +32,6 @@ file(
     "xattr -dr com.apple.quarantine path/to/folder\n"
 )
 
-string(REPLACE " " "-" CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}")
-
 execute_process(
     COMMAND
     zip -r ${CPACK_PACKAGE_DIRECTORY}/${CPACK_PACKAGE_FILE_NAME}.zip
