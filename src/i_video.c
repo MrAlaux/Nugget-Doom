@@ -868,16 +868,15 @@ static void UpdateRender(void)
 
     if (truecolor_rendering)
     {
-        const int src_width = video.width,
-                  dst_width = texture->w;
+        src_pitch *= sizeof(pixel32_t);
 
-        pixel32_t *dst = pixels;
-        pixel32_t *src = I_VideoBuffer32;
+        byte *dst = pixels;
+        byte *src = (byte *) I_VideoBuffer32;
         while (h--)
         {
-            V_RGBCopy(dst, src, src_width);
-            dst += dst_width;
-            src += src_width;
+            memcpy(dst, src, src_pitch);
+            dst += dst_pitch;
+            src += src_pitch;
         }
     }
     else
