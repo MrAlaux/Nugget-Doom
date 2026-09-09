@@ -8,4 +8,4 @@ None.
 
 ## Bug Fixes
 
-- **Fixed screen becoming distorted when enabling true-color rendering**
+- **Screen becoming distorted when enabling true-color rendering in some cases**
