@@ -264,7 +264,7 @@ jobs:
       - name: Extract Version Number
         if: matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
         shell: bash
-        run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF##*-}" >> $GITHUB_ENV
 
       - name: Release
         if: matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
