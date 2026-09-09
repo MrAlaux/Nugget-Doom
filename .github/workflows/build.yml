@@ -265,3 +265,19 @@ jobs:
         if: matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
         shell: bash
         run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
+
+      - name: Release
+        if: matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
+        uses: ncipollo/release-action@v1
+        with:
+          name: Nugget Doom ${{ env.VERSION }}
+          bodyFile: CHANGELOG.md
+          allowUpdates: true
+          artifacts: ${{ matrix.config.artifact-path }}
+
+      - name: Release (zsync)
+        if: runner.os == 'Linux' && matrix.config.type == 'vcpkg' && contains(github.ref, 'tags')
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: build/*.zsync
