@@ -354,6 +354,21 @@ typedef enum {
   sfx_plosml,
   sfx_lavsml,
 
+  // optional menu and intermission sounds
+  sfx_mnuopn,
+  sfx_mnucls,
+  sfx_mnuact,
+  sfx_mnubak,
+  sfx_mnumov,
+  sfx_mnusli,
+  sfx_mnusel,
+  sfx_mnuerr,
+  sfx_inttic,
+  sfx_inttot,
+  sfx_intnex,
+  sfx_intnet,
+  sfx_intdms,
+
   // [Nugget] /---------------------------------------------------------------
 
   NUG_SFX_START,
@@ -364,19 +379,6 @@ typedef enum {
   sfx_locked,
   sfx_keyup,
   sfx_keybnk, // [Nugget]
-  // [NS] Optional menu/intermission sounds.
-  sfx_mnuopn,
-  sfx_mnucls,
-  sfx_mnuact,
-  sfx_mnubak,
-  sfx_mnumov,
-  sfx_mnusli,
-  sfx_mnuerr,
-  sfx_inttic,
-  sfx_inttot,
-  sfx_intnex,
-  sfx_intnet,
-  sfx_intdms,
 
   sfx_ppai25,
   sfx_ppai50,

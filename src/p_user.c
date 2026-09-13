@@ -82,6 +82,8 @@ void P_SetFlinch(player_t *const player, int pitch)
 #define MAXBOB  0x100000
 
 boolean onground; // whether player is on ground or in air
+int offgroundtics; // how many frames the player has been in the air
+#define AIRBOBFADETICS 4 // how many frames over which to reduce bob to 0 in midair
 
 //
 // P_Thrust
@@ -122,9 +124,10 @@ void P_Bob(player_t *player, angle_t angle, fixed_t move)
 void P_CalcHeight (player_t* player)
 {
   int     angle;
-  fixed_t bob;
+  fixed_t bob, totalviewoffset;
+
   // [Nugget] Adjustable viewheight
-  const fixed_t view = (!strictmode ? viewheight_value*FRACUNIT : VIEWHEIGHT);
+  const fixed_t view = !strictmode ? viewheight_value * FRACUNIT : VIEWHEIGHT;
 
   // Regular movement bobbing
   // (needs to be calculated for gun swing
@@ -160,7 +163,9 @@ void P_CalcHeight (player_t* player)
     player->bob = MAXBOB;
   }
 
-  if (!onground || player->cheats & CF_NOMOMENTUM)
+  offgroundtics = onground ? 0 : (offgroundtics+1);
+
+  if (player->cheats & CF_NOMOMENTUM || (!onground && (offgroundtics > AIRBOBFADETICS)) )
     {
       // [Nugget] Account for crouching
       player->viewz = player->mo->z + view - player->crouchoffset;
@@ -186,7 +191,7 @@ void P_CalcHeight (player_t* player)
 
   // move viewheight
 
-  if (player->playerstate == PST_LIVE)
+  if (player->playerstate == PST_LIVE && onground)
     {
       player->viewheight += player->deltaviewheight;
 
@@ -235,7 +240,10 @@ void P_CalcHeight (player_t* player)
         }
     }
 
-  player->viewz = player->mo->z + player->viewheight + bob;
+  totalviewoffset = player->viewheight + bob - view;
+  if (!onground)
+    totalviewoffset = totalviewoffset * (AIRBOBFADETICS-offgroundtics+1) / AIRBOBFADETICS;
+  player->viewz = player->mo->z + view + totalviewoffset;
 
   // [Nugget] Account for crouching, but don't clip view through the floor
   if (player->crouchoffset)

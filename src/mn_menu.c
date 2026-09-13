@@ -1883,7 +1883,7 @@ static void M_QuickSaveResponse(int ch)
             SetDefaultSaveName(savegamestrings[quickSaveSlot], NULL);
         }
         M_DoSave(quickSaveSlot);
-        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnucls);
     }
 }
 
@@ -1917,7 +1917,7 @@ static void M_QuickSave(void)
 {
     if (!usergame && (!demoplayback || netgame)) // killough 10/98
     {
-        M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuerr);
         return;
     }
 
@@ -1941,7 +1941,7 @@ static void M_QuickSave(void)
         SetTempString(DEH_String(QSPROMPT));
 
         M_StartMessage(tempstring, M_QuickSaveResponse, true);
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuopn);
     }
     else
         M_QuickSaveResponse('y');
@@ -1958,7 +1958,7 @@ static void M_QuickLoadResponse(int ch)
     {
         savepage = quickSavePage;
         M_LoadSelect(quickSaveSlot);
-        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnucls);
     }
 }
 
@@ -1966,14 +1966,14 @@ static void M_QuickLoad(void)
 {
     if (netgame && !demoplayback) // killough 5/26/98: add !demoplayback
     {
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuopn);
         M_StartMessage(DEH_String(QLOADNET), NULL, false);
         return;
     }
 
     if (demorecording) // killough 5/26/98: exclude during demo recordings
     {
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuopn);
         M_StartMessage("you can't quickload\n"
                        "while recording a demo!\n\n" PRESSKEY,
                        NULL, false); // killough 5/26/98: not externalized
@@ -1996,7 +1996,7 @@ static void M_QuickLoad(void)
         SetTempString(DEH_String(QLPROMPT));
 
         M_StartMessage(tempstring, M_QuickLoadResponse, true);
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuopn);
     }
     else
         M_QuickLoadResponse('y');
@@ -2085,7 +2085,7 @@ static void M_SizeDisplay(int choice)
         return;
     }
     R_SetViewSize(screenblocks /*, detailLevel obsolete -- killough */);
-    M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSound(sfx_mnusli);
 
     MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
@@ -2505,7 +2505,7 @@ static boolean MenuBack(void)
     currentMenu = currentMenu->prevMenu;
     itemOn = currentMenu->lastOn;
     highlight_item = 0;
-    M_StartSoundOptional(sfx_mnubak, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSound(sfx_mnubak);
     return true;
 }
 
@@ -2856,7 +2856,7 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (M_InputActivated(input_endgame)) // End game
     {
         M_PauseSound();
-        M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuopn);
         M_EndGame(0);
         return true;
     }
@@ -2864,7 +2864,7 @@ boolean M_ShortcutResponder(const event_t *ev)
     if (M_InputActivated(input_messages)) // Toggle messages
     {
         M_ChangeMessages(0);
-        M_StartSoundOptional(sfx_mnusli, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuopn);
         return true;
     }
 
@@ -2879,7 +2879,7 @@ boolean M_ShortcutResponder(const event_t *ev)
         if (quit_prompt)
         {
             M_PauseSound();
-            M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnuopn);
         }
         M_QuitDOOM(0);
         return true;
@@ -3116,7 +3116,7 @@ static void CursorPosition(void)
             if (highlight_item != cursor)
             {
                 highlight_item = cursor;
-                M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnusel);
             }
         }
     }
@@ -3162,13 +3162,13 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
         {
             M_DeleteGame(old_menu_input == mouse_mode ? highlight_item : itemOn);
             M_ReadSaveStrings();
-            M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusel);
             delete_verify = false;
         }
         else if (M_ToUpper(ch) == 'N' || action == MENU_BACKSPACE
                  || action == MENU_ESCAPE)
         {
-            M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusel);
             delete_verify = false;
         }
         return true;
@@ -3183,7 +3183,7 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
             savepage--;
             M_UpdateLoadMenu();
             M_ReadSaveStrings();
-            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnumov);
         }
         return true;
     }
@@ -3194,7 +3194,7 @@ static boolean SaveLoadResponder(menu_action_t action, int ch)
             savepage++;
             M_UpdateLoadMenu();
             M_ReadSaveStrings();
-            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnumov);
         }
         return true;
     }
@@ -3297,7 +3297,7 @@ static boolean MouseResponder(void)
         if (current_item->routine)
         {
             current_item->routine(value);
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
         }
 
         return true;
@@ -3521,7 +3521,7 @@ boolean M_Responder(event_t *ev)
         G_ClearInput();
         menuactive = false;
         M_ResumeSound();
-        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnucls);
         return true;
     }
 
@@ -3586,7 +3586,7 @@ boolean M_Responder(event_t *ev)
             {
                 itemOn++;
             }
-            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnumov);
         } while (currentMenu->menuitems[itemOn].status == -1);
         return true;
     }
@@ -3603,7 +3603,7 @@ boolean M_Responder(event_t *ev)
             {
                 itemOn--;
             }
-            M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnumov);
         } while (currentMenu->menuitems[itemOn].status == -1);
         return true;
     }
@@ -3613,7 +3613,7 @@ boolean M_Responder(event_t *ev)
         if (currentMenu->menuitems[itemOn].routine
             && currentMenu->menuitems[itemOn].status == 2)
         {
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
             currentMenu->menuitems[itemOn].routine(CHOICE_LEFT);
         }
         return true;
@@ -3624,7 +3624,7 @@ boolean M_Responder(event_t *ev)
         if (currentMenu->menuitems[itemOn].routine
             && currentMenu->menuitems[itemOn].status == 2)
         {
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
             currentMenu->menuitems[itemOn].routine(CHOICE_RIGHT);
         }
         return true;
@@ -3640,17 +3640,17 @@ boolean M_Responder(event_t *ev)
             if (currentMenu->menuitems[itemOn].status == 2)
             {
                 currentMenu->menuitems[itemOn].routine(CHOICE_RIGHT);
-                M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnusli);
             }
             else
             {
                 currentMenu->menuitems[itemOn].routine(itemOn);
-                M_StartSoundOptional(sfx_mnuact, sfx_pistol); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnuact);
             }
         }
         else
         {
-            M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnuerr); // [FG] disabled menu item
         }
         // jff 3/24/98 remember last skill selected
         //  killough 10/98 moved to skill-specific functions
@@ -3664,7 +3664,7 @@ boolean M_Responder(event_t *ev)
             currentMenu->lastOn = itemOn;
         }
         MN_ClearMenus();
-        M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnucls);
         help_input = old_help_input;
         menu_input = old_menu_input;
         MN_ResetMouseCursor();
@@ -3702,12 +3702,12 @@ boolean M_Responder(event_t *ev)
             }
             itemOn = currentMenu->lastOn;
             highlight_item = 0;
-            M_StartSoundOptional(sfx_mnubak, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnubak);
         }
         else
         {
             MN_ClearMenus();
-            M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnucls);
         }
         help_input = old_help_input;
         menu_input = old_menu_input;
@@ -3723,7 +3723,7 @@ boolean M_Responder(event_t *ev)
         {
             if (AllowDeleteSaveGame())
             {
-                M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnusel);
                 currentMenu->lastOn = itemOn;
                 help_input = old_help_input;
                 menu_input = old_menu_input;
@@ -3732,7 +3732,7 @@ boolean M_Responder(event_t *ev)
             }
             else
             {
-                M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnuerr);
             }
         }
     }
@@ -3746,7 +3746,7 @@ boolean M_Responder(event_t *ev)
             if (currentMenu->menuitems[i].alphaKey == ch)
             {
                 itemOn = i;
-                M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnumov);
                 return true;
             }
         }
@@ -3756,7 +3756,7 @@ boolean M_Responder(event_t *ev)
             if (currentMenu->menuitems[i].alphaKey == ch)
             {
                 itemOn = i;
-                M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnumov);
                 return true;
             }
         }
@@ -3810,7 +3810,7 @@ void MN_StartControlPanel(void)
     G_ClearInput();
 
     M_PauseSound();
-    M_StartSoundOptional(sfx_mnuopn, sfx_swtchn); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSound(sfx_mnuopn);
 }
 
 //
@@ -4138,12 +4138,6 @@ static void WriteText(int x, int y, const char *string)
 void M_StartSound(int sound_id)
 {
     S_StartSoundPitch(NULL, sound_id, PITCH_NONE);
-}
-
-// [Nugget]
-void M_StartSoundOptional(const int opt_sound_id, const int sound_id)
-{
-    S_StartSoundPitchOptional(NULL, opt_sound_id, sound_id, PITCH_NONE);
 }
 
 //----------------------------------------------------------------------------

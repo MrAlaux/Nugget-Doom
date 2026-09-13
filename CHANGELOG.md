@@ -4,7 +4,7 @@ None.
 
 ## Changes
 
-None.
+- **Merged changes from Woof! post-16.0.0**
 
 ## Bug Fixes
 
