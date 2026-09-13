@@ -1336,7 +1336,7 @@ void G_ClearInput(void)
 // G_DoLoadLevel
 //
 
-static void G_DoLoadLevel(void)
+static void G_DoLoadLevel(boolean from_savegame)
 {
   int i;
 
@@ -1446,7 +1446,7 @@ static void G_DoLoadLevel(void)
 
   P_ClearDirtyArrays();
 
-  P_SetupLevel(gameepisode, gamemap, gameskill);
+  P_SetupLevel(gameepisode, gamemap, gameskill, from_savegame);
 
   MN_UpdateFreeLook();
   HU_UpdateTurnFormat();
@@ -1540,7 +1540,7 @@ static void G_ReloadLevel(void)
     G_RecordDemo(demoname_orig);
   }
 
-  G_InitNew(gameskill, gameepisode, gamemap);
+  G_InitNew(gameskill, gameepisode, gamemap, false);
   gameaction = ga_nothing;
 
   if (demorecording)
@@ -2523,7 +2523,7 @@ static void G_DoWorldDone(void)
   gamemap = wminfo.next+1;
   gamemapinfo = G_LookupMapinfo(gameepisode, gamemap);
   G_ResetRewind(false);
-  G_DoLoadLevel();
+  G_DoLoadLevel(false);
   gameaction = ga_nothing;
   viewactive = true;
   AM_clearMarks();           //jff 4/12/98 clear any marks on the automap
@@ -2800,8 +2800,8 @@ static void G_DoPlayDemo(void)
       // killough 2/22/98:
       // Do it anyway for timing demos, to reduce timing noise
       precache = timingdemo;
-
-      G_InitNew(skill, episode, map);
+  
+      G_InitNew(skill, episode, map, false);
 
       // killough 11/98: If OPTIONS were loaded from the wad in G_InitNew(),
       // reload any demo sync-critical ones from the demo itself, to be exactly
@@ -3175,6 +3175,12 @@ static void DoSaveGame(char *name)
     // [FG] save total time for all completed levels
     JS_SetInt(doc, root_mut, "totalleveltimes", totalleveltimes);
 
+    // fast-process pending MUSINFO music change
+    if (musinfo.tics > 0)
+    {
+        musinfo.tics = 0;
+        T_MusInfo();
+    }
     // save lump name for current MUSINFO item
     char lumpname[9] = {0};
     if (musinfo.current_item > 0)
@@ -3496,7 +3502,8 @@ static boolean DoLoadGameJSON(boolean do_load_autosave, json_t *root)
     json_t *custonskilloptions_obj = JS_GetObject(root, "customskilloptions");
     LoadCustomSkillOptionsJSON(custonskilloptions_obj);
 
-    G_InitNew(gameskill, gameepisode, gamemap);
+    // do not start level music yet
+    G_InitNew(gameskill, gameepisode, gamemap, true);
 
     /* cph - MBF needs to reread the savegame options because G_InitNew
      * rereads the WAD options. The demo playback code does this too. */
@@ -3512,18 +3519,23 @@ static boolean DoLoadGameJSON(boolean do_load_autosave, json_t *root)
     totalleveltimes = JS_GetIntegerValue(root, "totalleveltimes");
 
     const char *lumpname = JS_GetStringValue(root, "musinfo");
+    int lumpnum = -1;
     if (lumpname && *lumpname)
     {
-        int lumpnum = W_CheckNumForName(lumpname);
-
-        if (lumpnum >= 0)
-        {
-            musinfo.mapthing = NULL;
-            musinfo.lastmapthing = NULL;
-            musinfo.tics = 0;
-            musinfo.current_item = lumpnum;
-            S_ChangeMusInfoMusic(lumpnum, true);
-        }
+        lumpnum = W_CheckNumForName(lumpname);
+    }
+    if (lumpnum >= 0)
+    {
+        musinfo.mapthing = NULL;
+        musinfo.lastmapthing = NULL;
+        musinfo.tics = 0;
+        musinfo.current_item = lumpnum;
+        S_ChangeMusInfoMusic(lumpnum, true);
+    }
+    else
+    {
+        // start level music now
+        S_Start();
     }
 
     max_kill_requirement = JS_GetIntegerValue(root, "max_kill_requirement");
@@ -3631,7 +3643,7 @@ static boolean DoLoadGameBinary(boolean do_load_autosave)
   // [Nugget] Custom skill: removed `LoadCustomSkillOptions()`
 
   // load a base level
-  G_InitNew(gameskill, gameepisode, gamemap);
+  G_InitNew(gameskill, gameepisode, gamemap, true); // do not start level music yet
 
   // killough 3/1/98: Read game options
   // killough 11/98: move down to here
@@ -3671,6 +3683,7 @@ static boolean DoLoadGameBinary(boolean do_load_autosave)
   }
 
   // restore MUSINFO music
+  boolean musinfo_music = false;
   if (saveg_check_size(8))
   {
       char lump[9] = {0};
@@ -3687,7 +3700,13 @@ static boolean DoLoadGameBinary(boolean do_load_autosave)
           musinfo.tics = 0;
           musinfo.current_item = lumpnum;
           S_ChangeMusInfoMusic(lumpnum, true);
+          musinfo_music = true;
       }
+  }
+  if (!musinfo_music)
+  {
+    // start level music now
+    S_Start();
   }
 
   // restore max_kill_requirement
@@ -4042,7 +4061,7 @@ void G_Ticker(void)
     switch (gameaction)
       {
       case ga_loadlevel:
-	G_DoLoadLevel();
+	G_DoLoadLevel(false);
 	break;
       case ga_newgame:
 	G_DoNewGame();
@@ -5325,7 +5344,7 @@ void G_DoNewGame (void)
   boom_basetic = gametic;             // killough 9/29/98
   true_basetic = gametic;
 
-  G_InitNew(d_skill, d_episode, d_map);
+  G_InitNew(d_skill, d_episode, d_map, false);
   gameaction = ga_nothing;
 
   if (demorecording)
@@ -5370,7 +5389,7 @@ void G_SetFastParms(int fast_pending)
 // Can be called by the startup code or the menu task,
 // consoleplayer, displayplayer, playeringame[] should be set.
 
-void G_InitNew(skill_t skill, int episode, int map)
+void G_InitNew(skill_t skill, int episode, int map, boolean from_savegame)
 {
   int i;
 
@@ -5452,7 +5471,7 @@ void G_InitNew(skill_t skill, int episode, int map)
 
   D_UpdateCasualPlay(); // [Nugget]
 
-  G_DoLoadLevel();
+  G_DoLoadLevel(from_savegame);
 
   G_UpdateInitialLoadout(); // [Nugget] Custom Skill
 }
@@ -5469,7 +5488,7 @@ void G_SimplifiedInitNew(int episode, int map)
 
   D_UpdateCasualPlay(); // [Nugget]
 
-  G_DoLoadLevel();
+  G_DoLoadLevel(false);
 
   G_UpdateInitialLoadout(); // [Nugget] Custom Skill
 }
