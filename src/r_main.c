@@ -236,99 +236,95 @@ boolean comp_powerrunout;
 
 static void ApplyBlockPostProcess(void)
 {
-  int y, x, y2;
-
   const int pw = lowres_pixel_width,
             ph = lowres_pixel_height;
 
-  int first_y = (viewheight % ph) / 2,
-      first_x;
+  const int
+    vwx  = viewwindowx,
+    vwx2 = viewwindowx + viewwidth,
+    vwxh = viewwindowx + viewwidth/2,
+    vwy  = viewwindowy,
+    vwy2 = viewwindowy + viewheight,
+    vwyh = viewwindowy + viewheight/2;
 
-  pixel_t *const dest = I_VideoBuffer;
+  pixel_t *const screen = I_VideoBuffer;
+  const int pitch = video.height;
 
-  for (y = viewwindowy;  y < (viewwindowy + viewheight);)
+  const int first_x = vwx + (viewwidth / 2) % pw;
+
+  for (int x = vwx;  x < vwx2;  x++)
   {
-    first_x = (viewwidth % pw) / 2;
+    const int srcx =
+      (x < first_x) ? (first_x - 1) : (x - ((x - first_x) % pw) + (x < vwxh ? pw - 1 : 0));
 
-    for (x = viewwindowx;  x < (viewwindowx + viewwidth);)
+    int first_y = vwy + (viewheight / 2) % ph;
+
+    for (int y = vwy;  y < vwy2;)
     {
-      for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
-      {
-        memset(
-          dest + ((y + y2) * video.width) + x,
-          dest[
-            ( (first_y ? viewwindowy + first_y
-                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
-            + (first_x ? viewwindowx + first_x
-                       : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
-          ],
-          first_x ? first_x : MIN(pw, (viewwindowx + viewwidth) - x)
-        );
-      }
+      const int srcy =
+        first_y ? (first_y - 1) : (y + (y < vwyh ? ph - 1 : 0));
 
-      if (first_x)
-      {
-        x += first_x;
-        first_x = 0;
-      }
-      else { x += pw; }
-    }
+      pixel_t *const dest = screen + (x * pitch + y);
+      const pixel_t src = screen[srcx * pitch + srcy];
 
-    if (first_y)
-    {
-      y += first_y;
-      first_y = 0;
+      const int count = first_y ? (first_y - vwy) : MIN(ph, vwy2 - y);
+
+      memset(dest, src, count);
+
+      if (first_y)
+      {
+        y = first_y;
+        first_y = 0;
+      }
+      else { y += ph; }
     }
-    else { y += ph; }
   }
 }
 
 static void ApplyBlockPostProcess32(void)
 {
-  int y, x, y2;
-
   const int pw = lowres_pixel_width,
             ph = lowres_pixel_height;
 
-  int first_y = (viewheight % ph) / 2,
-      first_x;
+  const int
+    vwx  = viewwindowx,
+    vwx2 = viewwindowx + viewwidth,
+    vwxh = viewwindowx + viewwidth/2,
+    vwy  = viewwindowy,
+    vwy2 = viewwindowy + viewheight,
+    vwyh = viewwindowy + viewheight/2;
 
-  pixel32_t *const dest = I_VideoBuffer32;
+  pixel32_t *const screen = I_VideoBuffer32;
+  const int pitch = video.height;
 
-  for (y = viewwindowy;  y < (viewwindowy + viewheight);)
+  const int first_x = vwx + (viewwidth / 2) % pw;
+
+  for (int x = vwx;  x < vwx2;  x++)
   {
-    first_x = (viewwidth % pw) / 2;
+    const int srcx =
+      (x < first_x) ? (first_x - 1) : (x - ((x - first_x) % pw) + (x < vwxh ? pw - 1 : 0));
 
-    for (x = viewwindowx;  x < (viewwindowx + viewwidth);)
+    int first_y = vwy + (viewheight / 2) % ph;
+
+    for (int y = vwy;  y < vwy2;)
     {
-      for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
-      {
-        V_RGBSet(
-          dest + ((y + y2) * video.width) + x,
-          dest[
-            ( (first_y ? viewwindowy + first_y
-                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
-            + (first_x ? viewwindowx + first_x
-                       : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
-          ],
-          first_x ? first_x : MIN(pw, (viewwindowx + viewwidth) - x)
-        );
-      }
+      const int srcy =
+        first_y ? (first_y - 1) : (y + (y < vwyh ? ph - 1 : 0));
 
-      if (first_x)
-      {
-        x += first_x;
-        first_x = 0;
-      }
-      else { x += pw; }
-    }
+      pixel32_t *const dest = screen + (x * pitch + y);
+      const pixel32_t src = screen[srcx * pitch + srcy];
 
-    if (first_y)
-    {
-      y += first_y;
-      first_y = 0;
+      const int count = first_y ? (first_y - vwy) : MIN(ph, vwy2 - y);
+
+      V_RGBSet(dest, src, count);
+
+      if (first_y)
+      {
+        y = first_y;
+        first_y = 0;
+      }
+      else { y += ph; }
     }
-    else { y += ph; }
   }
 }
 

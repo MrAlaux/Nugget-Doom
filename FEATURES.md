@@ -89,8 +89,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Toggle for **diminishing lighting** (CFG-only: `diminishing_lighting`)
   - _Diminishing lighting_ (a.k.a. fog) refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Flip Levels_** setting
-- **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution
-  (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
+- **Low-resolution post-process**, to enlarge pixels when using 100% resolution [i.b. Doom Retro]
+  - Configured through the CFG-only `lowres_pixel_width` and `lowres_pixel_height` CVARs
 - **_Backdrop for all menus_** setting
 - **_No Palette Tint in Menus_** setting [i.b. Crispy Doom]
 - **_No Berserk Tint_** setting
