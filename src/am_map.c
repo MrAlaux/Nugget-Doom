@@ -1696,7 +1696,14 @@ static void (*AM_clearFB)(int color) = NULL;
 
 static void AM_clearFB8(int color)
 {
-  memset(I_VideoBuffer, color, f_h * f_w);
+  int width = f_w;
+  pixel_t *dest = I_VideoBuffer;
+
+  while (width--)
+  {
+    memset(dest, color, f_h);
+    dest += video.height;
+  }
 }
 
 static void AM_clearFB32(int color)
@@ -1881,7 +1888,7 @@ static void (*PutDot)(int x, int y, int color) = NULL;
 
 inline static void PutDot8(int x, int y, int color)
 {
-    I_VideoBuffer[y * video.width + x] = color;
+    I_VideoBuffer[(x * video.height) + y] = color;
 }
 
 inline static void PutDot32(int x, int y, int color)
@@ -1979,7 +1986,7 @@ static void (*PutWuDot)(int x, int y, int color, int weight) = NULL;
 
 inline static void PutWuDot8(int x, int y, int color, int weight)
 {
-    pixel_t *dest = I_VideoBuffer + y * video.width + x;
+    pixel_t *dest = I_VideoBuffer + (x * video.height) + y;
     unsigned int *fg2rgb = Col2RGB8[weight];
     unsigned int *bg2rgb = Col2RGB8[64 - weight];
     unsigned int fg, bg;

@@ -2495,19 +2495,20 @@ static void DrawSolidBackground(void)
             unsigned r = 0, g = 0, b = 0;
             pixel32_t col;
 
-            for (y = v0; y < v1; y++)
+            for (x = 0; x < depth; x++)
             {
-                int line = V_ScaleY(y) * video.width;
-                for (x = 0; x < depth; x++)
+                int line = V_ScaleX(x) * V_ScaleY(st_height);
+
+                for (y = v0; y < v1; y++)
                 {
-                    pixel32_t *tc = st_backing_screen32 + line + V_ScaleX(x);
+                    pixel32_t *tc = st_backing_screen32 + line + V_ScaleY(y);
                     pixel_t c = V_IndexFromRGB(*tc);
 
                     r += pal[3 * c + 0];
                     g += pal[3 * c + 1];
                     b += pal[3 * c + 2];
 
-                    tc += V_ScaleX(width - 2 * x - 1);
+                    tc += V_ScaleX(width - 2 * x - 1) * V_ScaleY(st_height);
                     c = V_IndexFromRGB(*tc);
 
                     r += pal[3 * c + 0];
@@ -2536,17 +2537,18 @@ static void DrawSolidBackground(void)
         unsigned r = 0, g = 0, b = 0;
         pixel_t col;
 
-        for (y = v0; y < v1; y++)
+        for (x = 0; x < depth; x++)
         {
-            int line = V_ScaleY(y) * video.width;
-            for (x = 0; x < depth; x++)
+            const int line = V_ScaleX(x) * V_ScaleY(st_height);
+
+            for (y = v0; y < v1; y++)
             {
-                pixel_t *c = st_backing_screen + line + V_ScaleX(x);
+                pixel_t *c = st_backing_screen + line + V_ScaleY(y);
                 r += pal[3 * c[0] + 0];
                 g += pal[3 * c[0] + 1];
                 b += pal[3 * c[0] + 2];
 
-                c += V_ScaleX(width - 2 * x - 1);
+                c += V_ScaleX(width - 2 * x - 1) * V_ScaleY(st_height);
                 r += pal[3 * c[0] + 0];
                 g += pal[3 * c[0] + 1];
                 b += pal[3 * c[0] + 2];
@@ -2578,11 +2580,11 @@ static void DrawBackground(const char *name)
 
         if (truecolor_rendering)
         {
-            V_UseBuffer32(st_backing_screen32, video.width);
+            V_UseBuffer32(st_backing_screen32, V_ScaleY(st_height));
         }
         else
         {
-            V_UseBuffer(st_backing_screen, video.width);
+            V_UseBuffer(st_backing_screen, V_ScaleY(st_height));
         }
 
         if (st_solidbackground && st_height > 3)
@@ -2621,11 +2623,11 @@ static void DrawBackground(const char *name)
 
     if (truecolor_rendering)
     {
-        V_CopyRect32(0, 0, st_backing_screen32, video.unscaledw, st_height, 0, ST_Y);
+        V_CopyRect32(0, 0, st_backing_screen32, video.unscaledw, st_height, V_ScaleY(st_height), 0, ST_Y);
     }
     else
     {
-        V_CopyRect(0, 0, st_backing_screen, video.unscaledw, st_height, 0, ST_Y);
+        V_CopyRect(0, 0, st_backing_screen, video.unscaledw, st_height, V_ScaleY(st_height), 0, ST_Y);
     }
 }
 
