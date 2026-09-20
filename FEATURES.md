@@ -32,7 +32,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
     - Supports 241 distinct light levels for sectors
   - Notes on the true-color modes:
     - Compatible with custom tinted palettes
-    - No support for true-color (32-bit PNG) graphics; those are still palettized at startup
+    - No support for true-color (PNG) graphics; those are still palettized at startup
     - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
       especially with _Smooth Palette Tinting_ enabled
 - **Extended FOV range:** [20, 140]
