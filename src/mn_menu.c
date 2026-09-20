@@ -649,7 +649,7 @@ enum
 
 void M_StartCustomSkill(const int mode)
 {
-  if (casual_play) { gameskill = sk_custom; }
+  gameskill = sk_custom;
 
   G_SetUserCustomSkill();
 

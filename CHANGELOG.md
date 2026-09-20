@@ -8,4 +8,4 @@ None.
 
 ## Bug Fixes
 
-None.
+- **Custom skill not taking effect when starting a new game with it while a demo were playing**
