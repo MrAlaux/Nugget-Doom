@@ -8,4 +8,5 @@ None.
 
 ## Bug Fixes
 
-- **Custom skill not taking effect when starting a new game with it while a demo were playing**
+- **Custom skill not taking effect when starting a new game with it during demo playback**
+- **Forced weapon carousel malfunctioning during demo playback**

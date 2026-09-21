@@ -131,17 +131,20 @@ static void BuildWeaponIcons(const player_t *player)
     }
 }
 
-boolean ST_ForceCarousel(const player_t *const player)
+// [Nugget]
+boolean ST_ForceCarousel(void)
 {
-  return player->pendingweapon != wp_nochange
-         && (force_carousel == 2
-             || (force_carousel == 1 && (R_ChasecamOn() || R_FreecamOn())));
+  return force_carousel == FORCECAROUSEL_ALWAYS
+         || (force_carousel == FORCECAROUSEL_OFFPLAYER && R_CameraOffPlayer());
 }
 
 void ST_UpdateCarousel(player_t *player)
 {
+    // [Nugget]
+    const boolean force = ST_ForceCarousel();
+
     if (G_NextWeaponActivate()
-        || ST_ForceCarousel(player)) // [Nugget]
+        || (force && player->pendingweapon != wp_nochange)) // [Nugget]
     {
         duration = TICRATE / 2;
     }
@@ -165,6 +168,30 @@ void ST_UpdateCarousel(player_t *player)
     }
 
     BuildWeaponIcons(player);
+
+    // [Nugget]
+    if (force)
+    {
+        const weapontype_t targetweapon =
+            player->pendingweapon != wp_nochange
+            ? player->pendingweapon
+            : player->readyweapon;
+
+        for (int i = 0;  i < array_size(weapon_icons);  i++)
+        {
+            weapon_icon_t *const icon = &weapon_icons[i];
+
+            if (icon->weapon == targetweapon)
+            {
+                selected_index = i;
+                icon->state = wpi_selected;
+            }
+            else if (icon->state == wpi_selected)
+            {
+                icon->state = wpi_regular;
+            }
+        }
+    }
 
     if (last_index != selected_index)
     {

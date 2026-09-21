@@ -387,7 +387,7 @@ void P_MovePlayer (player_t* player)
   // Forcefully stand up under certain conditions
   if ((mo->intflags & MIF_CROUCHING)
       && (!jump_crouch || player->cheats & CF_FLY
-          || ((R_ChasecamOn() || R_FreecamOn()) && !have_crouch_sprites)))
+          || (R_CameraOffPlayer() && !have_crouch_sprites)))
   {
     mo->intflags &= ~MIF_CROUCHING;
   }

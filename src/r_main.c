@@ -153,6 +153,11 @@ boolean R_SpriteShadowsOn(void)
   return sprite_shadows_on;
 }
 
+boolean R_CameraOffPlayer(void)
+{
+  return R_ChasecamOn() || R_FreecamOn();
+}
+
 void R_GetLightLevelAndTintInPoint(
   const fixed_t x,
   const fixed_t y,
@@ -1942,7 +1947,7 @@ static void UpdatePOVMobj(void)
 
 const mobj_t *R_POVMobj(void)
 {
-  return (!(R_FreecamOn() || R_ChasecamOn()) || nodrawers)
+  return (!R_CameraOffPlayer() || nodrawers)
          ? players[displayplayer].mo
          : &povmobj;
 }

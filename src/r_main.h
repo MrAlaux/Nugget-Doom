@@ -191,6 +191,7 @@ extern boolean have_crouch_sprites;
 
 fixed_t R_GetNughudViewPitch(void);
 boolean R_SpriteShadowsOn(void);
+boolean R_CameraOffPlayer(void);
 
 void R_GetLightLevelAndTintInPoint(
   fixed_t x,

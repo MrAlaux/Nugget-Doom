@@ -246,7 +246,7 @@ void G_NextWeaponReset(weapontype_t weapon)
     players[consoleplayer].nextweapon = players[consoleplayer].readyweapon;
     players[consoleplayer].nextweapon = G_AdjustSelection(weapon);
 
-    if (!ST_ForceCarousel(&players[consoleplayer])) // [Nugget]
+    if (!ST_ForceCarousel()) // [Nugget]
     {
         ST_ResetCarousel();
     }

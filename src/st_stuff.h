@@ -34,6 +34,14 @@ enum keyblink_e;
 
 // [Nugget] /=================================================================
 
+typedef enum forcecarousel_s {
+  FORCECAROUSEL_OFF,
+  FORCECAROUSEL_OFFPLAYER,
+  FORCECAROUSEL_ALWAYS,
+
+  NUM_FORCECAROUSEL
+} forcecarousel_t;
+
 // CVARs
 extern boolean no_menu_tint;
 extern boolean hud_menu_allow_lowercase;
@@ -41,8 +49,8 @@ extern boolean no_berserk_tint;
 extern boolean no_radsuit_tint;
 extern boolean comp_godface;
 extern boolean comp_unusedpals;
-extern int force_carousel;
-extern int carousel_fadeout;
+extern forcecarousel_t force_carousel;
+extern boolean carousel_fadeout;
 
 void ST_ToggleMinimap(void);
 

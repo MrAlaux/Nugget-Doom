@@ -101,8 +101,8 @@ boolean comp_unusedpals;
 static boolean use_nughud;
 static boolean hud_blink_keys;
 static boolean sts_show_berserk;
-int force_carousel;
-int carousel_fadeout;
+forcecarousel_t force_carousel;
+boolean carousel_fadeout;
 
 char ST_ToUpper(const char c)
 {
@@ -4721,7 +4721,7 @@ void ST_BindSTSVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("force_carousel", &force_carousel, NULL,
-            1, 0, 2, ss_weap, wad_no,
+            FORCECAROUSEL_OFFPLAYER, FORCECAROUSEL_OFF, NUM_FORCECAROUSEL-1, ss_weap, wad_no,
             "Force display of weapon carousel (0 = Off; 1 = Off player; 2 = Always)");
 
   M_BindBool("carousel_fadeout", &carousel_fadeout, NULL,
