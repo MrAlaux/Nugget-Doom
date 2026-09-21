@@ -4,6 +4,7 @@ None.
 
 ## Changes
 
+- **Made the NUGHUD have its own slot**
 - **Made automap marks flash brighter when using _Highlight P.O.I.'s_**
 
 ## Bug Fixes

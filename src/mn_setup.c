@@ -2158,7 +2158,6 @@ static setup_tab_t stat_tabs[] = {
 static void SizeDisplayAlt(void)
 {
     R_SetViewSize(screenblocks);
-    MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
 
 static void RefreshSolidBackground(void)
@@ -2180,9 +2179,6 @@ static setup_menu_t stat_settings1[] = {
 
     MI_GAP,
 
-    // [Nugget] NUGHUD
-    {"Use NUGHUD", S_ONOFF, H_X, M_SPC, {"use_nughud"}},
-
     {"HUD Anchoring", S_CHOICE, H_X, M_SPC, {"hud_anchoring"},
      .strings_id = str_hud_anchoring, .action = I_UpdateHudAnchoring},
 
@@ -2203,12 +2199,6 @@ static setup_menu_t stat_settings1[] = {
 void MN_UpdateHudAnchoringItem(void)
 {
     DisableItem(!video.deltaw, stat_settings1, "hud_anchoring");
-}
-
-// [Nugget] NUGHUD
-void MN_UpdateNughudItem(void)
-{
-    DisableItem(screenblocks != maxscreenblocks - 1, stat_settings1, "use_nughud");
 }
 
 static void UpdateStatsFormatItem(void);
@@ -6066,20 +6056,7 @@ static const char **GetScreenSizeStrings(void)
         array_push(strings, st_strings[i]);
     }
 
-    // [Nugget] NUGHUD /------------------------------------------------------
-
-    // `maxscreenblocks` is now calculated in `ST_StatusbarList()`
-
-    if (!st_strings)
-    {
-        array_push(strings, "Status Bar");
-        array_push(strings, "NUGHUD");
-    }
-
-    MN_UpdateNughudItem();
-
-    // [Nugget] -------------------------------------------------------------/
-
+    maxscreenblocks = array_size(strings) - 1;
     screenblocks = MIN(screenblocks, maxscreenblocks);
 
     return strings;
@@ -6130,7 +6107,6 @@ void MN_SetupResetMenu(void)
     UpdatePaletteItems();
     MN_UpdateDoom1SSGItem();
     MN_UpdateImprovedWeaponTogglesItem();
-    MN_UpdateNughudItem(); // NUGHUD
 }
 
 void MN_BindMenuVariables(void)

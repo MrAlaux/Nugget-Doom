@@ -2086,8 +2086,6 @@ static void M_SizeDisplay(int choice)
     }
     R_SetViewSize(screenblocks /*, detailLevel obsolete -- killough */);
     M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
-
-    MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2938,7 +2936,6 @@ boolean M_ShortcutResponder(const event_t *ev)
         }
 
         R_SetViewSize(screenblocks);
-        MN_UpdateNughudItem(); // [Nugget] NUGHUD
         return true;
     }
 
