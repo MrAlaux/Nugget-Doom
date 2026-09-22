@@ -92,13 +92,16 @@ static boolean message_flash;
 static int hud_msg_duration;
 static int hud_chat_duration;
 static int hud_msg_lines;
-static int hud_msg_total_lines;
+static int hud_msg_review_lines;
 static boolean hud_msg_scrollup;
 static boolean hud_msg_group;
 
 boolean sp_chat;
 
 // ---------------------------------------------------------------------------
+
+static int ST_GetNumMessages(void);
+static boolean ST_ReviewingMessages(void);
 
 boolean ST_MessageFadeoutOn(void)
 {
@@ -107,7 +110,14 @@ boolean ST_MessageFadeoutOn(void)
 
 int ST_GetNumMessageLines(void)
 {
-    return MAX(hud_msg_total_lines, hud_msg_lines);
+    return ST_ReviewingMessages()
+           ? MAX(ST_GetNumMessages(), hud_msg_lines)
+           : hud_msg_lines;
+}
+
+static int ST_GetNumMaxMessageLines(void)
+{
+    return MAX(hud_msg_review_lines, hud_msg_lines);
 }
 
 static void FadeOutLine(stringline_t *const line, const int duration_left)
@@ -192,6 +202,16 @@ static linkedmessage_t *message_list_head = NULL, *message_list_tail = NULL;
 static int num_messages = 0;
 static int message_review_duration_left = 0;
 
+static int ST_GetNumMessages(void)
+{
+    return num_messages;
+}
+
+static boolean ST_ReviewingMessages(void)
+{
+    return message_review_duration_left > 0;
+}
+
 static void AddMessage(char *const string, int duration, const boolean is_chat_msg)
 {
     static int num_copies = 0;
@@ -212,7 +232,7 @@ static void AddMessage(char *const string, int duration, const boolean is_chat_m
         num_messages++;
         num_copies = 1;
 
-        if (message_list_tail && num_messages > ST_GetNumMessageLines())
+        if (message_list_tail && num_messages > ST_GetNumMaxMessageLines())
         {
             num_messages--;
 
@@ -312,7 +332,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
     ST_ClearLines(widget);
 
     // Handle setting changes
-    while (num_messages > ST_GetNumMessageLines())
+    while (num_messages > ST_GetNumMaxMessageLines())
     {
         num_messages--;
 
@@ -1821,7 +1841,7 @@ void ST_BindHUDVariables(void)
             1, 1, 8, ss_stat, wad_no,
             "Number of lines in message list shown normally");
 
-  M_BindNum("hud_msg_total_lines", &hud_msg_total_lines, NULL,
+  M_BindNum("hud_msg_total_lines", &hud_msg_review_lines, NULL,
             1, 1, 8, ss_stat, wad_no,
             "Number of lines in message list shown during message review");
 

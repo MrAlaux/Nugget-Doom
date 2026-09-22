@@ -6,6 +6,7 @@ None.
 
 - **Made the NUGHUD have its own slot**
 - **Made automap marks flash brighter when using _Highlight P.O.I.'s_**
+- **Improved how the NUGHUD's minimap interacts with the message list**
 
 ## Bug Fixes
 
