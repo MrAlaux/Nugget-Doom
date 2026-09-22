@@ -202,7 +202,7 @@ void ST_UpdateCarousel(player_t *player)
     }
 }
 
-static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
+static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon, int offset) // [Nugget] New parameter
 {
     char lump[9] = {0};
     const char *name;
@@ -228,15 +228,18 @@ static void DrawIcon(int x, int y, sbarelem_t *elem, weapon_icon_t icon)
 
     const byte *tranmap = NULL;
 
+    const int duration2 = MAX(0, duration - abs(offset) * 2);
+
     if (elem->tranmap)
     {
       tranmap = elem->tranmap;
     }
-    else if (carousel_fadeout && 0 < duration && duration < 10)
+    else if (carousel_fadeout && 0 < duration2 && duration2 < 10)
     {
-      tranmap = R_GetGenericTranMap(duration * 10);
-      V_SetShadowColormap(100 * duration / 10); // HUD/menu shadows
+      tranmap = R_GetGenericTranMap(duration2 * 10);
+      V_SetShadowColormap(100 * duration2 / 10); // HUD/menu shadows
     }
+    else if (duration2 <= 0) { return; }
 
     // [Nugget] -------------------------------------------------------------/
 
@@ -272,16 +275,16 @@ void ST_DrawCarousel(int x, int y, sbarelem_t *elem)
     }
 
     const int offset = SCREENWIDTH / 2 + CalcOffset();
-    DrawIcon(offset, y, elem, weapon_icons[selected_index]);
+    DrawIcon(offset, y, elem, weapon_icons[selected_index], 0);
 
     for (int i = selected_index + 1, k = 1;
          i < array_size(weapon_icons) && k < 3; ++i, ++k)
     {
-        DrawIcon(offset + k * 64, y, elem, weapon_icons[i]);
+        DrawIcon(offset + k * 64, y, elem, weapon_icons[i], i - selected_index);
     }
 
     for (int i = selected_index - 1, k = 1; i >= 0 && k < 3; --i, ++k)
     {
-        DrawIcon(offset - k * 64, y, elem, weapon_icons[i]);
+        DrawIcon(offset - k * 64, y, elem, weapon_icons[i], i - selected_index);
     }
 }

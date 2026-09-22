@@ -340,17 +340,19 @@ void V_SetCurrentColormap(const int colormap_index)
 boolean hud_menu_shadows;
 int hud_menu_shadows_filter_pct;
 
-static byte       shadow_colormaps[10][256] = {0};
-static byte const *shadow_colormap = shadow_colormaps[9];
+#define NUM_SHADOW_COLORMAPS 11
+
+static byte       shadow_colormaps[NUM_SHADOW_COLORMAPS][256] = {0};
+static byte const *shadow_colormap = shadow_colormaps[NUM_SHADOW_COLORMAPS-1];
 
 static boolean shadows_on = true,
                drawing_shadow = false;
 
 void V_InitShadowColormaps(void)
 {
-  static int last_i = 10;
+  static int last_i = NUM_SHADOW_COLORMAPS;
 
-  int i = (ST_MessageFadeoutOn() || carousel_fadeout) ? 0 : 9;
+  int i = (ST_MessageFadeoutOn() || carousel_fadeout) ? 0 : NUM_SHADOW_COLORMAPS-1;
 
   if (last_i <= i) { return; }
 
@@ -358,11 +360,11 @@ void V_InitShadowColormaps(void)
 
   byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
 
-  for (; i < 10;  i++)
+  for (; i < NUM_SHADOW_COLORMAPS;  i++)
   {
     byte *const colormap = shadow_colormaps[i];
 
-    const float factor = (100 - hud_menu_shadows_filter_pct * (i + 1) / 10) / 100.0f;
+    const float factor = (100 - hud_menu_shadows_filter_pct * i / NUM_SHADOW_COLORMAPS-1) / 100.0f;
 
     byte *p = playpal;
 
@@ -381,8 +383,8 @@ void V_InitShadowColormaps(void)
 
 void V_SetShadowColormap(const int pct)
 {
-  const int i = 9 * pct / 100;
-  shadow_colormap = shadow_colormaps[CLAMP(i, 0, 9)];
+  const int i = pct / NUM_SHADOW_COLORMAPS-1;
+  shadow_colormap = shadow_colormaps[CLAMP(i, 0, NUM_SHADOW_COLORMAPS-1)];
 }
 
 void V_ToggleShadows(const boolean on)
