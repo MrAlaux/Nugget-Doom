@@ -649,7 +649,7 @@ enum
 
 void M_StartCustomSkill(const int mode)
 {
-  if (casual_play) { gameskill = sk_custom; }
+  gameskill = sk_custom;
 
   G_SetUserCustomSkill();
 
@@ -2086,8 +2086,6 @@ static void M_SizeDisplay(int choice)
     }
     R_SetViewSize(screenblocks /*, detailLevel obsolete -- killough */);
     M_StartSound(sfx_mnusli);
-
-    MN_UpdateNughudItem(); // [Nugget] NUGHUD
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2938,7 +2936,6 @@ boolean M_ShortcutResponder(const event_t *ev)
         }
 
         R_SetViewSize(screenblocks);
-        MN_UpdateNughudItem(); // [Nugget] NUGHUD
         return true;
     }
 

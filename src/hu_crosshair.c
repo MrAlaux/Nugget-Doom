@@ -336,14 +336,10 @@ void HU_DrawCrosshair(void)
 {
     if (plr->playerstate != PST_LIVE || automapactive || menuactive || paused
       // [Nugget] New conditions
-      // Crash fix
-      || !crosshair.cr
-      // Chasecam
-      || (R_ChasecamOn() && !chasecam_crosshair)
-      // Freecam
-      || (R_FreecamOn() && (R_GetFreecamMode() != FREECAM_CAM || R_GetFreecamMobj()))
-      // Alt. intermission background
-      || (gamestate == GS_INTERMISSION))
+      || !crosshair.cr // Crash fix
+      || (R_ChasecamOn() && !chasecam_crosshair) // Chasecam
+      || (R_FreecamOn() && (R_GetFreecamMode() != FREECAM_CAM || R_GetFreecamMobj())) // Freecam
+      || (gamestate == GS_INTERMISSION)) // Alt. intermission background
     {
         return;
     }

@@ -268,7 +268,7 @@ static mline_t tf_cross[] =
   #undef R
 };
 
-#define NUM_TF_CROSS_LINES (sizeof(tf_cross)/sizeof(mline_t))
+#define NUM_TF_CROSS_LINES (sizeof(tf_cross) / sizeof(mline_t))
 
 // Square hitbox -------------------------------------------------------------
 
@@ -422,8 +422,8 @@ static int magic_line_colors[NUM_MAGIC_LINE_COLORS],
 
 static int magic_line_mark_color;
 
-static sector_t* magic_sector;
-static short     magic_tag = -1;
+static const sector_t *magic_sector;
+static short magic_tag = -1;
 
 // Highlight points of interest ----------------------------------------------
 
@@ -750,7 +750,7 @@ void AM_initVariables(void)
     byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE);
 
     { // Highlight points of interest
-      const int low = 223;
+      static const int low = 223;
 
       highlight_color[0] = I_GetNearestColor(playpal, 255, low, low); // Red
       highlight_color[1] = I_GetNearestColor(playpal, low, low, 255); // Blue
@@ -1279,7 +1279,8 @@ boolean AM_Responder
       // [Alaux] Clear just the last mark
       if (!markpointnum)
         displaymsg(DEH_String(AMSTR_MARKSCLEARED));
-      else {
+      else
+      {
         // [Nugget]
         const int pmi = pointed_mark_index;
 
@@ -1535,7 +1536,7 @@ void AM_Ticker (void)
 
   // [Nugget] /===============================================================
 
-  if (highlight_timer) { highlight_timer--; } //  Highlight points of interest
+  if (highlight_timer) { highlight_timer--; } // Highlight points of interest
 
   // Tag Finder from PrBoomX -------------------------------------------------
 
@@ -1543,6 +1544,7 @@ void AM_Ticker (void)
   {
     const fixed_t tmapx = (m_x + m_w/2);
     const fixed_t tmapy = (m_y + m_h/2);
+
     const subsector_t *const subsec = R_PointInSubsector(tmapx<<FRACTOMAPBITS,
                                                          tmapy<<FRACTOMAPBITS);
 
@@ -3270,7 +3272,7 @@ static void AM_drawMarks(void)
 	}
 	else if (highlight_timer)
 	{
-	  cr2 = (highlight_timer & 8) ? cr_bright : cr_dark;
+	  cr2 = (highlight_timer & 8) ? cr_bright3 : cr_dark;
 	}
 
 	// [Nugget] ===============================================================/

@@ -1733,9 +1733,11 @@ void D_UpdateCasualPlay(void)
 
   casual_play = !(demorecording||demoplayback||netgame||fauxdemo||strictmode);
 
-  if (old_casual == -1) { old_casual = casual_play; }
-
-  if (old_casual != casual_play)
+  if (old_casual == -1)
+  {
+    old_casual = casual_play;
+  }
+  else if (old_casual != casual_play)
   {
     old_casual = casual_play;
 

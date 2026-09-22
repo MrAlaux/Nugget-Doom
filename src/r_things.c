@@ -1984,8 +1984,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   if (STRICTMODE(hide_weapon)
       // [Nugget]
-      || R_ChasecamOn() // Chasecam
-      || R_FreecamOn() // Freecam
+      || R_CameraOffPlayer()
       || (WI_AltInterpicOn() && gamestate == GS_INTERMISSION)) // Alt. intermission background
     return;
 

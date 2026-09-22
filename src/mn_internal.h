@@ -115,8 +115,6 @@ void MN_DrawHUDCol(void);
 void MN_DrawMapKeys(void);
 void MN_DrawCheatKeys(void);
 
-void MN_UpdateNughudItem(void);
-
 // [Nugget] -----------------------------------------------------------------/
 
 /////////////////////////////

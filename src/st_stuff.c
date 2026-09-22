@@ -74,9 +74,6 @@
 
 // [Nugget] /=================================================================
 
-static sbardef_t *normal_sbardef = NULL,
-                 *nughud_sbardef = NULL;  // NUGHUD
-
 static patch_t *stbersrk;
 static int lu_berserk;
 
@@ -98,11 +95,10 @@ boolean no_radsuit_tint;
 boolean comp_godface;
 boolean comp_unusedpals;
 
-static boolean use_nughud;
 static boolean hud_blink_keys;
 static boolean sts_show_berserk;
-int force_carousel;
-int carousel_fadeout;
+forcecarousel_t force_carousel;
+boolean carousel_fadeout;
 
 char ST_ToUpper(const char c)
 {
@@ -171,18 +167,16 @@ boolean ST_GetNughudOn(void)
   return st_nughud;
 }
 
+static int nughud_slot, nughud_screenblocks;
+
 static void UpdateNughudOn(void)
 {
-  // If we have no proper status bars (e.g. SBARDEF is empty),
-  // use NUGHUD when `screenblocks == 11`
-  st_nughud = automap_off
-              && (   ( normal_sbardef && screenblocks == maxscreenblocks - 1 && use_nughud)
-                  || (!normal_sbardef && screenblocks == 11));
+  st_nughud = automap_off && screenblocks == nughud_screenblocks;
 }
 
-static sbaralignment_t NughudConvertAlignment(const int wide, const int align);
-static void DrawNughudGraphics();
-static sbardef_t *CreateNughudSbarDef(void);
+static sbaralignment_t NughudConvertAlignment(int wide, int align);
+static void DrawNughudGraphics(void);
+static void AddNughudToSbarDef(void);
 
 // NUGHUD stacks -------------------------------------------------------------
 
@@ -202,9 +196,9 @@ typedef struct stackqueue_s {
 static stackqueue_t nughud_stackqueues[NUMNUGHUDSTACKS];
 
 static boolean NughudAddToStack(
-  const nughud_textline_t *const ntl,
-  sbarelem_t *const elem,
-  const int stack
+  const nughud_textline_t *ntl,
+  sbarelem_t *elem,
+  int stack
 );
 
 static int NughudSortWidgets(const void *_p1, const void *_p2);
@@ -1583,13 +1577,6 @@ static void UpdateStatusBar(player_t *player)
 
     int barindex = MAX(screenblocks - 10, 0);
 
-    // [Nugget] NUGHUD
-    if (st_nughud)
-    {
-        barindex = -2;
-    }
-    else
-
     if (barindex >= array_size(sbardef->statusbars))
     {
         barindex = array_size(sbardef->statusbars) - 1;
@@ -1609,7 +1596,7 @@ static void UpdateStatusBar(player_t *player)
         // [Nugget] Moved `oldbarindex` assignment below
     }
 
-    statusbar = &sbardef->statusbars[st_nughud ? 0 : barindex]; // [Nugget] NUGHUD
+    statusbar = &sbardef->statusbars[barindex];
 
     // [Nugget] Animated health/armor counts
     sbar_health = SmoothCount(sbar_health, player->health);
@@ -2073,7 +2060,7 @@ static void DrawStringLine(int x1, int y1, int *x2, int *y2, boolean dry,
     int cr = elem->cr;
 
     // [Nugget]
-    const boolean isnt_digits_font = !!strcmp(font->name, "Digits");
+    const boolean isnt_digits_font = !!strcmp(font->stem, "DIG");
 
     const char *str = line->string;
     while (*str)
@@ -2894,24 +2881,8 @@ static void DoPaletteStuff(player_t *player)
 
 void ST_Ticker(void)
 {
-    // [Nugget] NUGHUD /------------------------------------------------------
-
+    // [Nugget] NUGHUD
     UpdateNughudOn();
-
-    static int old_st_nughud = -1;
-
-    if (old_st_nughud == -1)
-    {
-      old_st_nughud = st_nughud;
-    }
-    else if (old_st_nughud != st_nughud)
-    {
-      old_st_nughud = st_nughud;
-      ST_Init();
-      ST_Start();
-    }
-
-    // [Nugget] -------------------------------------------------------------/
 
     if (!sbardef)
     {
@@ -3007,36 +2978,23 @@ patch_t **hu_font = NULL;
 
 void ST_Init(void)
 {
-    // [Nugget] NUGHUD /------------------------------------------------------
+    sbardef = ST_ParseSbarDef();
 
-    static boolean firsttime = true;
-
-    if (firsttime)
-    {
-        normal_sbardef = ST_ParseSbarDef();
-        nughud_sbardef = CreateNughudSbarDef();
-
-        ST_StatusbarList(); // Calculate `maxscreenblocks`
-        UpdateNughudOn();
-    }
-
-    // [Nugget] -------------------------------------------------------------/
-
-    sbardef = st_nughud ? nughud_sbardef : normal_sbardef;
-
-    // [Nugget]
-    if (firsttime) { firsttime = false; }
-    else           { return; }
+    // [Nugget] NUGHUD
+    AddNughudToSbarDef();
+    UpdateNughudOn();
 
     stcfnt = LoadSTCFN();
     hu_font = stcfnt->characters;
 
-    // [Nugget] Removed return when `!sbardef`;
-    // almost everything below can be loaded regardless
-
-    if (normal_sbardef && array_size(normal_sbardef->statusbars))
+    if (!sbardef)
     {
-        statusbar_t *sb = &normal_sbardef->statusbars[0];
+        return;
+    }
+
+    if (array_size(sbardef->statusbars))
+    {
+        statusbar_t *sb = &sbardef->statusbars[0];
         if (!sb->fullscreenrender)
         {
             st_height_screenblocks10 = CLAMP(sb->height, 0, SCREENHEIGHT) & ~1;
@@ -3075,7 +3033,7 @@ void ST_Init(void)
     }
 
     sbarelem_t *elem;
-    array_foreach(elem, nughud_sbardef->statusbars[0].children)
+    array_foreach(elem, sbardef->statusbars[nughud_slot].children)
     {
         if (elem->type != sbe_widget) { continue; }
 
@@ -3173,27 +3131,21 @@ void ST_InitRes(void)
 
 const char **ST_StatusbarList(void)
 {
-    // [Nugget] Use `normal_sbardef`; calculate `maxscreenblocks` here
-
-    if (!normal_sbardef)
+    if (!sbardef)
     {
-        maxscreenblocks = 11; // [Nugget] NUGHUD
         return NULL;
     }
-
-    maxscreenblocks = 10;
 
     static const char **strings;
 
     if (array_size(strings))
     {
-        maxscreenblocks += array_size(strings) - 1;
         return strings;
     }
 
-    for (int i = 0; i < array_size(normal_sbardef->statusbars); ++i)
+    for (int i = 0; i < array_size(sbardef->statusbars); ++i)
     {
-        statusbar_t *sb = &normal_sbardef->statusbars[i];
+        statusbar_t *sb = &sbardef->statusbars[i];
         if (sb->name)
         {
             array_push(strings, sb->name);
@@ -3206,10 +3158,6 @@ const char **ST_StatusbarList(void)
             array_push(strings, M_StringDuplicate(buf));
         }
     }
-
-    maxscreenblocks += array_size(strings) - 1;
-    screenblocks = MIN(screenblocks, maxscreenblocks);
-
     return strings;
 }
 
@@ -3911,7 +3859,8 @@ static hudfont_t LoadNughudHUDFont(
 ) {
   hudfont_t font = {0};
 
-  font.name = M_StringDuplicate(name);
+  font.name = name;
+  font.stem = stem;
   font.type = type;
 
   int maxwidth = 0, maxheight = 0;
@@ -4055,7 +4004,7 @@ static sbarelem_t CreateNughudWidget(
   return elem;
 }
 
-static sbardef_t *CreateNughudSbarDef(void)
+static statusbar_t CreateNughudStatusBar(void)
 {
   statusbar_t sb = {0};
 
@@ -4074,7 +4023,7 @@ static sbardef_t *CreateNughudSbarDef(void)
 
   static numberfont_t tnum = {0};
 
-  tnum.name = M_StringDuplicate("Tall");
+  tnum.name = "NughudTall";
   tnum.type = sbf_mono0;
 
   maxwidth = maxheight = 0;
@@ -4149,7 +4098,7 @@ end_tnum:
 
   static numberfont_t rnum = {0};
 
-  rnum.name = M_StringDuplicate("ReadyAmmo");
+  rnum.name = "NughudReadyAmmo";
   rnum.type = sbf_mono0;
 
   maxwidth = maxheight = 0;
@@ -4198,7 +4147,7 @@ end_rnum:
 
   static numberfont_t amnum = {0};
 
-  amnum.name = M_StringDuplicate("Ammo");
+  amnum.name = "NughudAmmo";
   amnum.type = sbf_mono0;
 
   maxwidth = maxheight = 0;
@@ -4243,11 +4192,11 @@ end_amnum:
 
   // Console font
   static hudfont_t cfn = {0};
-  cfn = LoadNughudHUDFont("Console", sbf_proportional, "STCFN");
+  cfn = LoadNughudHUDFont("NughudConsole", sbf_proportional, "STCFN");
 
   // Digits Font
   static hudfont_t dig = {0};
-  dig = LoadNughudHUDFont("Digits", sbf_mono0, "DIG");
+  dig = LoadNughudHUDFont("NughudDigits", sbf_mono0, "DIG");
 
   // Widgets =================================================================
 
@@ -4601,22 +4550,52 @@ end_amnum:
 
   // -------------------------------------------------------------------------
 
-  sbardef_t *const out = calloc(1, sizeof(*out));
+  return sb;
+}
 
-  array_push(out->statusbars, sb);
+static void AddNughudToSbarDef(void)
+{
+  if (!sbardef)
+  {
+    // Create an SBARDEF with an empty layout
 
-  return out;
+    sbardef = calloc(1, sizeof(*sbardef));
+
+    statusbar_t statusbar = {
+      .height = 200,
+      .fullscreenrender = true,
+      .name = "Dummy"
+    };
+
+    array_push(sbardef->statusbars, statusbar);
+  }
+
+  const int num_bars = array_size(sbardef->statusbars);
+
+  if (num_bars >= 2)
+  {
+    // NUGHUD takes the second-to-last slot
+    nughud_slot = num_bars - 1;
+
+    // The bar already there is pushed back
+    array_push(sbardef->statusbars, sbardef->statusbars[num_bars - 1]);
+  }
+  else {
+    // NUGHUD takes the last slot
+    nughud_slot = num_bars;
+
+    // Make room for the NUGHUD
+    array_push(sbardef->statusbars, (statusbar_t) {0});
+  }
+
+  nughud_screenblocks = 10 + nughud_slot;
+  sbardef->statusbars[nughud_slot] = CreateNughudStatusBar();
 }
 
 // [Nugget] =================================================================/
 
 void ST_BindSTSVariables(void)
 {
-  // [Nugget] NUGHUD
-  M_BindBool("use_nughud", &use_nughud, NULL,
-             true, ss_stat, wad_yes,
-             "Replace second-to-last HUD with NUGHUD");
-
   M_BindNum("hud_anchoring", &hud_anchoring, NULL, HUD_ANCHORING_16_9,
             HUD_ANCHORING_WIDE, HUD_ANCHORING_21_9, ss_stat, wad_no,
             "HUD anchoring (0 = Wide; 1 = 4:3; 2 = 16:9; 3 = 21:9)");
@@ -4723,7 +4702,7 @@ void ST_BindSTSVariables(void)
   // [Nugget] /---------------------------------------------------------------
 
   M_BindNum("force_carousel", &force_carousel, NULL,
-            1, 0, 2, ss_weap, wad_no,
+            FORCECAROUSEL_OFFPLAYER, FORCECAROUSEL_OFF, NUM_FORCECAROUSEL-1, ss_weap, wad_no,
             "Force display of weapon carousel (0 = Off; 1 = Off player; 2 = Always)");
 
   M_BindBool("carousel_fadeout", &carousel_fadeout, NULL,
