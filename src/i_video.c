@@ -52,6 +52,7 @@
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_plane.h"
+#include "r_srgb.h"
 #include "r_voxel.h"
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -286,8 +287,8 @@ static SDL_Window *screen;
 static SDL_Renderer *renderer;
 static SDL_Palette *palette;
 static SDL_Texture *texture;
-static SDL_Rect rect = {0};
-static SDL_FRect frect = {0.0f};
+static SDL_Rect src_rect = {0}, dst_rect = {0};
+static SDL_FRect src_frect = {0.0f}, dst_frect = {0.0f};
 
 static int window_width, window_height;
 static int default_window_width, default_window_height;
@@ -764,24 +765,24 @@ static void UpdateMouseMenu(void)
     float x, y;
     SDL_GetMouseState(&x, &y);
 
-    SDL_FRect rect;
-    SDL_GetRenderLogicalPresentationRect(renderer, &rect);
+    SDL_FRect mouse_rect;
+    SDL_GetRenderLogicalPresentationRect(renderer, &mouse_rect);
 
     static SDL_FRect old_rect;
-    if (SDL_RectsEqualFloat(&rect, &old_rect))
+    if (SDL_RectsEqualFloat(&mouse_rect, &old_rect))
     {
         ev.data1.i = 0;
     }
     else
     {
-        old_rect = rect;
+        old_rect = mouse_rect;
         ev.data1.i = EV_RESIZE_VIEWPORT;
     }
 
     const float scale = SDL_GetWindowPixelDensity(screen);
 
-    x = clampf((x * scale - rect.x) / rect.w, 0.0f, 1.0f) * video.unscaledw;
-    y = clampf((y * scale - rect.y) / rect.h, 0.0f, 1.0f) * SCREENHEIGHT;
+    x = clampf((x * scale - mouse_rect.x) / mouse_rect.w, 0.0f, 1.0f) * video.unscaledw;
+    y = clampf((y * scale - mouse_rect.y) / mouse_rect.h, 0.0f, 1.0f) * SCREENHEIGHT;
 
     static float oldx, oldy;
     if (x != oldx || y != oldy)
@@ -862,9 +863,11 @@ static void UpdateRender(void)
     // video buffer in order to emulate HOM effects.
     void *pixels;
     int dst_pitch;
-    SDL_LockTexture(texture, &rect, &pixels, &dst_pitch);
-    int h = rect.h;
-    int src_pitch = video.width;
+
+    SDL_LockTexture(texture, &src_rect, &pixels, &dst_pitch);
+
+    int h = src_rect.h;
+    int src_pitch = video.height;
 
     if (truecolor_rendering)
     {
@@ -894,7 +897,7 @@ static void UpdateRender(void)
     SDL_UnlockTexture(texture);
 
     SDL_RenderClear(renderer);
-    SDL_RenderTexture(renderer, texture, &frect, NULL);
+    SDL_RenderTextureRotated(renderer, texture, &src_frect, &dst_frect, 90.0, NULL, SDL_FLIP_VERTICAL);
 }
 
 static uint64_t frametime_start, frametime_withoutpresent;
@@ -1156,10 +1159,10 @@ static void I_InitDiskFlash8(void)
         Z_Free(old_data);
     }
 
-    diskflash = Z_Malloc(disk.sw * disk.sh * sizeof(*diskflash), PU_STATIC, 0);
-    old_data = Z_Malloc(disk.sw * disk.sh * sizeof(*old_data), PU_STATIC, 0);
+    diskflash = Z_Calloc(disk.sw * disk.sh, sizeof(*diskflash), PU_STATIC, 0);
+    old_data = Z_Calloc(disk.sw * disk.sh, sizeof(*old_data), PU_STATIC, 0);
 
-    V_UseBuffer(diskflash, disk.sw);
+    V_UseBuffer(diskflash, disk.sh);
     V_DrawPatch(-video.deltaw, 0, V_CachePatchName("STDISK", PU_CACHE));
     V_RestoreBuffer();
 }
@@ -1181,10 +1184,10 @@ static void I_InitDiskFlash32(void)
         Z_Free(old_data32);
     }
 
-    diskflash32 = Z_Malloc(disk.sw * disk.sh * sizeof(*diskflash32), PU_STATIC, 0);
-    old_data32 = Z_Malloc(disk.sw * disk.sh * sizeof(*old_data32), PU_STATIC, 0);
+    diskflash32 = Z_Calloc(disk.sw * disk.sh, sizeof(*diskflash32), PU_STATIC, 0);
+    old_data32 = Z_Calloc(disk.sw * disk.sh, sizeof(*old_data32), PU_STATIC, 0);
 
-    V_UseBuffer32(diskflash32, disk.sw);
+    V_UseBuffer32(diskflash32, disk.sh);
     V_DrawPatch(-video.deltaw, 0, V_CachePatchName("STDISK", PU_CACHE));
     V_RestoreBuffer();
 }
@@ -1466,7 +1469,7 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
 
 // Taken from Chocolate Doom chocolate-doom/src/i_video.c:L841-867
 
-byte I_GetNearestColor(byte *palette, int r, int g, int b)
+byte I_GetNearestColor(const byte *palette, int r, int g, int b)
 {
     byte best;
     int best_diff, diff;
@@ -1482,6 +1485,60 @@ byte I_GetNearestColor(byte *palette, int r, int g, int b)
         db = b - *palette++;
 
         diff = dr * dr + dg * dg + db * db;
+
+        if (diff < best_diff)
+        {
+            if (!diff)
+            {
+                return i;
+            }
+
+            best = i;
+            best_diff = diff;
+        }
+    }
+
+    return best;
+}
+
+static boolean linear_palette_init = false;
+static double linear_palette[768];
+
+byte I_GetNearestColorLinear(const byte *palette, int red, int green, int blue)
+{
+    if (!linear_palette_init)
+    {
+        linear_palette_init = true;
+
+        // We assume that all calls to this function pass the same palette
+
+        const byte *palette_rover = palette;
+        double *linear_palette_rover = linear_palette;
+
+        for (int i = 0; i < 768; i++)
+        {
+            *linear_palette_rover++ = byte_to_linear(*palette_rover++);
+        }
+    }
+
+    const double
+        linear_red   = byte_to_linear(red),
+        linear_green = byte_to_linear(green),
+        linear_blue  = byte_to_linear(blue);
+
+    byte best = 0;
+    double best_diff = INT_MAX;
+
+    const double *linear_palette_rover = linear_palette;
+
+    for (int i = 0; i < 256; ++i)
+    {
+        const double
+            dr = linear_red   - *linear_palette_rover++,
+            dg = linear_green - *linear_palette_rover++,
+            db = linear_blue  - *linear_palette_rover++;
+
+        const double diff = dr * dr + dg * dg + db * db;
 
         if (diff < best_diff)
         {
@@ -1674,9 +1731,15 @@ static void ResetResolution(int height)
 
 static void ResetLogicalSize(void)
 {
-    rect.w = video.width;
-    rect.h = video.height;
-    SDL_RectToFRect(&rect, &frect);
+    src_rect.w = video.height;
+    src_rect.h = video.width;
+    SDL_RectToFRect(&src_rect, &src_frect);
+
+    dst_rect.x = (video.width - actualheight) / 2;
+    dst_rect.y = (actualheight - video.width) / 2;
+    dst_rect.w = actualheight;
+    dst_rect.h = video.width;
+    SDL_RectToFRect(&dst_rect, &dst_frect);
 
     if (!SDL_SetRenderLogicalPresentation(renderer, video.width, actualheight,
         stretch_to_fit ? SDL_LOGICAL_PRESENTATION_STRETCH // [Nugget]
@@ -2003,7 +2066,7 @@ static void CreateVideoBuffer(void)
 
     texture = SDL_CreateTexture(renderer, pixelformat,
                                 SDL_TEXTUREACCESS_STREAMING,
-                                video.width, video.height);
+                                video.height, video.width);
     if (!texture)
     {
         I_Error("Failed to create texture: %s", SDL_GetError());

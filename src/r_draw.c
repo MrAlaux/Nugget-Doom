@@ -54,9 +54,9 @@ int viewwidth;
 int viewheight;
 int viewwindowx;
 int viewwindowy;
-static pixel_t **ylookup = NULL;
-static pixel32_t **ylookup32 = NULL;
-static int *columnofs = NULL;
+static pixel_t **xlookup = NULL;
+static pixel32_t **xlookup32 = NULL;
+static int *rowofs = NULL;
 static int linesize; // killough 11/98
 
 // Backing buffer containing the bezel drawn around the screen and surrounding
@@ -196,7 +196,7 @@ static void DrawColumn8(void)
     }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -227,12 +227,13 @@ static void DrawColumn8(void)
         do
         {
             src = source[frac >> 16];
-            *dest = colormap[brightmap[src]][src];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][src];
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -245,8 +246,7 @@ static void DrawColumn8(void)
         while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][src];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][src];
             frac += fracstep;
         }
     }
@@ -281,7 +281,7 @@ static void DrawTLColumn8(void)
     }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -313,11 +313,13 @@ static void DrawTLColumn8(void)
         {
             src = source[frac >> 16];
             *dest = tranmap[(*dest << 8) + colormap[brightmap[src]][src]];
-            dest += linesize;
+            dest++;
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -331,7 +333,7 @@ static void DrawTLColumn8(void)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = tranmap[(*dest << 8) + colormap[brightmap[src]][src]];
-            dest += linesize;
+            dest++;
             frac += fracstep;
         }
     }
@@ -354,7 +356,7 @@ static void DrawColumn32(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -385,12 +387,13 @@ static void DrawColumn32(void)
         do
         {
             src = source[frac >> 16];
-            *dest = colormap[brightmap[src]][src];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][src];
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -403,8 +406,7 @@ static void DrawColumn32(void)
         while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][src];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][src];
             frac += fracstep;
         }
     }
@@ -425,7 +427,7 @@ static void DrawTLColumn32(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -465,11 +467,13 @@ static void DrawTLColumn32(void)
         {
             src = source[frac >> 16];
             *dest = SRCPIXEL;
-            dest += linesize;
+            dest++;
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -483,7 +487,7 @@ static void DrawTLColumn32(void)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = SRCPIXEL;
-            dest += linesize;
+            dest++;
             frac += fracstep;
         }
     }
@@ -533,11 +537,11 @@ static void DrawColumnShadow8(void)
     { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
 
     do {
         *dest = sprite_shadows_colormap[*dest];
-        dest += linesize; // killough 11/98
+        dest++;
     } while (--count);
 }
 
@@ -552,11 +556,11 @@ static void DrawColumnShadow32(void)
     { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
 
     do {
         *dest = V_IndexToRGB(sprite_shadows_colormap[V_IndexFromRGB(*dest)]);
-        dest += linesize;
+        dest++;
     } while (--count);
 }
 
@@ -584,7 +588,7 @@ static void DrawSkyColumn8(void)
     }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
 
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
@@ -608,8 +612,7 @@ static void DrawSkyColumn8(void)
 
         for (i = 0; i < n; ++i)
         {
-            *dest = colormap[skycolor];
-            dest += linesize;
+            *dest++ = colormap[skycolor];
             frac += fracstep;
         }
 
@@ -629,11 +632,11 @@ static void DrawSkyColumn8(void)
 
         for (i = 0; i < n; ++i)
         {
-            *dest = main_tranmap
+            *dest++ = main_tranmap
                 [(main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]]
                   << 8)
                  + colormap[skycolor]];
-            dest += linesize;
+
             frac += fracstep;
         }
 
@@ -654,9 +657,9 @@ static void DrawSkyColumn8(void)
 
         for (i = 0; i < n; ++i)
         {
-            *dest =
+            *dest++ =
                 main_tranmap[(colormap[source[0]] << 8) + colormap[skycolor]];
-            dest += linesize;
+
             frac += fracstep;
         }
 
@@ -680,8 +683,8 @@ static void DrawSkyColumn8(void)
 
         do
         {
-            *dest = colormap[source[frac >> FRACBITS]];
-            dest += linesize; // killough 11/98
+            *dest++ = colormap[source[frac >> FRACBITS]];
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
@@ -693,8 +696,7 @@ static void DrawSkyColumn8(void)
         UNROLL_LOOP_BY(2)
         while (count--)
         {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += linesize; // killough 11/98
+            *dest++ = colormap[source[(frac >> FRACBITS) & heightmask]];
             frac += fracstep;
         }
     }
@@ -717,7 +719,7 @@ static void DrawSkyColumn32(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
 
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
@@ -738,8 +740,7 @@ static void DrawSkyColumn32(void)
 
         for (i = 0; i < n; ++i)
         {
-            *dest = colormap[skycolor];
-            dest += linesize;
+            *dest++ = colormap[skycolor];
             frac += fracstep;
         }
 
@@ -759,14 +760,15 @@ static void DrawSkyColumn32(void)
 
         for (i = 0; i < n; ++i)
         {
-            *dest = main_tranmap
+            *dest++ = V_IndexToRGB(
+                main_tranmap
                 [(main_tranmap[
                     V_TranMapRowFromRGB(colormap[source[0]])
                   + V_IndexFromRGB(colormap[skycolor])
                   ] << 8)
-                 + V_IndexFromRGB(colormap[skycolor])];
-            *dest = V_IndexToRGB(*dest);
-            dest += linesize;
+                 + V_IndexFromRGB(colormap[skycolor])]
+            );
+
             frac += fracstep;
         }
 
@@ -786,11 +788,11 @@ static void DrawSkyColumn32(void)
 
         for (i = 0; i < n; ++i)
         {
-            *dest =
+            *dest++ = V_IndexToRGB(
                 main_tranmap[V_TranMapRowFromRGB(colormap[source[0]])
-                             + V_IndexFromRGB(colormap[skycolor])];
-            *dest = V_IndexToRGB(*dest);
-            dest += linesize;
+                             + V_IndexFromRGB(colormap[skycolor])]
+            );
+
             frac += fracstep;
         }
 
@@ -814,8 +816,8 @@ static void DrawSkyColumn32(void)
 
         do
         {
-            *dest = colormap[source[frac >> FRACBITS]];
-            dest += linesize;
+            *dest++ = colormap[source[frac >> FRACBITS]];
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
@@ -827,8 +829,7 @@ static void DrawSkyColumn32(void)
         UNROLL_LOOP_BY(2)
         while (count--)
         {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += linesize;
+            *dest++ = colormap[source[(frac >> FRACBITS) & heightmask]];
             frac += fracstep;
         }
     }
@@ -918,7 +919,7 @@ static void DrawFuzzColumnOriginal(void)
     //  or blocky mode removed.
 
     // Does not work with blocky mode.
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
 
     // Looks like an attempt at dithering,
     // using the colormap #6 (of 0-31, a bit brighter than average).
@@ -938,8 +939,8 @@ static void DrawFuzzColumnOriginal(void)
         // why_i_left_doom.html
 
         *dest =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
-        dest += linesize; // killough 11/98
+            fullcolormap[6 * 256 + dest[fuzzoffset[fuzzpos]]];
+        dest++;
 
         ++fuzzpos;
 
@@ -952,7 +953,7 @@ static void DrawFuzzColumnOriginal(void)
     if (cutoff)
     {
         *dest = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
+            [6 * 256 + dest[(fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
     }
 }
 
@@ -996,7 +997,7 @@ static void DrawFuzzColumnBlocky(void)
 
     ++count;
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -1015,14 +1016,20 @@ static void DrawFuzzColumnBlocky(void)
         lines += count & mask;
         count &= ~mask;
 
-        const pixel_t fuzz =
-            fullcolormap[6 * 256 + dest[linesize * fuzzoffset[fuzzpos]]];
+        const byte fuzz =
+            fullcolormap[6 * 256 + dest[fuzzoffset[fuzzpos]]];
 
-        do
+        const int columns = MAX(1, lines);
+        int width = fuzzblockwidth;
+        pixel_t *dest2 = dest;
+
+        while (width--)
         {
-            memset(dest, fuzz, fuzzblockwidth);
-            dest += linesize;
-        } while (--lines);
+            memset(dest2, fuzz, columns);
+            dest2 += linesize;
+        }
+
+        dest += columns;
 
         ++fuzzpos;
 
@@ -1034,9 +1041,17 @@ static void DrawFuzzColumnBlocky(void)
 
     if (cutoff)
     {
-        const pixel_t fuzz = fullcolormap
-            [6 * 256 + dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+        const byte fuzz = fullcolormap
+            [6 * 256 + dest[(fuzzoffset[fuzzpos] - FUZZOFF) / 2]];
+
+        int width = fuzzblockwidth;
+        pixel_t *dest2 = dest;
+
+        while (width--)
+        {
+            *dest2 = fuzz;
+            dest2 += linesize;
+        }
     }
 }
 
@@ -1090,7 +1105,7 @@ static void DrawFuzzColumnRefraction(void)
 
     ++count;
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -1112,13 +1127,19 @@ static void DrawFuzzColumnRefraction(void)
         lines += count & mask;
         count &= ~mask;
 
-        const pixel_t fuzz = fullcolormap[dark + dest[linesize * offset]];
+        const byte fuzz = fullcolormap[dark + dest[offset]];
 
-        do
+        const int columns = MAX(1, lines);
+        int width = fuzzblockwidth;
+        pixel_t *dest2 = dest;
+
+        while (width--)
         {
-            memset(dest, fuzz, fuzzblockwidth);
-            dest += linesize;
-        } while (--lines);
+            memset(dest2, fuzz, columns);
+            dest2 += linesize;
+        }
+
+        dest += columns;
 
         ++fuzzpos;
 
@@ -1133,9 +1154,17 @@ static void DrawFuzzColumnRefraction(void)
 
     if (cutoff)
     {
-        const pixel_t fuzz =
-            fullcolormap[dark + dest[linesize * (offset - FUZZOFF) / 2]];
-        memset(dest, fuzz, fuzzblocksize);
+        const byte fuzz =
+            fullcolormap[dark + dest[(offset - FUZZOFF) / 2]];
+
+        int width = fuzzblockwidth;
+        pixel_t *dest2 = dest;
+
+        while (width--)
+        {
+            *dest2 = fuzz;
+            dest2 += linesize;
+        }
     }
 }
 
@@ -1156,15 +1185,14 @@ static void DrawFuzzColumnShadow(void)
     }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
 
     count++; // killough 1/99: minor tuning
 
     do
     {
         *dest = fullcolormap[8 * 256 + *dest];
-
-        dest += linesize; // killough 11/98
+        dest++;
     } while (--count);
 }
 
@@ -1199,15 +1227,15 @@ static void DrawFuzzColumn32Original(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
 
     count++;
 
     do
     {
         *dest =
-            fullcolormap32[(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
-        dest += linesize;
+            fullcolormap32[(6<<CRSB) * 256 + V_IndexFromRGB(dest[fuzzoffset[fuzzpos]])];
+        dest++;
 
         ++fuzzpos;
 
@@ -1217,7 +1245,7 @@ static void DrawFuzzColumn32Original(void)
     if (cutoff)
     {
         *dest = fullcolormap32
-            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[(fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
     }
 }
 
@@ -1257,7 +1285,7 @@ static void DrawFuzzColumn32Blocky(void)
 
     ++count;
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -1272,13 +1300,19 @@ static void DrawFuzzColumn32Blocky(void)
         count &= ~mask;
 
         const pixel32_t fuzz =
-            fullcolormap32[(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * fuzzoffset[fuzzpos]])];
+            fullcolormap32[(6<<CRSB) * 256 + V_IndexFromRGB(dest[fuzzoffset[fuzzpos]])];
 
-        do
+        const int columns = MAX(1, lines);
+        int width = fuzzblockwidth;
+        pixel32_t *dest2 = dest;
+
+        while (width--)
         {
-            V_RGBSet(dest, fuzz, fuzzblockwidth);
-            dest += linesize;
-        } while (--lines);
+            V_RGBSet(dest2, fuzz, columns);
+            dest2 += linesize;
+        }
+
+        dest += columns;
 
         ++fuzzpos;
 
@@ -1290,8 +1324,16 @@ static void DrawFuzzColumn32Blocky(void)
     if (cutoff)
     {
         const pixel32_t fuzz = fullcolormap32
-            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[linesize * (fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
-        V_RGBSet(dest, fuzz, fuzzblocksize);
+            [(6<<CRSB) * 256 + V_IndexFromRGB(dest[(fuzzoffset[fuzzpos] - FUZZOFF) / 2])];
+
+        int width = fuzzblockwidth;
+        pixel32_t *dest2 = dest;
+
+        while (width--)
+        {
+            *dest2 = fuzz;
+            dest2 += linesize;
+        }
     }
 }
 
@@ -1331,7 +1373,7 @@ static void DrawFuzzColumn32Refraction(void)
 
     ++count;
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
 
     int lines = fuzzblocksize - (dc_yl % fuzzblocksize);
 
@@ -1348,13 +1390,19 @@ static void DrawFuzzColumn32Refraction(void)
         lines += count & mask;
         count &= ~mask;
 
-        const pixel32_t fuzz = fullcolormap32[dark + V_IndexFromRGB(dest[linesize * offset])];
+        const pixel32_t fuzz = fullcolormap32[dark + V_IndexFromRGB(dest[offset])];
 
-        do
+        const int columns = MAX(1, lines);
+        int width = fuzzblockwidth;
+        pixel32_t *dest2 = dest;
+
+        while (width--)
         {
-            V_RGBSet(dest, fuzz, fuzzblockwidth);
-            dest += linesize;
-        } while (--lines);
+            V_RGBSet(dest2, fuzz, columns);
+            dest2 += linesize;
+        }
+
+        dest += columns;
 
         ++fuzzpos;
 
@@ -1369,8 +1417,16 @@ static void DrawFuzzColumn32Refraction(void)
     if (cutoff)
     {
         const pixel32_t fuzz =
-            fullcolormap32[dark + V_IndexFromRGB(dest[linesize * (offset - FUZZOFF) / 2])];
-        V_RGBSet(dest, fuzz, fuzzblocksize);
+            fullcolormap32[dark + V_IndexFromRGB(dest[(offset - FUZZOFF) / 2])];
+
+        int width = fuzzblockwidth;
+        pixel32_t *dest2 = dest;
+
+        while (width--)
+        {
+            *dest2 = fuzz;
+            dest2 += linesize;
+        }
     }
 }
 
@@ -1390,15 +1446,14 @@ static void DrawFuzzColumn32Shadow(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
 
     count++;
 
     do
     {
         *dest = fullcolormap32[(8<<CRSB) * 256 + V_IndexFromRGB(*dest)];
-
-        dest += linesize;
+        dest++;
     } while (--count);
 }
 
@@ -1497,7 +1552,7 @@ static void DrawTranslatedColumn8(void)
     }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -1529,12 +1584,13 @@ static void DrawTranslatedColumn8(void)
         do
         {
             src = source[frac >> 16];
-            *dest = colormap[brightmap[src]][translation[src]];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][translation[src]];
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -1547,8 +1603,7 @@ static void DrawTranslatedColumn8(void)
         while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][translation[src]];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][translation[src]];
             frac += fracstep;
         }
     }
@@ -1569,7 +1624,7 @@ static void DrawTranslatedColumn32(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -1601,12 +1656,13 @@ static void DrawTranslatedColumn32(void)
         do
         {
             src = source[frac >> 16];
-            *dest = colormap[brightmap[src]][translation[src]];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][translation[src]];
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -1619,8 +1675,7 @@ static void DrawTranslatedColumn32(void)
         while (count--)
         {
             src = source[(frac >> FRACBITS) & heightmask];
-            *dest = colormap[brightmap[src]][translation[src]];
-            dest += linesize;
+            *dest++ = colormap[brightmap[src]][translation[src]];
             frac += fracstep;
         }
     }
@@ -1677,7 +1732,7 @@ static void DrawTRTLColumn8(void)
     }
 #endif
 
-    pixel_t *dest = ylookup[dc_yl] + columnofs[dc_x];
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -1713,11 +1768,13 @@ static void DrawTRTLColumn8(void)
         {
             src = source[frac >> 16];
             *dest = SRCPIXEL;
-            dest += linesize;
+            dest++;
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -1731,7 +1788,7 @@ static void DrawTRTLColumn8(void)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = SRCPIXEL;
-            dest += linesize;
+            dest++;
             frac += fracstep;
         }
     }
@@ -1754,7 +1811,7 @@ static void DrawTRTLColumn32(void)
     }
 #endif
 
-    pixel32_t *dest = ylookup32[dc_yl] + columnofs[dc_x];
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
     const fixed_t fracstep = dc_iscale;
     fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
 
@@ -1795,11 +1852,13 @@ static void DrawTRTLColumn32(void)
         {
             src = source[frac >> 16];
             *dest = SRCPIXEL;
-            dest += linesize;
+            dest++;
+
             if ((frac += fracstep) >= heightmask)
             {
                 frac -= heightmask;
             }
+
             if (frac < 0)
             {
                 frac += heightmask;
@@ -1813,7 +1872,7 @@ static void DrawTRTLColumn32(void)
         {
             src = source[(frac >> FRACBITS) & heightmask];
             *dest = SRCPIXEL;
-            dest += linesize;
+            dest++;
             frac += fracstep;
         }
     }
@@ -1846,7 +1905,7 @@ static void DrawTRTLColumn32(void)
     \
         RANGECHECK_CODE \
     \
-        pixel##DEPTH##_t *dest = ylookup##DEPTH[dc_yl] + columnofs[dc_x]; \
+        pixel##DEPTH##_t *dest = xlookup##DEPTH[dc_x] + rowofs[dc_yl]; \
         const fixed_t fracstep = dc_iscale; \
         fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep; \
     \
@@ -1886,11 +1945,13 @@ static void DrawTRTLColumn32(void)
             { \
                 src = source[frac >> 16]; \
                 *dest = SRCPIXEL; \
-                dest += linesize; \
+                dest++; \
+    \
                 if ((frac += fracstep) >= heightmask) \
                 { \
                     frac -= heightmask; \
                 } \
+    \
                 if (frac < 0) \
                 { \
                     frac += heightmask; \
@@ -1904,7 +1965,7 @@ static void DrawTRTLColumn32(void)
             { \
                 src = source[(frac >> FRACBITS) & heightmask]; \
                 *dest = SRCPIXEL; \
-                dest += linesize; \
+                dest++; \
                 frac += fracstep; \
                 dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
             } \
@@ -2003,7 +2064,7 @@ void (*R_DrawSpan)(void) = NULL;
 static void DrawSpan8(void)
 {
     int count = ds_x2 - ds_x1 + 1;
-    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
+    pixel_t *dest = xlookup[ds_x1] + rowofs[ds_y];
     const byte *source = ds_source;
     const lighttable_t *const *colormap = ds_colormap;
     const byte *brightmap = ds_brightmap;
@@ -2027,7 +2088,8 @@ static void DrawSpan8(void)
         // because we don't have the uber complicated math to calculate it now,
         // so that was a memory write we didn't need!
         src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
-        *dest++ = colormap[brightmap[src]][src];
+        *dest = colormap[brightmap[src]][src];
+        dest += linesize;
         xf += xs;
         yf += ys;
     }
@@ -2046,7 +2108,7 @@ static void DrawSpan8(void)
 static void DrawSpan32(void)
 {
     int count = ds_x2 - ds_x1 + 1;
-    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
+    pixel32_t *dest = xlookup32[ds_x1] + rowofs[ds_y];
     const byte *const source = ds_source;
     const lighttable32_t *const *colormap = ds_colormap32;
     const byte *const brightmap = ds_brightmap;
@@ -2060,7 +2122,8 @@ static void DrawSpan32(void)
     while (count--)
     {
         src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
-        *dest++ = colormap[brightmap[src]][src];
+        *dest = colormap[brightmap[src]][src];
+        dest += linesize;
         xf += xs;
         yf += ys;
     }
@@ -2072,7 +2135,7 @@ static void DrawSpan32(void)
     static void NAME(void) \
     { \
         int count = ds_x2 - ds_x1 + 1; \
-        pixel##DEPTH##_t *dest = ylookup##DEPTH[ds_y] + columnofs[ds_x1]; \
+        pixel##DEPTH##_t *dest = xlookup##DEPTH[ds_x1] + rowofs[ds_y]; \
         const byte *source = ds_source; \
         const byte *brightmap = ds_brightmap; \
     \
@@ -2093,7 +2156,8 @@ static void DrawSpan32(void)
         while (count--) \
         { \
             src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)]; \
-            *dest++ = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            *dest = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            dest += linesize; \
             xf += xs; \
             yf += ys; \
             dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
@@ -2110,7 +2174,7 @@ void (*R_DrawSpanWithRadialFog)(void) = NULL;
 static void DrawSpanWithRadialFog8(void)
 {
     int count = ds_x2 - ds_x1 + 1;
-    pixel_t *dest = ylookup[ds_y] + columnofs[ds_x1];
+    pixel_t *dest = xlookup[ds_x1] + rowofs[ds_y];
     const byte *const source = ds_source;
     const lighttable_t **const colormap = ds_colormap;
     const byte *const brightmap = ds_brightmap;
@@ -2127,7 +2191,8 @@ static void DrawSpanWithRadialFog8(void)
         colormap[0] = colormap[1] + planezlightoffset[*sdl++];
 
         src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
-        *dest++ = colormap[brightmap[src]][src];
+        *dest = colormap[brightmap[src]][src];
+        dest += linesize;
         xf += xs;
         yf += ys;
     }
@@ -2136,7 +2201,7 @@ static void DrawSpanWithRadialFog8(void)
 static void DrawSpanWithRadialFog32(void)
 {
     int count = ds_x2 - ds_x1 + 1;
-    pixel32_t *dest = ylookup32[ds_y] + columnofs[ds_x1];
+    pixel32_t *dest = xlookup32[ds_x1] + rowofs[ds_y];
     const byte *const source = ds_source;
     const lighttable32_t **const colormap = ds_colormap32;
     const byte *const brightmap = ds_brightmap;
@@ -2153,7 +2218,8 @@ static void DrawSpanWithRadialFog32(void)
         colormap[0] = colormap[1] + planezlightoffset[*sdl++];
 
         src = source[((yf >> YSHIFT) & YMASK) | (xf >> XSHIFT)];
-        *dest++ = colormap[brightmap[src]][src];
+        *dest = colormap[brightmap[src]][src];
+        dest += linesize;
         xf += xs;
         yf += ys;
     }
@@ -2163,7 +2229,7 @@ static void DrawSpanWithRadialFog32(void)
     static void NAME(void) \
     { \
         int count = ds_x2 - ds_x1 + 1; \
-        pixel##DEPTH##_t *dest = ylookup##DEPTH[ds_y] + columnofs[ds_x1]; \
+        pixel##DEPTH##_t *dest = xlookup##DEPTH[ds_x1] + rowofs[ds_y]; \
         const byte *const source = ds_source; \
         const byte *const brightmap = ds_brightmap; \
     \
@@ -2193,7 +2259,8 @@ static void DrawSpanWithRadialFog32(void)
             const byte *const dither_pattern_row = \
               dither_patterns[planezlight_ditherlevel[*sdld++]][dy]; \
     \
-            *dest++ = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            *dest = colormap[dither_pattern_row[dx]][brightmap[src]][src]; \
+            dest += linesize; \
             xf += xs; \
             yf += ys; \
             dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK; \
@@ -2211,15 +2278,15 @@ DRAW_SPAN_DITHERED_RADFOG(DrawSpanDitheredWithRadialFog32, 32)
 
 void R_InitBufferRes(void)
 {
-    columnofs = Z_Malloc(video.width * sizeof(*columnofs), PU_RENDERER, NULL);
+    rowofs = Z_Malloc(video.height * sizeof(*rowofs), PU_RENDERER, NULL);
 
     if (truecolor_rendering)
     {
-        ylookup32 = Z_Malloc(video.height * sizeof(*ylookup32), PU_RENDERER, NULL);
+        xlookup32 = Z_Malloc(video.width * sizeof(*xlookup32), PU_RENDERER, NULL);
     }
     else
     {
-        ylookup = Z_Malloc(video.height * sizeof(*ylookup), PU_RENDERER, NULL);
+        xlookup = Z_Malloc(video.width * sizeof(*xlookup), PU_RENDERER, NULL);
     }
 
     solidcol = Z_Calloc(video.width, sizeof(*solidcol), PU_RENDERER, NULL);
@@ -2237,29 +2304,22 @@ void R_InitBuffer(void)
 {
     int i;
 
-    linesize = video.width; // killough 11/98
+    linesize = video.height;
 
     // Handle resize,
     //  e.g. smaller view windows
     //  with border and/or status bar.
 
-    // Column offset. For windows.
-
-    for (i = viewwidth; i--;) // killough 11/98
+    for (i = 0; i < viewheight; i++)
     {
-        columnofs[i] = viewwindowx + i;
+        rowofs[i] = viewwindowy + i;
     }
-
-    // Same with base row offset.
-
-    // Preclaculate all row offsets.
 
     if (truecolor_rendering)
     {
-        for (i = viewheight; i--;)
+        for (i = 0; i < viewwidth; i++)
         {
-            ylookup32[i] =
-                I_VideoBuffer32 + (i + viewwindowy) * linesize;
+            xlookup32[i] = I_VideoBuffer32 + (i + viewwindowx) * linesize;
         }
 
         if (background_buffer32 != NULL)
@@ -2270,10 +2330,9 @@ void R_InitBuffer(void)
     }
     else
     {
-        for (i = viewheight; i--;)
+        for (i = 0; i < viewwidth; i++)
         {
-            ylookup[i] =
-                I_VideoBuffer + (i + viewwindowy) * linesize; // killough 11/98
+            xlookup[i] = I_VideoBuffer + (i + viewwindowx) * linesize;
         }
 
         if (background_buffer != NULL)
@@ -2343,7 +2402,7 @@ void R_FillBackScreen(void)
                 Z_Malloc(size * sizeof(*background_buffer32), PU_STATIC, NULL);
         }
 
-        V_UseBuffer32(background_buffer32, video.width);
+        V_UseBuffer32(background_buffer32, video.height);
     }
     else
     {
@@ -2355,7 +2414,7 @@ void R_FillBackScreen(void)
                 Z_Malloc(size * sizeof(*background_buffer), PU_STATIC, NULL);
         }
 
-        V_UseBuffer(background_buffer, video.width);
+        V_UseBuffer(background_buffer, video.height);
     }
 
     V_DrawBackground(gamemode == commercial ? "GRNROCK" : "FLOOR7_2");
@@ -2378,7 +2437,7 @@ static void R_VideoErase(int x, int y, int w, int h)
             return;
         }
 
-        V_CopyRect32(x, y, background_buffer32, w, h, x, y);
+        V_CopyRect32(x, y, background_buffer32, w, h, video.height, x, y);
 
         return;
     }
@@ -2388,7 +2447,7 @@ static void R_VideoErase(int x, int y, int w, int h)
         return;
     }
 
-    V_CopyRect(x, y, background_buffer, w, h, x, y);
+    V_CopyRect(x, y, background_buffer, w, h, video.height, x, y);
 }
 
 //
