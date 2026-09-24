@@ -1,6 +1,6 @@
 ## New Features
 
-None.
+- **Frametime mode for the `FPS` cheat**
 
 ## Changes
 

@@ -267,7 +267,7 @@ All of these are CFG-only, so their CVAR names are included.
 - **`NEXTSECRET`** to exit the level as if using a secret exit [i.b. ZDoom]
 - **`TURBO`** to change the player speed in-game
 - **`TNTEM`** as an alternative to `KILLEM`
-- **`FPS`** as a replacement for `SHOWFPS`
+- **`FPS`** as a replacement for `SHOWFPS`, with additional frametime modes
 - **Mid-air control while in noclipping mode** [p.f. Crispy Doom]
 - **Key-binding for Computer Area Map cheat**
 - Reenabled **`NOMOMENTUM`** cheat [p.f. Crispy Doom]

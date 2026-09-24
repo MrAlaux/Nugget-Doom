@@ -1313,6 +1313,33 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
     ST_AddLine(widget, string);
 }
 
+// [Nugget] /-----------------------------------------------------------------
+
+typedef enum fpsmode_e
+{
+    FPSMODE_OFF,
+    FPSMODE_FPS,
+    FPSMODE_FRAMETIME,
+    FPSMODE_BOTH,
+
+    NUM_FPSMODES
+} fpsmode_t;
+
+static fpsmode_t fps_mode = FPSMODE_OFF;
+
+boolean ST_CycleFPSMode(void)
+{
+    fps_mode = (fps_mode + 1) % NUM_FPSMODES;
+    return fps_mode != FPSMODE_OFF;
+}
+
+void ST_ResetFPSMode(void)
+{
+    fps_mode = FPSMODE_OFF;
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 static void UpdateFPS(sbe_widget_t *widget, player_t *player)
 {
     ST_ClearLines(widget);
@@ -1323,6 +1350,20 @@ static void UpdateFPS(sbe_widget_t *widget, player_t *player)
     }
 
     ForceDoomFont(widget);
+
+    // [Nugget] /-------------------------------------------------------------
+
+    if (fps_mode & FPSMODE_FRAMETIME)
+    {
+        static char ft_string[32];
+
+        M_snprintf(ft_string, sizeof(ft_string), GRAY_S "%.3lf " GREEN_S "MS", average_frametime);
+        ST_AddLine(widget, ft_string);
+    }
+
+    if (!(fps_mode & FPSMODE_FPS)) { return; }
+
+    // [Nugget] -------------------------------------------------------------/
 
     static char string[20];
     M_snprintf(string, sizeof(string), GRAY_S "%d " GREEN_S "FPS", fps);

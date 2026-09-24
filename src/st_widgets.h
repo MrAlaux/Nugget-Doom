@@ -31,6 +31,9 @@ boolean ST_MessageFadeoutOn(void);
 int ST_GetNumMessageLines(void);
 void ST_ClearMessages(void);
 
+boolean ST_CycleFPSMode(void);
+void ST_ResetFPSMode(void);
+
 // [Nugget] =================================================================/
 
 struct sbarelem_s;

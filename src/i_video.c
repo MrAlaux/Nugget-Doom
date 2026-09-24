@@ -121,6 +121,8 @@ static int fps_counter_update_time;
 static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
 
+double average_frametime;
+
 boolean I_SmoothPaletteTinting(void)
 {
   return smooth_palette_tinting;
@@ -1064,6 +1066,9 @@ void I_FinishUpdate(void)
         // [Nugget] Made customizable
         if (time >= fps_counter_update_time * 1000)
         {
+            // [Nugget] Frametime
+            average_frametime = (time / 1000.0) / frame_counter;
+
             fps = ((uint64_t)frame_counter * 1000000) / time;
             frame_counter = 0;
             last_time = frametime_start;
