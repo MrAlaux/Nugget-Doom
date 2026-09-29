@@ -96,8 +96,8 @@ Centers the automap around the lowest numbered uncollected item that counts towa
 `SKILL`  
 Show (or change) game skill level.
 
-`SHOWFPS`  
-Toggle printing the FPS in the upper right corner.
+`FPS`  
+Toggle the display of FPS and/or frametime.
 
 `RATE`  
 Toggle the display of rendering stats, including frame rate and the current number of segs, visplanes, and sprites.

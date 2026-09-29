@@ -421,9 +421,9 @@ cheat_sequence_t cheats_table[] = {
    {.v = cheat_noclip} },
 
 // [FG] FPS counter widget
-// [Nugget] Change to just "fps"
+// [Nugget] Change to just "fps", made repeatable
   {"fps",    NULL,                always,
-   {.v = cheat_showfps} },
+   {.v = cheat_showfps}, .repeatable = true },
 
   {"speed",      NULL,                not_dm,
    {.v = cheat_speed} },
@@ -1080,7 +1080,16 @@ static void cheat_idgaf(void)
 // [FG] FPS counter widget
 static void cheat_showfps(void)
 {
-  plyr->cheats ^= CF_SHOWFPS;
+  // [Nugget] Rewritten for multiple modes
+
+  if (!(plyr->cheats & CF_SHOWFPS))
+  { ST_ResetFPSMode(); }
+
+  if (ST_CycleFPSMode())
+  {
+    plyr->cheats |= CF_SHOWFPS;
+  }
+  else { plyr->cheats &= ~CF_SHOWFPS; }
 }
 
 static void cheat_speed(void)
