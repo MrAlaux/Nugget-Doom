@@ -11,5 +11,6 @@
 
 ## Bug Fixes
 
+- **Lighting modes beyond _Vanilla_ being darker than intended**
 - **Custom skill not taking effect when starting a new game with it during demo playback**
 - **Forced weapon carousel malfunctioning during demo playback**

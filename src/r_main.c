@@ -1436,7 +1436,7 @@ void R_InitLightTables (void)
     zlightoffset[lightlevel] = all_zlightoffsets + MAXLIGHTZ * lightlevel;
 
     const int startmap =
-      ((LIGHTLEVELS - 1 - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+      ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
 
     for (int lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
@@ -1465,7 +1465,7 @@ void R_InitLightTables (void)
     scalelightoffset[lightlevel] = all_scalelightoffsets + MAXLIGHTSCALE * lightlevel;
 
     const int startmap =
-      ((LIGHTLEVELS - 1 - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+      ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
 
     for (int lightscale = 0; lightscale < MAXLIGHTSCALE; lightscale++)
     {
