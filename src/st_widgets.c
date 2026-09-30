@@ -1317,25 +1317,26 @@ static void UpdateStTime(sbe_widget_t *widget, player_t *player)
 
 typedef enum fpsmode_e
 {
-    FPSMODE_OFF,
-    FPSMODE_FPS,
+    FPSMODE_FPS = 1,
     FPSMODE_FRAMETIME,
     FPSMODE_BOTH,
 
     NUM_FPSMODES
 } fpsmode_t;
 
-static fpsmode_t fps_mode = FPSMODE_OFF;
+static fpsmode_t fps_mode = FPSMODE_FPS;
 
 boolean ST_CycleFPSMode(void)
 {
-    fps_mode = (fps_mode + 1) % NUM_FPSMODES;
-    return fps_mode != FPSMODE_OFF;
+    if (++fps_mode >= NUM_FPSMODES)
+    { fps_mode = FPSMODE_FPS; }
+
+    return fps_mode != FPSMODE_FPS;
 }
 
 void ST_ResetFPSMode(void)
 {
-    fps_mode = FPSMODE_OFF;
+    fps_mode = FPSMODE_FPS;
 }
 
 // [Nugget] -----------------------------------------------------------------/

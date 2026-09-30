@@ -1082,14 +1082,15 @@ static void cheat_showfps(void)
 {
   // [Nugget] Rewritten for multiple modes
 
-  if (!(plyr->cheats & CF_SHOWFPS))
-  { ST_ResetFPSMode(); }
-
-  if (ST_CycleFPSMode())
+  if (plyr->cheats & CF_SHOWFPS)
   {
-    plyr->cheats |= CF_SHOWFPS;
+    if (!ST_CycleFPSMode())
+    { plyr->cheats &= ~CF_SHOWFPS; }
   }
-  else { plyr->cheats &= ~CF_SHOWFPS; }
+  else {
+    plyr->cheats |= CF_SHOWFPS;
+    ST_ResetFPSMode();
+  }
 }
 
 static void cheat_speed(void)
