@@ -173,10 +173,10 @@ void V_UseBuffer32(pixel32_t *buffer, int pitch);
 void V_RestoreBuffer(void);
 
 void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
-                int destx, int desty);
+                int pitch, int destx, int desty);
 
 void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
-                  int destx, int desty);
+                  int pitch, int destx, int desty);
 
 typedef struct
 {
@@ -311,10 +311,12 @@ inline static pixel32_t V_IndexToRGB(const pixel_t index)
   return palcolors[index];
 }
 
-#define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
-inline static void V_RGBSet(pixel32_t *const dest, const pixel32_t color, const int count)
+#define V_IndexSet(dest, color, count) \
+  V_RGBSet(dest, V_IndexToRGB(color), count)
+
+inline static void V_RGBSet(pixel32_t *dest, const pixel32_t color, int count)
 {
-  for (int i = 0;  i < count;  i++) { dest[i] = color; }
+  while (count--) { *dest++ = color; }
 }
 
 inline static void V_IndexCopy(pixel32_t *dest, const pixel_t *src, int count)

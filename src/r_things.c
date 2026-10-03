@@ -93,18 +93,18 @@ int R_CalculateHitboxLightLevel(
 
 static void ApplyFlipPostProcess(void)
 {
-  const int pitch = video.width,
+  const int pitch = video.height,
             width = viewwidth - 1;
 
-  pixel_t *                 row = I_VideoBuffer + (viewwindowy * pitch + viewwindowx);
-  pixel_t const *const last_row = row + (viewheight * pitch);
+  pixel_t *                 row = I_VideoBuffer + (viewwindowx * pitch + viewwindowy);
+  pixel_t const *const last_row = row + viewheight;
 
   const int half_viewwidth = viewwidth / 2;
 
-  for (; row < last_row;  row += pitch)
+  for (; row < last_row;  row++)
   {
     pixel_t *restrict  left = row,
-            *restrict right = left + width;
+            *restrict right = left + (width * pitch);
 
     int16_t count = half_viewwidth;
 
@@ -115,26 +115,26 @@ static void ApplyFlipPostProcess(void)
       *left = *right;
       *right = temp;
 
-      left++;
-      right--;
+      left += pitch;
+      right -= pitch;
     }
   }
 }
 
 static void ApplyFlipPostProcess32(void)
 {
-  const int pitch = video.width,
+  const int pitch = video.height,
             width = viewwidth - 1;
 
-  pixel32_t *                 row = I_VideoBuffer32 + (viewwindowy * pitch + viewwindowx);
-  pixel32_t const *const last_row = row + (viewheight * pitch);
+  pixel32_t *                 row = I_VideoBuffer32 + (viewwindowx * pitch + viewwindowy);
+  pixel32_t const *const last_row = row + viewheight;
 
   const int half_viewwidth = viewwidth / 2;
 
-  for (; row < last_row;  row += pitch)
+  for (; row < last_row;  row++)
   {
     pixel32_t *restrict  left = row,
-              *restrict right = left + width;
+              *restrict right = left + (width * pitch);
 
     int16_t count = half_viewwidth;
 
@@ -145,8 +145,8 @@ static void ApplyFlipPostProcess32(void)
       *left = *right;
       *right = temp;
 
-      left++;
-      right--;
+      left += pitch;
+      right -= pitch;
     }
   }
 }

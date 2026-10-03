@@ -4,10 +4,12 @@
 
 ## Changes
 
+- **Merged changes from Woof! post-16.0.0**
 - **Made the NUGHUD have its own slot**
 - **Made automap marks flash brighter when using _Highlight P.O.I.'s_**
 - **Improved how the NUGHUD's minimap interacts with the message list**
 - **Improved carousel fadeout**
+- **Improved low-resolution post-process**
 
 ## Bug Fixes
 

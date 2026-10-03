@@ -89,8 +89,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - Toggle for **diminishing lighting** (CFG-only: `diminishing_lighting`)
   - _Diminishing lighting_ (a.k.a. fog) refers to geometry and entities becoming brighter as they come closer to the camera
 - **_Flip Levels_** setting
-- **Low-resolution pixel width/height** settings, to enlarge pixels when using 100% resolution
-  (CFG-only: `lowres_pixel_width`, `lowres_pixel_height`) [i.b. Doom Retro]
+- **Low-resolution post-process**, to enlarge pixels when using 100% resolution [i.b. Doom Retro]
+  - Configured through the CFG-only `lowres_pixel_width` and `lowres_pixel_height` CVARs
 - **_Backdrop for all menus_** setting
 - **_No Palette Tint in Menus_** setting [i.b. Crispy Doom]
 - **_No Berserk Tint_** setting
@@ -307,13 +307,10 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Key-locked door: `DSLOCKED`
   - Key pickup: `DSKEYUP`
   - Key blinking on HUD: `DSKEYBNK`
-  - Menus: `DSMNUOPN`, `DSMNUCLS`, `DSMNUACT`, `DSMNUBAK`, `DSMNUMOV`, `DSMNUSLI`, `DSMNUERR`
-  - Intermission: `DSINTTIC`, `DSINTTOT`, `DSINTNEX`, `DSINTNET`, `DSINTDMS` (last three unused)
   - Health-based player-pain sounds: `DSPPAI25`, `DSPPAI50`, `DSPPAI75`, `DSPPA100` [i.b. ZDoom]
   - Slow motion: `DSNGSLON`, `DSNGSLOF`
   - Milestone-completion announcements: `DSMILEST`
 - **Support for lowercase characters in console font** (CFG-only: `hud_menu_allow_lowercase`)
-- **Improved palettization of true-color PNG graphics**
 - **Customizable darkening level for dark menu background and Automap overlay**
   (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
 - The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
