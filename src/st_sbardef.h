@@ -305,6 +305,7 @@ typedef struct
     int xoffset;
 
     // [Nugget]
+    int ygap;
     int tran_pct; // Message fadeout
     boolean flash; // Message flash
 } stringline_t;

@@ -2133,10 +2133,16 @@ static void DrawWidget(int x1, int y1, int *x2, int *y2, boolean dry,
         if (elem->alignment & sbe_v_bottom)
         {
             y1 -= font->maxheight;
+
+            // [Nugget]
+            y1 -= line->ygap;
         }
         else
         {
             y1 += font->maxheight;
+
+            // [Nugget]
+            y1 += line->ygap;
         }
     }
 }

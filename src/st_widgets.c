@@ -120,13 +120,19 @@ static int ST_GetNumMaxMessageLines(void)
     return MAX(hud_msg_review_lines, hud_msg_lines);
 }
 
-static void FadeOutLine(stringline_t *const line, const int duration_left)
+static void FadeOutLine(stringline_t *const line, const int duration_left, int fontheight)
 {
     if (message_fadeout && 0 <= duration_left && duration_left < 9)
     {
         line->tran_pct = (duration_left + 1) * 10;
+
+        fontheight = MIN(9, fontheight);
+        line->ygap = duration_left - fontheight;
     }
-    else { line->tran_pct = 0; }
+    else {
+        line->tran_pct = 0;
+        line->ygap = 0;
+    }
 }
 
 // [Nugget] =================================================================/
@@ -392,7 +398,7 @@ static void UpdateMessage(sbe_widget_t *widget, player_t *player)
                                    ? message_review_duration_left
                                    : MAX(m->duration_left, message_review_duration_left);
 
-            FadeOutLine(line, fadeout_time);
+            FadeOutLine(line, fadeout_time, widget->font->maxheight);
 
             // Message flash -------------------------------------------------
 
@@ -468,7 +474,7 @@ static void UpdateAnnounceMessage(sbe_widget_t *widget, player_t *player)
 
         // [Nugget] Message fadeout
         for (int i = 0;  i < array_size(widget->lines);  i++)
-        { FadeOutLine(&widget->lines[i], announce_duration_left); }
+        { FadeOutLine(&widget->lines[i], announce_duration_left, widget->font->maxheight); }
     }
     else
     {
