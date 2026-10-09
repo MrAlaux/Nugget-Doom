@@ -117,6 +117,7 @@ static aspect_ratio_mode_t widescreen, default_widescreen;
 
 // [Nugget] /-----------------------------------------------------------------
 
+static boolean clear_every_frame;
 static int fps_counter_update_time;
 static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
@@ -276,6 +277,20 @@ static void InitColor(void)
 }
 
 static const char *sdl_renderdriver = "";
+
+static unsigned clearneeded = 0;
+
+static void DeferredRenderClear(void)
+{
+    // SDL might be using a swapchain for rendering,
+    // so a call to SDL_RenderClear might only clear a single buffer;
+    // thus, we queue multiple clears for the following frames
+
+    // We don't know the specifics of SDL's current renderer,
+    // so we'll assume that 60 frames is enough to clear all buffers
+
+    clearneeded = 60;
+}
 
 static int red_intensity, green_intensity, blue_intensity;
 static int color_saturation, color_contrast;
@@ -895,7 +910,14 @@ static void UpdateRender(void)
 
     SDL_UnlockTexture(texture);
 
-    SDL_RenderClear(renderer);
+    // [Nugget] Clear when needed
+    if (clear_every_frame || clearneeded)
+    {
+        SDL_RenderClear(renderer);
+
+        clearneeded = clear_every_frame ? 0 : clearneeded - 1;
+    }
+
     SDL_RenderTexture(renderer, texture, &frect, NULL);
 }
 
@@ -1430,6 +1452,8 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
                 V_BlueFromRGB(palcolors[0]),
                 SDL_ALPHA_OPAQUE
             );
+
+            DeferredRenderClear();
         }
 
         return;
@@ -1466,6 +1490,9 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
         // emulating VGA "porch" behaviour
         SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b,
                                SDL_ALPHA_OPAQUE);
+
+        // [Nugget]
+        DeferredRenderClear();
     }
 }
 
@@ -2132,6 +2159,9 @@ void I_ResetScreen(void)
 
     SDL_SetTextureScaleMode(texture, smooth_scaling ? SDL_SCALEMODE_PIXELART
                                                     : SDL_SCALEMODE_NEAREST);
+
+    // [Nugget]
+    DeferredRenderClear();
 }
 
 void I_ShutdownGraphics(void)
@@ -2272,6 +2302,11 @@ void I_BindVideoVariables(void)
                "Use palette colors exactly when gamma correction is disabled");
 
     BIND_BOOL_GENERAL(smooth_scaling, true, "Smooth pixel scaling");
+
+    // [Nugget]
+    BIND_BOOL(clear_every_frame, true,
+        "Clear SDL renderer every frame (disabling might improve performance "
+        "but provoke flickering on window borders)");
 
     BIND_BOOL(vga_porch_flash, false, "Emulate VGA \"porch\" behaviour");
     BIND_BOOL(disk_icon, false, "Flashing icon during disk I/O");
