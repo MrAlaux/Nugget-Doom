@@ -1702,6 +1702,9 @@ static void ResetResolution(int height)
              widescreen_strings[widescreen]);
 
     drs_skip_frame = true;
+
+    // [Nugget]
+    DeferredRenderClear();
 }
 
 static void ResetLogicalSize(void)
@@ -2135,9 +2138,6 @@ void I_ResetScreen(void)
 
     SDL_SetTextureScaleMode(texture, smooth_scaling ? SDL_SCALEMODE_PIXELART
                                                     : SDL_SCALEMODE_NEAREST);
-
-    // [Nugget]
-    DeferredRenderClear();
 }
 
 void I_ShutdownGraphics(void)
