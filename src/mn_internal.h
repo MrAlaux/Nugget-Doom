@@ -233,6 +233,10 @@ typedef struct setup_menu_s
     int lines;            // number of lines for rect, always > 0
     const char *desc;     // overrides default description
     const char *append;   // string to append to value
+
+    // [Nugget]
+    const char *special_string;
+    int special_value;
 } setup_menu_t;
 
 // phares 4/21/98: Moved from m_misc.c so m_menu.c could see it.

@@ -159,6 +159,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 ## Status Bar/HUD
 
 - **NUGHUD**, an alternative lump for HUD customization (see `docs/nughud.md`)
+- **Fine-tunable _HUD Anchoring_**
 - **Crosshair:**
   - Opacity setting
   - Vertical-only target lock-on

@@ -77,6 +77,8 @@ extern boolean screenvisible;
 
 extern double average_frametime;
 
+#define HUD_ANCHORING_MAX 120
+
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
 
