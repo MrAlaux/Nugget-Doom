@@ -35,11 +35,11 @@ meaning that **it is not necessary to redefine all properties in new `NUGHUD`s f
 - `_x`: **X position**, which can be any integer in the [0, 320] range.
 - `_y`: **Y position**, which can be any integer in the [0, 200] range.
 - `_wide`: **Widescreen shift**, with the following possible values:
-  - `-2` to shift the element left forcefully.
-  - `-1` to shift the element left only when in widescreen mode.
-  - ` 0` to keep the element in place regardless of widescreen mode.
-  - ` 1` to shift the element right only when in widescreen mode.
-  - ` 2` to shift the element right forcefully.
+  - `-2` to shift the element left as far as the widescreen allows.
+  - `-1` to shift the element left as per the _HUD Anchoring_ setting.
+  - ` 0` to keep the element in place regardless of widescreen and the _HUD Anchoring_ setting.
+  - ` 1` to shift the element right as per the _HUD Anchoring_ setting.
+  - ` 2` to shift the element right as far as the widescreen allows.
 
 **Some widgets are alignable**, by means of the following properties:
 
@@ -57,25 +57,25 @@ meaning that **it is not necessary to redefine all properties in new `NUGHUD`s f
 
 The following status-bar widgets are available:
 
-| Widget(s)           | Alignable | Description |
-| :-----------------: | :-------: | :---------- |
-| `nughud_ammo`       | Yes       | Ammo count for the currently equipped weapon |
-| `nughud_ammoicon`   | Yes       | Ammo icon, which changes depending on the ammo type of the current weapon |
-| `nughud_ammobar`    | Yes       | Ammo bar |
-| `nughud_weaponicon` | Yes       | Weapon icon, which changes depending on the current weapon |
-| `nughud_health`     | Yes       | Health count |
-| `nughud_healthicon` | Yes       | Health icon, which changes depending on whether the player has Berserk |
-| `nughud_healthbar`  | Yes       | Health bar |
-| `nughud_arms#`      | No        | Arms (weapon) number, where `#` is an integer in the [1, 9] range |
-| `nughud_frags`      | Yes       | Frag count, only shown during Deathmatch games |
-| `nughud_face`       | No        | Face (mugshot) |
-| `nughud_armor`      | Yes       | Armor count |
-| `nughud_armoricon`  | Yes       | Armor icon, which changes depending on the current armor type |
-| `nughud_armorbar`   | Yes       | Armor bar |
-| `nughud_key#`       | No        | Key display, where `#` is an integer in the [0, 2] range (in order: Blue Key; Yellow Key; Red Key) |
-| `nughud_ammo#`      | Yes       | Ammo count for each type, where `#` is an integer in the [0, 3] range (in order: Bullets; Shells; Cells; Rockets) |
-| `nughud_maxammo#`   | Yes       | Same as the above, but for Max. Ammo |
-| `nughud_carousel`   | No        | Weapon carousel |
+| Widget(s)           | H. Alignable | Description |
+| :-----------------: | :----------: | :---------- |
+| `nughud_ammo`       | Yes          | Ammo count for the currently equipped weapon |
+| `nughud_ammoicon`   | Yes          | Ammo icon, which changes depending on the ammo type of the current weapon |
+| `nughud_ammobar`    | Yes          | Ammo bar |
+| `nughud_weaponicon` | Yes          | Weapon icon, which changes depending on the current weapon |
+| `nughud_health`     | Yes          | Health count |
+| `nughud_healthicon` | Yes          | Health icon, which changes depending on whether the player has Berserk |
+| `nughud_healthbar`  | Yes          | Health bar |
+| `nughud_arms#`      | No           | Arms (weapon) number, where `#` is an integer in the [1, 9] range |
+| `nughud_frags`      | Yes          | Frag count, only shown during Deathmatch games |
+| `nughud_face`       | No           | Face (mugshot) |
+| `nughud_armor`      | Yes          | Armor count |
+| `nughud_armoricon`  | Yes          | Armor icon, which changes depending on the current armor type |
+| `nughud_armorbar`   | Yes          | Armor bar |
+| `nughud_key#`       | No           | Key display, where `#` is an integer in the [0, 2] range (in order: Blue Key; Yellow Key; Red Key) |
+| `nughud_ammo#`      | Yes          | Ammo count for each type, where `#` is an integer in the [0, 3] range (in order: Bullets; Shells; Cells; Rockets) |
+| `nughud_maxammo#`   | Yes          | Same as the above, but for Max. Ammo |
+| `nughud_carousel`   | No           | Weapon carousel |
 
 **All status-bar widgets can be disabled** by setting `_x` to `-1`.
 
@@ -304,7 +304,7 @@ nughud_patch2_name "STARMS"
 
 ### Status-bar chunks
 
-**Status-bar chunks** are square regions of the status bar, taken from the currently loaded `STBAR`.
+**Status-bar chunks** are rectangular regions of the status bar, taken from the currently loaded `STBAR`.
 Up to 8 chunks can be drawn; they are drawn behind patches, following the same order (`chunk1` before `chunk2`, etc.).
 
 Aside from the shared properties, **chunks make use of the following additional properties**:
