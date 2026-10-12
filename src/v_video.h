@@ -312,9 +312,10 @@ inline static pixel32_t V_IndexToRGB(const pixel_t index)
 }
 
 #define V_IndexSet(dest, color, count) V_RGBSet(dest, V_IndexToRGB(color), count)
-inline static void V_RGBSet(pixel32_t *const dest, const pixel32_t color, const int count)
+
+inline static void V_RGBSet(pixel32_t *dest, const pixel32_t color, int count)
 {
-  for (int i = 0;  i < count;  i++) { dest[i] = color; }
+  while (count--) { *dest++ = color; }
 }
 
 inline static void V_IndexCopy(pixel32_t *dest, const pixel_t *src, int count)
