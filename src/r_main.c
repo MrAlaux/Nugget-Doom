@@ -260,10 +260,10 @@ static void ApplyBlockPostProcess(void)
       for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
       {
         memset(
-          dest + ((y + y2) * video.width) + x,
+          dest + ((y + y2) * video.pitch) + x,
           dest[
             ( (first_y ? viewwindowy + first_y
-                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
+                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
             + (first_x ? viewwindowx + first_x
                        : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
           ],
@@ -309,10 +309,10 @@ static void ApplyBlockPostProcess32(void)
       for (y2 = 0;  y2 < (first_y ? first_y : MIN(ph, (viewwindowy + viewheight) - y));  y2++)
       {
         V_RGBSet(
-          dest + ((y + y2) * video.width) + x,
+          dest + ((y + y2) * video.pitch) + x,
           dest[
             ( (first_y ? viewwindowy + first_y
-                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.width)
+                       : y + ((y < viewwindowy + viewheight/2) ? ph-1 : 0)) * video.pitch)
             + (first_x ? viewwindowx + first_x
                        : x + ((x < viewwindowx + viewwidth/2)  ? pw-1 : 0))
           ],

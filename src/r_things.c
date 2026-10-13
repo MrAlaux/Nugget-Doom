@@ -93,7 +93,7 @@ int R_CalculateHitboxLightLevel(
 
 static void ApplyFlipPostProcess(void)
 {
-  const int pitch = video.width,
+  const int pitch = video.pitch,
             width = viewwidth - 1;
 
   pixel_t *                 row = I_VideoBuffer + (viewwindowy * pitch + viewwindowx);
@@ -123,7 +123,7 @@ static void ApplyFlipPostProcess(void)
 
 static void ApplyFlipPostProcess32(void)
 {
-  const int pitch = video.width,
+  const int pitch = video.pitch,
             width = viewwidth - 1;
 
   pixel32_t *                 row = I_VideoBuffer32 + (viewwindowy * pitch + viewwindowx);

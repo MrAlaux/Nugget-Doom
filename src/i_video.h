@@ -82,6 +82,9 @@ extern double average_frametime;
 #define GAMMA2MAX 30
 extern const float gammalevels[GAMMA2MAX+1];
 
+// Draw to texture
+void I_BeginUpdate(void);
+
 void I_DRSSkipFrame(void);
 
 boolean I_SmoothPaletteTinting(void);

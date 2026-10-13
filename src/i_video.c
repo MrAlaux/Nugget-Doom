@@ -117,6 +117,7 @@ static aspect_ratio_mode_t widescreen, default_widescreen;
 
 // [Nugget] /-----------------------------------------------------------------
 
+static boolean draw_to_texture;
 static boolean clear_every_frame;
 static int fps_counter_update_time;
 static boolean gamma_off_fix;
@@ -874,38 +875,46 @@ void I_StartFrame(void)
 
 static void UpdateRender(void)
 {
-    // When using SDL_LockTexture, the pixels made available for editing may not
-    // contain the original texture data. We have to maintain a copy of the
-    // video buffer in order to emulate HOM effects.
-    void *pixels;
-    int dst_pitch;
-    SDL_LockTexture(texture, &rect, &pixels, &dst_pitch);
-    int h = rect.h;
-    int src_pitch = video.width;
-
-    if (truecolor_rendering)
+    // [Nugget] Draw to texture
+    if (!draw_to_texture)
     {
-        src_pitch *= sizeof(pixel32_t);
+        // When using SDL_LockTexture, the pixels made available for editing may not
+        // contain the original texture data. We have to maintain a copy of the
+        // video buffer in order to emulate HOM effects.
+        void *pixels;
+        int dst_pitch;
+        SDL_LockTexture(texture, &rect, &pixels, &dst_pitch);
+        int h = rect.h;
+        int src_pitch = video.width;
 
-        byte *dst = pixels;
-        byte *src = (byte *) I_VideoBuffer32;
-        while (h--)
+        if (truecolor_rendering)
         {
-            memcpy(dst, src, src_pitch);
-            dst += dst_pitch;
-            src += src_pitch;
+            src_pitch *= sizeof(pixel32_t);
+
+            byte *dst = pixels;
+            byte *src = (byte *) I_VideoBuffer32;
+            while (h--)
+            {
+                memcpy(dst, src, src_pitch);
+                dst += dst_pitch;
+                src += src_pitch;
+            }
+        }
+        else
+        {
+            pixel_t *dst = pixels;
+            pixel_t *src = I_VideoBuffer;
+            while (h--)
+            {
+                memcpy(dst, src, src_pitch);
+                dst += dst_pitch;        
+                src += src_pitch;
+            }
         }
     }
-    else
-    {
-        pixel_t *dst = pixels;
-        pixel_t *src = I_VideoBuffer;
-        while (h--)
-        {
-            memcpy(dst, src, src_pitch);
-            dst += dst_pitch;        
-            src += src_pitch;
-        }
+    else {
+      I_VideoBuffer = NULL;
+      I_VideoBuffer32 = NULL;
     }
 
     SDL_UnlockTexture(texture);
@@ -1057,6 +1066,36 @@ static void I_DrawDiskIcon(), I_RestoreDiskBackground();
 static unsigned int disk_to_draw, disk_to_restore;
 
 static void I_ResetTargetRefresh(void);
+
+// [Nugget] Draw to texture
+void I_BeginUpdate(void)
+{
+    if (!draw_to_texture || noblit)
+    {
+        return;
+    }
+
+    void *pixels;
+    int dst_pitch;
+
+    SDL_LockTexture(texture, &rect, &pixels, &dst_pitch);
+
+    if (truecolor_rendering)
+    {
+        I_VideoBuffer32 = pixels;
+
+        // Assume that the pitch is a multiple of 4
+        video.pitch = dst_pitch / sizeof(pixel32_t);
+    }
+    else {
+        I_VideoBuffer = pixels;
+
+        video.pitch = dst_pitch;
+    }
+
+    V_RestoreBuffer();
+    R_InitYLookup();
+}
 
 void I_FinishUpdate(void)
 {
@@ -1685,6 +1724,12 @@ static void ResetResolution(int height)
     video.width = actualheight * aspect_ratio.w / aspect_ratio.h;
     video.width &= (int)~1;
 
+    // [Nugget] Draw to texture
+    if (!draw_to_texture)
+    {
+        video.pitch = video.width;
+    }
+
     video.deltaw = (video.unscaledw - NONWIDEWIDTH) / 2;
 
     Z_FreeTag(PU_VALLOC);
@@ -2062,28 +2107,32 @@ static void CreateVideoBuffer(void)
     SDL_SetTextureScaleMode(texture,
         smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
 
-    if (I_VideoBuffer)
+    // [Nugget] Draw to texture
+    if (!draw_to_texture)
     {
-        free(I_VideoBuffer);
-        I_VideoBuffer = NULL;
-    }
+        if (I_VideoBuffer)
+        {
+            free(I_VideoBuffer);
+            I_VideoBuffer = NULL;
+        }
 
-    if (I_VideoBuffer32)
-    {
-        free(I_VideoBuffer32);
-        I_VideoBuffer32 = NULL;
-    }
+        if (I_VideoBuffer32)
+        {
+            free(I_VideoBuffer32);
+            I_VideoBuffer32 = NULL;
+        }
 
-    if (truecolor_rendering)
-    {
-        I_VideoBuffer32 = calloc(video.width * video.height, sizeof(pixel32_t));
-    }
-    else
-    {
-        I_VideoBuffer = calloc(video.width * video.height, sizeof(pixel_t));
-    }
+        if (truecolor_rendering)
+        {
+            I_VideoBuffer32 = calloc(video.width * video.height, sizeof(pixel32_t));
+        }
+        else
+        {
+            I_VideoBuffer = calloc(video.width * video.height, sizeof(pixel_t));
+        }
 
-    V_RestoreBuffer();
+        V_RestoreBuffer();
+    }
 
     Z_FreeTag(PU_RENDERER);
     R_InitAnyRes();
@@ -2279,10 +2328,16 @@ void I_BindVideoVariables(void)
 
     BIND_BOOL_GENERAL(smooth_scaling, true, "Smooth pixel scaling");
 
-    // [Nugget]
+    // [Nugget] /-------------------------------------------------------------
+
+    BIND_BOOL(draw_to_texture, false,
+        "Draw to SDL texture directly (faster, might break wipes and HOMs)");
+
     BIND_BOOL(clear_every_frame, true,
         "Clear SDL renderer every frame (disabling might improve performance "
         "but provoke flickering on window borders)");
+
+    // [Nugget] -------------------------------------------------------------/
 
     BIND_BOOL(vga_porch_flash, false, "Emulate VGA \"porch\" behaviour");
     BIND_BOOL(disk_icon, false, "Flashing icon during disk I/O");

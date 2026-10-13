@@ -288,6 +288,9 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 - **Support for high-resolution sprites between `HI_START`/`HI_END` markers**
 - **Support for the DeHackEd thing `Scale` property**, as featured in ZDoom and derivatives
   - Does not work with voxel models
+- Setting to **draw to SDL texture directly** (CFG-only: `draw_to_texture`)
+  - Enabling this might improve performance, especially with true-color rendering,
+    but break screen wipes and HOMs in levels
 - Setting to **clear SDL renderer every frame** (CFG-only: `clear_every_frame`)
   - Disabling this might improve performance but provoke flickering on window borders
 - **SDL render driver** setting (CFG-only: `sdl_renderdriver`) [p.f. Woof! 14.0.0]

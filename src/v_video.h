@@ -127,6 +127,9 @@ void V_InitColorTranslation(void);
 
 typedef struct
 {
+    // [Nugget] Draw to texture
+    int pitch;
+
     int width;
     int height;
     int unscaledw; // unscaled width with correction for widecreen

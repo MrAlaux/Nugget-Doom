@@ -1,6 +1,7 @@
 ## New Features
 
 - **Frametime mode for the `FPS` cheat**
+- Setting to **draw to SDL texture directly**
 - Setting to **clear SDL renderer every frame**
 
 ## Changes

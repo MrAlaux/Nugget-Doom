@@ -1856,13 +1856,13 @@ static void (*PutLine)(int x, int y, int dx, int color) = NULL;
 
 static void PutLine8(const int x, const int y, const int dx, const int color)
 {
-  pixel_t *const dest = I_VideoBuffer + (y * video.width) + x;
+  pixel_t *const dest = I_VideoBuffer + (y * video.pitch) + x;
   memset(dest, color, dx);
 }
 
 static void PutLine32(const int x, const int y, const int dx, const int color)
 {
-  pixel32_t *const dest = I_VideoBuffer32 + (y * video.width) + x;
+  pixel32_t *const dest = I_VideoBuffer32 + (y * video.pitch) + x;
   V_IndexSet(dest, color, dx);
 }
 
@@ -1883,12 +1883,12 @@ static void (*PutDot)(int x, int y, int color) = NULL;
 
 inline static void PutDot8(int x, int y, int color)
 {
-    I_VideoBuffer[y * video.width + x] = color;
+    I_VideoBuffer[y * video.pitch + x] = color;
 }
 
 inline static void PutDot32(int x, int y, int color)
 {
-    I_VideoBuffer32[y * video.width + x] = V_IndexToRGB(color);
+    I_VideoBuffer32[y * video.pitch + x] = V_IndexToRGB(color);
 }
 
 static void AM_drawFline_Vanilla(fline_t *fl, int color)
@@ -1981,7 +1981,7 @@ static void (*PutWuDot)(int x, int y, int color, int weight) = NULL;
 
 inline static void PutWuDot8(int x, int y, int color, int weight)
 {
-    pixel_t *dest = I_VideoBuffer + y * video.width + x;
+    pixel_t *dest = I_VideoBuffer + y * video.pitch + x;
     unsigned int *fg2rgb = Col2RGB8[weight];
     unsigned int *bg2rgb = Col2RGB8[64 - weight];
     unsigned int fg, bg;
@@ -1994,7 +1994,7 @@ inline static void PutWuDot8(int x, int y, int color, int weight)
 
 inline static void PutWuDot32(int x, int y, int color, int weight)
 {
-    pixel32_t *dest = I_VideoBuffer32 + y * video.width + x;
+    pixel32_t *dest = I_VideoBuffer32 + y * video.pitch + x;
     unsigned int *fg2rgb = Col2RGB8[weight];
     unsigned int *bg2rgb = Col2RGB8[64 - weight];
     unsigned int fg, bg;
