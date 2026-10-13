@@ -54,6 +54,18 @@ inline static int32_t FixedToInt(fixed_t x)
     return x >> FRACBITS;
 }
 
+// [Nugget]
+inline static fixed_t FloatToFixed(float x)
+{
+    return (fixed_t)(x * FRACUNIT);
+}
+
+// [Nugget]
+inline static float FixedToFloat(fixed_t x)
+{
+    return (float)x / FRACUNIT;
+}
+
 inline static fixed_t DoubleToFixed(double x)
 {
     return (fixed_t)(x * FRACUNIT);

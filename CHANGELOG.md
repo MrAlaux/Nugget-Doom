@@ -8,6 +8,7 @@
 
 - **Made the NUGHUD have its own slot**
 - **Made _HUD Anchoring_ fine-tunable** [^1]
+- **Improved and optimized clipping of _Sprite Shadows_**
 - **Made messages scroll as they fade out when _Message Fadeout_ is enabled**
 - **Made automap marks flash brighter when using _Highlight P.O.I.'s_**
 - **Improved how the NUGHUD's minimap interacts with the message list**
