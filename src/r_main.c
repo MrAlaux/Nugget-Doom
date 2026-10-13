@@ -774,9 +774,8 @@ static void ProcessFOVEffects(void)
       {
         for (int i = 0;  i < NUM_FOVFX;  i++)
         {
-          fovfx[i].current = fovfx[i].old
-                           + ((fovfx[i].target - fovfx[i].old)
-                              * ((float) fractionaltic / FRACUNIT));
+          fovfx[i].current =
+            fovfx[i].old + (fovfx[i].target - fovfx[i].old) * FixedToFloat(fractionaltic);
         }
       }
     }
@@ -1820,8 +1819,8 @@ void R_Init (void)
 
   for (int i = 0;  i < FINEANGLES;  i++)
   {
-    floatsine[i] = (float) finesine[i] / FRACUNIT;
-    floatcosine[i] = (float) finecosine[i] / FRACUNIT;
+    floatsine[i] = FixedToFloat(finesine[i]);
+    floatcosine[i] = FixedToFloat(finecosine[i]);
 
     finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]);
     floatsecant[i] = (float) FRACUNIT / finecosine[i];

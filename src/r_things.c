@@ -1157,7 +1157,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
     have_scale = true;
 
-    info_scale_mult = FixedToDouble(thing->info->scale);
+    info_scale_mult = FixedToFloat(thing->info->scale);
     xscale_mult = yscale_mult = info_scale_mult;
 
     xscale *= xscale_mult;
@@ -1531,7 +1531,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   if (viewz < floorheight + FRACUNIT) { return; }
 
-  float floordist = MAX(0, interpz - floorheight) / (float) FRACUNIT;
+  float floordist = FixedToFloat(MAX(0, interpz - floorheight));
 
   if (floordist >= 256.0f) { return; }
 
