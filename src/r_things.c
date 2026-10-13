@@ -1562,8 +1562,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   shadow_gz  = floorheight - shadow_height / offset_divisor;
   shadow_gzt = shadow_gz   + shadow_height;
 
-  // Could clip shadows out of view due to height
-
   // The following `R_NewVisSprite()` call may leave `vis` dangling,
   // so we'll copy it beforehand
   const vissprite_t vis_copy = *vis;
@@ -1616,7 +1614,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   const fixed_t shadow_x1_clipped = (midx - FixedMul64(shadow_tx_clipped, xscale)) >> FRACBITS;
   shadow_vis->x1 = MAX(shadow_vis->x1, shadow_x1_clipped);
 
-  shadow_tx = thisspritewidth;
+  shadow_tx = thisspritewidth - shadow_tx;
   const fixed_t shadow_x2 = ((midx + FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS) - 1;
 
   shadow_vis->x2 = MIN(viewwidth - 1, shadow_x2);
