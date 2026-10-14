@@ -289,15 +289,7 @@ void D_Display (void)
         I_ResetScreen();
       else if (gamestate == GS_LEVEL)
         I_DynamicResolution();
-
-      // [Nugget] Draw to texture: begin a new update if the existing one was cancelled
-      I_BeginUpdate();
     }
-  // [Nugget] Draw to texture
-  else
-  {
-    wipe_StartScreen(0, 0, video.width, video.height);
-  }
 
   // [Nugget] True color: brought from below
   // clean up border stuff
@@ -330,6 +322,18 @@ void D_Display (void)
     R_InitDrawColorFunctions();
     VX_SetVoxelRenderingMode();
   }
+
+  // [Nugget] Draw to texture /-----------------------------------------------
+
+  // Begin a new update if the existing one was cancelled
+  I_BeginUpdate();
+
+  if (wipe)
+  {
+    wipe_StartScreen(0, 0, video.width, video.height);
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();

@@ -2131,7 +2131,11 @@ static void CreateVideoBuffer(void)
         smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
 
     // [Nugget] Draw to texture
-    if (!draw_to_texture)
+    if (draw_to_texture)
+    {
+        in_update = false; // The old texture has been destroyed
+    }
+    else
     {
         if (I_VideoBuffer)
         {
