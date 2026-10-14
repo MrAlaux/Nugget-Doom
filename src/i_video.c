@@ -870,7 +870,8 @@ void I_StartDisplay(void)
 //
 void I_StartFrame(void)
 {
-    ;
+    // [Nugget] Draw to texture
+    I_BeginUpdate();
 }
 
 static void UpdateRender(void)
@@ -1067,13 +1068,18 @@ static unsigned int disk_to_draw, disk_to_restore;
 
 static void I_ResetTargetRefresh(void);
 
-// [Nugget] Draw to texture
+// [Nugget] Draw to texture /-------------------------------------------------
+
+static boolean in_update = false;
+
 void I_BeginUpdate(void)
 {
-    if (!draw_to_texture || noblit)
+    if (!draw_to_texture || noblit || in_update)
     {
         return;
     }
+
+    in_update = true;
 
     void *pixels;
     int dst_pitch;
@@ -1097,12 +1103,26 @@ void I_BeginUpdate(void)
     R_InitYLookup();
 }
 
+static void CancelUpdate(void)
+{
+    if (draw_to_texture && in_update)
+    {
+        in_update = false;
+        SDL_UnlockTexture(texture);
+    }
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 void I_FinishUpdate(void)
 {
     if (noblit)
     {
         return;
     }
+
+    // [Nugget] Draw to texture
+    in_update = false;
 
     if (toggle_fullscreen)
     {
@@ -1764,6 +1784,9 @@ static void ResetLogicalSize(void)
     {
         I_Printf(VB_ERROR, "Failed to set logical size: %s", SDL_GetError());
     }
+
+    // [Nugget] Draw to texture
+    CancelUpdate();
 }
 
 static void UpdateUncapped(void)
