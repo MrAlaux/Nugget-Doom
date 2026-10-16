@@ -20,5 +20,7 @@
 - **Custom skill not taking effect when starting a new game with it during demo playback**
 - **Shadows of right-offset sprites being cut off**
 - **Forced weapon carousel malfunctioning during demo playback**
+- **_Slow Motion_ affecting freecam speed**
+- **_Slow Motion_ persisting when pausing with the <kbd>Pause</kbd> key**
 
 [^1]: This will affect existing config files.
