@@ -13,6 +13,7 @@
 - **Made automap marks flash brighter when using _Highlight P.O.I.'s_**
 - **Improved how the NUGHUD's minimap interacts with the message list**
 - **Improved carousel fadeout**
+- **Allowed _Fast-Forward_ outside of demo playback**
 
 ## Bug Fixes
 

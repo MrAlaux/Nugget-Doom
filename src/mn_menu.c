@@ -3003,7 +3003,8 @@ boolean M_ShortcutResponder(const event_t *ev)
 
     if (M_InputActivated(input_demo_fforward))
     {
-        if (demoplayback && !PLAYBACK_SKIP && !fastdemo && !D_CheckNetConnect())
+        // [Nugget] Allowed outside of demo playback
+        if ((demoplayback || casual_play) && !PLAYBACK_SKIP && !fastdemo && !D_CheckNetConnect())
         {
             fastdemo_timer = !fastdemo_timer;
             I_SetFastdemoTimer(fastdemo_timer);
