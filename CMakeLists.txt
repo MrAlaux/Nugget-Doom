@@ -44,7 +44,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 project(
     "Nugget Doom"
-    VERSION 6.0.1
+    VERSION 6.1.0
     HOMEPAGE_URL "https://github.com/MrAlaux/Nugget-Doom"
     LANGUAGES C CXX
 )

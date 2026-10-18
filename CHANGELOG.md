@@ -1,3 +1,5 @@
+**Nugget Doom 6.1.0**, released October 17th, 2026.
+
 ## New Features
 
 - **Frametime mode for the `FPS` cheat**
