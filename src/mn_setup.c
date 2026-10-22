@@ -939,6 +939,14 @@ static void DrawSetting(setup_menu_t *s, int accum_y)
         else
         {
             int value = *s->var.def->location.i;
+
+            // [Nugget]
+            if (s->special_string && value == s->special_value)
+            {
+                strcpy(menu_buffer, s->special_string);
+            }
+            else
+
             if (flags & S_PCT)
             {
                 M_snprintf(menu_buffer, sizeof(menu_buffer), "%d%%", value);
@@ -1107,6 +1115,13 @@ static void DrawSetting(setup_menu_t *s, int accum_y)
         rect->w = (width + 2) * M_THRM_STEP;
         rect->h = M_THRM_HEIGHT;
         DrawSetupThermo(s, x, y, width, max - min, thrm_val - min, cr);
+
+        // [Nugget]
+        if (s->special_string && value == s->special_value)
+        {
+            strcpy(menu_buffer, s->special_string);
+        }
+        else
 
         if (strings)
         {
@@ -1570,7 +1585,7 @@ static setup_menu_t keys_settings3[] = {
     {"Previous Map",    S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_menu_prevlevel},
     {"Show Stats/Time", S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_hud_timestats},
     MI_GAP,
-    {"Fast-FWD Demo",   S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_demo_fforward},
+    {"Fast-Forward",    S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_demo_fforward}, // [Nugget] Renamed
     {"Finish Demo",     S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_demo_quit},
     {"Join Demo",       S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_demo_join},
     {"Increase Speed",  S_INPUT, KB_X, M_SPC, {0}, m_scrn, input_speed_up},
@@ -2165,9 +2180,7 @@ static void RefreshSolidBackground(void)
     st_refresh_background = true;
 }
 
-static const char *hud_anchoring_strings[] = {
-    "Wide", "4:3", "16:9", "21:9"
-};
+// [Nugget] Made HUD anchoring fine-tunable; removed strings
 
 #define H_X_THRM8 (M_X_THRM8 - 14)
 #define H_X       (M_X - 14)
@@ -2179,8 +2192,10 @@ static setup_menu_t stat_settings1[] = {
 
     MI_GAP,
 
-    {"HUD Anchoring", S_CHOICE, H_X, M_SPC, {"hud_anchoring"},
-     .strings_id = str_hud_anchoring, .action = I_UpdateHudAnchoring},
+    // [Nugget] Made HUD anchoring fine-tunable
+    {"HUD Anchoring", S_THERMO, H_X_THRM8, M_SPC, {"hud_anchoring"},
+     .action = I_UpdateHudAnchoring, .append = "px",
+     .special_string = "Wide", .special_value = HUD_ANCHORING_MAX+1},
 
     MI_GAP,
 
@@ -5943,7 +5958,7 @@ static const char **selectstrings[] = {
     [str_curve] = curve_strings,
     [str_center_weapon] = center_weapon_strings,
     [str_screensize] = NULL,
-    [str_hud_anchoring] = hud_anchoring_strings,
+    // [Nugget] Made HUD anchoring fine-tunable; removed strings
     [str_show_widgets] = show_widgets_strings,
     [str_show_adv_widgets] = show_adv_widgets_strings,
     [str_stats_format] = stats_format_strings,

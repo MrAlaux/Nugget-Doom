@@ -2300,11 +2300,41 @@ void R_InitBufferRes(void)
 //  of a pixel to draw.
 //
 
+// [Nugget] Draw to texture
+void R_InitXLookup(void)
+{
+    linesize = video.pitch;
+
+    if (truecolor_rendering)
+    {
+        if (!I_VideoBuffer32)
+        {
+            return;
+        }
+
+        for (int i = 0; i < viewwidth; i++)
+        {
+            xlookup32[i] = I_VideoBuffer32 + (i + viewwindowx) * linesize;
+        }
+    }
+    else {
+        if (!I_VideoBuffer)
+        {
+            return;
+        }
+
+        for (int i = 0; i < viewwidth; i++)
+        {
+            xlookup[i] = I_VideoBuffer + (i + viewwindowx) * linesize;
+        }
+    }
+}
+
 void R_InitBuffer(void)
 {
     int i;
 
-    linesize = video.height;
+    // [Nugget] Draw to texture: initialize `linesize` in `R_InitYLookup()`
 
     // Handle resize,
     //  e.g. smaller view windows
@@ -2315,13 +2345,15 @@ void R_InitBuffer(void)
         rowofs[i] = viewwindowy + i;
     }
 
+    // Same with base row offset.
+
+    // Preclaculate all row offsets.
+
+    // [Nugget] Draw to texture
+    R_InitXLookup();
+
     if (truecolor_rendering)
     {
-        for (i = 0; i < viewwidth; i++)
-        {
-            xlookup32[i] = I_VideoBuffer32 + (i + viewwindowx) * linesize;
-        }
-
         if (background_buffer32 != NULL)
         {
             Z_Free(background_buffer32);
@@ -2330,11 +2362,6 @@ void R_InitBuffer(void)
     }
     else
     {
-        for (i = 0; i < viewwidth; i++)
-        {
-            xlookup[i] = I_VideoBuffer + (i + viewwindowx) * linesize;
-        }
-
         if (background_buffer != NULL)
         {
             Z_Free(background_buffer);
@@ -2393,6 +2420,7 @@ void R_FillBackScreen(void)
         return;
     }
 
+    // Allocate the background buffer if necessary
     if (truecolor_rendering)
     {
         if (background_buffer32 == NULL)
@@ -2406,7 +2434,6 @@ void R_FillBackScreen(void)
     }
     else
     {
-        // Allocate the background buffer if necessary
         if (background_buffer == NULL)
         {
             int size = video.width * video.height;

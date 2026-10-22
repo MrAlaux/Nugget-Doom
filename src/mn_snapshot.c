@@ -170,7 +170,7 @@ static void TakeSnapshot(void)
 
         for (int x = video.deltaw; x < NONWIDEWIDTH + video.deltaw; x++)
         {
-            const int line = V_ScaleX(x) * video.height;
+            const int line = V_ScaleX(x) * video.pitch;
             pixel_t *p2 = p;
 
             for (int y = 0; y < SCREENHEIGHT; y++)
@@ -188,7 +188,7 @@ static void TakeSnapshot(void)
 
         for (int x = video.deltaw; x < NONWIDEWIDTH + video.deltaw; x++)
         {
-            const int line = V_ScaleX(x) * video.height;
+            const int line = V_ScaleX(x) * video.pitch;
             pixel_t *p2 = p;
 
             for (int y = 0; y < SCREENHEIGHT; y++)
@@ -239,13 +239,13 @@ boolean MN_DrawSnapshot(int n, int x, int y, int w, int h)
 
     if (truecolor_rendering)
     {
-        pixel32_t *dest = I_VideoBuffer32 + (rect.sx * video.height) + rect.sy;
+        pixel32_t *dest = I_VideoBuffer32 + (rect.sx * video.pitch) + rect.sy;
         pixel32_t *destcol;
         pixel_t *srcline;
 
         for (destx = 0, srcx = 0; destx < rect.sw; destx++, srcx += step_x)
         {
-            destcol = dest + (destx * video.height);
+            destcol = dest + (destx * video.pitch);
             srcline = snapshots[n] + (srcx >> FRACBITS);
 
             for (desty = 0, srcy = 0; desty < rect.sh; desty++, srcy += step_y)
@@ -256,12 +256,12 @@ boolean MN_DrawSnapshot(int n, int x, int y, int w, int h)
     }
     else
     {
-        pixel_t *dest = I_VideoBuffer + (rect.sx * video.height) + rect.sy;
+        pixel_t *dest = I_VideoBuffer + (rect.sx * video.pitch) + rect.sy;
         pixel_t *destcol, *srcline;
 
         for (destx = 0, srcx = 0; destx < rect.sw; destx++, srcx += step_x)
         {
-            destcol = dest + (destx * video.height);
+            destcol = dest + (destx * video.pitch);
             srcline = snapshots[n] + (srcx >> FRACBITS);
 
             for (desty = 0, srcy = 0; desty < rect.sh; desty++, srcy += step_y)

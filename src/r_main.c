@@ -253,7 +253,7 @@ static void ApplyBlockPostProcess(void)
     vwyh = viewwindowy + viewheight/2;
 
   pixel_t *const screen = I_VideoBuffer;
-  const int pitch = video.height;
+  const int pitch = video.pitch;
 
   const int first_x = vwx + (viewwidth / 2) % pw;
 
@@ -300,7 +300,7 @@ static void ApplyBlockPostProcess32(void)
     vwyh = viewwindowy + viewheight/2;
 
   pixel32_t *const screen = I_VideoBuffer32;
-  const int pitch = video.height;
+  const int pitch = video.pitch;
 
   const int first_x = vwx + (viewwidth / 2) % pw;
 
@@ -770,9 +770,8 @@ static void ProcessFOVEffects(void)
       {
         for (int i = 0;  i < NUM_FOVFX;  i++)
         {
-          fovfx[i].current = fovfx[i].old
-                           + ((fovfx[i].target - fovfx[i].old)
-                              * ((float) fractionaltic / FRACUNIT));
+          fovfx[i].current =
+            fovfx[i].old + (fovfx[i].target - fovfx[i].old) * FixedToFloat(fractionaltic);
         }
       }
     }
@@ -1432,7 +1431,7 @@ void R_InitLightTables (void)
     zlightoffset[lightlevel] = all_zlightoffsets + MAXLIGHTZ * lightlevel;
 
     const int startmap =
-      ((LIGHTLEVELS - 1 - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+      ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
 
     for (int lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
@@ -1461,7 +1460,7 @@ void R_InitLightTables (void)
     scalelightoffset[lightlevel] = all_scalelightoffsets + MAXLIGHTSCALE * lightlevel;
 
     const int startmap =
-      ((LIGHTLEVELS - 1 - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
+      ((LIGHTLEVELS - LIGHTBRIGHT - lightlevel) * 2) * num_colormap_rows / LIGHTLEVELS;
 
     for (int lightscale = 0; lightscale < MAXLIGHTSCALE; lightscale++)
     {
@@ -1816,8 +1815,8 @@ void R_Init (void)
 
   for (int i = 0;  i < FINEANGLES;  i++)
   {
-    floatsine[i] = (float) finesine[i] / FRACUNIT;
-    floatcosine[i] = (float) finecosine[i] / FRACUNIT;
+    floatsine[i] = FixedToFloat(finesine[i]);
+    floatcosine[i] = FixedToFloat(finecosine[i]);
 
     finesecant[i] = FixedDiv(FRACUNIT, finecosine[i]);
     floatsecant[i] = (float) FRACUNIT / finecosine[i];

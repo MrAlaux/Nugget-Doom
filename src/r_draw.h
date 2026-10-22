@@ -112,6 +112,9 @@ extern void (*R_DrawSpanWithRadialFog)(void); // [Nugget] Radial fog
 boolean R_InitDrawFunctionsPending(void);
 void R_DeferredInitDrawFunctions(void);
 
+// Draw to texture
+void R_InitYLookup(void);
+
 // Dithered lighting ---------------------------------------------------------
 
 #define NUM_DITHER_LEVELS_BITS 3

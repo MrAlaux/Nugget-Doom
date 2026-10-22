@@ -291,7 +291,9 @@ static statusbar_t *statusbar;
 
 static int st_cmd_x, st_cmd_y;
 
-hud_anchoring_t hud_anchoring;
+// [Nugget] Made HUD anchoring fine-tunable
+int hud_anchoring;
+
 int st_wide_shift;
 
 static patch_t **facepatches = NULL;
@@ -2133,10 +2135,16 @@ static void DrawWidget(int x1, int y1, int *x2, int *y2, boolean dry,
         if (elem->alignment & sbe_v_bottom)
         {
             y1 -= font->maxheight;
+
+            // [Nugget]
+            y1 -= line->ygap;
         }
         else
         {
             y1 += font->maxheight;
+
+            // [Nugget]
+            y1 += line->ygap;
         }
     }
 }
@@ -4596,9 +4604,11 @@ static void AddNughudToSbarDef(void)
 
 void ST_BindSTSVariables(void)
 {
-  M_BindNum("hud_anchoring", &hud_anchoring, NULL, HUD_ANCHORING_16_9,
-            HUD_ANCHORING_WIDE, HUD_ANCHORING_21_9, ss_stat, wad_no,
-            "HUD anchoring (0 = Wide; 1 = 4:3; 2 = 16:9; 3 = 21:9)");
+  // [Nugget] Made fine-tunable
+  M_BindNum("hud_anchoring", &hud_anchoring, NULL, 53, // 16:9
+            0, HUD_ANCHORING_MAX+1, ss_stat, wad_no,
+            "HUD anchoring (Max. value = As wide as possible)");
+
   M_BindBool("sts_colored_numbers", &sts_colored_numbers, NULL,
              false, ss_stat, wad_yes, "Colored numbers on the status bar");
   M_BindBool("sts_pct_always_gray", &sts_pct_always_gray, NULL,

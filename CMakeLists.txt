@@ -44,7 +44,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 project(
     "Nugget Doom"
-    VERSION 6.0.1
+    VERSION 6.1.0
     HOMEPAGE_URL "https://github.com/MrAlaux/Nugget-Doom"
     LANGUAGES C CXX
 )
@@ -73,6 +73,7 @@ set(PROJECT_COMPANY "Alaux and contributors")
 set(PROJECT_COPYRIGHT "Copyright (C) 1993-2026")
 set(PROJECT_LICENSE "GNU General Public License, version 2")
 set(PROJECT_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
+set(PROJECT_FILENAME "Nugget-Doom")
 set(PROJECT_SHORTNAME "nugget-doom")
 set(PROJECT_APPID "io.github.MrAlaux.Nugget-Doom")
 set(BASE_PK3 "nugget-doom.pk3")

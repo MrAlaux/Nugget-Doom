@@ -282,7 +282,7 @@ void D_Display (void)
   if (gamestate != wipegamestate)
     {
       wipe = true;
-      wipe_StartScreen(0, 0, video.width, video.height);
+      // [Nugget] Draw to texture: move `wipe_StartScreen()` call below
     }
 
   if (!wipe)
@@ -324,6 +324,18 @@ void D_Display (void)
     R_InitDrawColorFunctions();
     VX_SetVoxelRenderingMode();
   }
+
+  // [Nugget] Draw to texture /-----------------------------------------------
+
+  // Begin a new update if the existing one was cancelled
+  I_BeginUpdate();
+
+  if (wipe)
+  {
+    wipe_StartScreen(0, 0, video.width, video.height);
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   if (gamestate == GS_LEVEL && gametic)
     ST_Erase();
@@ -427,12 +439,25 @@ void D_Display (void)
 
   wipestart = I_GetTime () - 1;
 
+  // [Nugget] Draw to texture
+  boolean first_wipe_frame = true;
+
   do
     {
       int nowtime = I_GetTime();
       int tics = nowtime - wipestart;
 
       fractionaltic = I_GetFracTime();
+
+      // [Nugget] Draw to texture
+      if (first_wipe_frame)
+      {
+        first_wipe_frame = false;
+      }
+      else
+      {
+        I_BeginUpdate();
+      }
 
       done = wipe_ScreenWipe(0, 0, video.width, video.height, tics);
       wipestart = nowtime;

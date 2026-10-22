@@ -2020,7 +2020,7 @@ void V_DrawBackground(const char *patchname)
 
 void V_Init(void)
 {
-    linesize = video.height;
+    linesize = video.pitch;
 
     video.xscale = IntToFixed(video.width) / video.unscaledw;
     video.yscale = IntToFixed(video.height) / SCREENHEIGHT;
@@ -2090,12 +2090,12 @@ void V_RestoreBuffer(void)
     if (truecolor_rendering)
     {
       dest_screen32 = I_VideoBuffer32;
-      linesize = video.height;
+      linesize = video.pitch;
       return;
     }
 
     dest_screen = I_VideoBuffer;
-    linesize = video.height;
+    linesize = video.pitch;
 }
 
 //

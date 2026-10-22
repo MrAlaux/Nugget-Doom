@@ -1,4 +1,4 @@
-set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_NAME ${PROJECT_FILENAME})
 set(CPACK_PACKAGE_VENDOR "Alaux and contributors")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "Fork of Woof! intended to implement additional features.")

@@ -696,8 +696,11 @@ void G_SetTimeScale(void)
     }
 
     // [Nugget] Slow Motion
-    if (casual_play && !menuactive && slow_motion_factor != SLOWMO_FACTOR_NORMAL)
-    { time_scale = time_scale * slow_motion_factor / SLOWMO_FACTOR_NORMAL; }
+    if (casual_play && !menuactive && !paused
+        && slow_motion_factor != SLOWMO_FACTOR_NORMAL)
+    {
+        time_scale = time_scale * slow_motion_factor / SLOWMO_FACTOR_NORMAL;
+    }
 
     I_SetTimeScale(time_scale);
 
@@ -4294,20 +4297,24 @@ void G_Ticker(void)
   {
     slow_motion_factor -= MAX(MIN_SLOWMO_STEP, (slow_motion_factor - SLOWMO_FACTOR_TARGET) / 4);
     slow_motion_factor  = MAX(SLOWMO_FACTOR_TARGET, slow_motion_factor);
+
     change = true;
   }
   else if (!slow_motion && slow_motion_factor != SLOWMO_FACTOR_NORMAL)
   {
     slow_motion_factor += MAX(MIN_SLOWMO_STEP, (SLOWMO_FACTOR_NORMAL - slow_motion_factor) / 4);
     slow_motion_factor  = MIN(SLOWMO_FACTOR_NORMAL, slow_motion_factor);
+
     change = true;
   }
 
-  static boolean oldmenuactive = false;
+  static boolean oldmenuactive = false, oldpaused = false;
 
-  if (oldmenuactive != menuactive)
+  if (oldmenuactive != menuactive || oldpaused != !!paused)
   {
     oldmenuactive = menuactive;
+    oldpaused = !!paused;
+
     change = true;
   }
 
@@ -4386,7 +4393,7 @@ void G_Ticker(void)
             displaymsg("Freecam Speed: %i unit%s", scaledspeed, (scaledspeed == 1) ? "" : "s");
           }
 
-          const fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed))) * 100 / realtic_clock_rate;
+          const fixed_t speed = basespeed * (1 + (autorun ^ INPUT(input_speed))) * 100 / time_scale;
 
           const fixed_t forwardmove = speed * (INPUT(input_forward)     - INPUT(input_backward));
                 fixed_t    sidemove = speed * (INPUT(input_straferight) - INPUT(input_strafeleft));

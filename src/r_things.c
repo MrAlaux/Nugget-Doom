@@ -93,7 +93,7 @@ int R_CalculateHitboxLightLevel(
 
 static void ApplyFlipPostProcess(void)
 {
-  const int pitch = video.height,
+  const int pitch = video.pitch,
             width = viewwidth - 1;
 
   pixel_t *                 row = I_VideoBuffer + (viewwindowx * pitch + viewwindowy);
@@ -123,7 +123,7 @@ static void ApplyFlipPostProcess(void)
 
 static void ApplyFlipPostProcess32(void)
 {
-  const int pitch = video.height,
+  const int pitch = video.pitch,
             width = viewwidth - 1;
 
   pixel32_t *                 row = I_VideoBuffer32 + (viewwindowx * pitch + viewwindowy);
@@ -1048,6 +1048,20 @@ inline const int GetThingTint(const mobj_t *const mo, const sector_t *const s)
 
 boolean flipcorpses = false;
 
+// [Nugget] Sprite shadows
+static inline boolean ClipShadow(
+  const fixed_t mobjx,
+  const fixed_t mobjy,
+  const fixed_t dist,
+  const int fineangle,
+  const fixed_t floorheight
+) {
+  const fixed_t x = mobjx + dist * floatcosine[fineangle],
+                y = mobjy + dist *   floatsine[fineangle];
+
+  return abs(R_PointInSubsector(x,y)->sector->interpfloorheight - floorheight) > 12*FRACUNIT;
+}
+
 static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 {
   fixed_t   gzt;               // killough 3/27/98
@@ -1143,7 +1157,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
     have_scale = true;
 
-    info_scale_mult = FixedToDouble(thing->info->scale);
+    info_scale_mult = FixedToFloat(thing->info->scale);
     xscale_mult = yscale_mult = info_scale_mult;
 
     xscale *= xscale_mult;
@@ -1498,13 +1512,13 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] Sprite shadows -------------------------------------------------
 
-  const float fscale = FixedToDouble(vis->scale);
+  const float fscale = FixedToFloat(scale);
 
   const unsigned sprite_area = ((thisspritewidth  >> FRACBITS) * fscale)
                              * ((thisspriteheight >> FRACBITS) * fscale);
 
   if (   !R_SpriteShadowsOn()
-      || (sprite_area < 32)
+      || (sprite_area < 128)
       || (frame & FF_FULLBRIGHT)
       || (thing->flags & MF_SHADOW)
       || vis->tranmap
@@ -1517,7 +1531,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   if (viewz < floorheight + FRACUNIT) { return; }
 
-  float floordist = MAX(0, interpz - floorheight) / (float) FRACUNIT;
+  float floordist = FixedToFloat(MAX(0, interpz - floorheight));
 
   if (floordist >= 256.0f) { return; }
 
@@ -1552,17 +1566,17 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
     shadow_yscale_mult = BASE_YSCALE_MULT - (floordist * BASE_YSCALE_MULT);
   }
 
-  fixed_t shadow_xscale, shadow_yscale, shadow_gz, shadow_gzt;
+  const fixed_t
+    shadow_yscale = yscale * shadow_yscale_mult,
+    shadow_xscale = xscale * (1.0f - floordist);
 
-  shadow_yscale = yscale * shadow_yscale_mult;
-  shadow_xscale = xscale * (1.0f - floordist);
+  const fixed_t
+    shadow_height = scaled_spriteheight * shadow_yscale_mult,
+    shadow_y_offset = shadow_height / offset_divisor;
 
-  const fixed_t shadow_height = scaled_spriteheight * shadow_yscale_mult;
-
-  shadow_gz  = floorheight - shadow_height / offset_divisor;
-  shadow_gzt = shadow_gz   + shadow_height;
-
-  // Could clip shadows out of view due to height
+  const fixed_t
+    shadow_gz  = floorheight - shadow_y_offset,
+    shadow_gzt = shadow_gz   + shadow_height;
 
   // The following `R_NewVisSprite()` call may leave `vis` dangling,
   // so we'll copy it beforehand
@@ -1576,54 +1590,75 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   shadow_vis->gz = shadow_gz;
   shadow_vis->gzt = shadow_gzt;
-  shadow_vis->texturemid = shadow_vis->gzt - viewz;
+  shadow_vis->texturemid = shadow_gzt - viewz;
 
   shadow_vis->yscale = shadow_yscale;
 
   shadow_vis->flags = VSF_NO_PERC|VSF_SCALED|VSF_SHADOW;
 
-  fixed_t shadow_tx, shadow_tx_clipped;
+  fixed_t shadow_tx;
 
-  const fixed_t clip_step = FRACUNIT / xscale_mult;
+  // Physical position of the shadow's center
+  const fixed_t
+    swx = interpx + (shadow_height - shadow_y_offset) * floatcosine[viewangle >> ANGLETOFINESHIFT],
+    swy = interpy + (shadow_height - shadow_y_offset) *   floatsine[viewangle >> ANGLETOFINESHIFT];
 
-  #define GET_TX_CLIPPED(angle) \
+  #define GET_TX_CLIPPED() \
   { \
-    shadow_tx_clipped = 0; \
-    const int fineangle = (angle) >> ANGLETOFINESHIFT; \
+    fixed_t clipped_frac = 0; \
     \
-    for (fixed_t dist = clip_step;  dist <= shadow_tx;  dist += clip_step) \
+    for (fixed_t dist = FRACUNIT;  dist <= shadow_tx;  dist += FRACUNIT) \
     { \
-      shadow_tx_clipped = dist; \
+      clipped_frac = dist; \
     \
-      const fixed_t scaled_dist = dist * xscale_mult; \
-      const fixed_t x = interpx + FixedMul(scaled_dist, finecosine[fineangle]), \
-                    y = interpy + FixedMul(scaled_dist,   finesine[fineangle]); \
-    \
-      if (abs(R_PointInSubsector(x,y)->sector->interpfloorheight - floorheight) \
-          > 12*FRACUNIT) \
-      { \
-        break; \
-      } \
+      if (ClipShadow(swx, swy, dist, fineangle, floorheight)) \
+      { break; } \
     } \
+    \
+    shadow_tx_clipped = FixedToFloat(clipped_frac); \
   }
 
+  const float fmidx = FixedToFloat(midx);
+
   shadow_tx = flip ? thisspritewidth - thisspriteoffset : thisspriteoffset;
-  const fixed_t shadow_x1 = (midx - FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS;
+  const int shadow_x1 = (midx - FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS;
 
-  shadow_vis->x1 = MAX(0, shadow_x1);
+  {
+    const int fineangle = (viewangle + ANG90) >> ANGLETOFINESHIFT;
 
-  GET_TX_CLIPPED(viewangle + ANG90);
-  const fixed_t shadow_x1_clipped = (midx - FixedMul64(shadow_tx_clipped, xscale)) >> FRACBITS;
-  shadow_vis->x1 = MAX(shadow_vis->x1, shadow_x1_clipped);
+    // Don't clip if the sector at the sprite's edge doesn't have a sufficient height difference
+    // (it's probably the sector that the entity is already in)
+    if (ClipShadow(swx, swy, shadow_tx * xscale_mult, fineangle, floorheight))
+    {
+      float shadow_tx_clipped;
+      GET_TX_CLIPPED();
 
-  shadow_tx = thisspritewidth;
-  const fixed_t shadow_x2 = ((midx + FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS) - 1;
+      const int shadow_x1_clipped = fmidx - shadow_tx_clipped * fscale;
+      shadow_vis->x1 = MAX(0, shadow_x1_clipped);
+    }
+    else {
+      shadow_vis->x1 = MAX(0, shadow_x1);
+    }
+  }
 
-  shadow_vis->x2 = MIN(viewwidth - 1, shadow_x2);
+  shadow_tx = thisspritewidth - shadow_tx;
 
-  GET_TX_CLIPPED(viewangle - ANG90);
-  const fixed_t shadow_x2_clipped = ((midx + FixedMul64(shadow_tx_clipped, xscale)) >> FRACBITS) - 1;
-  shadow_vis->x2 = MIN(shadow_vis->x2, shadow_x2_clipped);
+  {
+    const int fineangle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
+
+    if (ClipShadow(swx, swy, shadow_tx * xscale_mult, fineangle, floorheight))
+    {
+      float shadow_tx_clipped;
+      GET_TX_CLIPPED();
+
+      const int shadow_x2_clipped = fmidx + shadow_tx_clipped * fscale - 1;
+      shadow_vis->x2 = MIN(viewwidth - 1, shadow_x2_clipped);
+    }
+    else {
+      const int shadow_x2 = ((midx + FixedMul64(shadow_tx, shadow_xscale)) >> FRACBITS) - 1;
+      shadow_vis->x2 = MIN(viewwidth - 1, shadow_x2);
+    }
+  }
 
   const fixed_t shadow_xiscale = FixedDiv(FRACUNIT, shadow_xscale);
 

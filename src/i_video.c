@@ -118,6 +118,8 @@ static aspect_ratio_mode_t widescreen, default_widescreen;
 
 // [Nugget] /-----------------------------------------------------------------
 
+static boolean draw_to_texture;
+static boolean clear_every_frame;
 static int fps_counter_update_time;
 static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
@@ -277,6 +279,20 @@ static void InitColor(void)
 }
 
 static const char *sdl_renderdriver = "";
+
+static unsigned clearneeded = 0;
+
+static void DeferredRenderClear(void)
+{
+    // SDL might be using a swapchain for rendering,
+    // so a call to SDL_RenderClear might only clear a single buffer;
+    // thus, we queue multiple clears for the following frames
+
+    // We don't know the specifics of SDL's current renderer,
+    // so we'll assume that 60 frames is enough to clear all buffers
+
+    clearneeded = 60;
+}
 
 static int red_intensity, green_intensity, blue_intensity;
 static int color_saturation, color_contrast;
@@ -855,50 +871,66 @@ void I_StartDisplay(void)
 //
 void I_StartFrame(void)
 {
-    ;
+    // [Nugget] Draw to texture
+    I_BeginUpdate();
 }
 
 static void UpdateRender(void)
 {
-    // When using SDL_LockTexture, the pixels made available for editing may not
-    // contain the original texture data. We have to maintain a copy of the
-    // video buffer in order to emulate HOM effects.
-    void *pixels;
-    int dst_pitch;
-
-    SDL_LockTexture(texture, &src_rect, &pixels, &dst_pitch);
-
-    int h = src_rect.h;
-    int src_pitch = video.height;
-
-    if (truecolor_rendering)
+    // [Nugget] Draw to texture
+    if (!draw_to_texture)
     {
-        src_pitch *= sizeof(pixel32_t);
+        // When using SDL_LockTexture, the pixels made available for editing may not
+        // contain the original texture data. We have to maintain a copy of the
+        // video buffer in order to emulate HOM effects.
+        void *pixels;
+        int dst_pitch;
 
-        byte *dst = pixels;
-        byte *src = (byte *) I_VideoBuffer32;
-        while (h--)
+        SDL_LockTexture(texture, &src_rect, &pixels, &dst_pitch);
+
+        int h = src_rect.h;
+        int src_pitch = video.height;
+
+        if (truecolor_rendering)
         {
-            memcpy(dst, src, src_pitch);
-            dst += dst_pitch;
-            src += src_pitch;
+            src_pitch *= sizeof(pixel32_t);
+
+            byte *dst = pixels;
+            byte *src = (byte *) I_VideoBuffer32;
+            while (h--)
+            {
+                memcpy(dst, src, src_pitch);
+                dst += dst_pitch;
+                src += src_pitch;
+            }
+        }
+        else
+        {
+            pixel_t *dst = pixels;
+            pixel_t *src = I_VideoBuffer;
+            while (h--)
+            {
+                memcpy(dst, src, src_pitch);
+                dst += dst_pitch;        
+                src += src_pitch;
+            }
         }
     }
-    else
-    {
-        pixel_t *dst = pixels;
-        pixel_t *src = I_VideoBuffer;
-        while (h--)
-        {
-            memcpy(dst, src, src_pitch);
-            dst += dst_pitch;        
-            src += src_pitch;
-        }
+    else {
+        I_VideoBuffer = NULL;
+        I_VideoBuffer32 = NULL;
     }
 
     SDL_UnlockTexture(texture);
 
-    SDL_RenderClear(renderer);
+    // [Nugget] Clear when needed
+    if (clear_every_frame || clearneeded)
+    {
+        SDL_RenderClear(renderer);
+
+        clearneeded = clear_every_frame ? 0 : clearneeded - 1;
+    }
+
     SDL_RenderTextureRotated(renderer, texture, &src_frect, &dst_frect, 90.0, NULL, SDL_FLIP_VERTICAL);
 }
 
@@ -1039,12 +1071,61 @@ static unsigned int disk_to_draw, disk_to_restore;
 
 static void I_ResetTargetRefresh(void);
 
+// [Nugget] Draw to texture /-------------------------------------------------
+
+static boolean in_update = false;
+
+void I_BeginUpdate(void)
+{
+    if (!draw_to_texture || noblit || in_update)
+    {
+        return;
+    }
+
+    in_update = true;
+
+    void *pixels;
+    int dst_pitch;
+
+    SDL_LockTexture(texture, &src_rect, &pixels, &dst_pitch);
+
+    if (truecolor_rendering)
+    {
+        I_VideoBuffer32 = pixels;
+
+        // Assume that the pitch is a multiple of 4
+        video.pitch = dst_pitch / sizeof(pixel32_t);
+    }
+    else {
+        I_VideoBuffer = pixels;
+
+        video.pitch = dst_pitch;
+    }
+
+    V_RestoreBuffer();
+    R_InitXLookup();
+}
+
+static void CancelUpdate(void)
+{
+    if (draw_to_texture && in_update)
+    {
+        in_update = false;
+        SDL_UnlockTexture(texture);
+    }
+}
+
+// [Nugget] -----------------------------------------------------------------/
+
 void I_FinishUpdate(void)
 {
     if (noblit)
     {
         return;
     }
+
+    // [Nugget] Draw to texture
+    in_update = false;
 
     if (toggle_fullscreen)
     {
@@ -1433,6 +1514,8 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
                 V_BlueFromRGB(palcolors[0]),
                 SDL_ALPHA_OPAQUE
             );
+
+            DeferredRenderClear();
         }
 
         return;
@@ -1469,6 +1552,9 @@ void I_SetPalette(byte palette_index) // [Nugget] Pass index
         // emulating VGA "porch" behaviour
         SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b,
                                SDL_ALPHA_OPAQUE);
+
+        // [Nugget]
+        DeferredRenderClear();
     }
 }
 
@@ -1715,6 +1801,12 @@ static void ResetResolution(int height)
     video.width = actualheight * aspect_ratio.w / aspect_ratio.h;
     video.width &= (int)~1;
 
+    // [Nugget] Draw to texture
+    if (!draw_to_texture)
+    {
+        video.pitch = video.height;
+    }
+
     video.deltaw = (video.unscaledw - NONWIDEWIDTH) / 2;
 
     Z_FreeTag(PU_VALLOC);
@@ -1732,6 +1824,9 @@ static void ResetResolution(int height)
              widescreen_strings[widescreen]);
 
     drs_skip_frame = true;
+
+    // [Nugget]
+    DeferredRenderClear();
 }
 
 static void ResetLogicalSize(void)
@@ -1752,6 +1847,9 @@ static void ResetLogicalSize(void)
     {
         I_Printf(VB_ERROR, "Failed to set logical size: %s", SDL_GetError());
     }
+
+    // [Nugget] Draw to texture
+    CancelUpdate();
 }
 
 static void UpdateUncapped(void)
@@ -2095,28 +2193,36 @@ static void CreateVideoBuffer(void)
     SDL_SetTextureScaleMode(texture,
         smooth_scaling ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST);
 
-    if (I_VideoBuffer)
+    // [Nugget] Draw to texture
+    if (draw_to_texture)
     {
-        free(I_VideoBuffer);
-        I_VideoBuffer = NULL;
-    }
-
-    if (I_VideoBuffer32)
-    {
-        free(I_VideoBuffer32);
-        I_VideoBuffer32 = NULL;
-    }
-
-    if (truecolor_rendering)
-    {
-        I_VideoBuffer32 = calloc(video.width * video.height, sizeof(pixel32_t));
+        in_update = false; // The old texture has been destroyed
     }
     else
     {
-        I_VideoBuffer = calloc(video.width * video.height, sizeof(pixel_t));
-    }
+        if (I_VideoBuffer)
+        {
+            free(I_VideoBuffer);
+            I_VideoBuffer = NULL;
+        }
 
-    V_RestoreBuffer();
+        if (I_VideoBuffer32)
+        {
+            free(I_VideoBuffer32);
+            I_VideoBuffer32 = NULL;
+        }
+
+        if (truecolor_rendering)
+        {
+            I_VideoBuffer32 = calloc(video.width * video.height, sizeof(pixel32_t));
+        }
+        else
+        {
+            I_VideoBuffer = calloc(video.width * video.height, sizeof(pixel_t));
+        }
+
+        V_RestoreBuffer();
+    }
 
     Z_FreeTag(PU_RENDERER);
     R_InitAnyRes();
@@ -2136,39 +2242,15 @@ static void CreateVideoBuffer(void)
 
 void I_UpdateHudAnchoring(void)
 {
-    int w, h;
+    // [Nugget] Made HUD anchoring fine-tunable
 
-    switch (hud_anchoring)
+    if (hud_anchoring > HUD_ANCHORING_MAX)
     {
-        case HUD_ANCHORING_4_3:
-            w = 4;
-            h = 3;
-            break;
-
-        case HUD_ANCHORING_16_9:
-            w = 16;
-            h = 9;
-            break;
-
-        case HUD_ANCHORING_21_9:
-            w = 21;
-            h = 9;
-            break;
-
-        default: // HUD_ANCHORING_WIDE
-            w = video.unscaledw;
-            h = unscaled_actualheight;
-            break;
-    }
-
-    st_wide_shift = (unscaled_actualheight * w / h - NONWIDEWIDTH) / 2;
-    st_wide_shift = CLAMP(st_wide_shift, 0, video.deltaw);
-
-    if (st_wide_shift > 0.9f * video.deltaw)
-    {
-        // Snap to edges when close.
         st_wide_shift = video.deltaw;
     }
+    else { st_wide_shift = hud_anchoring; }
+
+    st_wide_shift = CLAMP(st_wide_shift, 0, video.deltaw);
 
     MN_UpdateHudAnchoringItem();
 }
@@ -2335,6 +2417,17 @@ void I_BindVideoVariables(void)
                "Use palette colors exactly when gamma correction is disabled");
 
     BIND_BOOL_GENERAL(smooth_scaling, true, "Smooth pixel scaling");
+
+    // [Nugget] /-------------------------------------------------------------
+
+    BIND_BOOL(draw_to_texture, false,
+        "Draw to SDL texture directly (faster, might break wipes and HOMs)");
+
+    BIND_BOOL(clear_every_frame, true,
+        "Clear SDL renderer every frame (disabling might improve performance "
+        "but provoke flickering on window borders)");
+
+    // [Nugget] -------------------------------------------------------------/
 
     BIND_BOOL(vga_porch_flash, false, "Emulate VGA \"porch\" behaviour");
     BIND_BOOL(disk_icon, false, "Flashing icon during disk I/O");

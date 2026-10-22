@@ -1075,7 +1075,7 @@ static void DrawColumnCubesLoop8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel_t * dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
@@ -1243,7 +1243,7 @@ static void DrawColumnCubesLoop32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel32_t * dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
@@ -1410,7 +1410,7 @@ static void DrawColumnCubesLoopDithered8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel_t * dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
@@ -1603,7 +1603,7 @@ static void DrawColumnCubesLoopDithered32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel32_t * dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
@@ -1986,7 +1986,7 @@ static void DrawColumnBoundedLoop8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
@@ -2093,7 +2093,7 @@ static void DrawColumnBoundedLoop32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
@@ -2202,7 +2202,7 @@ static void DrawColumnBoundedLoopDithered8(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
@@ -2326,7 +2326,7 @@ static void DrawColumnBoundedLoopDithered32(
 	const fixed_t ux2,
 	const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.height;
+	const int linesize = video.pitch;
 	pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
