@@ -113,7 +113,7 @@ boolean R_InitDrawFunctionsPending(void);
 void R_DeferredInitDrawFunctions(void);
 
 // Draw to texture
-void R_InitYLookup(void);
+void R_InitXLookup(void);
 
 // Dithered lighting ---------------------------------------------------------
 

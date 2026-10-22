@@ -89,43 +89,43 @@ static int wipe_doCrossfade(int width, int height, int ticks)
 
     if (truecolor_rendering)
     {
-        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
         {
-            pixel32_t *sta = wipe_scr32_start + y * width;
-            pixel32_t *end = wipe_scr32_end + y * width;
-            pixel32_t *dst = wipe_scr32 + y * video.pitch;
+            pixel32_t *sta = wipe_scr32_start + (x * height);
+            pixel32_t *end = wipe_scr32_end + (x * height);
+            pixel32_t *dst = wipe_scr32 + (x * video.pitch);
 
-            for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
             {
                 unsigned int *fg2rgb = Col2RGB8[fade_tick];
                 unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
                 unsigned int fg, bg;
 
-                fg = fg2rgb[V_IndexFromRGB(end[x])];
-                bg = bg2rgb[V_IndexFromRGB(sta[x])];
+                fg = fg2rgb[V_IndexFromRGB(end[y])];
+                bg = bg2rgb[V_IndexFromRGB(sta[y])];
                 fg = (fg + bg) | 0x1f07c1f;
-                dst[x] = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
+                dst[y] = V_IndexToRGB(RGB32k[0][0][fg & (fg >> 15)]);
             }
         }
     }
     else
     {
-        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
         {
-            pixel_t *sta = wipe_scr_start + y * width;
-            pixel_t *end = wipe_scr_end + y * width;
-            pixel_t *dst = wipe_scr + y * video.pitch;
+            pixel_t *sta = wipe_scr_start + (x * height);
+            pixel_t *end = wipe_scr_end + (x * height);
+            pixel_t *dst = wipe_scr + (x * video.pitch);
 
-            for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
             {
                 unsigned int *fg2rgb = Col2RGB8[fade_tick];
                 unsigned int *bg2rgb = Col2RGB8[64 - fade_tick];
                 unsigned int fg, bg;
 
-                fg = fg2rgb[end[x]];
-                bg = bg2rgb[sta[x]];
+                fg = fg2rgb[end[y]];
+                bg = bg2rgb[sta[y]];
                 fg = (fg + bg) | 0x1f07c1f;
-                dst[x] = RGB32k[0][0][fg & (fg >> 15)];
+                dst[y] = RGB32k[0][0][fg & (fg >> 15)];
             }
         }
     }
@@ -289,15 +289,10 @@ static int wipe_renderMelt(int width, int height, int ticks)
             currcolend = (col + 1) * horizblocksize / 100;
             for (; currcol < currcolend; ++currcol)
             {
-                pixel_t *source = wipe_scr_start + currcol;
-                pixel_t *dest = wipe_scr + currcol;
+                pixel_t *source = wipe_scr_start + (currcol * height);
+                pixel_t *dest = wipe_scr + (currcol * video.pitch);
 
-                for (int i = 0; i < height; ++i)
-                {
-                    *dest = *source;
-                    dest += width;
-                    source += width;
-                }
+                memcpy(dest, source, height);
             }
         }
         else if (current < WIPE_ROWS)
@@ -309,15 +304,10 @@ static int wipe_renderMelt(int width, int height, int ticks)
 
             for (; currcol < currcolend; ++currcol)
             {
-                pixel_t *source = wipe_scr_start + currcol;
-                pixel_t *dest = wipe_scr + currcol + (currrow * video.pitch);
+                pixel_t *source = wipe_scr_start + (currcol * height);
+                pixel_t *dest = wipe_scr + (currcol * video.pitch) + currrow;
 
-                for (int i = 0; i < height - currrow; ++i)
-                {
-                    *dest = *source;
-                    dest += video.pitch;
-                    source += width;
-                }
+                memcpy(dest, source, height - currrow);
             }
 
             done = false;
@@ -326,13 +316,9 @@ static int wipe_renderMelt(int width, int height, int ticks)
 
     for (currcol = wipe_columns * horizblocksize / 100; currcol < width; ++currcol)
     {
-        pixel_t *dest = wipe_scr + currcol;
+        pixel_t *dest = wipe_scr + (currcol * video.pitch);
 
-        for (int i = 0; i < height; ++i)
-        {
-            *dest = v_darkest_color;
-            dest += video.pitch;
-        }
+        memset(dest, v_darkest_color, height);
     }
 
     return done;
@@ -371,15 +357,10 @@ static int wipe_renderMelt32(int width, int height, int ticks)
             currcolend = (col + 1) * horizblocksize / 100;
             for (; currcol < currcolend; ++currcol)
             {
-                pixel32_t *source = wipe_scr32_start + currcol;
-                pixel32_t *dest = wipe_scr32 + currcol;
+                pixel32_t *source = wipe_scr32_start + (currcol * height);
+                pixel32_t *dest = wipe_scr32 + (currcol * video.pitch);
 
-                for (int i = 0; i < height; ++i)
-                {
-                    *dest = *source;
-                    dest += video.pitch;
-                    source += width;
-                }
+                V_RGBCopy(dest, source, height);
             }
         }
         else if (current < WIPE_ROWS)
@@ -391,15 +372,10 @@ static int wipe_renderMelt32(int width, int height, int ticks)
 
             for (; currcol < currcolend; ++currcol)
             {
-                pixel32_t *source = wipe_scr32_start + currcol;
-                pixel32_t *dest = wipe_scr32 + currcol + (currrow * video.pitch);
+                pixel32_t *source = wipe_scr32_start + (currcol * height);
+                pixel32_t *dest = wipe_scr32 + (currcol * video.pitch) + currrow;
 
-                for (int i = 0; i < height - currrow; ++i)
-                {
-                    *dest = *source;
-                    dest += video.pitch;
-                    source += width;
-                }
+                V_RGBCopy(dest, source, height - currrow);
             }
 
             done = false;
@@ -408,13 +384,9 @@ static int wipe_renderMelt32(int width, int height, int ticks)
 
     for (currcol = wipe_columns * horizblocksize / 100; currcol < width; ++currcol)
     {
-        pixel32_t *dest = wipe_scr32 + currcol;
+        pixel32_t *dest = wipe_scr32 + (currcol * video.pitch);
 
-        for (int i = 0; i < height; ++i)
-        {
-            *dest = V_IndexToRGB(v_darkest_color);
-            dest += video.pitch;
-        }
+        V_RGBSet(dest, v_darkest_color, height);
     }
 
     return done;
@@ -454,13 +426,13 @@ int wipe_EndScreen(int x, int y, int width, int height)
     {
         wipe_scr32_end = Z_Malloc(size * sizeof(*wipe_scr32_end), PU_STATIC, NULL);
         I_ReadScreen32(wipe_scr32_end);
-        V_DrawBlock32(x, y, width, height, wipe_scr32_start);
+        // V_DrawBlock32(x, y, width, height, wipe_scr32_start);
     }
     else
     {
         wipe_scr_end = Z_Malloc(size * sizeof(*wipe_scr_end), PU_STATIC, NULL);
         I_ReadScreen(wipe_scr_end);
-        V_DrawBlock(x, y, width, height, wipe_scr_start); // restore start scr.
+        // V_DrawBlock(x, y, width, height, wipe_scr_start); // restore start scr.
     }
 
     return 0;
@@ -596,13 +568,13 @@ static int wipe_doFizzle(int width, int height, int ticks)
         vrect_t rect = {x, y, 1, 1};
         V_ScaleRect(&rect);
 
-        pixel_t *src = wipe_scr_end + rect.sy * width + rect.sx;
-        pixel_t *dest = wipe_scr + rect.sy * video.pitch + rect.sx;
+        pixel_t *src = wipe_scr_end + rect.sx * height + rect.sy;
+        pixel_t *dest = wipe_scr + rect.sx * video.pitch + rect.sy;
 
-        while (rect.sh--)
+        while (rect.sw--)
         {
-            memcpy(dest, src, rect.sw);
-            src += width;
+            memcpy(dest, src, rect.sh);
+            src += height;
             dest += video.pitch;
         }
 
@@ -652,13 +624,13 @@ static int wipe_doFizzle32(int width, int height, int ticks)
         vrect_t rect = {x, y, 1, 1};
         V_ScaleRect(&rect);
 
-        pixel32_t *src = wipe_scr32_end + rect.sy * width + rect.sx;
-        pixel32_t *dest = wipe_scr32 + rect.sy * video.pitch + rect.sx;
+        pixel32_t *src = wipe_scr32_end + rect.sx * height + rect.sy;
+        pixel32_t *dest = wipe_scr32 + rect.sx * video.pitch + rect.sy;
 
-        while (rect.sh--)
+        while (rect.sw--)
         {
-            V_RGBCopy(dest, src, rect.sw);
-            src += width;
+            V_RGBCopy(dest, src, rect.sh);
+            src += height;
             dest += video.pitch;
         }
 

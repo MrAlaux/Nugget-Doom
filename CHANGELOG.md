@@ -8,6 +8,7 @@
 
 ## Changes
 
+- **Merged changes from Woof! post-16.0.0**
 - **Made the NUGHUD have its own slot**
 - **Made _HUD Anchoring_ fine-tunable** [^1]
 - **Improved and optimized clipping of _Sprite Shadows_**
@@ -15,6 +16,7 @@
 - **Made automap marks flash brighter when using _Highlight P.O.I.'s_**
 - **Improved how the NUGHUD's minimap interacts with the message list**
 - **Improved carousel fadeout**
+- **Improved low-resolution post-process**
 - **Allowed _Fast-Forward_ outside of demo playback**
 
 ## Bug Fixes
