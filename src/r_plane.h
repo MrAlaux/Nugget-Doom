@@ -36,6 +36,9 @@ extern int *openings, *lastopening; // [FG] 32-bit integer math
 extern int *floorclip, *ceilingclip; // [FG] 32-bit integer math
 extern fixed_t *yslope;
 
+// [Nugget] Square pixels
+extern fixed_t planesine[FINEANGLES], planecosine[FINEANGLES];
+
 void R_InitPlanes(void);
 void R_ClearPlanes(void);
 void R_DrawPlanes (void);

@@ -55,6 +55,10 @@ extern int64_t sprtopscreen; // [FG] 64-bit integer math
 extern fixed_t pspritescale;
 extern fixed_t pspriteiscale;
 
+// [Nugget]
+extern fixed_t pspriteyscale;
+extern fixed_t pspriteyiscale;
+
 extern boolean flipcorpses;
 
 extern boolean draw_nearby_sprites;

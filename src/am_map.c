@@ -843,7 +843,7 @@ static void AM_clearLastMark(void)
 
 static void AM_EnableSmoothLines(void)
 {
-    if (map_smooth_lines && video.height >= SCREENHEIGHT * 2)
+    if (map_smooth_lines && video.height >= screenheight * 2)
     {
         AM_drawFline = AM_drawFline_Smooth;
     }
@@ -2796,7 +2796,7 @@ static void AM_drawWalls(void)
         AM_drawLineCharacter(
             tf_cross,
             NUM_TF_CROSS_LINES,
-            ((int64_t) scale_ftom * 24) * current_video_height / SCREENHEIGHT,
+            ((int64_t) scale_ftom * 24) * current_video_height / screenheight,
             0,
             crossmarks[i].color,
             crossmarks[i].x,
@@ -3364,7 +3364,7 @@ void AM_Drawer(void)
         AM_drawLineCharacter(
             GetTanzerF(tanzf),
             NUMTANZERFL,
-            scale_ftom * current_video_height / SCREENHEIGHT,
+            scale_ftom * current_video_height / screenheight,
             automaprotate ? (followplayer ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
             v_lightest_color,
             (m_x + m_x2) / 2,
@@ -3531,7 +3531,7 @@ void AM_ResetThickness(void)
 {
     if (!map_line_thickness)
     {
-        thickness = MAX(1, video.height / SCREENHEIGHT - 1);
+        thickness = MAX(1, video.height / screenheight - 1);
     }
     else
     {

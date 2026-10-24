@@ -143,6 +143,9 @@ typedef struct
 
 extern video_t video;
 
+// [Nugget] Square pixels
+extern int screenheight;
+
 typedef struct
 {
     int x;   // original x coordinate for upper left corner

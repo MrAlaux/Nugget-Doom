@@ -2875,7 +2875,7 @@ static const char **GetResolutionScaleStrings(void)
     array_push(strings, "100%");
 
     resolution_scale = 0;
-    int val = SCREENHEIGHT * 2;
+    int val = screenheight * 2;
     char buf[8];
     int i;
 
@@ -2886,7 +2886,7 @@ static const char **GetResolutionScaleStrings(void)
             resolution_scale = i;
         }
 
-        int pct = val * 100 / SCREENHEIGHT;
+        int pct = val * 100 / screenheight;
         M_snprintf(buf, sizeof(buf), "%d%%", pct);
         array_push(strings, M_StringDuplicate(buf));
 
@@ -2910,7 +2910,7 @@ static void ResetVideoHeight(void)
 
     if (default_reset)
     {
-        current_video_height = 600;
+        current_video_height = screenheight * 3;
         int val = SCREENHEIGHT * 2;
         for (int i = 1; val < rs.max; ++i)
         {
@@ -2931,12 +2931,12 @@ static void ResetVideoHeight(void)
         }
         else if (resolution_scale == 0)
         {
-            current_video_height = SCREENHEIGHT;
+            current_video_height = screenheight;
         }
         else
         {
             current_video_height =
-                SCREENHEIGHT * 2 + (resolution_scale - 1) * rs.step;
+                screenheight * 2 + (resolution_scale - 1) * rs.step;
         }
     }
 

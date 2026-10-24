@@ -92,7 +92,7 @@ boolean setrefreshneeded;
 boolean toggle_fullscreen;
 
 static boolean use_vsync; // killough 2/8/98: controls whether vsync is called
-boolean correct_aspect_ratio;
+static boolean cvar_correct_aspect_ratio; // [Nugget] Made CVAR, static
 static boolean stretch_to_fit; // [Nugget]
 static int fpslimit; // when uncapped, limit framerate to this value
 static boolean fullscreen;
@@ -117,11 +117,16 @@ static aspect_ratio_mode_t widescreen, default_widescreen;
 
 // [Nugget] /-----------------------------------------------------------------
 
+// CVARs
+static boolean square_pixels;
 static boolean draw_to_texture;
 static boolean clear_every_frame;
 static int fps_counter_update_time;
 static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
+
+float aspect_v_factor;
+boolean correct_aspect_ratio;
 
 double average_frametime;
 
@@ -1878,12 +1883,29 @@ static void I_InitVideoParms(void)
         I_Error("Error getting display mode: %s", SDL_GetError());
     }
 
+    // [Nugget] Square pixels /-----------------------------------------------
+
+    if (square_pixels)
+    {
+        correct_aspect_ratio = false;
+        aspect_v_factor = 1.2f; // ACTUALHEIGHT / SCREENHEIGHT
+    }
+    else {
+        correct_aspect_ratio = cvar_correct_aspect_ratio;
+        aspect_v_factor = 1.0f;
+    }
+
+    screenheight = SCREENHEIGHT * aspect_v_factor;
+
+    // [Nugget] -------------------------------------------------------------/
+
     if (max_video_width && max_video_height)
     {
-        if (correct_aspect_ratio && max_video_height < ACTUALHEIGHT)
+        // [Nugget] Square pixels: adjusted
+        if (max_video_height < screenheight)
         {
-            I_Error("The vertical resolution is too low, turn off the aspect "
-                    "ratio correction.");
+            I_Error("The vertical resolution is too low; turn off aspect-"
+                    "ratio correction or square pixels.");
         }
         if (max_video_width < ASPECT_RATIO_MIN * max_video_height)
         {
@@ -1908,7 +1930,7 @@ static void I_InitVideoParms(void)
     else
     {
         max_height_adjusted = max_height;
-        unscaled_actualheight = SCREENHEIGHT;
+        unscaled_actualheight = screenheight;
     }
 
     // SDL may report native refresh rate as zero.
@@ -2075,7 +2097,7 @@ static void I_InitGraphicsMode(void)
 
 resolution_scaling_t I_GetResolutionScaling(void)
 {
-    resolution_scaling_t rs = {.max = max_height_adjusted, .step = 50};
+    resolution_scaling_t rs = {.max = max_height_adjusted, .step = screenheight / 4};
     return rs;
 }
 
@@ -2083,11 +2105,11 @@ static int GetCurrentVideoHeight(void)
 {
     if (scalefactor > 0)
     {
-        current_video_height = scalefactor * SCREENHEIGHT;
+        current_video_height = scalefactor * screenheight;
     }
 
     current_video_height =
-        CLAMP(current_video_height, SCREENHEIGHT, max_height_adjusted);
+        CLAMP(current_video_height, screenheight, max_height_adjusted);
 
     return current_video_height;
 }
@@ -2167,7 +2189,7 @@ static void CreateVideoBuffer(void)
 
     // [Nugget] Keep minimum window size at 200p/240p unconditionally
     SDL_SetWindowMinimumSize(screen, video.unscaledw,
-        correct_aspect_ratio ? ACTUALHEIGHT : SCREENHEIGHT);
+        correct_aspect_ratio ? ACTUALHEIGHT : screenheight);
 
     if (!fullscreen)
     {
@@ -2317,7 +2339,13 @@ void I_BindVideoVariables(void)
         "opengl, opengles2, opengles, software"
     );
 
-    BIND_BOOL(correct_aspect_ratio, true, "Aspect ratio correction");
+    // [Nugget] (CFG-only)
+    BIND_BOOL(square_pixels, false, "Square pixels");
+
+    // [Nugget] Bind CVAR
+    M_BindBool("correct_aspect_ratio", &cvar_correct_aspect_ratio, NULL,
+               true, ss_none, wad_no,
+               "Aspect-ratio correction for non-square pixels");
 
     // [Nugget] (CFG-only)
     BIND_BOOL(stretch_to_fit, false, "Stretch viewport to fit window");

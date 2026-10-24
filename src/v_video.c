@@ -396,6 +396,9 @@ void V_ToggleShadows(const boolean on)
 
 video_t video;
 
+// [Nugget] Square pixels
+int screenheight;
+
 #define WIDE_SCREENWIDTH 864 // Up to 32:9 aspect ratio (3.6).
 
 static int x1lookup[WIDE_SCREENWIDTH + 1];

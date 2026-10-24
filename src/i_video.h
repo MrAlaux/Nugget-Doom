@@ -75,6 +75,10 @@ extern boolean screenvisible;
 
 // [Nugget] /-----------------------------------------------------------------
 
+#define ADJUST_ASPECT() (aspect_v_factor != 1.0f)
+
+extern float aspect_v_factor;
+
 extern double average_frametime;
 
 #define HUD_ANCHORING_MAX 120

@@ -89,6 +89,9 @@ player_t *viewplayer;
 fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
 int max_project_slope = 4;
 
+// [Nugget] Square pixels: separate vertical projection
+fixed_t yprojection;
+
 static fixed_t focallength, lightfocallength;
 
 //
@@ -810,6 +813,10 @@ static void ProcessFOVEffects(void)
       skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
     }
 
+    // [Nugget] Square pixels
+    if (ADJUST_ASPECT())
+    { skyiscale /= aspect_v_factor; }
+
     skyiscalediff = (custom_fov == FOV_DEFAULT)
                   ? FRACUNIT
                   : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
@@ -1306,6 +1313,28 @@ static void R_InitTextureMapping(void)
     projection = centerxfrac / slope;
   }
 
+  // [Nugget] Square pixels
+  if (ADJUST_ASPECT())
+  {
+    yprojection = projection * aspect_v_factor;
+    lightfocallength *= aspect_v_factor;
+
+    for (i = 0;  i < FINEANGLES;  i++)
+    {
+      planesine[i] = finesine[i] * aspect_v_factor;
+      planecosine[i] = finecosine[i] * aspect_v_factor;
+    }
+  }
+  else {
+    yprojection = projection;
+
+    for (i = 0;  i < FINEANGLES;  i++)
+    {
+      planesine[i] = finesine[i];
+      planecosine[i] = finecosine[i];
+    }
+  }
+
   for (i=0 ; i<FINEANGLES/2 ; i++)
     {
       int t;
@@ -1430,6 +1459,10 @@ void R_InitLightTables (void)
 
   // Calculate the light levels to use
   //  for each level / distance combination.
+
+  // [Nugget] Square pixels
+  const fixed_t width = (SCREENWIDTH / 2 * FRACUNIT) / (ADJUST_ASPECT() ? aspect_v_factor : 1);
+
   for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
   {
     zlightoffset[lightlevel] = all_zlightoffsets + MAXLIGHTZ * lightlevel;
@@ -1440,7 +1473,7 @@ void R_InitLightTables (void)
     for (int lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
       const int scale =
-        FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (lightz + 1) << LIGHTZSHIFT);
+        FixedDiv(width, (lightz + 1) << LIGHTZSHIFT);
 
       int level = startmap - (scale >> LIGHTSCALESHIFT) / DISTMAP;
       level = CLAMP(level, 0, num_colormap_rows - 1);
@@ -1654,7 +1687,7 @@ static void R_SetupFreelook(void)
 
   if (STRICTMODE(ST_GetNughudOn()) && gamestate == GS_LEVEL)
   {
-    nughud_viewpitch = (nughud.viewoffset * viewheight / SCREENHEIGHT) << FRACBITS;
+    nughud_viewpitch = (nughud.viewoffset * viewheight / screenheight) << FRACBITS;
   }
   else { nughud_viewpitch = 0; }
 
@@ -1662,7 +1695,7 @@ static void R_SetupFreelook(void)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  centery = viewheight / 2 + (dy >> FRACBITS);
+  centery = viewheight / 2 + (dy >> FRACBITS) * (ADJUST_ASPECT() ? aspect_v_factor : 1);
   centeryfrac = centery << FRACBITS;
 
   for (i = 0; i < viewheight; i++)
@@ -1777,6 +1810,17 @@ void R_ExecuteSetViewSize (void)
   while (FixedMul(pspriteiscale, pspritescale) < FRACUNIT)
     pspriteiscale++;
 
+  // [Nugget] Square pixels
+  if (ADJUST_ASPECT())
+  {
+    pspriteyscale = pspritescale * aspect_v_factor;
+    pspriteyiscale = pspriteiscale / aspect_v_factor;
+  }
+  else {
+    pspriteyscale = pspritescale;
+    pspriteyiscale = pspriteiscale;
+  }
+
   // [Nugget] Use `r_fov` instead of `custom_fov`
   if (r_fov == FOV_DEFAULT)
   {
@@ -1786,6 +1830,10 @@ void R_ExecuteSetViewSize (void)
   {
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
   }
+
+  // [Nugget] Square pixels
+  if (ADJUST_ASPECT())
+  { skyiscale /= aspect_v_factor; }
 
   // [Nugget] FOV-based sky stretching /--------------------------------------
 
@@ -2568,7 +2616,7 @@ void R_RenderPlayerView (player_t* player)
   R_DrawMasked ();
 
   // [Nugget]
-  if (!strictmode && current_video_height == SCREENHEIGHT
+  if (!strictmode && current_video_height == screenheight
       && (lowres_pixel_width > 1 || lowres_pixel_height > 1))
   {
     if (truecolor_rendering)

@@ -177,6 +177,10 @@ fixed_t pspritescale;
 fixed_t pspriteiscale;
 
 // [Nugget]
+fixed_t pspriteyscale;
+fixed_t pspriteyiscale;
+
+// [Nugget]
 static int const *spritelightoffset = NULL;
 
 // [Nugget] Dithered lighting
@@ -957,17 +961,14 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
   dc_iscale = abs(vis->yiscale); // [Nugget] Sprite scaling: use `yiscale`
   dc_texturemid = vis->texturemid;
   frac = vis->startfrac;
-  spryscale = vis->scale;
-  sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
+  spryscale = vis->yscale; // [Nugget] Sprite scaling: use `yscale`
+  sprtopscreen = centeryfrac - FixedMul(dc_texturemid, vis->scale);
 
   // [Nugget] /===============================================================
 
   // Sprite scaling
   if (vis->flags & VSF_SCALED)
-  {
-    spryscale = vis->yscale;
-    dc_texturemid = FixedMul(dc_texturemid, FixedMul(dc_iscale, vis->scale));
-  }
+  { dc_texturemid = FixedMul(dc_texturemid, FixedMul(dc_iscale, vis->scale)); }
 
   // Thing lighting, radial fog, dithered lighting ---------------------------
 
@@ -1140,7 +1141,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] Sprite scaling /------------------------------------------------
 
-  const fixed_t scale = xscale;
+  fixed_t scale = xscale;
   fixed_t yscale = xscale;
 
   float xscale_mult = 1.0f,
@@ -1325,6 +1326,25 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
         return;
     }
 
+  // [Nugget] Square pixels /-------------------------------------------------
+
+  const fixed_t orig_scale = scale;
+
+  float aspect_mult = 1.0f;
+
+  if (ADJUST_ASPECT())
+  {
+    have_scale = true;
+
+    aspect_mult = aspect_v_factor;
+
+    scale *= aspect_mult;
+    yscale_mult *= aspect_mult;
+    yscale *= aspect_mult;
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
+
   // store information in a vissprite
   vis = R_NewVisSprite ();
 
@@ -1501,7 +1521,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   {
     if (STRICTMODE(flip_levels)) { txc = -txc; } // [Nugget] Flip levels
 
-    int x = (centerxfrac + FixedMul(txc, vis->scale)) >> FRACBITS;
+    int x = (centerxfrac + FixedMul(txc, orig_scale)) >> FRACBITS;
     // [Nugget] Removed `actualheight`
     int y = (centeryfrac + FixedMul(viewz - interpz - crosshair_target->height / 2, vis->scale)) >> FRACBITS;
     x = clampi(x, 0, viewwidth - 1);
@@ -1541,7 +1561,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   int offset_divisor = 0;
   float shadow_yscale_mult;
 
-  const fixed_t scaled_spriteheight = thisspriteheight * yscale_mult;
+  const fixed_t scaled_spriteheight = thisspriteheight * yscale_mult / aspect_mult;
 
   if (sprite_shadows == SPRITESHADOWS_3D)
   {
@@ -1792,12 +1812,14 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   fixed_t xscale, yscale, xiscale, yiscale;
 
-  xscale  = yscale  = pspritescale;
-  xiscale = yiscale = pspriteiscale;
+  xscale  = pspritescale;
+  xiscale = pspriteiscale;
+  yscale  = pspriteyscale;
+  yiscale = pspriteyiscale;
 
   float xscale_mult = 1.0f;
 
-  boolean have_scale = false;
+  boolean have_scale = ADJUST_ASPECT(); // Square pixels
 
   fixed_t thisspritewidth     = spritewidth[lump],
           thisspriteoffset    = spriteoffset[lump],
@@ -1886,7 +1908,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-  vis->scale = pspritescale;
+  vis->scale = pspriteyscale; // [Nugget] Square pixels
 
   // [Nugget]
   vis->scale_mult = xscale_mult;
@@ -2011,7 +2033,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
   vis->brightmap = R_BrightmapForState(psp->state - states);
 
   // [crispy] free look
-  vis->texturemid += (centery - viewheight/2) * pspriteiscale;
+  vis->texturemid += (centery - viewheight/2) * pspriteyiscale;
 
   // [Nugget] NUGHUD
   if (STRICTMODE(ST_GetNughudOn()))

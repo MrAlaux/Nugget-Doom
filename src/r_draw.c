@@ -1417,7 +1417,7 @@ void R_SetFuzzColumnMode(void)
         switch (mode)
         {
             case FUZZ_BLOCKY:
-                if (current_video_height > SCREENHEIGHT)
+                if (current_video_height > screenheight)
                 {
                     fuzzblocksize = FixedToInt(video.yscale);
                     R_DrawFuzzColumn = DrawFuzzColumn32Blocky;
@@ -1445,7 +1445,7 @@ void R_SetFuzzColumnMode(void)
     switch (mode)
     {
         case FUZZ_BLOCKY:
-            if (current_video_height > SCREENHEIGHT)
+            if (current_video_height > screenheight)
             {
                 fuzzblocksize = FixedToInt(video.yscale);
                 R_DrawFuzzColumn = DrawFuzzColumnBlocky;

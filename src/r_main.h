@@ -53,6 +53,9 @@ extern int      loopcount;
 extern fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
 extern int      max_project_slope;
 
+// [Nugget] Square pixels: separate vertical projection
+extern fixed_t yprojection;
+
 //
 // Rendering stats
 //
