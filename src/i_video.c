@@ -1001,7 +1001,7 @@ void I_DynamicResolution(void)
 
     static boolean needs_upscale;
 
-    #define DRS_STEP         (SCREENHEIGHT / 2)
+    #define DRS_STEP         (screenheight / 2)
     #define DRS_DOWNSCALE_T1 1.08
     #define DRS_DOWNSCALE_T2 1.2   // 20% over target -> 2x step
     #define DRS_DOWNSCALE_T3 1.5   // 50% over target -> 3x step
