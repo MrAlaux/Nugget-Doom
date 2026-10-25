@@ -2869,76 +2869,77 @@ static int resolution_scale;
 
 static const char **GetResolutionScaleStrings(void)
 {
-    const char **strings = NULL;
-    resolution_scaling_t rs = I_GetResolutionScaling();
+    // [Nugget] Square pixels: adapted
 
-    array_push(strings, "100%");
+    const char **strings = NULL;
+    const resolution_scaling_t *const resolution_list = I_GetResolutionScaling();
+    const int num_res = array_size(resolution_list);
 
     resolution_scale = 0;
-    int val = screenheight * 2;
-    char buf[8];
-    int i;
 
-    for (i = 1; val < rs.max; ++i)
+    for (int i = 0;  i < num_res;  i++)
     {
-        if (val == current_video_height)
+        const boolean square_res = resolution_list[i].square;
+        const int base_height = square_res ? ACTUALHEIGHT : SCREENHEIGHT;
+
+        const int height = resolution_list[i].height;
+
+        char buf[16];
+        int offset = 0;
+
+        if (i < num_res - 2)
         {
-            resolution_scale = i;
+            const int pct = 100 * height / base_height;
+            offset += M_snprintf(buf, sizeof(buf), "%d%%", pct);
+        }
+        else {
+            offset += M_snprintf(buf, sizeof(buf), "Max");
         }
 
-        int pct = val * 100 / screenheight;
-        M_snprintf(buf, sizeof(buf), "%d%%", pct);
+        if (square_res)
+        { M_snprintf(buf + offset, sizeof(buf) - offset, " Sq."); }
+
         array_push(strings, M_StringDuplicate(buf));
 
-        val += rs.step;
+        if (!(square_res ^ square_pixels))
+        {
+            if (height == current_video_height)
+            {
+                resolution_scale = i;
+            }
+        }
     }
-
-    if (current_video_height == rs.max)
-    {
-        resolution_scale = i;
-    }
-
-    array_push(strings, "max");
 
     return strings;
 }
 
 static void ResetVideoHeight(void)
 {
-    const char **strings = GetStrings(str_resolution_scale);
-    resolution_scaling_t rs = I_GetResolutionScaling();
+    // [Nugget] Square pixels: adapted
+
+    const resolution_scaling_t *const resolution_list = I_GetResolutionScaling();
 
     if (default_reset)
     {
-        current_video_height = screenheight * 3;
-        int val = SCREENHEIGHT * 2;
-        for (int i = 1; val < rs.max; ++i)
+        current_video_height = SCREENHEIGHT * 3;
+
+        for (int i = 0;  i < array_size(resolution_list);  i++)
         {
-            if (val == current_video_height)
+            if (i & 1) { continue; }
+
+            if (resolution_list[i].height == current_video_height)
             {
                 resolution_scale = i;
                 break;
             }
-
-            val += rs.step;
         }
     }
     else
     {
-        if (resolution_scale == array_size(strings))
-        {
-            current_video_height = rs.max;
-        }
-        else if (resolution_scale == 0)
-        {
-            current_video_height = screenheight;
-        }
-        else
-        {
-            current_video_height =
-                screenheight * 2 + (resolution_scale - 1) * rs.step;
-        }
+        current_video_height = resolution_list[resolution_scale].height;
     }
+
+    square_pixels = resolution_list[resolution_scale].square;
 
     if (!dynamic_resolution)
     {

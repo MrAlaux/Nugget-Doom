@@ -35,11 +35,12 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
     - No support for true-color (PNG) graphics; those are still palettized at startup
     - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
       especially with _Smooth Palette Tinting_ enabled
-- **Square pixels** setting (CFG-only: `square_pixels`)
+- Support for **square-pixel resolutions**
   - Normally, the renderer's output is stretched vertically by a factor of 1.2 to achieve a correct aspect ratio.
-    However, this makes some pixels uneven (non-square), resulting in a slightly dirty image.
-    Enabling this setting renders the game at the final resolution instead of stretching it afterwards,
-    fixing the unevenness; e.g. the game is rendered at 1920x1080 instead of 1920x900.
+    This makes some pixels uneven (non-square), resulting in a slightly dirty image.
+    Nugget offers additional resolution settings (labelled "Sq." for "square pixels")
+    which render the game at the final resolution instead of stretching it afterwards, fixing the unevenness;
+    e.g. the game is rendered at 1920x1080 instead of 1920x900.
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**

@@ -1,6 +1,6 @@
 ## New Features
 
-- **Square pixels** setting
+- Support for **square-pixel resolutions**, e.g. 1920x1080 instead of 1920x900
 
 ## Changes
 
