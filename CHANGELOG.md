@@ -8,4 +8,4 @@ None.
 
 ## Bug Fixes
 
-None.
+- **_Tag Finder_ cross marks changing size upon dynamic resolution changes**

@@ -2796,7 +2796,7 @@ static void AM_drawWalls(void)
         AM_drawLineCharacter(
             tf_cross,
             NUM_TF_CROSS_LINES,
-            ((int64_t) scale_ftom * 24) * current_video_height / screenheight,
+            ((int64_t) scale_ftom * 24) * video.height / screenheight,
             0,
             crossmarks[i].color,
             crossmarks[i].x,
@@ -3364,7 +3364,7 @@ void AM_Drawer(void)
         AM_drawLineCharacter(
             GetTanzerF(tanzf),
             NUMTANZERFL,
-            scale_ftom * current_video_height / screenheight,
+            scale_ftom * video.height / screenheight,
             automaprotate ? (followplayer ? plr->mo->angle - ANG90 : ANGLE_MAX - mapangle) : 0,
             v_lightest_color,
             (m_x + m_x2) / 2,

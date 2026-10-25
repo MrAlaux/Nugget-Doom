@@ -2616,7 +2616,7 @@ void R_RenderPlayerView (player_t* player)
   R_DrawMasked ();
 
   // [Nugget]
-  if (!strictmode && current_video_height == screenheight
+  if (!strictmode && video.height == screenheight
       && (lowres_pixel_width > 1 || lowres_pixel_height > 1))
   {
     if (truecolor_rendering)
