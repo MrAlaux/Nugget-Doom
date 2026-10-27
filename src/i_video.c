@@ -2080,24 +2080,24 @@ const resolution_scaling_t *I_GetResolutionScaling(void)
 
     if (!resolution_list)
     {
-      array_push(resolution_list, ((resolution_scaling_t) { SCREENHEIGHT, false }));
-      array_push(resolution_list, ((resolution_scaling_t) { ACTUALHEIGHT, true  }));
+        array_push(resolution_list, ((resolution_scaling_t) { SCREENHEIGHT, false }));
+        array_push(resolution_list, ((resolution_scaling_t) { ACTUALHEIGHT, true  }));
 
-      for (int i = 0; ; i++)
-      {
-          const boolean square_res = i & 1;
+        for (int i = 0; ; i++)
+        {
+            const boolean square_res = i & 1;
 
-          const int adjusted_max_height = square_res ? max_height : max_height / 1.2f;
-          const int base_height = square_res ? ACTUALHEIGHT : SCREENHEIGHT;
-          const int step = base_height / 4;
+            const int adjusted_max_height = square_res ? max_height : max_height / 1.2f;
+            const int base_height = square_res ? ACTUALHEIGHT : SCREENHEIGHT;
+            const int step = base_height / 4;
 
-          int height = (base_height * 2) + step * (i / 2);
-          height = MIN(height, adjusted_max_height);
+            int height = (base_height * 2) + step * (i / 2);
+            height = MIN(height, adjusted_max_height);
 
-          array_push(resolution_list, ((resolution_scaling_t) { height, square_res }));
+            array_push(resolution_list, ((resolution_scaling_t) { height, square_res }));
 
-          if (height >= max_height) { break; }
-      }
+            if (height >= max_height) { break; }
+        }
     }
 
     return resolution_list;
