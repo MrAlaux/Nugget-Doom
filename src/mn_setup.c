@@ -2887,12 +2887,13 @@ static const char **GetResolutionScaleStrings(void)
         char buf[16];
         int offset = 0;
 
-        if (i < num_res - 2)
+        if (i < num_res - 2 || height <= SCREENHEIGHT)
         {
             const int pct = 100 * height / base_height;
             offset += M_snprintf(buf, sizeof(buf), "%d%%", pct);
         }
-        else {
+        else
+        {
             offset += M_snprintf(buf, sizeof(buf), "Max");
         }
 
@@ -2921,25 +2922,24 @@ static void ResetVideoHeight(void)
 
     if (default_reset)
     {
-        current_video_height = SCREENHEIGHT * 3;
+        resolution_scale = 0;
 
         for (int i = 0;  i < array_size(resolution_list);  i++)
         {
-            if (i & 1) { continue; }
+            if (resolution_list[i].square)
+            {
+                continue;
+            }
 
-            if (resolution_list[i].height == current_video_height)
+            if (resolution_list[i].height == default_video_height)
             {
                 resolution_scale = i;
                 break;
             }
         }
     }
-    else
-    {
-        current_video_height = resolution_list[resolution_scale].height;
-    }
 
-    square_pixels = resolution_list[resolution_scale].square;
+    I_SetResolution(resolution_list[resolution_scale]);
 
     if (!dynamic_resolution)
     {

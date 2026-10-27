@@ -76,6 +76,9 @@
 //      range of [0.0, 1.0).  Used for interpolation.
 fixed_t fractionaltic;
 
+#define DEFAULT_VIDEO_HEIGHT (SCREENHEIGHT * 3)
+int default_video_height;
+
 boolean dynamic_resolution;
 
 int current_video_height;
@@ -93,7 +96,8 @@ boolean setrefreshneeded;
 boolean toggle_fullscreen;
 
 static boolean use_vsync; // killough 2/8/98: controls whether vsync is called
-static boolean cvar_correct_aspect_ratio; // [Nugget] Made CVAR, static
+static boolean default_correct_aspect_ratio;
+boolean correct_aspect_ratio;
 static boolean stretch_to_fit; // [Nugget]
 static int fpslimit; // when uncapped, limit framerate to this value
 static boolean fullscreen;
@@ -127,7 +131,6 @@ static boolean gamma_off_fix;
 static boolean cvar_smooth_palette_tinting, smooth_palette_tinting = false;
 
 float aspect_v_factor;
-boolean correct_aspect_ratio;
 
 double average_frametime;
 
@@ -326,6 +329,8 @@ static int max_video_width, max_video_height;
 static int max_width, max_height;
 static int max_height_adjusted;
 static float display_refresh_rate;
+
+#define MAX_HEIGHT_NONSQUARE() (max_height * SCREENHEIGHT / ACTUALHEIGHT)
 
 static boolean use_limiter;
 static float targetrefresh;
@@ -1686,6 +1691,12 @@ static void SetWindowPosition(void)
     SDL_SyncWindow(screen);
 }
 
+void I_SetResolution(const resolution_scaling_t resolution)
+{
+    current_video_height = resolution.height;
+    square_pixels = resolution.square;
+}
+
 typedef struct
 {
     int w, h;
@@ -1887,7 +1898,7 @@ static void I_InitVideoParms(void)
     if (max_video_width && max_video_height)
     {
         // [Nugget] Check CVAR
-        if (cvar_correct_aspect_ratio && max_video_height < ACTUALHEIGHT)
+        if (default_correct_aspect_ratio && max_video_height < ACTUALHEIGHT)
         {
             I_Error("The vertical resolution is too low, turn off the aspect "
                     "ratio correction.");
@@ -1907,7 +1918,7 @@ static void I_InitVideoParms(void)
         max_height = mode->h;
     }
 
-    // [Nugget] Square pixels: factored out some code
+    default_video_height = MIN(DEFAULT_VIDEO_HEIGHT, MAX_HEIGHT_NONSQUARE());
 
     // SDL may report native refresh rate as zero.
     display_refresh_rate = mode->refresh_rate;
@@ -2081,17 +2092,42 @@ const resolution_scaling_t *I_GetResolutionScaling(void)
     if (!resolution_list)
     {
         array_push(resolution_list, ((resolution_scaling_t) { SCREENHEIGHT, false }));
-        array_push(resolution_list, ((resolution_scaling_t) { ACTUALHEIGHT, true  }));
+
+        if (SCREENHEIGHT * 2 >= MAX_HEIGHT_NONSQUARE())
+        {
+            // The maximum height is abnormally low;
+            // try adding one more resolution to match it
+            if (SCREENHEIGHT < MAX_HEIGHT_NONSQUARE())
+            {
+                array_push(resolution_list, ((resolution_scaling_t) { MAX_HEIGHT_NONSQUARE(), false }));
+            }
+
+            return resolution_list;
+        }
 
         for (int i = 0; ; i++)
         {
-            const boolean square_res = i & 1;
+            boolean square_res;
+            int step_num;
 
-            const int adjusted_max_height = square_res ? max_height : max_height / 1.2f;
+            // Non-square pixels for resolutions < 300%,
+            // and alternating between non-square and square for resolutions >= 300%
+            if (i <= 4)
+            {
+                square_res = false;
+                step_num = i;
+            }
+            else
+            {
+                square_res = i & 1;
+                step_num = (i + 4) / 2;
+            }
+
+            const int adjusted_max_height = square_res ? max_height : MAX_HEIGHT_NONSQUARE();
             const int base_height = square_res ? ACTUALHEIGHT : SCREENHEIGHT;
             const int step = base_height / 4;
 
-            int height = (base_height * 2) + step * (i / 2);
+            int height = base_height * 2 + step * step_num;
             height = MIN(height, adjusted_max_height);
 
             array_push(resolution_list, ((resolution_scaling_t) { height, square_res }));
@@ -2109,21 +2145,21 @@ static int GetCurrentVideoHeight(void)
 
     const float old_factor = aspect_v_factor;
 
-    if (square_pixels)
+    if (default_correct_aspect_ratio && square_pixels)
     {
         correct_aspect_ratio = false;
         aspect_v_factor = 1.2f; // ACTUALHEIGHT / SCREENHEIGHT
+        screenheight = ACTUALHEIGHT;
     }
     else {
-        correct_aspect_ratio = cvar_correct_aspect_ratio;
+        correct_aspect_ratio = default_correct_aspect_ratio;
         aspect_v_factor = 1.0f;
+        screenheight = SCREENHEIGHT;
     }
-
-    screenheight = SCREENHEIGHT * aspect_v_factor;
 
     if (correct_aspect_ratio)
     {
-        max_height_adjusted = 5 * max_height / 6;
+        max_height_adjusted = MAX_HEIGHT_NONSQUARE();
         unscaled_actualheight = ACTUALHEIGHT;
     }
     else
@@ -2359,8 +2395,10 @@ static void InitColorFunctions(void)
 void I_BindVideoVariables(void)
 {
     M_BindNum("current_video_height", &default_current_video_height,
-              &current_video_height, 600, 200, UL, ss_none, wad_no,
-              "Vertical resolution");
+              &current_video_height, DEFAULT_VIDEO_HEIGHT, SCREENHEIGHT, UL,
+              ss_none, wad_no, "Vertical resolution");
+    BIND_BOOL(square_pixels, false, "Internal setting, do not change");
+
     BIND_BOOL_GENERAL(dynamic_resolution, true, "Dynamic resolution");
 
     // [Nugget] (CFG-only)
@@ -2374,13 +2412,9 @@ void I_BindVideoVariables(void)
         "opengl, opengles2, opengles, software"
     );
 
-    // [Nugget] (CFG-only)
-    BIND_BOOL(square_pixels, false, "Internal setting, do not change");
-
-    // [Nugget] Bind CVAR
-    M_BindBool("correct_aspect_ratio", &cvar_correct_aspect_ratio, NULL,
+    M_BindBool("correct_aspect_ratio", &default_correct_aspect_ratio, NULL,
                true, ss_none, wad_no,
-               "Aspect-ratio correction for non-square pixels");
+               "Aspect-ratio correction");
 
     // [Nugget] (CFG-only)
     BIND_BOOL(stretch_to_fit, false, "Stretch viewport to fit window");

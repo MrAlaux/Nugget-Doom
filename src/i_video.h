@@ -37,6 +37,7 @@ typedef struct
 } resolution_scaling_t;
 
 const resolution_scaling_t *I_GetResolutionScaling(void);
+void I_SetResolution(resolution_scaling_t resolution);
 
 // Called by D_DoomMain,
 // determines the hardware configuration
@@ -60,6 +61,8 @@ void I_ToggleVsync(void); // [JN] Calls native SDL vsync toggle
 
 void I_DynamicResolution(void);
 void I_ResetDRS(void);
+
+extern int default_video_height;
 
 extern int current_video_height;
 #define DRS_MIN_HEIGHT 400
