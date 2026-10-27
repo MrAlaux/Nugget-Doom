@@ -41,6 +41,7 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
     Nugget offers additional resolution settings (labelled "Sq." for "square pixels")
     which render the game at the final resolution instead of stretching it afterwards, fixing the unevenness;
     e.g. the game is rendered at 1920x1080 instead of 1920x900.
+- Support for **aspect ratios below 4:3**, e.g. 5:4
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**

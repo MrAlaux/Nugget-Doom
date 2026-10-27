@@ -1742,10 +1742,6 @@ static aspect_ratio_t CurrentAspectRatio(void)
     {
         return (aspect_ratio_t){.w = 36, .h = 10};
     }
-    else if (w < ASPECT_RATIO_MIN * h)
-    {
-        return (aspect_ratio_t){.w = 4, .h = 3};
-    }
 
     return (aspect_ratio_t){.w = w, .h = h};
 }
@@ -1754,10 +1750,28 @@ static void ResetResolution(int height)
 {
     const aspect_ratio_t aspect_ratio = CurrentAspectRatio();
 
+    video.unscaledw = unscaled_actualheight * aspect_ratio.w / aspect_ratio.h;
+
+    // Support internal aspect ratios below 16:10
+    if (video.unscaledw < SCREENWIDTH)
+    {
+        int adjusted_screenheight =
+            ceilf((float) (screenheight * SCREENWIDTH) / video.unscaledw);
+
+        adjusted_screenheight = (adjusted_screenheight + 1) & (int)~1;
+
+        aspect_v_factor = aspect_v_factor * adjusted_screenheight / screenheight;
+        unscaled_actualheight = unscaled_actualheight * adjusted_screenheight / screenheight;
+
+        height = MIN(max_height_adjusted, height * adjusted_screenheight / screenheight);
+
+        screenheight = adjusted_screenheight;
+        video.unscaledw = SCREENWIDTH;
+    }
+
     actualheight = correct_aspect_ratio ? (6 * height / 5) : height;
     video.height = height;
 
-    video.unscaledw = unscaled_actualheight * aspect_ratio.w / aspect_ratio.h;
     video.width = actualheight * aspect_ratio.w / aspect_ratio.h;
     video.width &= (int)~1;
 
@@ -1785,8 +1799,19 @@ static void ResetResolution(int height)
 
     drs_skip_frame = true;
 
-    // [Nugget]
+    // [Nugget] --------------------------------------------------------------
+
     DeferredRenderClear();
+
+    static float old_factor = 0.0f;
+
+    // Regenerate light tables (plane lighting depends on the vertical aspect factor)
+    if (old_factor != aspect_v_factor)
+    {
+        old_factor = aspect_v_factor;
+        R_DeferredInitLightTables();
+    }
+
 }
 
 static void ResetLogicalSize(void)
@@ -1897,18 +1922,12 @@ static void I_InitVideoParms(void)
 
     if (max_video_width && max_video_height)
     {
-        // [Nugget] Check CVAR
         if (default_correct_aspect_ratio && max_video_height < ACTUALHEIGHT)
         {
-            I_Error("The vertical resolution is too low, turn off the aspect "
-                    "ratio correction.");
+            I_Error("The vertical resolution is too low; increase it or turn "
+                    "off the aspect-ratio correction.");
         }
-        if (max_video_width < ASPECT_RATIO_MIN * max_video_height)
-        {
-            I_Printf(VB_ERROR, "Aspect ratio not supported, set other resolution");
-            max_video_width = mode->w;
-            max_video_height = mode->h;
-        }
+
         max_width = max_video_width;
         max_height = max_video_height;
     }
@@ -2141,10 +2160,6 @@ const resolution_scaling_t *I_GetResolutionScaling(void)
 
 static int GetCurrentVideoHeight(void)
 {
-    // [Nugget] Square pixels /-----------------------------------------------
-
-    const float old_factor = aspect_v_factor;
-
     if (default_correct_aspect_ratio && square_pixels)
     {
         correct_aspect_ratio = false;
@@ -2167,12 +2182,6 @@ static int GetCurrentVideoHeight(void)
         max_height_adjusted = max_height;
         unscaled_actualheight = screenheight;
     }
-
-    // Regenerate light tables (plane lighting depends on the vertical aspect factor)
-    if (old_factor != aspect_v_factor)
-    { R_DeferredInitLightTables(); }
-
-    // [Nugget] -------------------------------------------------------------/
 
     if (scalefactor > 0)
     {
