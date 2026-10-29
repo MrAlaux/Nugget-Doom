@@ -885,6 +885,9 @@ void I_StartFrame(void)
     I_BeginUpdate();
 }
 
+// [Nugget] Draw to texture
+static boolean in_update = false;
+
 static void UpdateRender(void)
 {
     // [Nugget] Draw to texture
@@ -925,6 +928,8 @@ static void UpdateRender(void)
         }
     }
     else {
+      in_update = false;
+
       I_VideoBuffer = NULL;
       I_VideoBuffer32 = NULL;
     }
@@ -1081,8 +1086,6 @@ static void I_ResetTargetRefresh(void);
 
 // [Nugget] Draw to texture /-------------------------------------------------
 
-static boolean in_update = false;
-
 void I_BeginUpdate(void)
 {
     if (!draw_to_texture || noblit || in_update)
@@ -1119,6 +1122,10 @@ static void CancelUpdate(void)
     if (draw_to_texture && in_update)
     {
         in_update = false;
+
+        I_VideoBuffer = NULL;
+        I_VideoBuffer32 = NULL;
+
         SDL_UnlockTexture(texture);
     }
 }
@@ -1131,9 +1138,6 @@ void I_FinishUpdate(void)
     {
         return;
     }
-
-    // [Nugget] Draw to texture
-    in_update = false;
 
     if (toggle_fullscreen)
     {
@@ -1604,6 +1608,9 @@ byte I_GetNearestColor(byte *palette, int r, int g, int b)
 boolean I_WritePNGfile(char *filename)
 {
     UpdateRender();
+
+    // [Nugget] Draw to texture
+    I_BeginUpdate();
 
     SDL_Surface *surface = SDL_RenderReadPixels(renderer, NULL);
     if (surface == NULL)
