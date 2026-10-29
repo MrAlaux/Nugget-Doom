@@ -115,9 +115,6 @@ static fixed_t *cachedrotation = NULL;
 static fixed_t xoffs,yoffs;    // killough 2/28/98: flat offsets
 static angle_t rotation;
 
-// [Nugget] Square pixels
-fixed_t planesine[FINEANGLES], planecosine[FINEANGLES];
-
 static fixed_t angle_sin, angle_cos;
 static fixed_t viewx_trans, viewy_trans;
 
@@ -761,8 +758,8 @@ static void do_draw_plane(visplane_t *pl)
 
     // plane math updated for accounting flat rotation, thanks to Odamex
     // [Nugget] Square pixels
-    angle_sin = planesine[(viewangle + rotation) >> ANGLETOFINESHIFT];
-    angle_cos = planecosine[(viewangle + rotation) >> ANGLETOFINESHIFT];
+    angle_sin = finesine[(viewangle + rotation) >> ANGLETOFINESHIFT];
+    angle_cos = finecosine[(viewangle + rotation) >> ANGLETOFINESHIFT];
 
     if (pl->rotation == 0)
     {
@@ -779,6 +776,9 @@ static void do_draw_plane(visplane_t *pl)
     }
 
     planeheight = abs(pl->height - viewz);
+
+    if (ADJUST_ASPECT())
+    { planeheight *= aspect_v_factor; }
 
     const int stop = pl->maxx + 1;
     pl->top[pl->minx - 1] = pl->top[stop] = USHRT_MAX;

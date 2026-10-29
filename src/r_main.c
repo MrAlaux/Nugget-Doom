@@ -1318,21 +1318,10 @@ static void R_InitTextureMapping(void)
   {
     yprojection = projection * aspect_v_factor;
     lightfocallength *= aspect_v_factor;
-
-    for (i = 0;  i < FINEANGLES;  i++)
-    {
-      planesine[i] = finesine[i] * aspect_v_factor;
-      planecosine[i] = finecosine[i] * aspect_v_factor;
-    }
   }
-  else {
+  else
+  {
     yprojection = projection;
-
-    for (i = 0;  i < FINEANGLES;  i++)
-    {
-      planesine[i] = finesine[i];
-      planecosine[i] = finecosine[i];
-    }
   }
 
   for (i=0 ; i<FINEANGLES/2 ; i++)
@@ -1459,10 +1448,6 @@ void R_InitLightTables (void)
 
   // Calculate the light levels to use
   //  for each level / distance combination.
-
-  // [Nugget] Square pixels
-  const fixed_t width = (SCREENWIDTH / 2 * FRACUNIT) / (ADJUST_ASPECT() ? aspect_v_factor : 1);
-
   for (int lightlevel = 0; lightlevel < LIGHTLEVELS; lightlevel++)
   {
     zlightoffset[lightlevel] = all_zlightoffsets + MAXLIGHTZ * lightlevel;
@@ -1473,7 +1458,7 @@ void R_InitLightTables (void)
     for (int lightz = 0; lightz < MAXLIGHTZ; lightz++)
     {
       const int scale =
-        FixedDiv(width, (lightz + 1) << LIGHTZSHIFT);
+        FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (lightz + 1) << LIGHTZSHIFT);
 
       int level = startmap - (scale >> LIGHTSCALESHIFT) / DISTMAP;
       level = CLAMP(level, 0, num_colormap_rows - 1);
@@ -1676,7 +1661,7 @@ static void R_SetupFreelook(void)
 
   if (viewpitch)
   {
-    dy = FixedMul(projection, -finetangent[(ANG90 - viewpitch) >> ANGLETOFINESHIFT]);
+    dy = FixedMul(yprojection, -finetangent[(ANG90 - viewpitch) >> ANGLETOFINESHIFT]);
   }
   else
   {
@@ -1687,7 +1672,8 @@ static void R_SetupFreelook(void)
 
   if (STRICTMODE(ST_GetNughudOn()) && gamestate == GS_LEVEL)
   {
-    nughud_viewpitch = (nughud.viewoffset * viewheight / screenheight) << FRACBITS;
+    nughud_viewpitch = IntToFixed(nughud.viewoffset * viewheight / screenheight)
+                     * (ADJUST_ASPECT() ? aspect_v_factor : 1);
   }
   else { nughud_viewpitch = 0; }
 
@@ -1695,7 +1681,7 @@ static void R_SetupFreelook(void)
 
   // [Nugget] ---------------------------------------------------------------/
 
-  centery = viewheight / 2 + (dy >> FRACBITS) * (ADJUST_ASPECT() ? aspect_v_factor : 1);
+  centery = viewheight / 2 + (dy >> FRACBITS);
   centeryfrac = centery << FRACBITS;
 
   for (i = 0; i < viewheight; i++)

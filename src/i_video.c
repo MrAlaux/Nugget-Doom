@@ -1799,19 +1799,8 @@ static void ResetResolution(int height)
 
     drs_skip_frame = true;
 
-    // [Nugget] --------------------------------------------------------------
-
+    // [Nugget]
     DeferredRenderClear();
-
-    static float old_factor = 0.0f;
-
-    // Regenerate light tables (plane lighting depends on the vertical aspect factor)
-    if (old_factor != aspect_v_factor)
-    {
-        old_factor = aspect_v_factor;
-        R_DeferredInitLightTables();
-    }
-
 }
 
 static void ResetLogicalSize(void)
