@@ -2127,7 +2127,7 @@ void R_DrawPlayerSprites(void)
 
     // Hack to make weapon voxels be unaffected by view pitch
     if (default_vertical_aiming != VERTAIM_AUTO)
-    { centeryfrac = (viewheight / 2 + (R_GetNughudViewPitch() >> FRACBITS)) << FRACBITS; }
+    { centeryfrac = IntToFixed(viewheight / 2) + R_GetNughudViewPitch(); }
 
     // Drawn in reverse order
     for (i = 0;  i < queued_weapon_voxels;  i++)
