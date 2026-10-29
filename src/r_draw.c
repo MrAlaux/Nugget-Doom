@@ -2362,23 +2362,23 @@ void R_FillBackScreen(void)
     {
         if (background_buffer32 == NULL)
         {
-            int size = video.width * video.height;
+            int size = video.pitch * video.height;
             background_buffer32 =
                 Z_Malloc(size * sizeof(*background_buffer32), PU_STATIC, NULL);
         }
 
-        V_UseBuffer32(background_buffer32, video.width);
+        V_UseBuffer32(background_buffer32, video.pitch);
     }
     else
     {
         if (background_buffer == NULL)
         {
-            int size = video.width * video.height;
+            int size = video.pitch * video.height;
             background_buffer =
                 Z_Malloc(size * sizeof(*background_buffer), PU_STATIC, NULL);
         }
 
-        V_UseBuffer(background_buffer, video.width);
+        V_UseBuffer(background_buffer, video.pitch);
     }
 
     V_DrawBackground(gamemode == commercial ? "GRNROCK" : "FLOOR7_2");

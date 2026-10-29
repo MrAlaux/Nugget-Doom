@@ -295,7 +295,7 @@ static int wipe_renderMelt(int width, int height, int ticks)
                 for (int i = 0; i < height; ++i)
                 {
                     *dest = *source;
-                    dest += width;
+                    dest += video.pitch;
                     source += width;
                 }
             }
