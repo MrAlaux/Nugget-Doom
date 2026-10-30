@@ -5,7 +5,7 @@
 
 ## Changes
 
-None.
+- **Improved accuracy of plane rendering**
 
 ## Bug Fixes
 

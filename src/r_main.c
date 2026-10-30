@@ -1686,7 +1686,15 @@ static void R_SetupFreelook(void)
 
   for (i = 0; i < viewheight; i++)
   {
-    dy = abs(IntToFixed(i - centery) + FRACUNIT / 2);
+    // [Nugget] Improved accuracy
+
+    dy = abs(IntToFixed(i - centery));
+
+    if (!dy)
+    {
+      dy = 1;
+    }
+
     yslope[i] = FixedDiv(projection, dy);
   }
 }

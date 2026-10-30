@@ -344,16 +344,11 @@ static void R_MapPlane(int y, int x1, int x2, const int thiscolormap)
 #endif
 
   // [FG] calculate flat coordinates relative to screen center
-  //
-  // SoM: because centery is an actual row of pixels (and it isn't really the
-  // center row because there are an even number of rows) some corrections need
-  // to be made depending on where the row lies relative to the centery row.
+  // [Nugget] Improved accuracy
   if (centery == y)
     return;
-  else if (y < centery)
-    dy = (abs(centery - y) << FRACBITS) - FRACUNIT / 2;
   else
-    dy = (abs(centery - y) << FRACBITS) + FRACUNIT / 2;
+    dy = abs(centery - y) << FRACBITS;
 
   // plane math updated for accounting flat rotation, thanks to Odamex
   if (planeheight != cachedheight[y] || rotation != cachedrotation[y])
