@@ -6,6 +6,7 @@
 ## Changes
 
 - **Improved accuracy of plane rendering**
+- **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
 
 ## Bug Fixes
 

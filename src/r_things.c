@@ -1074,7 +1074,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   spriteframe_t *sprframe;
   int       lump;
   vissprite_t *vis;
-  fixed_t   iscale;
   int heightsec;      // killough 3/27/98
 
   // [FG] moved declarations here
@@ -1301,10 +1300,26 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   if (info_scale_mult != 1.0f)
   { gzt = interpz + thisspritetopoffset * info_scale_mult; }
 
+  // [Alaux] Calculate this early so we can perform height clipping
+  // using multiplications instead of divisions
+  const fixed_t iscale = FixedDiv(FRACUNIT, xscale);
+
   // killough 4/9/98: clip things which are out of view due to height
-  if (interpz > (int64_t)viewz + FixedDiv(viewheightfrac, xscale) ||
-      gzt < (int64_t)viewz - FixedDiv(viewheightfrac - viewheight, xscale))
-    return;
+  // [Alaux] Improved, thanks to JNechaevsky and pvictress
+  {
+    // The original code did not take sprite offsets into account
+    // when clipping sprites above the view
+    const fixed_t gz = gzt - thisspriteheight;
+
+    const int64_t
+      view_top    = viewz + FixedMul64(centeryfrac, iscale),
+      view_bottom = viewz - FixedMul64(bottomydeltafrac, iscale);
+
+    if (gzt < view_bottom || view_top < gz)
+    {
+      return;
+    }
+  }
 
   // killough 3/27/98: exclude things totally separated
   // from the viewer, by either water or fake ceilings
@@ -1364,7 +1379,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   vis->texturemid = gzt - viewz;
   vis->x1 = vx1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-  iscale = FixedDiv(FRACUNIT, xscale);
   vis->color = thing->bloodcolor;
 
   // [Nugget]
