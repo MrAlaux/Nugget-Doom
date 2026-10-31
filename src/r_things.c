@@ -1138,6 +1138,8 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   xscale = FixedDiv(projection, tz);
 
+  const fixed_t orig_scale = xscale;
+
   // [Nugget] Sprite scaling /------------------------------------------------
 
   fixed_t scale = xscale;
@@ -1243,8 +1245,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   fixed_t thisspritewidth     = spritewidth[lump],
           thisspriteheight    = spriteheight[lump],
-          thisspriteoffset    = spriteoffset[lump],
-          thisspritetopoffset = spritetopoffset[lump];
+          thisspriteoffset    = spriteoffset[lump];
 
   const short hires_lump = allow_hires_graphics ? sprframe->hires_lump[rotation] : -1;
 
@@ -1294,26 +1295,57 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   if (x2 < vx1)
     return;
 
-  gzt = interpz + thisspritetopoffset;
-
   // [Nugget] Sprite scaling
   if (info_scale_mult != 1.0f)
-  { gzt = interpz + thisspritetopoffset * info_scale_mult; }
+  {
+    gzt = interpz + spritetopoffset[lump] * info_scale_mult;
+  }
+  else
+  {
+    gzt = interpz + spritetopoffset[lump];
+  }
+
+  // [Nugget] Square pixels /-------------------------------------------------
+
+  float aspect_mult = 1.0f;
+
+  if (ADJUST_ASPECT())
+  {
+    have_scale = true;
+
+    aspect_mult = aspect_v_factor;
+
+    scale *= aspect_mult;
+    yscale_mult *= aspect_mult;
+    yscale *= aspect_mult;
+  }
+
+  // [Nugget] ---------------------------------------------------------------/
 
   // [Alaux] Calculate this early so we can perform height clipping
   // using multiplications instead of divisions
-  const fixed_t iscale = FixedDiv(FRACUNIT, xscale);
+  const fixed_t yiscale = FixedDiv(FRACUNIT, yscale);
 
   // killough 4/9/98: clip things which are out of view due to height
   // [Alaux] Improved, thanks to JNechaevsky and pvictress
   {
-    // The original code did not take sprite offsets into account
-    // when clipping sprites above the view
-    const fixed_t gz = gzt - thisspriteheight;
+    // [Nugget] Sprite scaling: we'd have to introduce another division
+    // to keep the multiplications, so just use divisions directly
+
+    fixed_t gz;
+
+    if (info_scale_mult != 1.0f)
+    {
+      gz = gzt - spriteheight[lump] * info_scale_mult;
+    }
+    else
+    {
+      gz = gzt - spriteheight[lump];
+    }
 
     const int64_t
-      view_top    = viewz + FixedMul64(centeryfrac, iscale),
-      view_bottom = viewz - FixedMul64(bottomydeltafrac, iscale);
+      view_top    = (int64_t) viewz + FixedDiv(centeryfrac, scale),
+      view_bottom = (int64_t) viewz - FixedDiv(bottomydeltafrac, scale);
 
     if (gzt < view_bottom || view_top < gz)
     {
@@ -1340,25 +1372,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
           interpz >= sectors[heightsec].ceilingheight)
         return;
     }
-
-  // [Nugget] Square pixels /-------------------------------------------------
-
-  const fixed_t orig_scale = scale;
-
-  float aspect_mult = 1.0f;
-
-  if (ADJUST_ASPECT())
-  {
-    have_scale = true;
-
-    aspect_mult = aspect_v_factor;
-
-    scale *= aspect_mult;
-    yscale_mult *= aspect_mult;
-    yscale *= aspect_mult;
-  }
-
-  // [Nugget] ---------------------------------------------------------------/
 
   // store information in a vissprite
   vis = R_NewVisSprite ();
@@ -1388,6 +1401,8 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   vis->leftoffset = spriteoffset[lump] * info_scale_mult;
   vis->flags = (VSF_FLIPPED * flip) | (VSF_SCALED * have_scale);
 
+  const fixed_t iscale = FixedDiv(FRACUNIT, xscale);
+
   if (flip)
     {
       vis->startfrac = thisspritewidth-1;
@@ -1399,7 +1414,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
       vis->xiscale = iscale;
     }
 
-  vis->yiscale = FixedDiv(FRACUNIT, yscale); // [Nugget] Sprite scaling
+  vis->yiscale = yiscale;
 
   if (vis->x1 > x1)
     vis->startfrac += vis->xiscale*(vis->x1-x1);
