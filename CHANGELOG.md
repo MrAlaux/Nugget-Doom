@@ -7,6 +7,7 @@
 
 - **Improved accuracy of plane rendering**
 - **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
+- **Improved culling of distant sprite shadows**
 
 ## Bug Fixes
 

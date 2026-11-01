@@ -958,17 +958,21 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
             :                               R_DrawColumn;
   }
 
-  dc_iscale = abs(vis->yiscale); // [Nugget] Sprite scaling: use `yiscale`
-  dc_texturemid = vis->texturemid;
+  dc_iscale = vis->yiscale;
   frac = vis->startfrac;
-  spryscale = vis->yscale; // [Nugget] Sprite scaling: use `yscale`
-  sprtopscreen = centeryfrac - FixedMul(dc_texturemid, vis->scale);
+  spryscale = vis->yscale;
+  sprtopscreen = centeryfrac - FixedMul(vis->texturemid, vis->scale);
+
+  if (vis->scale != spryscale)
+  {
+    dc_texturemid = FixedMul(vis->texturemid, FixedMul(dc_iscale, vis->scale));
+  }
+  else
+  {
+    dc_texturemid = vis->texturemid;
+  }
 
   // [Nugget] /===============================================================
-
-  // Sprite scaling
-  if (vis->flags & VSF_SCALED)
-  { dc_texturemid = FixedMul(dc_texturemid, FixedMul(dc_iscale, vis->scale)); }
 
   // Thing lighting, radial fog, dithered lighting ---------------------------
 
@@ -1140,34 +1144,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   const fixed_t orig_scale = xscale;
 
-  // [Nugget] Sprite scaling /------------------------------------------------
-
-  fixed_t scale = xscale;
-  fixed_t yscale = xscale;
-
-  float xscale_mult = 1.0f,
-        yscale_mult = 1.0f,
-        info_scale_mult = 1.0f;
-
-  boolean have_scale = false;
-
-  const fixed_t info_scale = thing->info ? thing->info->scale : FRACUNIT;
-
-  if (info_scale != FRACUNIT)
-  {
-    if (info_scale <= 0) { return; }
-
-    have_scale = true;
-
-    info_scale_mult = FixedToFloat(thing->info->scale);
-    xscale_mult = yscale_mult = info_scale_mult;
-
-    xscale *= xscale_mult;
-    yscale *= yscale_mult;
-  }
-
-  // [Nugget] ---------------------------------------------------------------/
-
   // decide which patch to use for sprite relative to player
 
   if ((unsigned) thing->sprite >= num_sprites)
@@ -1241,38 +1217,63 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
       rotation = 0;
     }
 
-  // [Nugget] Hi-res graphics /-----------------------------------------------
+  fixed_t scale = xscale;
+
+  // [Nugget] Sprite scaling /================================================
+
+  fixed_t yscale = xscale;
+
+  float xscale_mult = 1.0f,
+        yscale_mult = 1.0f,
+        info_scale_mult = 1.0f;
+
+  const fixed_t info_scale = thing->info ? thing->info->scale : FRACUNIT;
+
+  if (info_scale != FRACUNIT)
+  {
+    if (info_scale <= 0) { return; }
+
+    info_scale_mult = FixedToFloat(thing->info->scale);
+    xscale_mult = yscale_mult = info_scale_mult;
+  }
+
+  // Hi-res graphics ---------------------------------------------------------
 
   fixed_t thisspritewidth     = spritewidth[lump],
-          thisspriteheight    = spriteheight[lump],
           thisspriteoffset    = spriteoffset[lump];
 
   const short hires_lump = allow_hires_graphics ? sprframe->hires_lump[rotation] : -1;
 
   if (hires_lump >= 0)
   {
-    have_scale = true;
-
     const float hires_xscale_mult = hires_sprite_xscales[hires_lump],
                 hires_yscale_mult = hires_sprite_yscales[hires_lump];
 
     xscale_mult *= hires_xscale_mult;
     yscale_mult *= hires_yscale_mult;
 
-    xscale *= hires_xscale_mult;
-    yscale *= hires_yscale_mult;
-
     thisspritewidth  = hires_graphic_widths[hires_lump];
-    thisspriteheight = hires_graphic_heights[hires_lump];
     thisspriteoffset /= hires_xscale_mult;
   }
 
-  // [Nugget] Hi-res graphics -----------------------------------------------/
+  // [Nugget] ===============================================================/
+
+  if (ADJUST_ASPECT())
+  {
+    scale *= aspect_v_factor;
+
+    // [Nugget] Sprite scaling
+    yscale_mult *= aspect_v_factor;
+  }
+
+  // [Nugget] Sprite scaling
+  xscale *= xscale_mult;
+  yscale *= yscale_mult;
 
   txc = tx; // [FG] sprite center coordinate
 
   // [Nugget] Sprite scaling
-  const fixed_t midx = centerxfrac + FixedMul64(txc, scale);
+  const fixed_t midx = centerxfrac + FixedMul64(txc, orig_scale);
 
   // calculate edges of the shape
   // [crispy] fix sprite offsets for mirrored sprites
@@ -1304,23 +1305,6 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   {
     gzt = interpz + spritetopoffset[lump];
   }
-
-  // [Nugget] Square pixels /-------------------------------------------------
-
-  float aspect_mult = 1.0f;
-
-  if (ADJUST_ASPECT())
-  {
-    have_scale = true;
-
-    aspect_mult = aspect_v_factor;
-
-    scale *= aspect_mult;
-    yscale_mult *= aspect_mult;
-    yscale *= aspect_mult;
-  }
-
-  // [Nugget] ---------------------------------------------------------------/
 
   // [Alaux] Calculate this early so we can perform height clipping
   // using multiplications instead of divisions
@@ -1399,7 +1383,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   vis->yscale = yscale;
   vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
   vis->leftoffset = spriteoffset[lump] * info_scale_mult;
-  vis->flags = (VSF_FLIPPED * flip) | (VSF_SCALED * have_scale);
+  vis->flags = (VSF_FLIPPED * flip);
 
   const fixed_t iscale = FixedDiv(FRACUNIT, xscale);
 
@@ -1561,13 +1545,17 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] Sprite shadows -------------------------------------------------
 
-  const float fscale = FixedToFloat(scale);
+  // Original scales as floats
+  const float
+    foxscale = FixedToFloat(orig_scale),
+    foyscale = FixedToFloat(scale);
 
-  const unsigned sprite_area = ((thisspritewidth  >> FRACBITS) * fscale)
-                             * ((thisspriteheight >> FRACBITS) * fscale);
+  const float sprite_area =
+    (FixedToFloat(spritewidth[lump])  * foxscale * info_scale_mult)
+  * (FixedToFloat(spriteheight[lump]) * foyscale * info_scale_mult);
 
   if (   !R_SpriteShadowsOn()
-      || (sprite_area < 128)
+      || (sprite_area < 64.0f)
       || (frame & FF_FULLBRIGHT)
       || (thing->flags & MF_SHADOW)
       || vis->tranmap
@@ -1590,7 +1578,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
   int offset_divisor = 0;
   float shadow_yscale_mult;
 
-  const fixed_t scaled_spriteheight = thisspriteheight * yscale_mult / aspect_mult;
+  const fixed_t scaled_spriteheight = spriteheight[lump] * info_scale_mult;
 
   if (sprite_shadows == SPRITESHADOWS_3D)
   {
@@ -1643,7 +1631,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   shadow_vis->yscale = shadow_yscale;
 
-  shadow_vis->flags = VSF_NO_PERC|VSF_SCALED|VSF_SHADOW;
+  shadow_vis->flags = VSF_NO_PERC|VSF_SHADOW;
 
   fixed_t shadow_tx;
 
@@ -1682,7 +1670,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
       float shadow_tx_clipped;
       GET_TX_CLIPPED();
 
-      const int shadow_x1_clipped = fmidx - shadow_tx_clipped * fscale;
+      const int shadow_x1_clipped = fmidx - shadow_tx_clipped * foxscale;
       shadow_vis->x1 = MAX(0, shadow_x1_clipped);
     }
     else {
@@ -1700,7 +1688,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
       float shadow_tx_clipped;
       GET_TX_CLIPPED();
 
-      const int shadow_x2_clipped = fmidx + shadow_tx_clipped * fscale - 1;
+      const int shadow_x2_clipped = fmidx + shadow_tx_clipped * foxscale - 1;
       shadow_vis->x2 = MIN(viewwidth - 1, shadow_x2_clipped);
     }
     else {
@@ -1839,27 +1827,21 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   // [Nugget] Hi-res graphics /-----------------------------------------------
 
-  fixed_t xscale, yscale, xiscale, yiscale;
-
-  xscale  = pspritescale;
-  xiscale = pspriteiscale;
-  yscale  = pspriteyscale;
-  yiscale = pspriteyiscale;
+  fixed_t
+    xscale  = pspritescale,
+    xiscale = pspriteiscale,
+    yscale  = pspriteyscale,
+    yiscale = pspriteyiscale;
 
   float xscale_mult = 1.0f;
 
-  boolean have_scale = ADJUST_ASPECT(); // Square pixels
-
-  fixed_t thisspritewidth     = spritewidth[lump],
-          thisspriteoffset    = spriteoffset[lump],
-          thisspritetopoffset = spritetopoffset[lump];
+  fixed_t thisspritewidth  = spritewidth[lump],
+          thisspriteoffset = spriteoffset[lump];
 
   const short hires_lump = allow_hires_graphics ? sprframe->hires_lump[0] : -1;
 
   if (hires_lump >= 0)
   {
-    have_scale = true;
-
     const float hires_xscale_mult = hires_sprite_xscales[hires_lump],
                 hires_yscale_mult = hires_sprite_yscales[hires_lump];
 
@@ -1929,7 +1911,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   // killough 12/98: fix psprite positioning problem
   vis->texturemid = (BASEYCENTER<<FRACBITS) /* + FRACUNIT/2 */ -
-                    (sy2 - thisspritetopoffset); // [FG] centered weapon sprite
+                    (sy2 - spritetopoffset[lump]); // [FG] centered weapon sprite
 
   // [Nugget]
   vis->texturemid += (P_WeaponInertiaOn() ? -wiy : 0) // Weapon inertia
@@ -1937,14 +1919,14 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-  vis->scale = pspriteyscale; // [Nugget] Square pixels
+  vis->scale = pspriteyscale;
 
   // [Nugget]
   vis->scale_mult = xscale_mult;
   vis->yscale = yscale;
   vis->lightnum = lightlevel_override >> LIGHTSEGSHIFT;
   vis->leftoffset = spriteoffset[lump];
-  vis->flags = (VSF_FLIPPED * flip) | VSF_NO_PERC | (VSF_SCALED * have_scale);
+  vis->flags = (VSF_FLIPPED * flip) | VSF_NO_PERC;
 
   if (flip)
     {
@@ -1957,7 +1939,7 @@ void R_DrawPSprite(pspdef_t *psp, int lightlevel_override, const boolean is_flas
       vis->startfrac = 0;
     }
 
-  vis->yiscale = yiscale; // [Nugget] Sprite scaling
+  vis->yiscale = yiscale;
 
   if (vis->x1 > x1)
     vis->startfrac += vis->xiscale*(vis->x1-x1);
