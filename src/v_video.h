@@ -205,6 +205,11 @@ void V_DrawPatchFullScreen(patch_t *patch);
 
 // [Nugget] /=================================================================
 
+// CVARs
+extern int automap_overlay_darkening;
+extern int menu_backdrop_darkening;
+extern boolean smooth_darkening;
+
 void V_DrawPatchAll(
     int x,
     int y,
@@ -290,11 +295,6 @@ extern void (*V_ShadowRect)(int x, int y, int width, int height);
     \
         hud_menu_shadows = old_shadows; \
     }
-
-// ---------------------------------------------------------------------------
-
-extern int automap_overlay_darkening;
-extern int menu_backdrop_darkening;
 
 // True color ----------------------------------------------------------------
 
@@ -400,6 +400,9 @@ extern void (*V_TileBlock64)(int line, int width, int height, const byte *src);
 void V_DrawBackground(const char *patchname);
 
 void V_ShadeScreen(int level); // [Nugget] Parameterized
+
+// [Nugget] Skips the fade-in
+void V_ShadeScreenDirect(int level);
 
 extern void (*V_ShadeRect)(int x, int y, int width, int height, int level); // [Nugget] Parameterized
 

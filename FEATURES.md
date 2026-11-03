@@ -328,7 +328,8 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
 - **Support for lowercase characters in console font** (CFG-only: `hud_menu_allow_lowercase`)
 - **Improved palettization of true-color PNG graphics**
 - **Customizable darkening level for dark menu background and Automap overlay**
-  (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+  (CFG-only: `menu_backdrop_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+- Setting to make **screen-darkening effects fade in** (CFG-only: `smooth_darkening`)
 - The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
   - This does not apply to HacX, as it provides a dummy, incongruous lump for the sound
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)

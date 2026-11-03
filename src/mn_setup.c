@@ -6140,6 +6140,9 @@ void MN_BindMenuVariables(void)
              20, 0, 31,
              "Darkening level for dark menu backdrop");
 
+    // (CFG-only)
+    BIND_BOOL(smooth_darkening, true, "Screen-darkening effects fade in");
+
     M_BindBool("menu_background_all", &menu_background_all, NULL,
                false, ss_display, wad_yes,
                "Backdrop for all menus");
