@@ -1598,16 +1598,18 @@ void V_ShadeScreen(const int target_level) // [Nugget] Parameterized
         #define HOLD_TIME_MS 600
 
         static int start_time, last_time = -HOLD_TIME_MS;
+        static int last_tic = -1;
 
         const int time = I_GetTimeMS();
 
-        if (time - last_time >= HOLD_TIME_MS)
+        if (time - last_time >= HOLD_TIME_MS && gametic - last_tic > 1)
         { start_time = time; }
 
         level = ((time - start_time) / 28 + 1) * 2;
         level = MIN(target_level, level);
 
         last_time = time;
+        last_tic = gametic;
 
         #undef HOLD_TICS
     }
