@@ -25,6 +25,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "doomtype.h"
+#include "dsdh_main.h"
 #include "info.h"
 #include "m_array.h"
 #include "m_hashmap.h"
@@ -300,7 +301,7 @@ void R_ParseBrightmaps(int lumpnum)
         else if (!strcasecmp("STATE", SC_GetString(s)))
         {
             SC_MustGetToken(s, TK_IntConst);
-            int num = SC_GetNumber(s);
+            int num = DSDH_StateTranslate(SC_GetNumber(s));
             if (num < 0 || num >= num_states)
             {
                 SC_Error(s, "state '%d' not found", num);

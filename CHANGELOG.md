@@ -12,6 +12,7 @@
 
 ## Bug Fixes
 
+- **Crash when assigning brightmaps to states**
 - **_Tag Finder_ cross marks changing size upon dynamic resolution changes**
 - **Rock background and _Melt_ wipe being distorted when draw-to-texture were enabled**
 - **Crash when taking screenshots with draw-to-texture enabled**
