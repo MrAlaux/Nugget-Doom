@@ -1148,7 +1148,7 @@ static void ThreadInitInterpolatedColormaps(void)
       lighttable32_t *const last_colormap = pal_colormaps[i][j] + ((31<<CRSB) * 256);
 
       for (int l = 1;  l < 1<<CRSB;  l++)
-      { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+      { memmove(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
     }
   }
 }
@@ -1204,7 +1204,7 @@ static void ThreadInitTruecolorColormaps(void)
 
       // Fill the remainder with the last colormap row
       for (int l = 1;  l < 1<<CRSB;  l++)
-      { memcpy(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
+      { memmove(last_colormap + (l * 256), last_colormap, sizeof(*last_colormap) * 256); }
     }
   }
 }
