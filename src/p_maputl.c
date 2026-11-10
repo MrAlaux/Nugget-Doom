@@ -607,13 +607,13 @@ void P_SaveIntercepts(void)
                                  PU_STATIC, 0);
   }
 
-  memmove(saved_intercepts, intercepts, sizeof(*intercepts) * num_intercepts);
+  memcpy(saved_intercepts, intercepts, sizeof(*intercepts) * num_intercepts);
   saved_intercepts_index = intercept_p - intercepts;
 }
 
 void P_RestoreIntercepts(void)
 {
-  memmove(intercepts, saved_intercepts, sizeof(*saved_intercepts) * num_saved_intercepts);
+  memcpy(intercepts, saved_intercepts, sizeof(*saved_intercepts) * num_saved_intercepts);
   intercept_p = intercepts + saved_intercepts_index;
 }
 

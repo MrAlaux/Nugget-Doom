@@ -911,11 +911,11 @@ static void UpdateRender(void)
 
             if (dst_pitch == src_pitch)
             {
-                memmove(dst, src, src_pitch * h);
+                memcpy(dst, src, src_pitch * h);
             }
             else while (h--)
             {
-                memmove(dst, src, src_pitch);
+                memcpy(dst, src, src_pitch);
                 dst += dst_pitch;
                 src += src_pitch;
             }
