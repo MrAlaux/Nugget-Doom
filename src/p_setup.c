@@ -1470,45 +1470,9 @@ void P_SetupLevel(int episode, int map_num, skill_t skill)
   // set up world state
   P_SpawnSpecials();
 
-  // [Nugget] Thanks Mikolah!
-  if (allow_flakes)
-  {
-    P_ClearFlakers();
-
-    for (int i = 0;  i < numsectors;  i++)
-    {
-      const sector_t *const sector = &sectors[i];
-
-      if (sector->ceilingpic != skyflatnum || sector->floorheight >= sector->ceilingheight)
-      { continue; }
-
-      fixed_t bbox[4];
-      M_ClearBox(bbox);
-
-      for (int j = 0;  j < sector->linecount;  j++)
-      {
-        const line_t *const line = sector->lines[j];
-
-        M_AddToBox(bbox, line->v1->x, line->v1->y);
-        M_AddToBox(bbox, line->v2->x, line->v2->y);
-      }
-
-      const fixed_t x1 = (bbox[BOXLEFT]   + FLAKER_DIST_MASK) & ~FLAKER_DIST_MASK,
-                    x2 =  bbox[BOXRIGHT]                      & ~FLAKER_DIST_MASK,
-                    y1 = (bbox[BOXBOTTOM] + FLAKER_DIST_MASK) & ~FLAKER_DIST_MASK,
-                    y2 =  bbox[BOXTOP]                        & ~FLAKER_DIST_MASK;
-
-      for (fixed_t x = x1;  x <= x2;  x += FLAKER_DIST)
-      {
-        for (fixed_t y = y1;  y <= y2;  y += FLAKER_DIST)
-        {
-          if (R_PointInSubsector(x, y)->sector != sector) { continue; }
-
-          P_AddFlaker(x, y, sector->ceilingheight, sector);
-        }
-      }
-    }
-  }
+  // [Nugget]
+  P_ClearFlakers();
+  P_CreateFlakers(true);
 
   P_MapEnd();
 

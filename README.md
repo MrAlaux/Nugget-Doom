@@ -241,9 +241,9 @@ Copyright:
  © 2001-2019 Contributors to the Freedoom project.  
 License: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
 
-Files: `base/all-all/sprites/ngcha0.png, base/all-all/sprites/ngcla0.png, base/all-all/sprites/ngtr*0.png`  
+Files: `base/all-all/sprites/ngcha0.png, base/all-all/sprites/ngcla0.png, base/all-all/sprites/ngfla0.png, base/all-all/sprites/ngrn*0.png, base/all-all/sprites/ngtr*0.png`  
 Copyright:  
- © 2023-2024 Korp.  
+ © 2023-2026 Korp.  
 License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
 Files: `base/all-all/dsdg*, base/all-all/sprites/dog*`  

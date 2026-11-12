@@ -199,6 +199,7 @@ static void cheat_castcall(void);
 
 static void cheat_cheese(void);
 static void cheat_flakes(void);
+static void cheat_moody(void);
 
 boolean idgaf;
 static void cheat_idgaf(void);
@@ -483,6 +484,7 @@ cheat_sequence_t cheats_table[] = {
 
   { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
   { "flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
+  { "moody",      NULL, not_net | not_demo, {.v = cheat_moody} },
   { "idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf} },
 
   #ifdef NUGMAGIC
@@ -1067,6 +1069,12 @@ static void cheat_flakes(void)
   if (!allow_flakes) { return; }
 
   flakes = !flakes;
+}
+
+static void cheat_moody(void)
+{
+  moody = !moody;
+  P_CreateFlakers(false);
 }
 
 static void cheat_idgaf(void)
