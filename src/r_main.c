@@ -1414,7 +1414,7 @@ void R_InitLightTables (void)
 
     LIGHTSEGSHIFT = 0;
     LIGHTSCALESHIFT = 9;
-    LIGHTZSHIFT = 16;
+    LIGHTZSHIFT = 14;
   }
   else {
     num_colormap_rows = NUMCOLORMAPS;

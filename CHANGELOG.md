@@ -7,6 +7,7 @@
 ## Changes
 
 - **Improved accuracy of plane rendering**
+- **Improved plane lighting in true-color modes**
 - **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
 - **Improved culling of distant sprite shadows**
 
