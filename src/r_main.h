@@ -50,8 +50,11 @@ extern fixed_t  skyiscale,
 extern int      validcount;
 extern int      linecount;
 extern int      loopcount;
-extern fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
+extern fixed_t  bottomydeltafrac;
 extern int      max_project_slope;
+
+// [Nugget] Square pixels: separate vertical projection
+extern fixed_t yprojection;
 
 //
 // Rendering stats

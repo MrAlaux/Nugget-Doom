@@ -680,7 +680,7 @@ static int wipe_doFade(int width, int height, int ticks)
         V_PutBlock(0, 0, width, height, fadeIn ? wipe_scr_end : wipe_scr_start);
     }
 
-    V_ShadeScreen(screenshade);
+    V_ShadeScreenDirect(screenshade);
 
     if (!fadeIn)
     {

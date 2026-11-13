@@ -252,6 +252,7 @@ typedef enum
   MIF_CROUCHING    = 0x00010000,  // Mobj (player) is crouching
   MIF_DONTRENDER   = 0x00020000,
   MIF_FLAKE        = 0x00040000,
+  MIF_RAIN         = 0x00080000,
 } mobjflag_int_t;
 
 // Map Object definition.
@@ -514,7 +515,7 @@ mobj_t *P_FindMobjFromTID(int tid, mobj_t *rover, mobj_t *trigger);
 
 // [Nugget] ==================================================================
 
-extern boolean cheese, frights, flakes, allow_flakes, faint_flakes;
+extern boolean cheese, frights, flakes, allow_flakes, faint_flakes, moody;
 
 typedef enum flinching_s {
   FLINCH_OFF,
@@ -550,7 +551,7 @@ mobjinfo_t *P_VisualMobjDummyInfo(void);
 
 struct sector_s;
 
-void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const struct sector_s *sector);
+void P_CreateFlakers(boolean prespawn);
 void P_ClearFlakers(void);
 void P_RunFlakers(void);
 

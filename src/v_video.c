@@ -47,6 +47,7 @@
 #include "z_zone.h"
 
 // [Nugget]
+#include "i_timer.h"
 #include "st_stuff.h"
 #include "st_widgets.h"
 
@@ -261,8 +262,10 @@ void V_InitColorTranslation(void)
 
 // [Nugget] /=================================================================
 
+// CVARs
 int automap_overlay_darkening;
 int menu_backdrop_darkening;
+boolean smooth_darkening;
 
 byte cr_bright3[256],
      cr_gray_vc[256],  // `V_Colorize()` only
@@ -395,6 +398,9 @@ void V_ToggleShadows(const boolean on)
 // [Nugget] =================================================================/
 
 video_t video;
+
+// [Nugget] Square pixels
+int screenheight;
 
 #define WIDE_SCREENWIDTH 864 // Up to 32:9 aspect ratio (3.6).
 
@@ -1575,7 +1581,39 @@ static void V_ShadeRect32(int x, int y, int width, int height, const int level)
     }
 }
 
-void V_ShadeScreen(const int level) // [Nugget] Parameterized
+void V_ShadeScreen(const int target_level) // [Nugget] Parameterized
+{
+    // [Nugget] Fade-in
+
+    int level;
+
+    if (smooth_darkening)
+    {
+        #define HOLD_TIME_MS 600
+
+        static int start_time, last_time = -HOLD_TIME_MS;
+        static int last_tic = -1;
+
+        const int time = I_GetTimeMS();
+
+        if (time - last_time >= HOLD_TIME_MS && gametic - last_tic > 1)
+        { start_time = time; }
+
+        level = ((time - start_time) / 28 + 1) * 2;
+        level = MIN(target_level, level);
+
+        last_time = time;
+        last_tic = gametic;
+
+        #undef HOLD_TICS
+    }
+    else { level = target_level; }
+
+    V_ShadeScreenDirect(level);
+}
+
+// [Nugget] Skips the fade-in
+void V_ShadeScreenDirect(const int level)
 {
     V_ShadeRect(0, 0, video.unscaledw, SCREENHEIGHT, level);
 }

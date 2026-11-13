@@ -233,6 +233,11 @@ set(BASE_SOURCES
     all-all/graphics/ng_palet.lmp
     all-all/sprites/ngcha0.png
     all-all/sprites/ngcla0.png
+    all-all/sprites/ngfla0.png
+    all-all/sprites/ngrna0.png
+    all-all/sprites/ngrnb0.png
+    all-all/sprites/ngrnc0.png
+    all-all/sprites/ngrnd0.png
     all-all/sprites/ngtra0.png
     all-all/sprites/ngtrb0.png
     all-all/sprites/ngtrc0.png

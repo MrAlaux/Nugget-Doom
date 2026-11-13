@@ -125,6 +125,9 @@ void M_BindInput(const char *name, int input_id, const char *help)
     array_push(defaults, item);
 }
 
+// [Nugget]
+static const char *port_version = NULL;
+
 void M_InitConfig(void)
 {
     BIND_BOOL(config_help, true,
@@ -190,6 +193,10 @@ void M_InitConfig(void)
     M_BindBool("fail_safe", &fail_safe, NULL,
                false, ss_none, wad_no,
                "Use only when instructed");
+
+    // (CFG-only)
+    M_BindStr("port_version", &port_version, "", wad_no,
+      "Port version (informational -- do not change)");
 
     // [Nugget] -------------------------------------------------------------/
 
@@ -789,6 +796,9 @@ void M_LoadDefaults(void)
     }
 
     defaults_loaded = true; // killough 10/98
+
+    // [Nugget]
+    port_version = PROJECT_VERSION;
 }
 
 boolean M_CheckIfDisabled(const char *name)

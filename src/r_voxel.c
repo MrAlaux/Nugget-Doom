@@ -267,10 +267,14 @@ static boolean VX_Load (int spr, int frame)
 
 	const spritedef_t   *const sprdef = &sprites[spr];
 	const spriteframe_t *const sprframe = &sprdef->spriteframes[frame];
-	const int sprite_lumpnum = sprframe->lump[0] + firstspritelump;
 
-	if (W_FileIndexForLump(lumpnum) < W_FileIndexForLump(sprite_lumpnum))
-	{ return false; }
+	if (sprframe)
+	{
+		const int sprite_lumpnum = sprframe->lump[0] + firstspritelump;
+
+		if (W_FileIndexForLump(lumpnum) < W_FileIndexForLump(sprite_lumpnum))
+		{ return false; }
+	}
 
 	// [Nugget] ---------------------------------------------------------------/
 
@@ -605,6 +609,13 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 		xscale = FixedDiv (projection, ty);
 	}
 
+	// [Nugget] Square pixels
+
+	const fixed_t orig_scale = xscale;
+
+	if (ADJUST_ASPECT())
+	{ xscale *= aspect_v_factor; }
+
 	switch (VX_RotateModeForThing (thing))
 	{
 		case 1:
@@ -813,7 +824,7 @@ boolean VX_ProjectVoxel(mobj_t *thing, int lightlevel_override)
 	// [Alaux] Lock crosshair on target
 	if (STRICTMODE(hud_crosshair_lockon) && thing == crosshair_target)
 	{
-		int x = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS;
+		int x = (centerxfrac + FixedMul(tx, orig_scale)) >> FRACBITS;
 		// [Nugget] Removed `actualheight`
 		int y = (centeryfrac + FixedMul(viewz - gz - crosshair_target->height / 2, xscale)) >> FRACBITS;
 		x = clampi(x, 0, viewwidth - 1);
@@ -1103,6 +1114,10 @@ static void DrawColumnCubesLoop8(
 		else
 			scale = A_xscale + FixedMul (B_xscale - A_xscale, FixedDiv (ux - Ax, Bx - Ax));
 
+		// [Nugget] Square pixels
+		if (ADJUST_ASPECT())
+		{ scale *= aspect_v_factor; }
+
 		iscale = FixedDiv (FRACUNIT, scale);
 
 		const byte * slab = &v->data[ofs1];
@@ -1167,6 +1182,10 @@ static void DrawColumnCubesLoop8(
 					wscale = D_xscale + FixedMul (C_xscale - D_xscale, FixedDiv (ux - Dx, Cx - Dx));
 				else
 					wscale = A_xscale + FixedMul (D_xscale - A_xscale, FixedDiv (ux - Ax, Dx - Ax));
+
+				// [Nugget] Square pixels
+				if (ADJUST_ASPECT())
+				{ wscale *= aspect_v_factor; }
 			}
 
 			if (has_top)
@@ -1270,6 +1289,10 @@ static void DrawColumnCubesLoop32(
 		else
 			scale = A_xscale + FixedMul (B_xscale - A_xscale, FixedDiv (ux - Ax, Bx - Ax));
 
+		// [Nugget] Square pixels
+		if (ADJUST_ASPECT())
+		{ scale *= aspect_v_factor; }
+
 		iscale = FixedDiv (FRACUNIT, scale);
 
 		const byte * slab = &v->data[ofs1];
@@ -1332,6 +1355,10 @@ static void DrawColumnCubesLoop32(
 					wscale = D_xscale + FixedMul (C_xscale - D_xscale, FixedDiv (ux - Dx, Cx - Dx));
 				else
 					wscale = A_xscale + FixedMul (D_xscale - A_xscale, FixedDiv (ux - Ax, Dx - Ax));
+
+				// [Nugget] Square pixels
+				if (ADJUST_ASPECT())
+				{ wscale *= aspect_v_factor; }
 			}
 
 			if (has_top)
@@ -1439,6 +1466,10 @@ static void DrawColumnCubesLoopDithered8(
 		else
 			scale = A_xscale + FixedMul (B_xscale - A_xscale, FixedDiv (ux - Ax, Bx - Ax));
 
+		// [Nugget] Square pixels
+		if (ADJUST_ASPECT())
+		{ scale *= aspect_v_factor; }
+
 		iscale = FixedDiv (FRACUNIT, scale);
 
 		const byte * slab = &v->data[ofs1];
@@ -1513,6 +1544,10 @@ static void DrawColumnCubesLoopDithered8(
 					wscale = D_xscale + FixedMul (C_xscale - D_xscale, FixedDiv (ux - Dx, Cx - Dx));
 				else
 					wscale = A_xscale + FixedMul (D_xscale - A_xscale, FixedDiv (ux - Ax, Dx - Ax));
+
+				// [Nugget] Square pixels
+				if (ADJUST_ASPECT())
+				{ wscale *= aspect_v_factor; }
 			}
 
 			if (has_top)
@@ -1632,6 +1667,10 @@ static void DrawColumnCubesLoopDithered32(
 		else
 			scale = A_xscale + FixedMul (B_xscale - A_xscale, FixedDiv (ux - Ax, Bx - Ax));
 
+		// [Nugget] Square pixels
+		if (ADJUST_ASPECT())
+		{ scale *= aspect_v_factor; }
+
 		iscale = FixedDiv (FRACUNIT, scale);
 
 		const byte * slab = &v->data[ofs1];
@@ -1706,6 +1745,10 @@ static void DrawColumnCubesLoopDithered32(
 					wscale = D_xscale + FixedMul (C_xscale - D_xscale, FixedDiv (ux - Dx, Cx - Dx));
 				else
 					wscale = A_xscale + FixedMul (D_xscale - A_xscale, FixedDiv (ux - Ax, Dx - Ax));
+
+				// [Nugget] Square pixels
+				if (ADJUST_ASPECT())
+				{ wscale *= aspect_v_factor; }
 			}
 
 			if (has_top)
@@ -1861,10 +1904,19 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	Bx = centerxfrac + FixedMul (Bx, B_xscale);
 	Cx = centerxfrac + FixedMul (Cx, C_xscale);
 
-	const fixed_t frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
-	               backscale = MIN(D_xscale, MIN(C_xscale, A_xscale)),
-	                midscale = ((int64_t) frontscale + backscale) / 2,
-	               imidscale = FixedDiv(FRACUNIT, midscale);
+	fixed_t
+		frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
+		 backscale = MIN(D_xscale, MIN(C_xscale, A_xscale));
+
+	if (ADJUST_ASPECT())
+	{
+		frontscale *= aspect_v_factor;
+		backscale *= aspect_v_factor;
+	}
+
+	const fixed_t
+		 midscale = ((int64_t) frontscale + backscale) / 2,
+		imidscale = FixedDiv(FRACUNIT, midscale);
 
 	static const byte A_faces[9] = { F_BACK, F_BACK, F_RIGHT, F_LEFT, 0, F_RIGHT, F_LEFT,  F_FRONT, F_FRONT };
 	static const byte B_faces[9] = { F_LEFT,      0, F_BACK,       0, 0,       0, F_FRONT,       0, F_RIGHT };

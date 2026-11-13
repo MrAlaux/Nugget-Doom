@@ -1472,7 +1472,7 @@ void R_SetFuzzColumnMode(void)
         switch (mode)
         {
             case FUZZ_BLOCKY:
-                if (current_video_height > SCREENHEIGHT)
+                if (current_video_height > screenheight)
                 {
                     fuzzblocksize = FixedToInt(video.yscale);
                     R_DrawFuzzColumn = DrawFuzzColumn32Blocky;
@@ -1500,7 +1500,7 @@ void R_SetFuzzColumnMode(void)
     switch (mode)
     {
         case FUZZ_BLOCKY:
-            if (current_video_height > SCREENHEIGHT)
+            if (current_video_height > screenheight)
             {
                 fuzzblocksize = FixedToInt(video.yscale);
                 R_DrawFuzzColumn = DrawFuzzColumnBlocky;
@@ -2425,23 +2425,23 @@ void R_FillBackScreen(void)
     {
         if (background_buffer32 == NULL)
         {
-            int size = video.width * video.height;
+            int size = video.width * video.pitch;
             background_buffer32 =
                 Z_Malloc(size * sizeof(*background_buffer32), PU_STATIC, NULL);
         }
 
-        V_UseBuffer32(background_buffer32, video.height);
+        V_UseBuffer32(background_buffer32, video.pitch);
     }
     else
     {
         if (background_buffer == NULL)
         {
-            int size = video.width * video.height;
+            int size = video.width * video.pitch;
             background_buffer =
                 Z_Malloc(size * sizeof(*background_buffer), PU_STATIC, NULL);
         }
 
-        V_UseBuffer(background_buffer, video.height);
+        V_UseBuffer(background_buffer, video.pitch);
     }
 
     V_DrawBackground(gamemode == commercial ? "GRNROCK" : "FLOOR7_2");

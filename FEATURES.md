@@ -35,6 +35,13 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
     - No support for true-color (PNG) graphics; those are still palettized at startup
     - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
       especially with _Smooth Palette Tinting_ enabled
+- Support for **square-pixel resolutions**
+  - Normally, the renderer's output is stretched vertically by a factor of 1.2 to achieve a correct aspect ratio.
+    This makes some pixels uneven (non-square), resulting in a slightly dirty image.
+    Nugget offers additional resolution settings (labelled "Sq." for "square pixels")
+    which render the game at the final resolution instead of stretching it afterwards, fixing the unevenness;
+    e.g. the game is rendered at 1920x1080 instead of 1920x900.
+- Support for **aspect ratios below 4:3**, e.g. 5:4
 - **Extended FOV range:** [20, 140]
 - **Stretch viewport to fit window** setting (CFG-only: `stretch_to_fit`) [i.b. and partially p.f. Crispy Doom; i.b. ZDoom]
 - **Set _Air Absorption_ and _Doppler Effect_ to 5 by default**
@@ -318,7 +325,8 @@ For a complete list with more details, see the _New Nugget Doom cheats_ section 
   - Milestone-completion announcements: `DSMILEST`
 - **Support for lowercase characters in console font** (CFG-only: `hud_menu_allow_lowercase`)
 - **Customizable darkening level for dark menu background and Automap overlay**
-  (CFG-only: `menu_background_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+  (CFG-only: `menu_backdrop_darkening` and `automap_overlay_darkening`) [i.b. Cherry Doom]
+- Setting to make **screen-darkening effects fade in** (CFG-only: `smooth_darkening`)
 - The **Chaingun and Chaingunner can be given a custom sound effect** by providing a `DSCHGUN` sound effect lump
   - This does not apply to HacX, as it provides a dummy, incongruous lump for the sound
 - Toggle to **disable the Killough-face easter egg** (CFG-only: `no_killough_face`)

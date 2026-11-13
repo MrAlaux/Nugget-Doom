@@ -86,8 +86,11 @@ localview_t localview;
 boolean raw_input;
 fixed_t  viewcos, viewsin;
 player_t *viewplayer;
-fixed_t  viewheightfrac; // [FG] sprite clipping optimizations
+fixed_t  bottomydeltafrac;
 int max_project_slope = 4;
+
+// [Nugget] Square pixels: separate vertical projection
+fixed_t yprojection;
 
 static fixed_t focallength, lightfocallength;
 
@@ -806,6 +809,10 @@ static void ProcessFOVEffects(void)
       skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
     }
 
+    // [Nugget] Square pixels
+    if (ADJUST_ASPECT())
+    { skyiscale /= aspect_v_factor; }
+
     skyiscalediff = (custom_fov == FOV_DEFAULT)
                   ? FRACUNIT
                   : tan(custom_fov * M_PI / 360.0) * FRACUNIT;
@@ -1302,6 +1309,17 @@ static void R_InitTextureMapping(void)
     projection = centerxfrac / slope;
   }
 
+  // [Nugget] Square pixels
+  if (ADJUST_ASPECT())
+  {
+    yprojection = projection * aspect_v_factor;
+    lightfocallength *= aspect_v_factor;
+  }
+  else
+  {
+    yprojection = projection;
+  }
+
   for (i=0 ; i<FINEANGLES/2 ; i++)
     {
       int t;
@@ -1392,7 +1410,7 @@ void R_InitLightTables (void)
 
     LIGHTSEGSHIFT = 0;
     LIGHTSCALESHIFT = 9;
-    LIGHTZSHIFT = 16;
+    LIGHTZSHIFT = 14;
   }
   else {
     num_colormap_rows = NUMCOLORMAPS;
@@ -1639,7 +1657,7 @@ static void R_SetupFreelook(void)
 
   if (viewpitch)
   {
-    dy = FixedMul(projection, -finetangent[(ANG90 - viewpitch) >> ANGLETOFINESHIFT]);
+    dy = FixedMul(yprojection, -finetangent[(ANG90 - viewpitch) >> ANGLETOFINESHIFT]);
   }
   else
   {
@@ -1650,7 +1668,8 @@ static void R_SetupFreelook(void)
 
   if (STRICTMODE(ST_GetNughudOn()) && gamestate == GS_LEVEL)
   {
-    nughud_viewpitch = (nughud.viewoffset * viewheight / SCREENHEIGHT) << FRACBITS;
+    nughud_viewpitch = IntToFixed(nughud.viewoffset * viewheight / screenheight)
+                     * (ADJUST_ASPECT() ? aspect_v_factor : 1);
   }
   else { nughud_viewpitch = 0; }
 
@@ -1661,9 +1680,19 @@ static void R_SetupFreelook(void)
   centery = viewheight / 2 + (dy >> FRACBITS);
   centeryfrac = centery << FRACBITS;
 
+  bottomydeltafrac = (viewheight - centery) << FRACBITS;
+
   for (i = 0; i < viewheight; i++)
   {
-    dy = abs(IntToFixed(i - centery) + FRACUNIT / 2);
+    // [Nugget] Improved accuracy
+
+    dy = abs(IntToFixed(i - centery));
+
+    if (!dy)
+    {
+      dy = 1;
+    }
+
     yslope[i] = FixedDiv(projection, dy);
   }
 }
@@ -1755,8 +1784,6 @@ void R_ExecuteSetViewSize (void)
   centerx = centerxfrac >> FRACBITS;
   centerxfrac_nonwide = (viewwidth_nonwide << FRACBITS) / 2;
 
-  viewheightfrac = viewheight << (FRACBITS + 1); // [FG] sprite clipping optimizations
-
   R_InitBuffer();       // killough 11/98
 
   R_InitTextureMapping();
@@ -1773,6 +1800,17 @@ void R_ExecuteSetViewSize (void)
   while (FixedMul(pspriteiscale, pspritescale) < FRACUNIT)
     pspriteiscale++;
 
+  // [Nugget] Square pixels
+  if (ADJUST_ASPECT())
+  {
+    pspriteyscale = pspritescale * aspect_v_factor;
+    pspriteyiscale = pspriteiscale / aspect_v_factor;
+  }
+  else {
+    pspriteyscale = pspritescale;
+    pspriteyiscale = pspriteiscale;
+  }
+
   // [Nugget] Use `r_fov` instead of `custom_fov`
   if (r_fov == FOV_DEFAULT)
   {
@@ -1782,6 +1820,10 @@ void R_ExecuteSetViewSize (void)
   {
     skyiscale = tan(r_fov * M_PI / 360.0) * SCREENWIDTH / viewwidth_nonwide * FRACUNIT;
   }
+
+  // [Nugget] Square pixels
+  if (ADJUST_ASPECT())
+  { skyiscale /= aspect_v_factor; }
 
   // [Nugget] FOV-based sky stretching /--------------------------------------
 
@@ -2564,7 +2606,7 @@ void R_RenderPlayerView (player_t* player)
   R_DrawMasked ();
 
   // [Nugget]
-  if (!strictmode && current_video_height == SCREENHEIGHT
+  if (!strictmode && video.height == screenheight
       && (lowres_pixel_width > 1 || lowres_pixel_height > 1))
   {
     if (truecolor_rendering)

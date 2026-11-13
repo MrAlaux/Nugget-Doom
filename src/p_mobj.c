@@ -50,6 +50,7 @@
 
 // [Nugget]
 #include "m_array.h"
+#include "m_bbox.h"
 #include "p_user.h"
 #include "r_tranmap.h"
 
@@ -626,6 +627,13 @@ floater:
 	}
 
       mo->z = mo->floorz;
+
+      // [Nugget]
+      if (mo->intflags & MIF_RAIN)
+      {
+        P_SetMobjAltState(mo, AS_RAINL1);
+        return;
+      }
 
       // [FG] game version specific differences
       if (!correct_lost_soul_bounce && mo->flags & MF_SKULLFLY)
@@ -2195,7 +2203,10 @@ mobjinfo_t *P_VisualMobjDummyInfo(void)
   return &info;
 }
 
+#define WEATHER() (flakes || moody)
+
 boolean flakes, allow_flakes, faint_flakes;
+boolean moody;
 
 typedef struct flaker_s {
   fixed_t x, y, z;
@@ -2206,13 +2217,17 @@ flaker_t *flakers = NULL;
 
 static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
 {
-  if (prespawn)
+  if (moody)
   {
-    if (M_Random() & 3) { return; }
+    if (prespawn ? M_Random() < 80 : M_Random() & 63)
+    { return; }
   }
-  else if (M_Random() != 4) { return; }
+  else {
+    if (prespawn ? M_Random() < 64 : M_Random() != 3)
+    { return; }
+  }
 
-  if (faint_flakes)
+  if (faint_flakes && !moody)
   {
     if (leveltime & 1 || M_Random() != Woof_Random()) { return; }
   }
@@ -2247,26 +2262,83 @@ static void SpawnFlake(const flaker_t *const flaker, const boolean prespawn)
   if (prespawn)
   { z -= ((int64_t) z - flaker->sector->floorheight) * Woof_Random() / 255; }
 
-  mobj_t *const flake = P_SpawnVisualMobj(x, y, z, AS_FLAKE1);
+  mobj_t *const flake = P_SpawnVisualMobj(x, y, z, moody ? AS_RAIN1 : AS_FLAKE1);
 
   flake->flags |= MF_NOGRAVITY;
-  flake->intflags |= MIF_FLAKE;
+  flake->intflags |= moody ? MIF_RAIN : MIF_FLAKE;
 
-  flake->gentranmap_pct = faint_flakes ? 5 : 40;
+  if (moody)
+  {
+    flake->gentranmap_pct = 40;
+  }
+  else {
+    flake->gentranmap_pct = faint_flakes ? 5 : 40;
+  }
+
   flake->gentranmap = R_GetGenericTranMap(flake->gentranmap_pct);
 
-  const fixed_t momz = FRACUNIT + (dist / 3000);
+  if (moody)
+  {
+    const fixed_t momz = 8 * FRACUNIT;
 
-  flake->momz = -(momz + (momz * Woof_Random() / 255));
+    flake->momz = -(momz + (momz / 2 * Woof_Random() / 255));
+  }
+  else {
+    const fixed_t momz = FRACUNIT + (dist / 3000);
 
-  flake->alttics = 28 + (z - flaker->sector->floorheight) / -flake->momz;
+    flake->momz = -(momz + (momz * Woof_Random() / 255));
+
+    flake->alttics = 28 + (z - flaker->sector->floorheight) / -flake->momz;
+  }
 }
 
-void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const sector_t *const sector)
+static void P_AddFlaker(fixed_t x, fixed_t y, fixed_t z, const sector_t *sector, boolean prespawn)
 {
   array_push(flakers, ((flaker_t) { x, y, z, sector }));
 
-  if (flakes) { SpawnFlake(&flakers[array_size(flakers) - 1], true); }
+  if (WEATHER()) { SpawnFlake(&flakers[array_size(flakers) - 1], prespawn); }
+}
+
+void P_CreateFlakers(const boolean prespawn)
+{
+  if (!WEATHER() || array_size(flakers))
+  { return; }
+
+  // Thanks Mikolah!
+  for (int i = 0;  i < numsectors;  i++)
+  {
+    const sector_t *const sector = &sectors[i];
+
+    if (sector->ceilingpic != skyflatnum || sector->floorheight >= sector->ceilingheight)
+    { continue; }
+
+    fixed_t bbox[4];
+    M_ClearBox(bbox);
+
+    for (int j = 0;  j < sector->linecount;  j++)
+    {
+      const line_t *const line = sector->lines[j];
+
+      M_AddToBox(bbox, line->v1->x, line->v1->y);
+      M_AddToBox(bbox, line->v2->x, line->v2->y);
+    }
+
+    const fixed_t
+      x1 = (bbox[BOXLEFT]   + FLAKER_DIST_MASK) & ~FLAKER_DIST_MASK,
+      x2 =  bbox[BOXRIGHT]                      & ~FLAKER_DIST_MASK,
+      y1 = (bbox[BOXBOTTOM] + FLAKER_DIST_MASK) & ~FLAKER_DIST_MASK,
+      y2 =  bbox[BOXTOP]                        & ~FLAKER_DIST_MASK;
+
+    for (fixed_t x = x1;  x <= x2;  x += FLAKER_DIST)
+    {
+      for (fixed_t y = y1;  y <= y2;  y += FLAKER_DIST)
+      {
+        if (R_PointInSubsector(x, y)->sector != sector) { continue; }
+
+        P_AddFlaker(x, y, sector->ceilingheight, sector, prespawn);
+      }
+    }
+  }
 }
 
 void P_ClearFlakers(void)
@@ -2276,7 +2348,7 @@ void P_ClearFlakers(void)
 
 void P_RunFlakers(void)
 {
-  if (!flakes) { return; }
+  if (!WEATHER()) { return; }
 
   if (nodrawers || leveltime <= 1) { return; } // View positions are presumably uninitialized
 

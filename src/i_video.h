@@ -27,15 +27,16 @@
 #define FOV_MIN          20  // [Nugget] Decreased
 #define FOV_MAX          140 // [Nugget] Increased
 #define ASPECT_RATIO_MAX 3.6 // Up to 32:9 aspect ratio.
-#define ASPECT_RATIO_MIN (4.0 / 3.0)
 
+// [Nugget] Square pixels: adapted
 typedef struct
 {
-    int max;
-    int step;
+    int height;
+    boolean square;
 } resolution_scaling_t;
 
-resolution_scaling_t I_GetResolutionScaling(void);
+const resolution_scaling_t *I_GetResolutionScaling(void);
+void I_SetResolution(resolution_scaling_t resolution);
 
 // Called by D_DoomMain,
 // determines the hardware configuration
@@ -60,6 +61,8 @@ void I_ToggleVsync(void); // [JN] Calls native SDL vsync toggle
 void I_DynamicResolution(void);
 void I_ResetDRS(void);
 
+extern int default_video_height;
+
 extern int current_video_height;
 #define DRS_MIN_HEIGHT 400
 extern boolean dynamic_resolution;
@@ -74,6 +77,13 @@ extern boolean correct_aspect_ratio;
 extern boolean screenvisible;
 
 // [Nugget] /-----------------------------------------------------------------
+
+// CVARs
+extern boolean square_pixels;
+
+#define ADJUST_ASPECT() (aspect_v_factor != 1.0f)
+
+extern float aspect_v_factor;
 
 extern double average_frametime;
 

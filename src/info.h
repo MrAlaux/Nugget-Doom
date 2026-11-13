@@ -1560,7 +1560,7 @@ extern char *altsprnames[];
 typedef enum {
   ASPR_NULL = -1,
 
-  ASPR_PLYC, ASPR_NGCH, ASPR_NGCL, ASPR_NGTR, ASPR_NGFL,
+  ASPR_PLYC, ASPR_NGCH, ASPR_NGCL, ASPR_NGTR, ASPR_NGFL, ASPR_NGRN,
 
   NUMALTSPRITES
 } altspritenum_t;
@@ -1577,6 +1577,10 @@ typedef enum {
   AS_TRAIL6,
   AS_TRAIL7,
   AS_FLAKE1,
+  AS_RAIN1,
+  AS_RAINL1,
+  AS_RAINL2,
+  AS_RAINL3,
 
   NUMALTSTATES
 } altstatenum_t;

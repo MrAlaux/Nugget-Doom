@@ -451,12 +451,11 @@ typedef struct patch_s
 // [Nugget]
 typedef enum visspriteflag_s
 {
-  VSF_FULLBRIGHT = 0x00000001,
-  VSF_FLIPPED    = 0x00000002,
-  VSF_SHADOW     = 0x00000004,
-  VSF_SCALED     = 0x00000008,
-  VSF_NO_PERC    = 0x00000010,
-  VSF_OWN_TINT   = 0x00000020,
+  VSF_FULLBRIGHT = 1,
+  VSF_FLIPPED    = VSF_FULLBRIGHT << 1,
+  VSF_SHADOW     = VSF_FLIPPED << 1,
+  VSF_NO_PERC    = VSF_SHADOW << 1,
+  VSF_OWN_TINT   = VSF_NO_PERC << 1,
 } visspriteflag_t;
 
 typedef struct vissprite_s
