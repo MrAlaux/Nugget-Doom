@@ -410,7 +410,7 @@ static int x2lookup[WIDE_SCREENWIDTH + 1];
 static int y2lookup[SCREENHEIGHT + 1];
 static int linesize;
 
-#define V_ADDRESS(buffer, x, y) ((buffer) + (y) * linesize + (x))
+#define V_ADDRESS(buffer, x, y) ((buffer) + ((x) * linesize) + (y))
 
 typedef struct
 {
@@ -461,10 +461,10 @@ static void DrawPatchColumn8(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = source[frac >> FRACBITS];
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = source[frac >> FRACBITS];
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -497,10 +497,10 @@ static void DrawPatchColumn8TR(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = translation[source[frac >> FRACBITS]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = translation[source[frac >> FRACBITS]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -533,10 +533,10 @@ static void DrawPatchColumn8TRTR(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = translation2[translation[source[frac >> FRACBITS]]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = translation2[translation[source[frac >> FRACBITS]]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -569,10 +569,10 @@ static void DrawPatchColumn8TL(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = tranmap[(*dest << 8) + source[frac >> FRACBITS]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = tranmap[(*dest << 8) + source[frac >> FRACBITS]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -605,10 +605,10 @@ static void DrawPatchColumn8TRTL(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = tranmap[(*dest << 8) + translation[source[frac >> FRACBITS]]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = tranmap[(*dest << 8) + translation[source[frac >> FRACBITS]]];
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -648,10 +648,10 @@ static void DrawPatchColumn8TRTRTL(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -688,9 +688,9 @@ static void DrawPatchColumn8Shadow(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
     }
     if (count & 1)
     {
@@ -730,11 +730,9 @@ static void DrawPatchColumn32(const patch_column_t *patchcol)
 
     while ((count -= 2) >= 0)
     {
-        *dest = SRCPIXEL;
-        dest += linesize;
+        *dest++ = SRCPIXEL;
         frac += fracstep;
-        *dest = SRCPIXEL;
-        dest += linesize;
+        *dest++ = SRCPIXEL;
         frac += fracstep;
     }
     if (count & 1)
@@ -773,11 +771,9 @@ static void DrawPatchColumn32TR(const patch_column_t *patchcol)
 
     while ((count -= 2) >= 0)
     {
-        *dest = SRCPIXEL;
-        dest += linesize;
+        *dest++ = SRCPIXEL;
         frac += fracstep;
-        *dest = SRCPIXEL;
-        dest += linesize;
+        *dest++ = SRCPIXEL;
         frac += fracstep;
     }
     if (count & 1)
@@ -816,11 +812,9 @@ static void DrawPatchColumn32TRTR(const patch_column_t *patchcol)
 
     while ((count -= 2) >= 0)
     {
-        *dest = SRCPIXEL;
-        dest += linesize;
+        *dest++ = SRCPIXEL;
         frac += fracstep;
-        *dest = SRCPIXEL;
-        dest += linesize;
+        *dest++ = SRCPIXEL;
         frac += fracstep;
     }
     if (count & 1)
@@ -860,10 +854,10 @@ static void DrawPatchColumn32TL(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -903,10 +897,10 @@ static void DrawPatchColumn32TRTL(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -949,10 +943,10 @@ static void DrawPatchColumn32TRTRTL(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         frac += fracstep;
     }
     if (count & 1)
@@ -987,9 +981,9 @@ static void DrawPatchColumn32Shadow(const patch_column_t *patchcol)
     while ((count -= 2) >= 0)
     {
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
         *dest = SRCPIXEL;
-        dest += linesize;
+        dest++;
     }
     if (count & 1)
     {
@@ -1394,9 +1388,9 @@ static void V_FillRect8(int x, int y, int width, int height, pixel_t color)
 
     pixel_t *dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
-    while (dstrect.sh--)
+    while (dstrect.sw--)
     {
-        memset(dest, color, dstrect.sw);
+        memset(dest, color, dstrect.sh);
         dest += linesize;
     }
 }
@@ -1426,9 +1420,9 @@ void V_FillRectRGB(int x, int y, int width, int height, pixel32_t color)
 
     pixel32_t *dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
 
-    while (dstrect.sh--)
+    while (dstrect.sw--)
     {
-        V_RGBSet(dest, color, dstrect.sw);
+        V_RGBSet(dest, color, dstrect.sh);
         dest += linesize;
     }
 }
@@ -1456,20 +1450,20 @@ static void V_ShadowRect8(int x, int y, int width, int height)
 
     ScaleClippedRect(&dstrect);
 
-    pixel_t *row = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+    pixel_t *col = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
-    while (dstrect.sh--)
+    while (dstrect.sw--)
     {
-        int width = dstrect.sw;
-        pixel_t *col = row;
+        int height = dstrect.sh;
+        pixel_t *row = col;
 
-        while (width--)
+        while (height--)
         {
-            *col = shadow_colormap[*col];
-            ++col;
+            *row = shadow_colormap[*row];
+            ++row;
         }
 
-        row += linesize;
+        col += linesize;
     }
 }
 
@@ -1491,20 +1485,20 @@ static void V_ShadowRect32(int x, int y, int width, int height)
 
     ScaleClippedRect(&dstrect);
 
-    pixel32_t *row = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+    pixel32_t *col = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
 
-    while (dstrect.sh--)
+    while (dstrect.sw--)
     {
-        int width = dstrect.sw;
-        pixel32_t *col = row;
+        int height = dstrect.sh;
+        pixel32_t *row = col;
 
-        while (width--)
+        while (height--)
         {
-            *col = V_IndexToRGB(shadow_colormap[V_IndexFromRGB(*col)]);
-            ++col;
+            *row = V_IndexToRGB(shadow_colormap[V_IndexFromRGB(*row)]);
+            ++row;
         }
 
-        row += linesize;
+        col += linesize;
     }
 }
 
@@ -1531,22 +1525,22 @@ static void V_ShadeRect8(int x, int y, int width, int height, const int level) /
 
     ScaleClippedRect(&dstrect);
 
-    pixel_t *row = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
+    pixel_t *col = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
     const byte *darkcolormap = &colormaps[0][level * 256];
 
-    while (dstrect.sh--)
+    while (dstrect.sw--)
     {
-        int width = dstrect.sw;
-        pixel_t *col = row;
+        int height = dstrect.sh;
+        pixel_t *row = col;
 
-        while (width--)
+        while (height--)
         {
-            *col = darkcolormap[*col];
-            ++col;
+            *row = darkcolormap[*row];
+            ++row;
         }
 
-        row += linesize;
+        col += linesize;
     }
 }
 
@@ -1568,22 +1562,22 @@ static void V_ShadeRect32(int x, int y, int width, int height, const int level)
 
     ScaleClippedRect(&dstrect);
 
-    pixel32_t *row = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
+    pixel32_t *col = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
 
     const lighttable32_t *darkcolormap = &colormaps32[0][level * 256 << COLORMAP_ROW_SHIFT_BITS];
 
-    while (dstrect.sh--)
+    while (dstrect.sw--)
     {
-        int width = dstrect.sw;
-        pixel32_t *col = row;
+        int height = dstrect.sh;
+        pixel32_t *row = col;
 
-        while (width--)
+        while (height--)
         {
-            *col = darkcolormap[V_IndexFromRGB(*col)];
-            ++col;
+            *row = darkcolormap[V_IndexFromRGB(*row)];
+            ++row;
         }
 
-        row += linesize;
+        col += linesize;
     }
 }
 
@@ -1633,7 +1627,7 @@ void V_ShadeScreenDirect(const int level)
 //
 
 void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
-                int destx, int desty)
+                int pitch, int destx, int desty)
 {
     vrect_t srcrect, dstrect;
     pixel_t *src, *dest;
@@ -1685,16 +1679,16 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source, int width, int height,
     src = V_ADDRESS(source, srcrect.sx, srcrect.sy);
     dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
-    while (useh--)
+    while (usew--)
     {
-        memcpy(dest, src, usew);
-        src += linesize;
+        memcpy(dest, src, useh);
+        src += pitch;
         dest += linesize;
     }
 }
 
 void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
-                  int destx, int desty)
+                  int pitch, int destx, int desty)
 {
     vrect_t srcrect, dstrect;
     pixel32_t *src, *dest;
@@ -1705,7 +1699,7 @@ void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
         || srcy >= SCREENHEIGHT || destx + width < 0 || desty + height < 0
         || destx >= video.unscaledw || desty >= SCREENHEIGHT)
     {
-        I_Error("Bad V_CopyRect");
+        I_Error("Bad coordinates");
     }
 #endif
 
@@ -1743,10 +1737,10 @@ void V_CopyRect32(int srcx, int srcy, pixel32_t *source, int width, int height,
     src = V_ADDRESS(source, srcrect.sx, srcrect.sy);
     dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
 
-    while (useh--)
+    while (usew--)
     {
-        V_RGBCopy(dest, src, usew);
-        src += linesize;
+        V_RGBCopy(dest, src, useh);
+        src += pitch;
         dest += linesize;
     }
 }
@@ -1785,33 +1779,33 @@ void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
 
     ScaleClippedRect(&dstrect);
 
-    source = src + dy * width + dx;
+    source = src + (dx * height) + dy;
     dest = V_ADDRESS(dest_screen, dstrect.sx, dstrect.sy);
 
     {
-        int w;
+        int h = dstrect.sh;
         fixed_t xfrac, yfrac;
         int xtex, ytex;
-        pixel_t *row;
+        pixel_t *col;
 
-        yfrac = 0;
+        xfrac = 0;
 
-        while (dstrect.sh--)
+        while (h--)
         {
-            row = dest;
-            w = dstrect.sw;
-            xfrac = 0;
-            ytex = (yfrac >> FRACBITS) * width;
+            col = dest;
+            int w = dstrect.sw;
+            yfrac = 0;
+            xtex = (xfrac >> FRACBITS);
 
             while (w--)
             {
-                xtex = (xfrac >> FRACBITS);
-                *row++ = source[ytex + xtex];
-                xfrac += video.xstep;
+                ytex = (yfrac >> FRACBITS) * width;
+                *col++ = source[ytex + xtex];
+                yfrac += video.ystep;
             }
 
             dest += linesize;
-            yfrac += video.ystep;
+            xfrac += video.xstep;
         }
     }
 }
@@ -1839,33 +1833,33 @@ void V_DrawBlock32(int x, int y, int width, int height, pixel32_t *src)
 
     ScaleClippedRect(&dstrect);
 
-    source = src + dy * width + dx;
+    source = src + (dx * height) + dy;
     dest = V_ADDRESS(dest_screen32, dstrect.sx, dstrect.sy);
 
     {
-        int w;
+        int h = dstrect.sh;
         fixed_t xfrac, yfrac;
         int xtex, ytex;
-        pixel32_t *row;
+        pixel32_t *col;
 
-        yfrac = 0;
+        xfrac = 0;
 
-        while (dstrect.sh--)
+        while (h--)
         {
-            row = dest;
-            w = dstrect.sw;
-            xfrac = 0;
-            ytex = (yfrac >> FRACBITS) * width;
+            col = dest;
+            int w = dstrect.sw;
+            yfrac = 0;
+            xtex = (xfrac >> FRACBITS);
 
             while (w--)
             {
-                xtex = (xfrac >> FRACBITS);
-                *row++ = source[ytex + xtex];
-                xfrac += video.xstep;
+                ytex = (yfrac >> FRACBITS) * width;
+                *col++ = source[ytex + xtex];
+                yfrac += video.ystep;
             }
 
             dest += linesize;
-            yfrac += video.ystep;
+            xfrac += video.xstep;
         }
     }
 }
@@ -1874,9 +1868,9 @@ void (*V_TileBlock64)(int line, int width, int height, const byte *src) = NULL;
 
 static void V_TileBlock64_8(int line, int width, int height, const byte *src)
 {
-    pixel_t *dest, *row;
+    pixel_t *dest, *col;
     fixed_t xfrac, yfrac;
-    int xtex, ytex, h;
+    int xtex, ytex;
     vrect_t dstrect;
 
     dstrect.x = 0;
@@ -1886,35 +1880,35 @@ static void V_TileBlock64_8(int line, int width, int height, const byte *src)
 
     V_ScaleRect(&dstrect);
 
-    h = dstrect.sh;
-    yfrac = dstrect.sy * video.ystep;
+    int w = dstrect.sw;
+    xfrac = 0;
 
     dest = dest_screen;
 
-    while (h--)
+    while (w--)
     {
-        int w = dstrect.sw;
-        row = dest;
-        xfrac = 0;
-        ytex = ((yfrac >> FRACBITS) & 63) << 6;
+        int h = dstrect.sh;
+        col = dest;
+        yfrac = dstrect.sy * video.ystep;
+        xtex = (xfrac >> FRACBITS) & 63;
 
-        while (w--)
+        while (h--)
         {
-            xtex = (xfrac >> FRACBITS) & 63;
-            *row++ = src[ytex + xtex];
-            xfrac += video.xstep;
+            ytex = ((yfrac >> FRACBITS) & 63) << 6;
+            *col++ = src[ytex + xtex];
+            yfrac += video.ystep;
         }
 
         dest += linesize;
-        yfrac += video.ystep;
+        xfrac += video.xstep;
     }
 }
 
 static void V_TileBlock64_32(int line, int width, int height, const byte *src)
 {
-    pixel32_t *dest, *row;
+    pixel32_t *dest, *col;
     fixed_t xfrac, yfrac;
-    int xtex, ytex, h;
+    int xtex, ytex;
     vrect_t dstrect;
 
     dstrect.x = 0;
@@ -1924,27 +1918,27 @@ static void V_TileBlock64_32(int line, int width, int height, const byte *src)
 
     V_ScaleRect(&dstrect);
 
-    h = dstrect.sh;
-    yfrac = dstrect.sy * video.ystep;
+    int w = dstrect.sw;
+    xfrac = 0;
 
     dest = dest_screen32;
 
-    while (h--)
+    while (w--)
     {
-        int w = dstrect.sw;
-        row = dest;
-        xfrac = 0;
-        ytex = ((yfrac >> FRACBITS) & 63) << 6;
+        int h = dstrect.sh;
+        col = dest;
+        yfrac = dstrect.sy * video.ystep;
+        xtex = (xfrac >> FRACBITS) & 63;
 
-        while (w--)
+        while (h--)
         {
-            xtex = (xfrac >> FRACBITS) & 63;
-            *row++ = V_IndexToRGB(src[ytex + xtex]);
-            xfrac += video.xstep;
+            ytex = ((yfrac >> FRACBITS) & 63) << 6;
+            *col++ = V_IndexToRGB(src[ytex + xtex]);
+            yfrac += video.ystep;
         }
 
         dest += linesize;
-        yfrac += video.ystep;
+        xfrac += video.xstep;
     }
 }
 
@@ -1971,11 +1965,11 @@ void V_GetBlock(int x, int y, int width, int height, pixel_t *dest)
 
     src = V_ADDRESS(dest_screen, x, y);
 
-    while (height--)
+    while (width--)
     {
-        memcpy(dest, src, width);
+        memcpy(dest, src, height);
+        dest += height;
         src += linesize;
-        dest += width;
     }
 }
 
@@ -1992,11 +1986,11 @@ void V_GetBlock32(int x, int y, int width, int height, pixel32_t *dest)
 
     src = V_ADDRESS(dest_screen32, x, y);
 
-    while (height--)
+    while (width--)
     {
-        V_RGBCopy(dest, src, width);
+        V_RGBCopy(dest, src, height);
+        dest += height;
         src += linesize;
-        dest += width;
     }
 }
 
@@ -2015,11 +2009,11 @@ void V_PutBlock(int x, int y, int width, int height, pixel_t *src)
 
     dest = V_ADDRESS(dest_screen, x, y);
 
-    while (height--)
+    while (width--)
     {
-        memcpy(dest, src, width);
+        memcpy(dest, src, height);
         dest += linesize;
-        src += width;
+        src += height;
     }
 }
 
@@ -2036,11 +2030,11 @@ void V_PutBlock32(int x, int y, int width, int height, pixel32_t *src)
 
     dest = V_ADDRESS(dest_screen32, x, y);
 
-    while (height--)
+    while (width--)
     {
-        V_RGBCopy(dest, src, width);
+        V_RGBCopy(dest, src, height);
         dest += linesize;
-        src += width;
+        src += height;
     }
 }
 
@@ -2070,7 +2064,7 @@ void V_Init(void)
     video.yscale = IntToFixed(video.height) / SCREENHEIGHT;
     video.xstep = IntToFixed(video.unscaledw) / video.width + 1;
     video.ystep = IntToFixed(SCREENHEIGHT) / video.height + 1;
-   
+
     const int width = video.width;
     const int height = video.height;
     fixed_t frac, lastfrac, step;

@@ -1260,7 +1260,7 @@ static void DrawGyroCalibration(void)
             I_UpdateGyroCalibrationState();
             if (I_GetGyroCalibrationState() == GYRO_CALIBRATION_ACTIVE)
             {
-                M_StartSound(sfx_pstop);
+                M_StartSound(sfx_mnumov);
             }
             break;
 
@@ -1269,7 +1269,7 @@ static void DrawGyroCalibration(void)
             I_UpdateGyroCalibrationState();
             if (I_GetGyroCalibrationState() == GYRO_CALIBRATION_COMPLETE)
             {
-                M_StartSound(sfx_pstop);
+                M_StartSound(sfx_mnumov);
             }
             break;
 
@@ -1278,7 +1278,7 @@ static void DrawGyroCalibration(void)
             I_UpdateGyroCalibrationState();
             if (I_GetGyroCalibrationState() == GYRO_CALIBRATION_INACTIVE)
             {
-                M_StartSound(sfx_swtchx);
+                M_StartSound(sfx_mnucls);
                 block_input = false;
             }
             break;
@@ -4519,7 +4519,7 @@ static void SelectDone(setup_menu_t *ptr)
 {
     ptr->m_flags &= ~S_SELECT;
     ptr->m_flags |= S_HILITE;
-    M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSound(sfx_mnusel);
     setup_select = false;
     if (print_warning_about_changes) // killough 8/15/98
     {
@@ -4941,7 +4941,7 @@ boolean MN_SetupCursorPostion(int x, int y)
                 if (highlight_tab != i)
                 {
                     highlight_tab = i;
-                    M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+                    M_StartSound(sfx_mnusel);
                 }
             }
         }
@@ -4975,7 +4975,7 @@ boolean MN_SetupCursorPostion(int x, int y)
             {
                 print_warning_about_changes = false;
                 highlight_item = i;
-                M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+                M_StartSound(sfx_mnusel);
             }
         }
     }
@@ -5036,7 +5036,7 @@ static void Choice(menu_action_t action)
 
         if (*def->location.i != value)
         {
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
         }
         *def->location.i = value;
 
@@ -5067,7 +5067,7 @@ static void Choice(menu_action_t action)
 
         if (*def->location.i != value)
         {
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
         }
         *def->location.i = value;
 
@@ -5368,7 +5368,7 @@ static boolean NextPage(int inc)
         current_menu[set_item_on].m_flags |= S_HILITE;
     }
 
-    M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSound(sfx_mnumov); // killough 10/98
     return true;
 }
 
@@ -5405,7 +5405,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
     {
         if (ItemDisabled(current_item->m_flags))
         {
-            M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnuerr);
             return true;
         }
         else if (current_item->action)
@@ -5413,7 +5413,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
             current_item->action();
         }
 
-        M_StartSoundOptional(sfx_mnuact, sfx_pistol); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnuact);
         return true;
     }
 
@@ -5572,7 +5572,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
 
         if (ItemDisabled(flags))
         {
-            M_StartSoundOptional(sfx_mnuerr, sfx_oof); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnuerr);
             return true;
         }
         else if (flags & S_NUM)
@@ -5588,7 +5588,7 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
 
         current_item->m_flags |= S_SELECT;
         setup_select = true;
-        M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnusel);
         return true;
     }
 
@@ -5615,7 +5615,8 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
             setup_active = false;
             setup_active_secondary = false;
 
-            M_StartSoundOptional(sfx_mnucls, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+            // [Nugget]
+            M_StartSound(sfx_mnucls);
         }
         else
         {
@@ -5630,7 +5631,8 @@ boolean MN_SetupResponder(menu_action_t action, int ch)
                 setup_active = false;
             }
 
-            M_StartSoundOptional(sfx_mnubak, sfx_swtchx); // [Nugget]: [NS] Optional menu sounds.
+            // [Nugget]
+            M_StartSound(sfx_mnubak);
         }
 
         current_item->m_flags &= ~(S_HILITE | S_SELECT); // phares 4/19/98
@@ -5682,7 +5684,7 @@ static boolean SetupTab(void)
         ;
     set_item_on--;
 
-    M_StartSoundOptional(sfx_mnumov, sfx_pstop); // [Nugget]: [NS] Optional menu sounds.
+    M_StartSound(sfx_mnumov);
     return true;
 }
 
@@ -5798,7 +5800,7 @@ boolean MN_SetupMouseResponder(int x, int y)
             {
                 active_thermo->action();
             }
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
         }
         return true;
     }
@@ -5811,7 +5813,7 @@ boolean MN_SetupMouseResponder(int x, int y)
     if (flags & S_ONOFF) // yes or no setting?
     {
         OnOff();
-        M_StartSoundOptional(sfx_mnuact, sfx_itemup); // [Nugget]: [NS] Optional menu sounds.
+        M_StartSound(sfx_mnusel);
         return true;
     }
 
@@ -5831,7 +5833,7 @@ boolean MN_SetupMouseResponder(int x, int y)
 
         if (*def->location.i != value)
         {
-            M_StartSoundOptional(sfx_mnusli, sfx_stnmov); // [Nugget]: [NS] Optional menu sounds.
+            M_StartSound(sfx_mnusli);
         }
         *def->location.i = value;
 
