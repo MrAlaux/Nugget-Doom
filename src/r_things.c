@@ -1001,7 +1001,8 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 
       if (!do_sprite_radial_fog)
       {
-        lightindex = R_GetLightIndex(vis->scale, 0);
+        lightindex = STRICTMODE(!diminishing_lighting)
+                     ? 0 : R_GetLightIndex(vis->scale, 0);
 
         if (dithered_lighting && lightindex >= MAXLIGHTSCALE-1)
         { R_SetDitherPattern(0); }
