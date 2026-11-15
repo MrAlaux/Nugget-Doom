@@ -1630,7 +1630,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   shadow_vis->yscale = shadow_yscale;
 
-  shadow_vis->flags = VSF_NO_PERC|VSF_SHADOW;
+  shadow_vis->flags = (visspriteflag_t) (VSF_NO_PERC|VSF_SHADOW);
 
   fixed_t shadow_tx;
 

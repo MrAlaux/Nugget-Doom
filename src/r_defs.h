@@ -449,7 +449,7 @@ typedef struct patch_s
 //
 
 // [Nugget]
-typedef enum visspriteflag_s
+typedef enum visspriteflag_e
 {
   VSF_NONE       = 0,
   VSF_FULLBRIGHT = 1,
