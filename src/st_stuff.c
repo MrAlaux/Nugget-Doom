@@ -4023,7 +4023,7 @@ static statusbar_t CreateNughudStatusBar(void)
   // Number fonts ============================================================
 
   int lumpnum;
-  int maxwidth, maxheight;
+  int maxheight;
 
   // Tall Numbers ------------------------------------------------------------
 
@@ -4032,7 +4032,7 @@ static statusbar_t CreateNughudStatusBar(void)
   tnum.name = "NughudTall";
   tnum.type = sbf_mono0;
 
-  maxwidth = maxheight = 0;
+  maxheight = 0;
 
   for (int i = 0;  i < 10;  i++)
   {
@@ -4041,7 +4041,6 @@ static statusbar_t CreateNughudStatusBar(void)
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
       tnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(tnum.numbers[i]->width));
       maxheight = MAX(maxheight, SHORT(tnum.numbers[i]->height));
     }
     else { goto no_nhtnum; }
@@ -4050,7 +4049,6 @@ static statusbar_t CreateNughudStatusBar(void)
   if ((lumpnum = (W_CheckNumForName)("NHTMINUS", ns_global)) >= 0)
   {
     tnum.minus = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.minus->width));
     maxheight = MAX(maxheight, SHORT(tnum.minus->height));
   }
   else { goto no_nhtnum; }
@@ -4058,7 +4056,6 @@ static statusbar_t CreateNughudStatusBar(void)
   if ((lumpnum = (W_CheckNumForName)("NHTPRCNT", ns_global)) >= 0)
   {
     tnum.percent = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.percent->width));
     maxheight = MAX(maxheight, SHORT(tnum.percent->height));
   }
   else { goto no_nhtnum; }
@@ -4067,7 +4064,7 @@ static statusbar_t CreateNughudStatusBar(void)
 
 no_nhtnum:
 
-  maxwidth = maxheight = 0;
+  maxheight = 0;
 
   for (int i = 0;  i < 10;  i++)
   {
@@ -4076,7 +4073,6 @@ no_nhtnum:
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
       tnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(tnum.numbers[i]->width));
       maxheight = MAX(maxheight, SHORT(tnum.numbers[i]->height));
     }
   }
@@ -4084,14 +4080,12 @@ no_nhtnum:
   if ((lumpnum = (W_CheckNumForName)("STTMINUS", ns_global)) >= 0)
   {
     tnum.minus = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.minus->width));
     maxheight = MAX(maxheight, SHORT(tnum.minus->height));
   }
 
   if ((lumpnum = (W_CheckNumForName)("STTPRCNT", ns_global)) >= 0)
   {
     tnum.percent = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(tnum.percent->width));
     maxheight = MAX(maxheight, SHORT(tnum.percent->height));
   }
 
@@ -4107,7 +4101,7 @@ end_tnum:
   rnum.name = "NughudReadyAmmo";
   rnum.type = sbf_mono0;
 
-  maxwidth = maxheight = 0;
+  maxheight = 0;
 
   for (int i = 0;  i < 10;  i++)
   {
@@ -4116,7 +4110,6 @@ end_tnum:
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
       rnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(rnum.numbers[i]->width));
       maxheight = MAX(maxheight, SHORT(rnum.numbers[i]->height));
     }
     else { goto no_nhrnum; }
@@ -4125,7 +4118,6 @@ end_tnum:
   if ((lumpnum = (W_CheckNumForName)("NHRMINUS", ns_global)) >= 0)
   {
     rnum.minus = V_CachePatchNum(lumpnum, PU_STATIC);
-    maxwidth  = MAX(maxwidth,  SHORT(rnum.minus->width));
     maxheight = MAX(maxheight, SHORT(rnum.minus->height));
   }
   else { goto no_nhrnum; }
@@ -4134,7 +4126,6 @@ end_tnum:
 
 no_nhrnum:
 
-  maxwidth  = tnum.monowidth;
   maxheight = tnum.maxheight;
 
   for (int i = 0;  i < 10;  i++)
@@ -4156,7 +4147,7 @@ end_rnum:
   amnum.name = "NughudAmmo";
   amnum.type = sbf_mono0;
 
-  maxwidth = maxheight = 0;
+  maxheight = 0;
 
   for (int i = 0;  i < 10;  i++)
   {
@@ -4165,7 +4156,6 @@ end_rnum:
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
       amnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(amnum.numbers[i]->width));
       maxheight = MAX(maxheight, SHORT(amnum.numbers[i]->height));
     }
     else { goto no_nhamnum; }
@@ -4175,7 +4165,7 @@ end_rnum:
 
 no_nhamnum:
 
-  maxwidth = maxheight = 0;
+  maxheight = 0;
 
   for (int i = 0;  i < 10;  i++)
   {
@@ -4184,7 +4174,6 @@ no_nhamnum:
     if ((lumpnum = (W_CheckNumForName)(namebuf, ns_global)) >= 0)
     {
       amnum.numbers[i] = V_CachePatchNum(lumpnum, PU_STATIC);
-      maxwidth  = MAX(maxwidth,  SHORT(amnum.numbers[i]->width));
       maxheight = MAX(maxheight, SHORT(amnum.numbers[i]->height));
     }
   }

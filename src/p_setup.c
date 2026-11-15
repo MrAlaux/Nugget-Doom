@@ -311,7 +311,7 @@ void P_LoadThings (int lump)
   int  i, numthings = W_LumpLength (lump) / sizeof(mapthing_doom_t);
   byte *data = W_CacheLumpNum (lump,PU_STATIC);
 
-  int *enemies = NULL, numenemies = 0; // [Nugget]
+  int *enemies = NULL; // [Nugget]
 
   for (i=0; i<numthings; i++)
     {
@@ -372,23 +372,22 @@ void P_LoadThings (int lump)
             && ((mobjinfo[mobjtype].flags & MF_COUNTKILL) || mobjtype == MT_SKULL))
         {
           array_push(enemies, i);
-          numenemies++;
         }
       }
     }
 
   // [Nugget] /===============================================================
 
-  // Custom Skill: duplicate monster spawns ----------------------------------
-
-  if (x2monsters)
+  // Custom Skill: duplicate monster spawns
+  if (enemies)
   {
     P_ToggleDuplicateSpawns(true);
 
-    for (i = 0;  i < numenemies;  i++)
+    int *enemy = NULL;
+    array_foreach(enemy, enemies)
     {
       mapthing_t mt = {0};
-      mapthing_doom_t *mtd = (mapthing_doom_t *) data + enemies[i];
+      mapthing_doom_t *mtd = (mapthing_doom_t *) data + *enemy;
 
       mt.x = IntToFixed((int32_t) SHORT(mtd->x));
       mt.y = IntToFixed((int32_t) SHORT(mtd->y));
@@ -406,7 +405,7 @@ void P_LoadThings (int lump)
       P_SpawnMapThing(&mt);
     }
 
-    array_clear(enemies);
+    array_free(enemies);
 
     P_ToggleDuplicateSpawns(false);
   }

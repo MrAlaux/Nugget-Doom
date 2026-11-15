@@ -1157,8 +1157,7 @@ static void R_ProjectSprite(mobj_t* thing, int lightlevel_override)
 
   // [Nugget] Alt. sprites /--------------------------------------------------
 
-  int sprite = thing->sprite,
-       frame = (thing->altframe > -1) ? thing->altframe : thing->frame;
+  int sprite, frame = (thing->altframe > -1) ? thing->altframe : thing->frame;
 
   if (!strictmode && thing->altsprite > -1
       && sprites[num_sprites + thing->altsprite].numframes > (frame & FF_FRAMEMASK))
