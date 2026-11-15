@@ -33,8 +33,8 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
   - Notes on the true-color modes:
     - Compatible with custom tinted palettes
     - No support for true-color (PNG) graphics; those are still palettized at startup
-    - May significantly increase memory consumption and loading times of program startup and changes to color settings (e.g. gamma correction),
-      especially with _Smooth Palette Tinting_ enabled
+    - May significantly increase memory consumption and loading times of program startup and changes to color settings
+      (e.g. gamma correction), especially with _Smooth Palette Tinting_ enabled
 - Support for **square-pixel resolutions**
   - Normally, the renderer's output is stretched vertically by a factor of 1.2 to achieve a correct aspect ratio.
     This makes some pixels uneven (non-square), resulting in a slightly dirty image.
