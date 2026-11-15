@@ -686,9 +686,9 @@ boolean PIT_AddLineIntercepts(line_t *ld)
   return true;  // continue
 }
 
-// [Nugget] Hitbox-based hitscan collision /----------------------------------
+// [Nugget] Edge-based hitscan collision /----------------------------------
 
-boolean hitbox_hitscan;
+boolean edge_hitscan;
 
 static const inline boolean CheckPointsOnSides(mobj_t *const thing,
                                                const fixed_t x1, const fixed_t y1,
@@ -732,8 +732,8 @@ static const inline boolean CheckPointsOnSides(mobj_t *const thing,
 
 boolean PIT_AddThingIntercepts(mobj_t *thing)
 {
-  // [Nugget] Hitbox-based hitscan collision
-  if (CASUALPLAY(hitbox_hitscan))
+  // [Nugget] Edge-based hitscan collision
+  if (CASUALPLAY(edge_hitscan))
   {
     #define CHECK_POINTS_ON_LEFT()   CheckPointsOnSides(thing, lx, by, lx, ty)
     #define CHECK_POINTS_ON_RIGHT()  CheckPointsOnSides(thing, rx, by, rx, ty)

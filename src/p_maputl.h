@@ -57,7 +57,7 @@ typedef struct {
 // [Nugget] /-----------------------------------------------------------------
 
 // CVARs
-extern boolean hitbox_hitscan; // Hitbox-based hitscan collision
+extern boolean edge_hitscan; // Edge-based hitscan collision
 
 void P_SaveIntercepts(void);
 void P_RestoreIntercepts(void);

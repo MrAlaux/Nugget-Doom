@@ -52,7 +52,10 @@ For these settings, their CVAR names are provided alongside the _CFG-only_ label
 - **_Black Fade_ screen wipe**
 - **Extended _Level Brightness_ range:** [-8, 8]
 - **Support for SSG in Doom 1** [p.f. Woof! 15.2.0]
-- **_Hitbox-based Hitscan Collision_** setting
+- **_Edge-based Hitscan Collision_** setting
+  - Doom normally uses the cross-section of a thing's hitbox for collision detection of hitscan attacks,
+    which makes it difficult to hit large things, such as arachnotrons, with short hitscan attacks (usually melee);
+    with this setting enabled, the edges of the hitbox are used instead, thus fixing that issue
 - **_"Direct + Auto"_ mode for _Free Look_**
 - **Direct vertical aiming for melee attacks**
 - **_Move Over/Under Things_** setting [partially p.f. Crispy Doom, DSDA-Doom]
