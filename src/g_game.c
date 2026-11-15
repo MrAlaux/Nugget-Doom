@@ -107,6 +107,7 @@
 // [Nugget]
 #include "d_items.h"
 #include "m_cheat.h"
+#include "net_client.h"
 #include "p_spec.h"
 
 #include "miniz.h"
@@ -124,8 +125,6 @@ boolean default_pistolstart;
 boolean nugget_devmode;
 
 // ---------------------------------------------------------------------------
-
-static ticcmd_t current_ticcmd = {0};
 
 milestone_t complete_milestones;
 
@@ -1103,7 +1102,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
     const int old_forward = forward, old_side = side;
 
     const angle_t player_angle =
-      players[consoleplayer].mo->angle + (cmd->angleturn << 16);
+      players[consoleplayer].mo->angle + IntToFixed(cmd->angleturn);
 
     const angle_t anglediff = player_angle - R_GetFreecamAngle();
 
@@ -1305,20 +1304,23 @@ void G_BuildTiccmd(ticcmd_t* cmd)
     sendjoin = false;
     cmd->buttons |= BT_JOIN;
   }
+}
 
-  // [Nugget] Freecam
-  if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL)
-  {
-    current_ticcmd = *cmd;
+// [Nugget] Freecam: remove movement data from a tic
+ticcmd_t G_FreecamStripTiccmd(const ticcmd_t *const cmd)
+{
+  if (R_GetFreecamMode() != FREECAM_CAM || gamestate != GS_LEVEL)
+  { return *cmd; }
 
-    memset(cmd, 0, sizeof(ticcmd_t));
+  ticcmd_t stripped = {0};
 
-    cmd->consistancy = current_ticcmd.consistancy;
-    cmd->chatchar = current_ticcmd.chatchar;
+  stripped.consistancy = cmd->consistancy;
+  stripped.chatchar = cmd->chatchar;
 
-    if (current_ticcmd.buttons & BT_SPECIAL)
-    { cmd->buttons = current_ticcmd.buttons; }
-  }
+  if (cmd->buttons & BT_SPECIAL)
+  { stripped.buttons = cmd->buttons; }
+
+  return stripped;
 }
 
 void G_ClearInput(void)
@@ -4160,6 +4162,10 @@ void G_Ticker(void)
 
 	      memcpy(cmd, &netcmds[i], sizeof *cmd);
 
+	      // [Nugget] Freecam
+	      if (!drone && i == consoleplayer)
+	      { players[i].cmd = G_FreecamStripTiccmd(&players[i].cmd); }
+
 	      // catch BT_JOIN before G_ReadDemoTiccmd overwrites it
 	      if (demoplayback &&
 	          !(cmd->buttons & BT_CHANGE) && cmd->buttons & BT_JOIN)
@@ -4334,7 +4340,7 @@ void G_Ticker(void)
 
     if (R_GetFreecamMode() == FREECAM_CAM && gamestate == GS_LEVEL && !menuactive)
     {
-      const ticcmd_t *const cmd = &current_ticcmd;
+      const ticcmd_t *const cmd = &netcmds[consoleplayer];
 
       #define INPUT(input) M_InputGameActive(input)
 
@@ -4356,8 +4362,8 @@ void G_Ticker(void)
       else {
         if (!R_GetFreecamMobj() || R_ChasecamOn())
         {
-          angle = cmd->angleturn << 16;
-          ticangle = cmd->ticangleturn << FRACBITS;
+          angle = IntToFixed(cmd->angleturn);
+          ticangle = IntToFixed(cmd->ticangleturn);
         }
 
         if (!R_GetFreecamMobj())
@@ -4392,7 +4398,7 @@ void G_Ticker(void)
           z = speed * (INPUT(input_jump) - INPUT(input_crouch));
         }
 
-        pitch = cmd->pitch << FRACBITS;
+        pitch = IntToFixed(cmd->pitch);
 
         #define FREELOOK_RESET_MS 300 // 0.3 seconds
         static int strafetime = -FREELOOK_RESET_MS;

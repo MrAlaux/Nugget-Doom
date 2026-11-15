@@ -994,9 +994,12 @@ void R_UpdateFreecam(fixed_t x, fixed_t y, fixed_t z, angle_t angle,
     freecam.centering = false;
 
     if (freecam.reset == 2)
-    { freecam.mobj = NULL; }
-    else
-    { R_UpdateFreecamMobj(NULL); }
+    {
+      // We reset due to a map change, so we're pointing to an invalid mobj;
+      // thus, we must not decrease its reference count
+      freecam.mobj = NULL;
+    }
+    else { R_UpdateFreecamMobj(NULL); }
 
     freecam.reset = false;
 

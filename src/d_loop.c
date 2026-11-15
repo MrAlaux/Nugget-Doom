@@ -184,7 +184,13 @@ static boolean BuildNewTic(void)
 
     if (net_client_connected)
     {
-        NET_CL_SendTiccmd(&cmd, maketic);
+        // [Nugget] Freecam
+
+        ticcmd_t G_FreecamStripTiccmd(const ticcmd_t *cmd);
+
+        ticcmd_t cmd2 = G_FreecamStripTiccmd(&cmd);
+
+        NET_CL_SendTiccmd(&cmd2, maketic);
     }
 
     ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
