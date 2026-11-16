@@ -448,15 +448,21 @@ typedef struct patch_s
 // i.e. a sprite object that is partly visible.
 //
 
-// [Nugget]
-typedef enum visspriteflag_s
+// [Nugget] /-----------------------------------------------------------------
+
+typedef enum visspriteflag_e
 {
+  VSF_NONE       = 0,
   VSF_FULLBRIGHT = 1,
   VSF_FLIPPED    = VSF_FULLBRIGHT << 1,
   VSF_SHADOW     = VSF_FLIPPED << 1,
   VSF_NO_PERC    = VSF_SHADOW << 1,
   VSF_OWN_TINT   = VSF_NO_PERC << 1,
 } visspriteflag_t;
+
+typedef unsigned int visspriteflags_t;
+
+// [Nugget] -----------------------------------------------------------------/
 
 typedef struct vissprite_s
 {
@@ -498,7 +504,7 @@ typedef struct vissprite_s
   float scale_mult;
   fixed_t yiscale, yscale;
 
-  visspriteflag_t flags;
+  visspriteflags_t flags;
   byte lightnum;
   int tint;
   fixed_t leftoffset;

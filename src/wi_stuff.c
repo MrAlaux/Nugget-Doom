@@ -2465,8 +2465,8 @@ static void DrawStat(int x, int y, int stat)
 
       numx2 = numx;
 
-      numx = WI_drawNum(numx, y, cnt2, -1);
-      SHADOW_REDRAW(numx2 = WI_drawNum(numx2, y, cnt2, -1)) // HUD/menu shadows
+      WI_drawNum(numx, y, cnt2, -1);
+      SHADOW_REDRAW(WI_drawNum(numx2, y, cnt2, -1)) // HUD/menu shadows
 
       return;
     }
