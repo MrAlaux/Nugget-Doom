@@ -339,233 +339,6 @@ static void DrawTLColumn8(void)
     }
 }
 
-// [Nugget] /=================================================================
-
-static void DrawColumn32(void)
-{
-    int count = dc_yh - dc_yl + 1;
-    if (count <= 0)
-    {
-        return;
-    }
-
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    {
-        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
-    }
-#endif
-
-    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
-    const fixed_t fracstep = dc_iscale;
-    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
-
-    const byte *const source = dc_source;
-    const lighttable32_t *const *colormap = dc_colormap32;
-    const byte *const brightmap = dc_brightmap;
-    int heightmask = dc_texheight - 1;
-
-    byte src;
-
-    if (dc_texheight & heightmask)
-    {
-        heightmask++;
-        heightmask <<= 16;
-        if (frac < 0)
-        {
-            while ((frac += heightmask) < 0)
-                ;
-        }
-        else
-        {
-            while (frac >= heightmask)
-            {
-                frac -= heightmask;
-            }
-        }
-
-        do
-        {
-            src = source[frac >> 16];
-            *dest++ = colormap[brightmap[src]][src];
-
-            if ((frac += fracstep) >= heightmask)
-            {
-                frac -= heightmask;
-            }
-
-            if (frac < 0)
-            {
-                frac += heightmask;
-            }
-        } while (--count);
-    }
-    else
-    {
-        UNROLL_LOOP_BY(2)
-        while (count--)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest++ = colormap[brightmap[src]][src];
-            frac += fracstep;
-        }
-    }
-}
-
-static void DrawTLColumn32(void)
-{
-    int count = dc_yh - dc_yl + 1;
-    if (count <= 0)
-    {
-        return;
-    }
-
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    {
-        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
-    }
-#endif
-
-    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
-    const fixed_t fracstep = dc_iscale;
-    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
-
-    const byte *const source = dc_source;
-    const lighttable32_t *const *colormap = dc_colormap32;
-    const byte *const brightmap = dc_brightmap;
-    int heightmask = dc_texheight - 1;
-
-    byte src;
-
-    #define SRCPIXEL \
-        V_IndexToRGB( \
-            tranmap[ \
-                V_TranMapRowFromRGB(*dest) \
-                + V_IndexFromRGB(colormap[brightmap[src]][src]) \
-            ] \
-        )
-
-    if (dc_texheight & heightmask)
-    {
-        heightmask++;
-        heightmask <<= 16;
-        if (frac < 0)
-        {
-            while ((frac += heightmask) < 0)
-                ;
-        }
-        else
-        {
-            while (frac >= heightmask)
-            {
-                frac -= heightmask;
-            }
-        }
-
-        do
-        {
-            src = source[frac >> 16];
-            *dest = SRCPIXEL;
-            dest++;
-
-            if ((frac += fracstep) >= heightmask)
-            {
-                frac -= heightmask;
-            }
-
-            if (frac < 0)
-            {
-                frac += heightmask;
-            }
-        } while (--count);
-    }
-    else
-    {
-        UNROLL_LOOP_BY(2)
-        while (count--)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest = SRCPIXEL;
-            dest++;
-            frac += fracstep;
-        }
-    }
-
-    #undef SRCPIXEL
-}
-
-// Sprite shadows ------------------------------------------------------------
-
-static byte sprite_shadows_colormap[256];
-
-void R_InitSpriteShadowsColormap(void)
-{
-  static boolean initialized = false;
-
-  if (initialized) { return; }
-
-  initialized = true;
-
-  byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE),
-       *p = playpal;
-
-  const float factor = (100 - sprite_shadows_tran_pct) / 100.0f;
-
-  for (int i = 0;  i < 256;  i++, p += 3)
-  {
-    sprite_shadows_colormap[i] =
-      I_GetNearestColor(
-        playpal,
-        p[0] * factor,
-        p[1] * factor,
-        p[2] * factor
-      );
-  }
-}
-
-void (*R_DrawColumnShadow)(void) = NULL;
-
-static void DrawColumnShadow8(void)
-{
-    int count = dc_yh - dc_yl + 1;
-
-    if (count <= 0) { return; }
-
-#ifdef RANGECHECK
-    if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
-#endif
-
-    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
-
-    do {
-        *dest = sprite_shadows_colormap[*dest];
-        dest++;
-    } while (--count);
-}
-
-static void DrawColumnShadow32(void)
-{
-    int count = dc_yh - dc_yl + 1;
-
-    if (count <= 0) { return; }
-
-#ifdef RANGECHECK
-    if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
-#endif
-
-    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
-
-    do {
-        *dest = V_IndexToRGB(sprite_shadows_colormap[V_IndexFromRGB(*dest)]);
-        dest++;
-    } while (--count);
-}
-
-// [Nugget] =================================================================/
-
 //
 // Sky drawing: for showing just a color above the texture
 // Taken from Eternity Engine eternity-engine/source/r_draw.c:L170-234
@@ -702,7 +475,6 @@ static void DrawSkyColumn8(void)
     }
 }
 
-// [Nugget]
 static void DrawSkyColumn32(void)
 {
     int count = dc_yh - dc_yl + 1;
@@ -1609,78 +1381,6 @@ static void DrawTranslatedColumn8(void)
     }
 }
 
-static void DrawTranslatedColumn32(void)
-{
-    int count = dc_yh - dc_yl + 1;
-    if (count <= 0)
-    {
-        return;
-    }
-
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
-    {
-        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
-    }
-#endif
-
-    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
-    const fixed_t fracstep = dc_iscale;
-    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
-
-    const byte *const source = dc_source;
-    const byte *const translation = dc_translation;
-    const lighttable32_t *const *colormap = dc_colormap32;
-    const byte *const brightmap = dc_brightmap;
-    int heightmask = dc_texheight - 1;
-
-    byte src;
-
-    if (dc_texheight & heightmask)
-    {
-        heightmask++;
-        heightmask <<= 16;
-        if (frac < 0)
-        {
-            while ((frac += heightmask) < 0)
-                ;
-        }
-        else
-        {
-            while (frac >= heightmask)
-            {
-                frac -= heightmask;
-            }
-        }
-
-        do
-        {
-            src = source[frac >> 16];
-            *dest++ = colormap[brightmap[src]][translation[src]];
-
-            if ((frac += fracstep) >= heightmask)
-            {
-                frac -= heightmask;
-            }
-
-            if (frac < 0)
-            {
-                frac += heightmask;
-            }
-        } while (--count);
-    }
-    else
-    {
-        UNROLL_LOOP_BY(2)
-        while (count--)
-        {
-            src = source[(frac >> FRACBITS) & heightmask];
-            *dest++ = colormap[brightmap[src]][translation[src]];
-            frac += fracstep;
-        }
-    }
-}
-
 //
 // R_InitTranslationTables
 // Creates the translation tables to map
@@ -1796,6 +1496,234 @@ static void DrawTRTLColumn8(void)
     #undef SRCPIXEL
 }
 
+// [Nugget] /=================================================================
+
+static void DrawColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest++ = colormap[brightmap[src]][src];
+
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        UNROLL_LOOP_BY(2)
+        while (count--)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest++ = colormap[brightmap[src]][src];
+            frac += fracstep;
+        }
+    }
+}
+
+static void DrawTLColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    #define SRCPIXEL \
+        V_IndexToRGB( \
+            tranmap[ \
+                V_TranMapRowFromRGB(*dest) \
+                + V_IndexFromRGB(colormap[brightmap[src]][src]) \
+            ] \
+        )
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest = SRCPIXEL;
+            dest++;
+
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        UNROLL_LOOP_BY(2)
+        while (count--)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest = SRCPIXEL;
+            dest++;
+            frac += fracstep;
+        }
+    }
+
+    #undef SRCPIXEL
+}
+
+static void DrawTranslatedColumn32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+    if (count <= 0)
+    {
+        return;
+    }
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    {
+        I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
+    const fixed_t fracstep = dc_iscale;
+    fixed_t frac = dc_texturemid + (dc_yl - centery) * fracstep;
+
+    const byte *const source = dc_source;
+    const byte *const translation = dc_translation;
+    const lighttable32_t *const *colormap = dc_colormap32;
+    const byte *const brightmap = dc_brightmap;
+    int heightmask = dc_texheight - 1;
+
+    byte src;
+
+    if (dc_texheight & heightmask)
+    {
+        heightmask++;
+        heightmask <<= 16;
+        if (frac < 0)
+        {
+            while ((frac += heightmask) < 0)
+                ;
+        }
+        else
+        {
+            while (frac >= heightmask)
+            {
+                frac -= heightmask;
+            }
+        }
+
+        do
+        {
+            src = source[frac >> 16];
+            *dest++ = colormap[brightmap[src]][translation[src]];
+
+            if ((frac += fracstep) >= heightmask)
+            {
+                frac -= heightmask;
+            }
+
+            if (frac < 0)
+            {
+                frac += heightmask;
+            }
+        } while (--count);
+    }
+    else
+    {
+        UNROLL_LOOP_BY(2)
+        while (count--)
+        {
+            src = source[(frac >> FRACBITS) & heightmask];
+            *dest++ = colormap[brightmap[src]][translation[src]];
+            frac += fracstep;
+        }
+    }
+}
+
 static void DrawTRTLColumn32(void)
 {
     int count = dc_yh - dc_yl + 1;
@@ -1879,8 +1807,6 @@ static void DrawTRTLColumn32(void)
 
     #undef SRCPIXEL
 }
-
-// [Nugget] /=================================================================
 
 // Dithered lighting ---------------------------------------------------------
 
@@ -2023,6 +1949,75 @@ DRAW_COLUMN_DITHERED(
 )
 
 #undef RANGECHECK_CODE
+
+// Sprite shadows ------------------------------------------------------------
+
+static byte sprite_shadows_colormap[256];
+
+void R_InitSpriteShadowsColormap(void)
+{
+    static boolean initialized = false;
+
+    if (initialized) { return; }
+
+    initialized = true;
+
+    byte *const playpal = W_CacheLumpName("PLAYPAL", PU_CACHE),
+         *p = playpal;
+
+    const float factor = (100 - sprite_shadows_tran_pct) / 100.0f;
+
+    for (int i = 0;  i < 256;  i++, p += 3)
+    {
+        sprite_shadows_colormap[i] =
+            I_GetNearestColor(
+                playpal,
+                p[0] * factor,
+                p[1] * factor,
+                p[2] * factor
+            );
+    }
+}
+
+void (*R_DrawColumnShadow)(void) = NULL;
+
+static void DrawColumnShadow8(void)
+{
+    int count = dc_yh - dc_yl + 1;
+
+    if (count <= 0) { return; }
+
+#ifdef RANGECHECK
+    if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
+#endif
+
+    pixel_t *dest = xlookup[dc_x] + rowofs[dc_yl];
+
+    do {
+        *dest = sprite_shadows_colormap[*dest];
+        dest++;
+    } while (--count);
+}
+
+static void DrawColumnShadow32(void)
+{
+    int count = dc_yh - dc_yl + 1;
+
+    if (count <= 0) { return; }
+
+#ifdef RANGECHECK
+    if ((unsigned) dc_x >= video.width || dc_yl < 0 || dc_yh >= video.height)
+    { I_Error("%i to %i at %i", dc_yl, dc_yh, dc_x); }
+#endif
+
+    pixel32_t *dest = xlookup32[dc_x] + rowofs[dc_yl];
+
+    do {
+        *dest = V_IndexToRGB(sprite_shadows_colormap[V_IndexFromRGB(*dest)]);
+        dest++;
+    } while (--count);
+}
 
 // [Nugget] =================================================================/
 
