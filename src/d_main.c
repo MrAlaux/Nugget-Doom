@@ -321,7 +321,7 @@ void D_Display (void)
   // [Nugget]
   if (R_InitDrawFunctionsPending())
   {
-    R_InitDrawColorFunctions();
+    R_InitDrawFunctions();
     VX_SetVoxelRenderingMode();
   }
 

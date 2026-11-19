@@ -147,7 +147,7 @@ void R_DrawViewBorder(void);
 
 void R_InitBufferRes(void);
 
-void R_InitDrawColorFunctions(void);
+void R_InitDrawFunctions(void);
 
 #endif
 
