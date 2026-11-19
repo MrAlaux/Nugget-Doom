@@ -370,8 +370,8 @@ struct sbarelem_s
     int height;
 
     const byte *tranmap;
-    crange_idx_e cr;
-    crange_idx_e crboom;
+    xlat_index_t cr;
+    xlat_index_t crboom;
 
     union
     {
