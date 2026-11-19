@@ -445,12 +445,12 @@ static int pointed_mark_index = -1;
 static const int markcolors[] =
 {
   CR_NONE,
-  CR_RED,
-  CR_ORANGE,
-  CR_YELLOW,
-  CR_GREEN,
-  CR_BLUE1,
-  CR_PURPLE
+  CR_SOLID_RED,
+  CR_SOLID_ORANGE,
+  CR_SOLID_YELLOW,
+  CR_SOLID_GREEN,
+  CR_SOLID_BLUE,
+  CR_SOLID_MAGENTA
 };
 
 #define NUM_MARKCOLORS (sizeof(markcolors) / sizeof(*markcolors))
@@ -3262,17 +3262,16 @@ static void AM_drawMarks(void)
 
 	if (mark->color)
 	{
-	  cr1 = colrngs[markcolors[mark->color]];
-	  cr2 = cr_bright;
+	  cr1 = xlat[markcolors[mark->color]].table;
 	}
 
 	if (i == pointed_mark_index)
 	{
-	  cr2 = cr_bright3;
+	  cr2 = xlat[CR_BRIGHT2].table;
 	}
 	else if (highlight_timer)
 	{
-	  cr2 = (highlight_timer & 8) ? cr_bright3 : cr_dark;
+	  cr2 = (highlight_timer & 8) ? xlat[CR_BRIGHT2].table : cr_dark;
 	}
 
 	// [Nugget] ===============================================================/

@@ -196,7 +196,7 @@ void HU_UpdateCrosshair(void)
     // Freecam
     if (R_FreecamOn())
     {
-        crosshair.cr = colrngs[hud_crosshair_color];
+        crosshair.cr = xlat[hud_crosshair_color].table;
         return;
     }
 

@@ -196,6 +196,13 @@ byte V_Colorize(byte *playpal, int cr, byte source)
 
     rgb_to_hsv(&rgb, &hsv);
 
+    // [Nugget]
+    if (cr == CR_BRIGHT2)
+    {
+        hsv.z *= 4.0;
+    }
+    else
+
     if (cr == CR_BRIGHT)
     {
         hsv.z *= 1.4;

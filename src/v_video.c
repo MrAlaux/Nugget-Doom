@@ -95,6 +95,20 @@ xlat_t xlat[CR_LIMIT] =
     [CR_WHITE]  = { .name = "CRWHITE",  .str = "\x1b\x3d" },
     [CR_BRIGHT] = { .name = NULL,       .str = NULL },
     [CR_NONE]   = { .name = NULL,       .str = NULL },
+
+    // [Nugget] --------------------------------------------------------------
+
+    #define XLAT_NULL_INIT(NAME) [NAME] = { .name = NULL, .str = NULL }
+
+    XLAT_NULL_INIT(CR_BRIGHT2),
+    XLAT_NULL_INIT(CR_SOLID_RED),
+    XLAT_NULL_INIT(CR_SOLID_ORANGE),
+    XLAT_NULL_INIT(CR_SOLID_YELLOW),
+    XLAT_NULL_INIT(CR_SOLID_GREEN),
+    XLAT_NULL_INIT(CR_SOLID_CYAN),
+    XLAT_NULL_INIT(CR_SOLID_BLUE),
+    XLAT_NULL_INIT(CR_SOLID_VIOLET),
+    XLAT_NULL_INIT(CR_SOLID_MAGENTA),
 };
 
 // [FG] translate between blood color value as per EE spec
@@ -196,17 +210,27 @@ void V_InitColorTranslation(void)
 
     // [Nugget] ==============================================================
 
-    colrngs[CR_BRIGHT] = cr_bright;
+    for (xlat_index_t cr = CR_NUGGET_START;  cr < CR_LIMIT;  cr++)
+    { xlat[cr].table = malloc(256); }
 
     for (int i = 0;  i < 256;  i++)
-    {
-        cr_bright3[i] = cr_bright[cr_bright[cr_bright[i]]];
-    }
+    { xlat[CR_BRIGHT2].table[i] = V_Colorize(playpal, CR_BRIGHT2, i); }
 
-    for (int i = 0;  i < 256;  i++)
-    {
-        cr_gray_vc[i] = V_Colorize(playpal, CR_GRAY, (byte) i);
-    }
+    static const int CHANNEL_MAX = 192;
+
+    const byte solid_colors[] = {
+        I_GetNearestColor(playpal, CHANNEL_MAX,   0,             0            ),
+        I_GetNearestColor(playpal, CHANNEL_MAX,   CHANNEL_MAX/2, 0            ),
+        I_GetNearestColor(playpal, CHANNEL_MAX,   CHANNEL_MAX,   0            ),
+        I_GetNearestColor(playpal, 0,             CHANNEL_MAX,   0            ),
+        I_GetNearestColor(playpal, 0,             CHANNEL_MAX,   CHANNEL_MAX  ),
+        I_GetNearestColor(playpal, 0,             0,             CHANNEL_MAX  ),
+        I_GetNearestColor(playpal, CHANNEL_MAX/2, 0,             CHANNEL_MAX  ),
+        I_GetNearestColor(playpal, CHANNEL_MAX,   0,             CHANNEL_MAX  ),
+    };
+
+    for (xlat_index_t cr = CR_SOLID_RED;  cr <= CR_SOLID_MAGENTA;  cr++)
+    { memset(xlat[cr].table, solid_colors[cr - CR_SOLID_RED], 256); }
 
     V_InitShadowColormaps(); // HUD/menu shadows
 
@@ -221,7 +245,7 @@ void V_InitColorTranslation(void)
                      blue  = *palsrc++,
                      greatest = MAX(MAX(blue, red), green);
 
-        nightvision[i] = I_GetNearestColor(playpal, 0.0, greatest, 0.0);
+        nightvision[i] = I_GetNearestColor(playpal, 0, greatest, 0);
     }
 }
 
@@ -232,9 +256,7 @@ int automap_overlay_darkening;
 int menu_backdrop_darkening;
 boolean smooth_darkening;
 
-byte cr_bright3[256],
-     cr_gray_vc[256],  // `V_Colorize()` only
-     nightvision[256]; // Night-vision visor
+byte nightvision[256]; // Night-vision visor
 
 // True color ----------------------------------------------------------------
 
