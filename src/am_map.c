@@ -445,12 +445,12 @@ static int pointed_mark_index = -1;
 static const int markcolors[] =
 {
   CR_NONE,
-  CR_RED,
-  CR_ORANGE,
-  CR_YELLOW,
-  CR_GREEN,
-  CR_BLUE1,
-  CR_PURPLE
+  CR_SOLID_RED,
+  CR_SOLID_ORANGE,
+  CR_SOLID_YELLOW,
+  CR_SOLID_GREEN,
+  CR_SOLID_BLUE,
+  CR_SOLID_MAGENTA
 };
 
 #define NUM_MARKCOLORS (sizeof(markcolors) / sizeof(*markcolors))
@@ -1698,12 +1698,27 @@ static void (*AM_clearFB)(int color) = NULL;
 
 static void AM_clearFB8(int color)
 {
-  memset(I_VideoBuffer, color, f_h * f_w);
+  int width = f_w;
+  pixel_t *dest = I_VideoBuffer;
+
+  while (width--)
+  {
+    memset(dest, color, f_h);
+    dest += video.height;
+  }
 }
 
 static void AM_clearFB32(int color)
 {
-  V_RGBSet(I_VideoBuffer32, V_IndexToRGB(color), f_h * f_w);
+  int width = f_w;
+  pixel32_t *dest = I_VideoBuffer32;
+  const pixel32_t color32 = V_IndexToRGB(color);
+
+  while (width--)
+  {
+    V_RGBSet(dest, color32, f_h);
+    dest += video.height;
+  }
 }
 
 //
@@ -1856,13 +1871,13 @@ static void (*PutLine)(int x, int y, int dx, int color) = NULL;
 
 static void PutLine8(const int x, const int y, const int dx, const int color)
 {
-  pixel_t *const dest = I_VideoBuffer + (y * video.pitch) + x;
+  pixel_t *const dest = I_VideoBuffer + (x * video.pitch) + y;
   memset(dest, color, dx);
 }
 
 static void PutLine32(const int x, const int y, const int dx, const int color)
 {
-  pixel32_t *const dest = I_VideoBuffer32 + (y * video.pitch) + x;
+  pixel32_t *const dest = I_VideoBuffer32 + (x * video.pitch) + y;
   V_IndexSet(dest, color, dx);
 }
 
@@ -1883,12 +1898,12 @@ static void (*PutDot)(int x, int y, int color) = NULL;
 
 inline static void PutDot8(int x, int y, int color)
 {
-    I_VideoBuffer[y * video.pitch + x] = color;
+    I_VideoBuffer[x * video.pitch + y] = color;
 }
 
 inline static void PutDot32(int x, int y, int color)
 {
-    I_VideoBuffer32[y * video.pitch + x] = V_IndexToRGB(color);
+    I_VideoBuffer32[x * video.pitch + y] = V_IndexToRGB(color);
 }
 
 static void AM_drawFline_Vanilla(fline_t *fl, int color)
@@ -1917,16 +1932,16 @@ static void AM_drawFline_Vanilla(fline_t *fl, int color)
 
     int d;
 
-    // [Nugget] Optimize straight horizontal lines
-    if (dx && !dy)
+    // [Nugget] Optimize straight vertical lines
+    if (dy && !dx)
     {
-        if (dx < 0)
+        if (dy < 0)
         {
-            x += dx;
-            dx = -dx;
+            y += dy;
+            dy = -dy;
         }
 
-        PutLine(x, y, dx, color);
+        PutLine(x, y, dy, color);
 
         return;
     }
@@ -1981,7 +1996,7 @@ static void (*PutWuDot)(int x, int y, int color, int weight) = NULL;
 
 inline static void PutWuDot8(int x, int y, int color, int weight)
 {
-    pixel_t *dest = I_VideoBuffer + y * video.pitch + x;
+    pixel_t *dest = I_VideoBuffer + x * video.pitch + y;
     unsigned int *fg2rgb = Col2RGB8[weight];
     unsigned int *bg2rgb = Col2RGB8[64 - weight];
     unsigned int fg, bg;
@@ -1994,7 +2009,7 @@ inline static void PutWuDot8(int x, int y, int color, int weight)
 
 inline static void PutWuDot32(int x, int y, int color, int weight)
 {
-    pixel32_t *dest = I_VideoBuffer32 + y * video.pitch + x;
+    pixel32_t *dest = I_VideoBuffer32 + x * video.pitch + y;
     unsigned int *fg2rgb = Col2RGB8[weight];
     unsigned int *bg2rgb = Col2RGB8[64 - weight];
     unsigned int fg, bg;
@@ -3247,17 +3262,16 @@ static void AM_drawMarks(void)
 
 	if (mark->color)
 	{
-	  cr1 = colrngs[markcolors[mark->color]];
-	  cr2 = cr_bright;
+	  cr1 = xlat[markcolors[mark->color]].table;
 	}
 
 	if (i == pointed_mark_index)
 	{
-	  cr2 = cr_bright3;
+	  cr2 = xlat[CR_BRIGHT2].table;
 	}
 	else if (highlight_timer)
 	{
-	  cr2 = (highlight_timer & 8) ? cr_bright3 : cr_dark;
+	  cr2 = (highlight_timer & 8) ? xlat[CR_BRIGHT2].table : cr_dark;
 	}
 
 	// [Nugget] ===============================================================/

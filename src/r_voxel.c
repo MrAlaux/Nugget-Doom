@@ -83,31 +83,6 @@ enum VoxelFace
 };
 
 
-static int VX_PaletteIndex (byte * pal, int r, int g, int b)
-{
-	int best = 0;
-	int best_dist = (1 << 30);
-
-	int i;
-	for (i = 0 ; i < 256 ; i++)
-	{
-		int dr = r - (int)*pal++;
-		int dg = g - (int)*pal++;
-		int db = b - (int)*pal++;
-
-		int dist = dr * dr + dg * dg + db * db;
-
-		if (dist < best_dist)
-		{
-			best = i;
-			best_dist = dist;
-		}
-	}
-
-	return best;
-}
-
-
 static void VX_CreateRemapTable (byte * p, byte * table)
 {
 	byte * pal = W_CacheLumpName ("PLAYPAL", PU_CACHE);
@@ -119,7 +94,7 @@ static void VX_CreateRemapTable (byte * p, byte * table)
 		int g = (int)*p++ << 2;
 		int b = (int)*p++ << 2;
 
-		table[c] = VX_PaletteIndex (pal, r, g, b);
+		table[c] = I_GetNearestColor (pal, r, g, b);
 	}
 }
 
@@ -1087,7 +1062,7 @@ static void DrawColumnCubesLoop8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -1202,7 +1177,7 @@ static void DrawColumnCubesLoop8(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 			else if (has_bottom)
@@ -1217,7 +1192,7 @@ static void DrawColumnCubesLoop8(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 
@@ -1235,7 +1210,7 @@ static void DrawColumnCubesLoop8(
 					byte src = slab[i];
 					pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 		}
@@ -1263,7 +1238,7 @@ static void DrawColumnCubesLoop32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t * dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -1375,7 +1350,7 @@ static void DrawColumnCubesLoop32(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 			else if (has_bottom)
@@ -1390,7 +1365,7 @@ static void DrawColumnCubesLoop32(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 
@@ -1408,7 +1383,7 @@ static void DrawColumnCubesLoop32(
 					byte src = slab[i];
 					pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 		}
@@ -1438,7 +1413,7 @@ static void DrawColumnCubesLoopDithered8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -1569,7 +1544,7 @@ static void DrawColumnCubesLoopDithered8(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1590,7 +1565,7 @@ static void DrawColumnCubesLoopDithered8(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1610,7 +1585,7 @@ static void DrawColumnCubesLoopDithered8(
 					const byte src = slab[i];
 					const pixel_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1639,7 +1614,7 @@ static void DrawColumnCubesLoopDithered32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t * dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -1770,7 +1745,7 @@ static void DrawColumnCubesLoopDithered32(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1791,7 +1766,7 @@ static void DrawColumnCubesLoopDithered32(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1811,7 +1786,7 @@ static void DrawColumnCubesLoopDithered32(
 					const byte src = slab[i];
 					const pixel32_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -2039,7 +2014,7 @@ static void DrawColumnBoundedLoop8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -2053,9 +2028,9 @@ static void DrawColumnBoundedLoop8(
 	              x2 = (spr->x2 + 1) << FRACBITS;
 
 	int uxi = ux >> FRACBITS;
-	dest += uxi;
+	dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
+	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
 	{
 		if (ux >= x2) break;
 		if (ux <  x1) continue;
@@ -2113,9 +2088,9 @@ static void DrawColumnBoundedLoop8(
 			}
 
 			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+			pixel_t *dest2 = dest + (uy >> FRACBITS);
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
+			for (; uy <= uy2;  uy += FRACUNIT, dest2++)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
@@ -2146,7 +2121,7 @@ static void DrawColumnBoundedLoop32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -2160,9 +2135,9 @@ static void DrawColumnBoundedLoop32(
 	              x2 = (spr->x2 + 1) << FRACBITS;
 
 	int uxi = ux >> FRACBITS;
-	dest += uxi;
+	dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
+	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
 	{
 		if (ux >= x2) break;
 		if (ux <  x1) continue;
@@ -2220,9 +2195,9 @@ static void DrawColumnBoundedLoop32(
 			}
 
 			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel32_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+			pixel32_t *dest2 = dest + (uy >> FRACBITS);
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
+			for (; uy <= uy2;  uy += FRACUNIT, dest2++)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
@@ -2255,7 +2230,7 @@ static void DrawColumnBoundedLoopDithered8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -2271,9 +2246,9 @@ static void DrawColumnBoundedLoopDithered8(
 	              x2 = (spr->x2 + 1) << FRACBITS;
 
 	int uxi = ux >> FRACBITS;
-	dest += uxi;
+	dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
+	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
 	{
 		if (ux >= x2) break;
 		if (ux <  x1) continue;
@@ -2343,11 +2318,11 @@ static void DrawColumnBoundedLoopDithered8(
 			}
 
 			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+			pixel_t *dest2 = dest + (uy >> FRACBITS);
 
 			byte dx = (uy >> FRACBITS) & DITHER_PATTERN_WIDTH_MASK;
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
+			for (; uy <= uy2;  uy += FRACUNIT, dest2++)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
@@ -2379,7 +2354,7 @@ static void DrawColumnBoundedLoopDithered32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -2395,9 +2370,9 @@ static void DrawColumnBoundedLoopDithered32(
 	              x2 = (spr->x2 + 1) << FRACBITS;
 
 	int uxi = ux >> FRACBITS;
-	dest += uxi;
+	dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
+	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
 	{
 		if (ux >= x2) break;
 		if (ux <  x1) continue;
@@ -2467,11 +2442,11 @@ static void DrawColumnBoundedLoopDithered32(
 			}
 
 			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel32_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+			pixel32_t *dest2 = dest + (uy >> FRACBITS);
 
 			byte dx = (uy >> FRACBITS) & DITHER_PATTERN_WIDTH_MASK;
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
+			for (; uy <= uy2;  uy += FRACUNIT, dest2++)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
@@ -2595,7 +2570,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 	// always pass the source color through a translation table, selected here
 	if ((spr->mobjflags_extra & MFX_COLOREDBLOOD) && !(spr->mobjflags & MF_SHADOW))
 	{
-		dc_translation = red2col[spr->color];
+		dc_translation = xlat[spr->color].lump;
 	}
 	else if ((spr->mobjflags & MF_TRANSLATION) && !(spr->mobjflags & MF_SHADOW))
 	{
