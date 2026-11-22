@@ -2,6 +2,7 @@
 
 - Support for **square-pixel resolutions**, e.g. 1920x1080 instead of 1920x900
 - Support for **aspect ratios below 4:3**, e.g. 5:4
+- **`IDDWT` cheat** to find a weapon in the automap
 - Setting to make **screen-darkening effects fade in**, enabled by default
 
 ## Changes
@@ -11,6 +12,8 @@
 - **Improved plane lighting in true-color modes**
 - **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
 - **Improved culling of distant sprite shadows**
+- **Pointed automap marks are now underlined**
+- **Allowed `IDDF` and `IDDET` cheats during demos and netgames (except deathmatch)**
 - **Improved low-resolution post-process**
 - **Renamed _Hitbox-based Hitscan Collision_ to _Edge-based Hitscan Collision_** [^1]
 

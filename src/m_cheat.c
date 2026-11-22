@@ -178,6 +178,9 @@ static void cheat_reveal_key(void);
 static void cheat_reveal_keyx(void);
 static void cheat_reveal_keyxx(int key);
 
+static void cheat_reveal_weapon(void);
+static void cheat_reveal_weaponx(int weapon);
+
 static void cheat_reveal_exit(void);
 static void cheat_linetarget(void);  // Give info on the current linetarget
 static void cheat_trails(void);      // Show hitscan trails
@@ -452,18 +455,28 @@ cheat_sequence_t cheats_table[] = {
   { "summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // ---------------- Summon a friendly mobj
   { "summonr", NULL, not_net | not_demo, {.v = cheat_summonr}, .repeatable = true }, //  Repeat last summon
 
-  { "iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key} },
-  { "iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
-  { "iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
-  { "iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
-  { "iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0, .repeatable = true },
-  { "iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2, .repeatable = true },
-  { "iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1, .repeatable = true },
-  { "iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5, .repeatable = true },
-  { "iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3, .repeatable = true },
-  { "iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4, .repeatable = true },
+  { "iddf",   NULL, not_dm, {.v = cheat_reveal_key} },
+  { "iddfb",  NULL, not_dm, {.v = cheat_reveal_keyx} },
+  { "iddfy",  NULL, not_dm, {.v = cheat_reveal_keyx} },
+  { "iddfr",  NULL, not_dm, {.v = cheat_reveal_keyx} },
+  { "iddfbc", NULL, not_dm, {.i = cheat_reveal_keyxx}, 0, .repeatable = true },
+  { "iddfyc", NULL, not_dm, {.i = cheat_reveal_keyxx}, 2, .repeatable = true },
+  { "iddfrc", NULL, not_dm, {.i = cheat_reveal_keyxx}, 1, .repeatable = true },
+  { "iddfbs", NULL, not_dm, {.i = cheat_reveal_keyxx}, 5, .repeatable = true },
+  { "iddfys", NULL, not_dm, {.i = cheat_reveal_keyxx}, 3, .repeatable = true },
+  { "iddfrs", NULL, not_dm, {.i = cheat_reveal_keyxx}, 4, .repeatable = true },
 
-  { "iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit}, .repeatable = true }, // --- Exit finder
+  { "iddwt",  NULL, not_dm, {.v = cheat_reveal_weapon} },
+  { "iddwt0", NULL, not_dm, {.i = cheat_reveal_weaponx}, 0, .repeatable = true },
+  { "iddwt3", NULL, not_dm, {.i = cheat_reveal_weaponx}, 3, .repeatable = true },
+  { "iddwt4", NULL, not_dm, {.i = cheat_reveal_weaponx}, 4, .repeatable = true },
+  { "iddwt5", NULL, not_dm, {.i = cheat_reveal_weaponx}, 5, .repeatable = true },
+  { "iddwt6", NULL, not_dm, {.i = cheat_reveal_weaponx}, 6, .repeatable = true },
+  { "iddwt7", NULL, not_dm, {.i = cheat_reveal_weaponx}, 7, .repeatable = true },
+  { "iddwt8", NULL, not_dm, {.i = cheat_reveal_weaponx}, 8, .repeatable = true },
+  { "iddwt9", NULL, not_dm, {.i = cheat_reveal_weaponx}, 9, .repeatable = true },
+
+  { "iddet",      NULL, not_dm, {.v = cheat_reveal_exit}, .repeatable = true }, // --- Exit finder
   { "linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget} }, // ------------------------ Give info on the current linetarget
   { "trails",     NULL, not_net | not_demo, {.v = cheat_trails} }, // ---------------------------- Show hitscan trails
   { "mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}, .repeatable = true },
@@ -485,7 +498,7 @@ cheat_sequence_t cheats_table[] = {
   { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
   { "flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
   { "moody",      NULL, not_net | not_demo, {.v = cheat_moody} },
-  { "idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf} },
+  { "idgaf",      NULL, always,             {.v = cheat_idgaf} },
 
   #ifdef NUGMAGIC
 
@@ -805,14 +818,9 @@ static void cheat_reveal_keyxx(int key)
     last_mobj = NULL;
   }
 
-  thinker_t *th, *start_th;
-
-  if (last_mobj) { th = &(last_mobj->thinker); }
-  else           { th = &thinkercap; }
-
-  start_th = th;
-
-  boolean found = false;
+  thinker_t
+    *            th = last_mobj ? &(last_mobj->thinker) : &thinkercap,
+    *const start_th = th;
 
   do {
     th = th->next;
@@ -823,20 +831,109 @@ static void cheat_reveal_keyxx(int key)
 
       if (mobj->type == MT_MISC4 + key)
       {
-        found = true;
-
         followplayer = false;
         AM_SetMapCenter(mobj->x, mobj->y);
 
         P_SetTarget(&last_mobj, mobj);
 
         displaymsg("Key Finder: key found");
-        break;
+        return;
       }
     }
   } while (th != start_th);
 
-  if (!found) { displaymsg("Key Finder: key not found"); }
+  displaymsg("Key Finder: key not found");
+}
+
+// Weapon finder -------------------------------------------------------------
+
+static void cheat_reveal_weapon(void)
+{
+  if (!automapactive) { return; }
+
+  displaymsg("Weapon Finder: 3-9, or 0 for any weapon");
+}
+
+static void cheat_reveal_weaponx(int weapon)
+{
+  if (!automapactive) { return; }
+
+  if (weapon && (weapon < 3 || 9 < weapon))
+  {
+    displaymsg("Weapon Finder: invalid weapon");
+    return;
+  }
+
+  static int last_count;
+  static mobj_t *last_mobj;
+
+  // If the thinkers have been wiped, addresses are invalid
+  if (last_count != init_thinkers_count)
+  {
+    last_count = init_thinkers_count;
+    last_mobj = NULL;
+  }
+
+  thinker_t
+    *            th = last_mobj ? &(last_mobj->thinker) : &thinkercap,
+    *const start_th = th;
+
+  int type = 0;
+
+  static const int num_to_type[] =
+  {
+    0, // ------------- 0: None -- dummy
+    0, // ------------- 1: Fist -- dummy
+    0, // ------------- 2: Pistol -- dummy
+    MT_SHOTGUN, // ---- 3: Shotgun
+    MT_CHAINGUN, // --- 4: Chaingun
+    MT_MISC27, // ----- 5: Rocket launcher
+    MT_MISC28, // ----- 6: Plasma rifle
+    MT_MISC25, // ----- 7: BFG
+    MT_MISC26, // ----- 8: Chainsaw
+    MT_SUPERSHOTGUN, // 9: Super shotgun
+  };
+
+  do {
+    th = th->next;
+
+    if (th->function.p1 == P_MobjThinker)
+    {
+      mobj_t *mobj = (mobj_t *) th;
+      type = mobj->type;
+
+      if (weapon ? (type == num_to_type[weapon])
+                 : (MT_MISC25 <= type && type <= MT_SUPERSHOTGUN))
+      {
+        followplayer = false;
+        AM_SetMapCenter(mobj->x, mobj->y);
+
+        P_SetTarget(&last_mobj, mobj);
+
+        if (!weapon)
+        {
+          for (int i = 3;  i <= 9;  i++)
+          {
+            if (num_to_type[i] == type)
+            {
+              weapon = i;
+              break;
+            }
+          }
+        }
+
+        displaymsg("Weapon Finder: weapon %i found", weapon);
+        return;
+      }
+    }
+  } while (th != start_th);
+
+  // Not found
+  if (weapon)
+  {
+    displaymsg("Weapon Finder: weapon %i not found", weapon);
+  }
+  else { displaymsg("Weapon Finder: no weapons found"); }
 }
 
 // ---------------------------------------------------------------------------

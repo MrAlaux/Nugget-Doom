@@ -146,6 +146,10 @@ Otherwise, they will be spawned in front of the player.
 Find a key in the automap.
 This cheat functions similarly to the `KEY` cheat, with `C` and `T` specifying the key color and type respectively.
 
+`IDDWT[X]`  
+Find a weapon in the automap.
+`X` is a digit between 3 and 9 to find a specific weapon, or 0 to find any weapon.
+
 `IDDET`  
 Find exits in the automap.
 

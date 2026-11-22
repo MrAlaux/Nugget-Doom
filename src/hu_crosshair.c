@@ -238,8 +238,7 @@ void HU_UpdateCrosshair(void)
     if (STRICTMODE(hud_crosshair_target || hud_crosshair_lockon))
     {
         angle_t an = plr->mo->angle;
-        ammotype_t ammo = weaponinfo[plr->readyweapon].ammo;
-        fixed_t range = (ammo == am_noammo) ? MELEERANGE : 16 * 64 * FRACUNIT;
+        fixed_t range;
         boolean intercepts_overflow_enabled = overflow[emu_intercepts].enabled;
 
         // [Nugget] /---------------------------------------------------------

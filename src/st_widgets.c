@@ -1188,7 +1188,7 @@ static void UpdateMonSec(sbe_widget_t *widget)
 
         if (secret_str2[0])
         {
-            offset += M_snprintf(
+            M_snprintf(
               string + offset, sizeof(string) - offset, "%s", secret_str2
             );
         }

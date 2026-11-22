@@ -53,9 +53,9 @@
 #include "z_zone.h"
 
 // [Nugget]
-#include <math.h>
 #include "i_timer.h"
 #include "m_random.h"
+#include "m_swap.h"
 #include "p_map.h"
 #include "s_sound.h"
 #include "sounds.h"
@@ -3303,6 +3303,15 @@ static void AM_drawMarks(void)
 	    j /= 10;
 	  }
 	while (j>0);
+
+	// [Nugget] Underline pointed mark
+	if (i == pointed_mark_index)
+	{
+	  const int x = ((fx + w) << FRACBITS) / video.xscale - SHORT(marknums[0]->leftoffset);
+	  const int y = (fy << FRACBITS) / video.yscale + 6;
+
+	  V_FillRect(x, y, (4 * num_digits) - 1, 1, v_lightest_color);
+	}
       }
 }
 

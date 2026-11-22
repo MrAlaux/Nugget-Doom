@@ -267,6 +267,7 @@ All of these are CFG-only, so their CVAR names are included.
 - **`IDFLY`** to fly (uses jumping/crouching buttons) [i.b. PrBoom+, ZDoom]
 - **`SUMMON`** to spawn an actor based on its type index [i.b. ZDoom, PrBoomX]
 - **`IDDF`** to find a key in the automap
+- **`IDDWT`** to find a weapon in the automap
 - **`IDDET`** to find exits in the automap
 - **`RESURRECT / IDRES`** to resurrect the player without toggling `IDDQD` [i.b. ZDoom]
 - **`LINETARGET`** to give some info on the player's linetarget [i.b. ZDoom]
