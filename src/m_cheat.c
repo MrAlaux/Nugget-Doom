@@ -455,16 +455,16 @@ cheat_sequence_t cheats_table[] = {
   { "summonf", NULL, not_net | not_demo, {.s = cheat_summonf}, -3 }, // ---------------- Summon a friendly mobj
   { "summonr", NULL, not_net | not_demo, {.v = cheat_summonr}, .repeatable = true }, //  Repeat last summon
 
-  { "iddf",   NULL, not_net | not_demo, {.v = cheat_reveal_key} },
-  { "iddfb",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
-  { "iddfy",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
-  { "iddfr",  NULL, not_net | not_demo, {.v = cheat_reveal_keyx} },
-  { "iddfbc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 0, .repeatable = true },
-  { "iddfyc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 2, .repeatable = true },
-  { "iddfrc", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 1, .repeatable = true },
-  { "iddfbs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 5, .repeatable = true },
-  { "iddfys", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 3, .repeatable = true },
-  { "iddfrs", NULL, not_net | not_demo, {.i = cheat_reveal_keyxx}, 4, .repeatable = true },
+  { "iddf",   NULL, not_dm, {.v = cheat_reveal_key} },
+  { "iddfb",  NULL, not_dm, {.v = cheat_reveal_keyx} },
+  { "iddfy",  NULL, not_dm, {.v = cheat_reveal_keyx} },
+  { "iddfr",  NULL, not_dm, {.v = cheat_reveal_keyx} },
+  { "iddfbc", NULL, not_dm, {.i = cheat_reveal_keyxx}, 0, .repeatable = true },
+  { "iddfyc", NULL, not_dm, {.i = cheat_reveal_keyxx}, 2, .repeatable = true },
+  { "iddfrc", NULL, not_dm, {.i = cheat_reveal_keyxx}, 1, .repeatable = true },
+  { "iddfbs", NULL, not_dm, {.i = cheat_reveal_keyxx}, 5, .repeatable = true },
+  { "iddfys", NULL, not_dm, {.i = cheat_reveal_keyxx}, 3, .repeatable = true },
+  { "iddfrs", NULL, not_dm, {.i = cheat_reveal_keyxx}, 4, .repeatable = true },
 
   { "iddwt",  NULL, not_dm, {.v = cheat_reveal_weapon} },
   { "iddwt0", NULL, not_dm, {.i = cheat_reveal_weaponx}, 0, .repeatable = true },
@@ -476,7 +476,7 @@ cheat_sequence_t cheats_table[] = {
   { "iddwt8", NULL, not_dm, {.i = cheat_reveal_weaponx}, 8, .repeatable = true },
   { "iddwt9", NULL, not_dm, {.i = cheat_reveal_weaponx}, 9, .repeatable = true },
 
-  { "iddet",      NULL, not_net | not_demo, {.v = cheat_reveal_exit}, .repeatable = true }, // --- Exit finder
+  { "iddet",      NULL, not_dm, {.v = cheat_reveal_exit}, .repeatable = true }, // --- Exit finder
   { "linetarget", NULL, not_net | not_demo, {.v = cheat_linetarget} }, // ------------------------ Give info on the current linetarget
   { "trails",     NULL, not_net | not_demo, {.v = cheat_trails} }, // ---------------------------- Show hitscan trails
   { "mdk",        NULL, not_net | not_demo, {.v = cheat_mdk}, .repeatable = true },
@@ -498,7 +498,7 @@ cheat_sequence_t cheats_table[] = {
   { "cheese",     NULL, not_net | not_demo, {.v = cheat_cheese} },
   { "flakes",     NULL, not_net | not_demo, {.v = cheat_flakes} },
   { "moody",      NULL, not_net | not_demo, {.v = cheat_moody} },
-  { "idgaf",      NULL, not_net | not_demo, {.v = cheat_idgaf} },
+  { "idgaf",      NULL, always,             {.v = cheat_idgaf} },
 
   #ifdef NUGMAGIC
 
@@ -818,14 +818,9 @@ static void cheat_reveal_keyxx(int key)
     last_mobj = NULL;
   }
 
-  thinker_t *th, *start_th;
-
-  if (last_mobj) { th = &(last_mobj->thinker); }
-  else           { th = &thinkercap; }
-
-  start_th = th;
-
-  boolean found = false;
+  thinker_t
+    *            th = last_mobj ? &(last_mobj->thinker) : &thinkercap,
+    *const start_th = th;
 
   do {
     th = th->next;
@@ -836,20 +831,18 @@ static void cheat_reveal_keyxx(int key)
 
       if (mobj->type == MT_MISC4 + key)
       {
-        found = true;
-
         followplayer = false;
         AM_SetMapCenter(mobj->x, mobj->y);
 
         P_SetTarget(&last_mobj, mobj);
 
         displaymsg("Key Finder: key found");
-        break;
+        return;
       }
     }
   } while (th != start_th);
 
-  if (!found) { displaymsg("Key Finder: key not found"); }
+  displaymsg("Key Finder: key not found");
 }
 
 // Weapon finder -------------------------------------------------------------
@@ -881,12 +874,9 @@ static void cheat_reveal_weaponx(int weapon)
     last_mobj = NULL;
   }
 
-  thinker_t *th, *start_th;
-
-  if (last_mobj) { th = &(last_mobj->thinker); }
-  else           { th = &thinkercap; }
-
-  start_th = th;
+  thinker_t
+    *            th = last_mobj ? &(last_mobj->thinker) : &thinkercap,
+    *const start_th = th;
 
   int type = 0;
 

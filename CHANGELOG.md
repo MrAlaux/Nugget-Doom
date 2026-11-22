@@ -12,6 +12,7 @@
 - **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
 - **Improved culling of distant sprite shadows**
 - **Pointed automap marks are now underlined**
+- **Allowed `IDDF` and `IDDET` cheats during demos and netgames (except deathmatch)**
 - **Renamed _Hitbox-based Hitscan Collision_ to _Edge-based Hitscan Collision_** [^1]
 
 ## Bug Fixes
