@@ -11,6 +11,7 @@
 - **Improved accuracy of plane rendering**
 - **Improved plane lighting in true-color modes**
 - **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
+- **Optimized _Bounded Voxel Rendering_**
 - **Improved culling of distant sprite shadows**
 - **Pointed automap marks are now underlined**
 - **Allowed `IDDF` and `IDDET` cheats during demos and netgames (except deathmatch)**

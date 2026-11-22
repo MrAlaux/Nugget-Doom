@@ -1998,6 +1998,13 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 	);
 }
 
+#define MAX_CACHED_POSTS 32
+
+typedef struct cachedvoxelpost_s
+{
+  int yl, yh;
+} cachedvoxelpost_t;
+
 static void DrawColumnBoundedLoop8(
 	const vissprite_t *const spr,
 	const struct Voxel *const v,
@@ -2014,7 +2021,8 @@ static void DrawColumnBoundedLoop8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
+	pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy,
+          *last_dest;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -2030,6 +2038,17 @@ static void DrawColumnBoundedLoop8(
 	int uxi = ux >> FRACBITS;
 	dest += uxi * linesize;
 
+  boolean can_copy_column = false;
+  int copy_column_yl, copy_column_yh;
+  int copy_column_uyl, copy_column_uyh;
+
+  cachedvoxelpost_t cached_posts[MAX_CACHED_POSTS];
+  int num_cached_posts;
+
+  boolean try_copy_column = ux2 - ux > FRACUNIT && !shadow;
+
+  const lighttable_t *last_colormap = NULL;
+
 	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
 	{
 		if (ux >= x2) break;
@@ -2038,14 +2057,48 @@ static void DrawColumnBoundedLoop8(
 		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
 		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
 
-		const byte *      slab = &v->data[ofs1],
-		           *const  end = &v->data[ofs2];
-
-		// [Nugget] Radial fog
+		// Radial fog
 		if (do_voxel_radial_fog)
 		{
 			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
 		}
+
+    if (try_copy_column)
+    {
+      if (last_colormap == colormap[0] && can_copy_column)
+      {
+        const int
+          clip_yi1 = FixedToInt(clip_y1),
+          clip_yi2 = FixedToInt(clip_y2);
+
+        const int
+          cyl = MAX(copy_column_uyl, clip_yi1),
+          cyh = MIN(copy_column_uyh, clip_yi2);
+
+        if (!(cyl < copy_column_yl || copy_column_yh < cyh))
+        {
+          for (int i = 0;  i < num_cached_posts;  i++)
+          {
+            const int
+              pyl = MAX(cached_posts[i].yl, cyl),
+              pyh = MIN(cached_posts[i].yh, cyh);
+
+            if (pyl <= pyh)
+            { memcpy(dest + pyl, last_dest + pyl, pyh - pyl + 1); }
+          }
+
+          continue;
+        }
+      }
+      else {
+        last_colormap = colormap[0];
+        num_cached_posts = 0;
+        last_dest = dest;
+      }
+    }
+
+		const byte *      slab = &v->data[ofs1],
+		           *const  end = &v->data[ofs2];
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{
@@ -2070,6 +2123,10 @@ static void DrawColumnBoundedLoop8(
 			if (uy1 >= clip_y2) break;
 			if (uy2 <= clip_y1) continue;
 
+      const int
+        uyl = FixedToInt(uy1 + FRACMASK),
+        uyh = FixedToInt(uy2);
+
 			const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
 
 			uy1 = MAX(uy1, clip_y1);
@@ -2088,19 +2145,59 @@ static void DrawColumnBoundedLoop8(
 			}
 
 			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel_t *dest2 = dest + (uy >> FRACBITS);
+      const int uyi = uy >> FRACBITS;
+      int uyi2 = uyi - 1;
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2++)
+			pixel_t *dest2 = dest + uyi;
+
+			for (; uy <= uy2;  uy += FRACUNIT, uyi2++, dest2++)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
 				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i];
-				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
+				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				*dest2 = pix;
 			}
+
+      if (try_copy_column)
+      {
+        if (!num_cached_posts)
+        {
+          copy_column_yl = cached_posts[0].yl = uyi;
+          copy_column_yh = cached_posts[0].yh = uyi2;
+
+          copy_column_uyl = uyl;
+          copy_column_uyh = uyh;
+
+          num_cached_posts++;
+          can_copy_column = true;
+        }
+        else if (uyi - copy_column_yh <= 1)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts - 1].yh = uyi2;
+        }
+        else
+        if (num_cached_posts < MAX_CACHED_POSTS)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts].yl = uyi;
+          cached_posts[num_cached_posts].yh = uyi2;
+
+          num_cached_posts++;
+        }
+        else
+        {
+          try_copy_column = can_copy_column = false;
+        }
+      }
 		}
 	}
 }
@@ -2121,7 +2218,8 @@ static void DrawColumnBoundedLoop32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
+	pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy,
+            *last_dest;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -2137,6 +2235,17 @@ static void DrawColumnBoundedLoop32(
 	int uxi = ux >> FRACBITS;
 	dest += uxi * linesize;
 
+  boolean can_copy_column = false;
+  int copy_column_yl, copy_column_yh;
+  int copy_column_uyl, copy_column_uyh;
+
+  cachedvoxelpost_t cached_posts[MAX_CACHED_POSTS];
+  int num_cached_posts;
+
+  boolean try_copy_column = ux2 - ux > FRACUNIT && !shadow;
+
+  const lighttable32_t *last_colormap = NULL;
+
 	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
 	{
 		if (ux >= x2) break;
@@ -2145,14 +2254,48 @@ static void DrawColumnBoundedLoop32(
 		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
 		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
 
-		const byte *      slab = &v->data[ofs1],
-		           *const  end = &v->data[ofs2];
-
-		// [Nugget] Radial fog
+		// Radial fog
 		if (do_voxel_radial_fog)
 		{
 			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
 		}
+
+    if (try_copy_column)
+    {
+      if (last_colormap == colormap[0] && can_copy_column)
+      {
+        const int
+          clip_yi1 = FixedToInt(clip_y1),
+          clip_yi2 = FixedToInt(clip_y2);
+
+        const int
+          cyl = MAX(copy_column_uyl, clip_yi1),
+          cyh = MIN(copy_column_uyh, clip_yi2);
+
+        if (!(cyl < copy_column_yl || copy_column_yh < cyh))
+        {
+          for (int i = 0;  i < num_cached_posts;  i++)
+          {
+            const int
+              pyl = MAX(cached_posts[i].yl, cyl),
+              pyh = MIN(cached_posts[i].yh, cyh);
+
+            if (pyl <= pyh)
+            { V_RGBCopy(dest + pyl, last_dest + pyl, pyh - pyl + 1); }
+          }
+
+          continue;
+        }
+      }
+      else {
+        last_colormap = colormap[0];
+        num_cached_posts = 0;
+        last_dest = dest;
+      }
+    }
+
+		const byte *      slab = &v->data[ofs1],
+		           *const  end = &v->data[ofs2];
 
 		for (byte top, len, face;  slab < end;  slab += len)
 		{
@@ -2177,6 +2320,10 @@ static void DrawColumnBoundedLoop32(
 			if (uy1 >= clip_y2) break;
 			if (uy2 <= clip_y1) continue;
 
+      const int
+        uyl = FixedToInt(uy1 + FRACMASK),
+        uyh = FixedToInt(uy2);
+
 			const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
 
 			uy1 = MAX(uy1, clip_y1);
@@ -2195,19 +2342,59 @@ static void DrawColumnBoundedLoop32(
 			}
 
 			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel32_t *dest2 = dest + (uy >> FRACBITS);
+      const int uyi = uy >> FRACBITS;
+      int uyi2 = uyi - 1;
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2++)
+			pixel32_t *dest2 = dest + uyi;
+
+			for (; uy <= uy2;  uy += FRACUNIT, uyi2++, dest2++)
 			{
 				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
 
 				i = CLAMP(i, 0, len - 1);
 
 				const byte src = slab[i];
-				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
+				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
 
 				*dest2 = pix;
 			}
+
+      if (try_copy_column)
+      {
+        if (!num_cached_posts)
+        {
+          copy_column_yl = cached_posts[0].yl = uyi;
+          copy_column_yh = cached_posts[0].yh = uyi2;
+
+          copy_column_uyl = uyl;
+          copy_column_uyh = uyh;
+
+          num_cached_posts++;
+          can_copy_column = true;
+        }
+        else if (uyi - copy_column_yh <= 1)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts - 1].yh = uyi2;
+        }
+        else
+        if (num_cached_posts < MAX_CACHED_POSTS)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts].yl = uyi;
+          cached_posts[num_cached_posts].yh = uyi2;
+
+          num_cached_posts++;
+        }
+        else
+        {
+          try_copy_column = can_copy_column = false;
+        }
+      }
 		}
 	}
 }
