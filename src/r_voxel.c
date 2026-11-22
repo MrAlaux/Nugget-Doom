@@ -1825,8 +1825,8 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
 
   if (!(ofs1 < ofs2)) { return; }
 
-  const int qu_x = vx_eye_x < (x << FRACBITS) ? 0 : vx_eye_x < ((x+1) << FRACBITS) ? 1 : 2;
-  const int qu_y = vx_eye_y < (y << FRACBITS) ? 0 : vx_eye_y < ((y+1) << FRACBITS) ? 1 : 2;
+  const int qu_x = vx_eye_x < IntToFixed(x) ? 0 : vx_eye_x < IntToFixed(x+1) ? 1 : 2;
+  const int qu_y = vx_eye_y < IntToFixed(y) ? 0 : vx_eye_y < IntToFixed(y+1) ? 1 : 2;
 
   const int quadrant = qu_y * 3 + qu_x;
 
@@ -1876,9 +1876,9 @@ static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int 
     C_xscale = FixedDiv(projection, Cy),
     D_xscale = FixedDiv(projection, Dy);
 
-  Ax = centerxfrac + FixedMul (Ax, A_xscale);
-  Bx = centerxfrac + FixedMul (Bx, B_xscale);
-  Cx = centerxfrac + FixedMul (Cx, C_xscale);
+  Ax = centerxfrac + FixedMul(Ax, A_xscale);
+  Bx = centerxfrac + FixedMul(Bx, B_xscale);
+  Cx = centerxfrac + FixedMul(Cx, C_xscale);
 
   fixed_t
     frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
@@ -2033,10 +2033,10 @@ static void DrawColumnBoundedLoop8(
   colormap[0] = thiscolormap + spr->colormap[0];
   colormap[1] = thiscolormap + spr->colormap[1];
 
-  const fixed_t x1 =  spr->x1      << FRACBITS,
-                x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-  int uxi = ux >> FRACBITS;
+  int uxi = FixedToInt(ux);
   dest += uxi * linesize;
 
   boolean can_copy_column = false;
@@ -2055,8 +2055,8 @@ static void DrawColumnBoundedLoop8(
     if (ux >= x2) break;
     if (ux <  x1) continue;
 
-    const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-                  clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
     // Radial fog
     if (do_voxel_radial_fog)
@@ -2107,11 +2107,11 @@ static void DrawColumnBoundedLoop8(
       len  = *slab++;
       face = *slab++;
 
-      const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-      const byte visible_v_face = (top_z < 0)                       ? F_TOP
-                                : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-                                :                                     0;
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
       if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
@@ -2119,7 +2119,7 @@ static void DrawColumnBoundedLoop8(
                        topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
       fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
       if (uy1 >= clip_y2) break;
       if (uy2 <= clip_y1) continue;
@@ -2136,24 +2136,24 @@ static void DrawColumnBoundedLoop8(
       if (shadow)
       {
         dc_x  = uxi;
-        dc_yl = uy1 >> FRACBITS;
-        dc_yh = uy2 >> FRACBITS;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
 
         if (dc_yl <= dc_yh)
-          R_DrawFuzzColumn ();
+          R_DrawFuzzColumn();
 
         continue;
       }
 
       fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-      const int uyi = uy >> FRACBITS;
+      const int uyi = FixedToInt(uy);
       int uyi2 = uyi - 1;
 
       pixel_t *dest2 = dest + uyi;
 
       for (; uy <= uy2;  uy += FRACUNIT, uyi2++, dest2++)
       {
-        int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
             i = CLAMP(i, 0, len - 1);
 
         const byte src = slab[i];
@@ -2229,10 +2229,10 @@ static void DrawColumnBoundedLoop32(
   colormap[0] = thiscolormap + spr->colormap[0];
   colormap[1] = thiscolormap + spr->colormap[1];
 
-  const fixed_t x1 =  spr->x1      << FRACBITS,
-                x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-  int uxi = ux >> FRACBITS;
+  int uxi = FixedToInt(ux);
   dest += uxi * linesize;
 
   boolean can_copy_column = false;
@@ -2251,8 +2251,8 @@ static void DrawColumnBoundedLoop32(
     if (ux >= x2) break;
     if (ux <  x1) continue;
 
-    const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-                  clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
     // Radial fog
     if (do_voxel_radial_fog)
@@ -2303,11 +2303,11 @@ static void DrawColumnBoundedLoop32(
       len  = *slab++;
       face = *slab++;
 
-      const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-      const byte visible_v_face = (top_z < 0)                       ? F_TOP
-                                : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-                                :                                     0;
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
       if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
@@ -2315,7 +2315,7 @@ static void DrawColumnBoundedLoop32(
                        topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
       fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
       if (uy1 >= clip_y2) break;
       if (uy2 <= clip_y1) continue;
@@ -2332,24 +2332,24 @@ static void DrawColumnBoundedLoop32(
       if (shadow)
       {
         dc_x  = uxi;
-        dc_yl = uy1 >> FRACBITS;
-        dc_yh = uy2 >> FRACBITS;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
 
         if (dc_yl <= dc_yh)
-          R_DrawFuzzColumn ();
+          R_DrawFuzzColumn();
 
         continue;
       }
 
       fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-      const int uyi = uy >> FRACBITS;
+      const int uyi = FixedToInt(uy);
       int uyi2 = uyi - 1;
 
       pixel32_t *dest2 = dest + uyi;
 
       for (; uy <= uy2;  uy += FRACUNIT, uyi2++, dest2++)
       {
-        int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
             i = CLAMP(i, 0, len - 1);
 
         const byte src = slab[i];
@@ -2428,10 +2428,10 @@ static void DrawColumnBoundedLoopDithered8(
   colormap[1][0] = thiscolormap + spr->nextcolormap[0];
   colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
-  const fixed_t x1 =  spr->x1      << FRACBITS,
-                x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-  int uxi = ux >> FRACBITS;
+  int uxi = FixedToInt(ux);
   dest += uxi * linesize;
 
   for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
@@ -2439,13 +2439,10 @@ static void DrawColumnBoundedLoopDithered8(
     if (ux >= x2) break;
     if (ux <  x1) continue;
 
-    const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-                  clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
-    const byte *      slab = &v->data[ofs1],
-               *const  end = &v->data[ofs2];
-
-    // [Nugget] Radial fog
+    // Radial fog
     if (do_voxel_radial_fog)
     {
       const int index = R_GetLightIndex(midscale, uxi);
@@ -2460,8 +2457,11 @@ static void DrawColumnBoundedLoopDithered8(
       else { R_SetDitherPattern(0); }
     }
 
+    const byte *      slab = &v->data[ofs1],
+               *const  end = &v->data[ofs2];
+
     byte const dy = uxi & DITHER_PATTERN_HEIGHT_MASK;
-    const byte *const dither_pattern_row = dither_pattern[dy];
+    const byte *const restrict dither_pattern_row = dither_pattern[dy];
 
     for (byte top, len, face;  slab < end;  slab += len)
     {
@@ -2469,11 +2469,11 @@ static void DrawColumnBoundedLoopDithered8(
       len  = *slab++;
       face = *slab++;
 
-      const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-      const byte visible_v_face = (top_z < 0)                       ? F_TOP
-                                : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-                                :                                     0;
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
       if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
@@ -2481,7 +2481,7 @@ static void DrawColumnBoundedLoopDithered8(
                        topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
       fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
       if (uy1 >= clip_y2) break;
       if (uy2 <= clip_y1) continue;
@@ -2494,23 +2494,25 @@ static void DrawColumnBoundedLoopDithered8(
       if (shadow)
       {
         dc_x  = uxi;
-        dc_yl = uy1 >> FRACBITS;
-        dc_yh = uy2 >> FRACBITS;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
 
         if (dc_yl <= dc_yh)
-          R_DrawFuzzColumn ();
+          R_DrawFuzzColumn();
 
         continue;
       }
 
       fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-      pixel_t *dest2 = dest + (uy >> FRACBITS);
+      const int uyi = FixedToInt(uy);
 
-      byte dx = (uy >> FRACBITS) & DITHER_PATTERN_WIDTH_MASK;
+      pixel_t *dest2 = dest + uyi;
+
+      byte dx = uyi & DITHER_PATTERN_WIDTH_MASK;
 
       for (; uy <= uy2;  uy += FRACUNIT, dest2++)
       {
-        int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
             i = CLAMP(i, 0, len - 1);
 
         const byte src = slab[i];
@@ -2551,10 +2553,10 @@ static void DrawColumnBoundedLoopDithered32(
   colormap[1][0] = thiscolormap + spr->nextcolormap[0];
   colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
-  const fixed_t x1 =  spr->x1      << FRACBITS,
-                x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-  int uxi = ux >> FRACBITS;
+  int uxi = FixedToInt(ux);
   dest += uxi * linesize;
 
   for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
@@ -2562,13 +2564,10 @@ static void DrawColumnBoundedLoopDithered32(
     if (ux >= x2) break;
     if (ux <  x1) continue;
 
-    const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-                  clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
-    const byte *      slab = &v->data[ofs1],
-               *const  end = &v->data[ofs2];
-
-    // [Nugget] Radial fog
+    // Radial fog
     if (do_voxel_radial_fog)
     {
       const int index = R_GetLightIndex(midscale, uxi);
@@ -2583,8 +2582,11 @@ static void DrawColumnBoundedLoopDithered32(
       else { R_SetDitherPattern(0); }
     }
 
+    const byte *      slab = &v->data[ofs1],
+               *const  end = &v->data[ofs2];
+
     byte const dy = uxi & DITHER_PATTERN_HEIGHT_MASK;
-    const byte *const dither_pattern_row = dither_pattern[dy];
+    const byte *const restrict dither_pattern_row = dither_pattern[dy];
 
     for (byte top, len, face;  slab < end;  slab += len)
     {
@@ -2592,11 +2594,11 @@ static void DrawColumnBoundedLoopDithered32(
       len  = *slab++;
       face = *slab++;
 
-      const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-      const byte visible_v_face = (top_z < 0)                       ? F_TOP
-                                : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-                                :                                     0;
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
       if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
@@ -2604,7 +2606,7 @@ static void DrawColumnBoundedLoopDithered32(
                        topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
       fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
       if (uy1 >= clip_y2) break;
       if (uy2 <= clip_y1) continue;
@@ -2617,23 +2619,25 @@ static void DrawColumnBoundedLoopDithered32(
       if (shadow)
       {
         dc_x  = uxi;
-        dc_yl = uy1 >> FRACBITS;
-        dc_yh = uy2 >> FRACBITS;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
 
         if (dc_yl <= dc_yh)
-          R_DrawFuzzColumn ();
+          R_DrawFuzzColumn();
 
         continue;
       }
 
       fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-      pixel32_t *dest2 = dest + (uy >> FRACBITS);
+      const int uyi = FixedToInt(uy);
 
-      byte dx = (uy >> FRACBITS) & DITHER_PATTERN_WIDTH_MASK;
+      pixel32_t *dest2 = dest + uyi;
+
+      byte dx = uyi & DITHER_PATTERN_WIDTH_MASK;
 
       for (; uy <= uy2;  uy += FRACUNIT, dest2++)
       {
-        int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
             i = CLAMP(i, 0, len - 1);
 
         const byte src = slab[i];
