@@ -200,6 +200,15 @@ Toggle deathmatch state.
 `MYRNG[X]`  
 Override the RNG output with `X`, which is a three-digit number between 0 and 255.
 
+`RENDSEG`  
+Toggle rendering of segs (walls).
+
+`RENDPLANE`  
+Toggle rendering of planes (floors and ceilings).
+
+`RENDSPRITE`  
+Toggle rendering of sprites.
+
 `DIMLIGHT`  
 Toggle diminishing lighting (`diminishing_lighting` CVAR).
 

@@ -1725,6 +1725,9 @@ boolean draw_nearby_sprites;
 // killough 9/18/98: add lightlevel as parameter, fixing underwater lighting
 void R_AddSprites(sector_t* sec, int lightlevel_override)
 {
+  // [Nugget]
+  if (dont_draw_sprites) { return; }
+
   mobj_t *thing;
 
   // BSP is traversed by subsector.

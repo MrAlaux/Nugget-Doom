@@ -195,6 +195,9 @@ static void cheat_netgame(void);
 static void cheat_dmatch(void);
 static void cheat_myrng(void);
 static void cheat_myrngx(char *buf);
+static void cheat_rendseg(void);
+static void cheat_rendplane(void);
+static void cheat_rendsprite(void);
 static void cheat_dimlight(void);
 static void cheat_fovsky(void);
 static void cheat_hiresgfx(void);
@@ -490,6 +493,9 @@ cheat_sequence_t cheats_table[] = {
   { "dmatch",     NULL, devmode_only|not_demo,         {.v = cheat_dmatch}, .repeatable = true },
   { "myrng",      NULL, devmode_only|not_demo|not_net, {.v = cheat_myrng} },
   { "myrng",      NULL, devmode_only|not_demo|not_net, {.s = cheat_myrngx}, -3 },
+  { "rendseg",    NULL, devmode_only,                  {.v = cheat_rendseg}, .repeatable = true },
+  { "rendplane",  NULL, devmode_only,                  {.v = cheat_rendplane}, .repeatable = true },
+  { "rendsprite", NULL, devmode_only,                  {.v = cheat_rendsprite}, .repeatable = true },
   { "dimlight",   NULL, devmode_only,                  {.v = cheat_dimlight}, .repeatable = true },
   { "fovsky",     NULL, devmode_only,                  {.v = cheat_fovsky}, .repeatable = true },
   { "hiresgfx",   NULL, devmode_only,                  {.v = cheat_hiresgfx}, .repeatable = true },
@@ -1123,6 +1129,24 @@ static void cheat_myrngx(char *buf)
   rng_override = value;
 
   displaymsg("RNG Override: %i", rng_override);
+}
+
+static void cheat_rendseg(void)
+{
+  dont_draw_segs = !dont_draw_segs;
+  displaymsg("Seg rendering %s", dont_draw_segs ? "disabled" : "enabled");
+}
+
+static void cheat_rendplane(void)
+{
+  dont_draw_planes = !dont_draw_planes;
+  displaymsg("Plane rendering %s", dont_draw_planes ? "disabled" : "enabled");
+}
+
+static void cheat_rendsprite(void)
+{
+  dont_draw_sprites = !dont_draw_sprites;
+  displaymsg("Sprite rendering %s", dont_draw_sprites ? "disabled" : "enabled");
 }
 
 static void cheat_dimlight(void)

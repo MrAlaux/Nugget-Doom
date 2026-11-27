@@ -140,6 +140,8 @@ int extra_level_brightness;               // level brightness feature
 
 // [Nugget] /=================================================================
 
+boolean dont_draw_segs, dont_draw_planes, dont_draw_sprites;
+
 static int viewwidth_nonwide; // Brought from below
 
 static fixed_t nughud_viewpitch;

@@ -811,6 +811,9 @@ static void do_draw_plane(visplane_t *pl)
 
 void R_DrawPlanes (void)
 {
+  // [Nugget]
+  if (dont_draw_planes) { return; }
+
   visplane_t *pl;
   int i;
   for (i=0;i<MAXVISPLANES;i++)
