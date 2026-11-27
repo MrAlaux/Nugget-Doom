@@ -715,6 +715,9 @@ static void R_Subsector(int num)
 
   R_AddSprites(sub->sector, (floorlightlevel+ceilinglightlevel)/2);
 
+  // [Nugget]
+  if (dont_draw_segs) { return; }
+
   while (count--)
   {
     if (line->linedef)

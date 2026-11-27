@@ -4,6 +4,7 @@
 - Support for **aspect ratios below 4:3**, e.g. 5:4
 - **`IDDWT` cheat** to find a weapon in the automap
 - Setting to make **screen-darkening effects fade in**, enabled by default
+- Developer cheats to disable rendering of certain elements
 
 ## Changes
 

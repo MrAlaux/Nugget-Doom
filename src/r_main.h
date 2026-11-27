@@ -190,6 +190,8 @@ extern boolean comp_powerrunout;
 
 // ---------------------------------------------------------------------------
 
+extern boolean dont_draw_segs, dont_draw_planes, dont_draw_sprites;
+
 extern boolean have_crouch_sprites;
 
 fixed_t R_GetNughudViewPitch(void);
