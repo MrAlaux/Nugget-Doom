@@ -83,31 +83,6 @@ enum VoxelFace
 };
 
 
-static int VX_PaletteIndex (byte * pal, int r, int g, int b)
-{
-	int best = 0;
-	int best_dist = (1 << 30);
-
-	int i;
-	for (i = 0 ; i < 256 ; i++)
-	{
-		int dr = r - (int)*pal++;
-		int dg = g - (int)*pal++;
-		int db = b - (int)*pal++;
-
-		int dist = dr * dr + dg * dg + db * db;
-
-		if (dist < best_dist)
-		{
-			best = i;
-			best_dist = dist;
-		}
-	}
-
-	return best;
-}
-
-
 static void VX_CreateRemapTable (byte * p, byte * table)
 {
 	byte * pal = W_CacheLumpName ("PLAYPAL", PU_CACHE);
@@ -119,7 +94,7 @@ static void VX_CreateRemapTable (byte * p, byte * table)
 		int g = (int)*p++ << 2;
 		int b = (int)*p++ << 2;
 
-		table[c] = VX_PaletteIndex (pal, r, g, b);
+		table[c] = I_GetNearestColor (pal, r, g, b);
 	}
 }
 
@@ -1087,7 +1062,7 @@ static void DrawColumnCubesLoop8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -1202,7 +1177,7 @@ static void DrawColumnCubesLoop8(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 			else if (has_bottom)
@@ -1217,7 +1192,7 @@ static void DrawColumnCubesLoop8(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 
@@ -1235,7 +1210,7 @@ static void DrawColumnCubesLoop8(
 					byte src = slab[i];
 					pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 		}
@@ -1263,7 +1238,7 @@ static void DrawColumnCubesLoop32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t * dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -1375,7 +1350,7 @@ static void DrawColumnCubesLoop32(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 			else if (has_bottom)
@@ -1390,7 +1365,7 @@ static void DrawColumnCubesLoop32(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 
@@ -1408,7 +1383,7 @@ static void DrawColumnCubesLoop32(
 					byte src = slab[i];
 					pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 				}
 			}
 		}
@@ -1438,7 +1413,7 @@ static void DrawColumnCubesLoopDithered8(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel_t * dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+	pixel_t * dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
@@ -1569,7 +1544,7 @@ static void DrawColumnCubesLoopDithered8(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1590,7 +1565,7 @@ static void DrawColumnCubesLoopDithered8(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1610,7 +1585,7 @@ static void DrawColumnCubesLoopDithered8(
 					const byte src = slab[i];
 					const pixel_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1639,7 +1614,7 @@ static void DrawColumnCubesLoopDithered32(
 	const boolean do_voxel_radial_fog
 ) {
 	const int linesize = video.pitch;
-	pixel32_t * dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+	pixel32_t * dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
 	const lighttable32_t *thiscolormap =
 		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
@@ -1770,7 +1745,7 @@ static void DrawColumnCubesLoopDithered32(
 
 				for (; uy < uy1 ; uy += FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1791,7 +1766,7 @@ static void DrawColumnCubesLoopDithered32(
 
 				for (; uy > uy2 ; uy -= FRACUNIT)
 				{
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix[dither_pattern_row[dx]];
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix[dither_pattern_row[dx]];
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1811,7 +1786,7 @@ static void DrawColumnCubesLoopDithered32(
 					const byte src = slab[i];
 					const pixel32_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
 
-					dest[(uy >> FRACBITS) * linesize + (ux >> FRACBITS)] = pix;
+					dest[(ux >> FRACBITS) * linesize + (uy >> FRACBITS)] = pix;
 					dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
 				}
 			}
@@ -1825,666 +1800,854 @@ static void DrawColumnCubesLoopDithered32(
 // [Nugget] Voxel rendering mode: new function /==============================
 
 static void (*DrawColumnBoundedLoop)(
-	const vissprite_t *const spr,
-	const struct Voxel *const v,
-	const int ofs1,
-	const int ofs2,
-	const fixed_t frontscale,
-	const fixed_t backscale,
-	const fixed_t midscale,
-	const fixed_t imidscale,
-	const byte visible_h_faces,
-	const boolean shadow,
-	fixed_t ux,
-	const fixed_t ux2,
-	const boolean do_voxel_radial_fog
+  const vissprite_t *const spr,
+  const struct Voxel *const v,
+  const int ofs1,
+  const int ofs2,
+  const fixed_t frontscale,
+  const fixed_t backscale,
+  const fixed_t midscale,
+  const fixed_t imidscale,
+  const byte visible_h_faces,
+  const boolean shadow,
+  fixed_t ux,
+  const fixed_t ux2,
+  const boolean do_voxel_radial_fog
 ) = NULL;
 
 static void VX_DrawColumnBounded(vissprite_t *const spr, const int x, const int y)
 {
-	const struct VisVoxel *const vv = &visvoxels[spr->voxel_index];
-	const struct Voxel    *const v  = vv->model;
+  const struct VisVoxel *const vv = &visvoxels[spr->voxel_index];
+  const struct Voxel    *const v  = vv->model;
 
-	const int ofs1 = v->offsets[ y    * v->x_size + x];
-	const int ofs2 = v->offsets[(y+1) * v->x_size + x];
+  const int ofs1 = v->offsets[ y    * v->x_size + x];
+  const int ofs2 = v->offsets[(y+1) * v->x_size + x];
 
-	if (!(ofs1 < ofs2)) { return; }
+  if (!(ofs1 < ofs2)) { return; }
 
-	const int qu_x = vx_eye_x < (x << FRACBITS) ? 0 : vx_eye_x < ((x+1) << FRACBITS) ? 1 : 2;
-	const int qu_y = vx_eye_y < (y << FRACBITS) ? 0 : vx_eye_y < ((y+1) << FRACBITS) ? 1 : 2;
+  const int qu_x = vx_eye_x < IntToFixed(x) ? 0 : vx_eye_x < IntToFixed(x+1) ? 1 : 2;
+  const int qu_y = vx_eye_y < IntToFixed(y) ? 0 : vx_eye_y < IntToFixed(y+1) ? 1 : 2;
 
-	const int quadrant = qu_y * 3 + qu_x;
+  const int quadrant = qu_y * 3 + qu_x;
 
-	if (quadrant == 4) { return; }
+  if (quadrant == 4) { return; }
 
-	const fixed_t c = vv->c;
-	const fixed_t s = vv->s;
+  const fixed_t c = vv->c;
+  const fixed_t s = vv->s;
 
-	fixed_t tx[4];
-	fixed_t ty[4];
+  fixed_t tx[4];
+  fixed_t ty[4];
 
-	tx[0] = vv->TL_x + x * c + y * s;
-	ty[0] = vv->TL_y + x * s - y * c;
+  tx[0] = vv->TL_x + x * c + y * s;
+  ty[0] = vv->TL_y + x * s - y * c;
 
-	tx[1] = tx[0] + s;
-	ty[1] = ty[0] - c;
+  tx[1] = tx[0] + s;
+  ty[1] = ty[0] - c;
 
-	tx[2] = tx[1] + c;
-	ty[2] = ty[1] + s;
+  tx[2] = tx[1] + c;
+  ty[2] = ty[1] + s;
 
-	tx[3] = tx[0] + c;
-	ty[3] = ty[0] + s;
+  tx[3] = tx[0] + c;
+  ty[3] = ty[0] + s;
 
-	static const int A_corners[9] = { 3, 3, 2, 0, -1, 2, 0, 1, 1 };
+  static const int A_corners[9] = { 3, 3, 2, 0, -1, 2, 0, 1, 1 };
 
-	int idx = A_corners[quadrant];
+  int idx = A_corners[quadrant];
 
-	fixed_t       Ax = tx[idx];
-	fixed_t const Ay = ty[idx];
-	idx = (idx + 1) & 3;
+  fixed_t       Ax = tx[idx];
+  fixed_t const Ay = ty[idx];
+  idx = (idx + 1) & 3;
 
-	fixed_t       Bx = tx[idx];
-	fixed_t const By = ty[idx];
-	idx = (idx + 1) & 3;
+  fixed_t       Bx = tx[idx];
+  fixed_t const By = ty[idx];
+  idx = (idx + 1) & 3;
 
-	if (By < VX_MINZ) { return; }
+  if (By < VX_MINZ) { return; }
 
-	fixed_t       Cx = tx[idx];
-	fixed_t const Cy = ty[idx];
-	idx = (idx + 1) & 3;
+  fixed_t       Cx = tx[idx];
+  fixed_t const Cy = ty[idx];
+  idx = (idx + 1) & 3;
 
-	fixed_t const Dy = ty[idx];
+  fixed_t const Dy = ty[idx];
 
-	const fixed_t A_xscale = FixedDiv(projection, Ay),
-	              B_xscale = FixedDiv(projection, By),
-	              C_xscale = FixedDiv(projection, Cy),
-	              D_xscale = FixedDiv(projection, Dy);
+  const fixed_t
+    A_xscale = FixedDiv(projection, Ay),
+    B_xscale = FixedDiv(projection, By),
+    C_xscale = FixedDiv(projection, Cy),
+    D_xscale = FixedDiv(projection, Dy);
 
-	Ax = centerxfrac + FixedMul (Ax, A_xscale);
-	Bx = centerxfrac + FixedMul (Bx, B_xscale);
-	Cx = centerxfrac + FixedMul (Cx, C_xscale);
+  Ax = centerxfrac + FixedMul(Ax, A_xscale);
+  Bx = centerxfrac + FixedMul(Bx, B_xscale);
+  Cx = centerxfrac + FixedMul(Cx, C_xscale);
 
-	fixed_t
-		frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
-		 backscale = MIN(D_xscale, MIN(C_xscale, A_xscale));
+  fixed_t
+    frontscale = MAX(B_xscale, MAX(C_xscale, A_xscale)),
+     backscale = MIN(D_xscale, MIN(C_xscale, A_xscale));
 
-	if (ADJUST_ASPECT())
-	{
-		frontscale *= aspect_v_factor;
-		backscale *= aspect_v_factor;
-	}
+  if (ADJUST_ASPECT())
+  {
+    frontscale *= aspect_v_factor;
+    backscale *= aspect_v_factor;
+  }
 
-	const fixed_t
-		 midscale = ((int64_t) frontscale + backscale) / 2,
-		imidscale = FixedDiv(FRACUNIT, midscale);
+  const fixed_t
+     midscale = ((int64_t) frontscale + backscale) / 2,
+    imidscale = FixedDiv(FRACUNIT, midscale);
 
-	static const byte A_faces[9] = { F_BACK, F_BACK, F_RIGHT, F_LEFT, 0, F_RIGHT, F_LEFT,  F_FRONT, F_FRONT };
-	static const byte B_faces[9] = { F_LEFT,      0, F_BACK,       0, 0,       0, F_FRONT,       0, F_RIGHT };
+  static const byte A_faces[9] = { F_BACK, F_BACK, F_RIGHT, F_LEFT, 0, F_RIGHT, F_LEFT,  F_FRONT, F_FRONT };
+  static const byte B_faces[9] = { F_LEFT,      0, F_BACK,       0, 0,       0, F_FRONT,       0, F_RIGHT };
 
-	const byte visible_h_faces = A_faces[quadrant] | B_faces[quadrant];
+  const byte visible_h_faces = A_faces[quadrant] | B_faces[quadrant];
 
-	const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
+  const boolean shadow = ((spr->mobjflags & MF_SHADOW) != 0);
 
-	fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
+  fixed_t ux = ((Ax - 1) | FRACMASK) + 1;
 
-	const fixed_t ux2 = MAX(Cx, Bx);
+  const fixed_t ux2 = MAX(Cx, Bx);
 
-	// [Nugget] Thing lighting, radial fog, dithered lighting /-----------------
+  // [Nugget] Thing lighting, radial fog, dithered lighting /-----------------
 
-	boolean do_voxel_radial_fog = false;
+  boolean do_voxel_radial_fog = false;
 
-	if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapoffset)
-	{
-		do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
+  if (!(spr->flags & VSF_NO_PERC) && !shadow && !fixedcolormapoffset)
+  {
+    do_voxel_radial_fog = do_radial_fog && !(spr->flags & VSF_FULLBRIGHT);
 
-		if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
-		{
-			const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
-			              yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
+    if (STRICTMODE(thing_lighting_mode) == THINGLIGHTING_PERCOLUMN)
+    {
+      const fixed_t xofs = ((x << FRACBITS) + FRACUNIT/2) - v->x_pivot,
+                    yofs = ((y << FRACBITS) + FRACUNIT/2) - v->y_pivot;
 
-			const int fineangle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
+      const int fineangle = (vv->angle + ANG90) >> ANGLETOFINESHIFT;
 
-			const fixed_t cosine = finecosine[fineangle],
-			                sine =   finesine[fineangle];
+      const fixed_t cosine = finecosine[fineangle],
+                      sine =   finesine[fineangle];
 
-			const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
-			              gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
+      const fixed_t gx = spr->gx + FixedMul(xofs, cosine) + FixedMul(yofs,   sine),
+                    gy = spr->gy + FixedMul(xofs,   sine) - FixedMul(yofs, cosine);
 
-			const boolean own_tint = spr->flags & VSF_OWN_TINT;
+      const boolean own_tint = spr->flags & VSF_OWN_TINT;
 
-			int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
+      int lightnum, tint = 0, *const tint_p = own_tint ? NULL : &tint;
 
-			R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
+      R_GetLightLevelAndTintInPoint(gx, gy, false, &lightnum, tint_p);
 
-			lightnum = (spr->flags & VSF_FULLBRIGHT)
-			         ? LIGHTLEVELS-1
-			         : (lightnum >> LIGHTSEGSHIFT) + extralight;
+      lightnum = (spr->flags & VSF_FULLBRIGHT)
+               ? LIGHTLEVELS-1
+               : (lightnum >> LIGHTSEGSHIFT) + extralight;
 
-			spr->lightnum = lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
+      spr->lightnum = lightnum = CLAMP(lightnum, 0, LIGHTLEVELS-1);
 
-			if (!own_tint) { spr->tint = tint; }
+      if (!own_tint) { spr->tint = tint; }
 
-			if (!do_voxel_radial_fog)
-			{
-				const int lightindex = STRICTMODE(!diminishing_lighting)
-				                       ? 0 : R_GetLightIndex(midscale, 0);
+      if (!do_voxel_radial_fog)
+      {
+        const int lightindex = STRICTMODE(!diminishing_lighting)
+                               ? 0 : R_GetLightIndex(midscale, 0);
 
-				spr->colormap[0] = scalelightoffset[lightnum][lightindex];
+        spr->colormap[0] = scalelightoffset[lightnum][lightindex];
 
-				if (dithered_lighting)
-				{
-					if (lightindex < MAXLIGHTSCALE-1)
-					{
-						spr->nextcolormap[0] = scalelight_nextcolormap[lightnum][lightindex];
-						R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-					}
-					else { R_SetDitherPattern(0); }
-				}
-			}
-			else {
-				voxellightoffset = scalelightoffset[lightnum];
+        if (dithered_lighting)
+        {
+          if (lightindex < MAXLIGHTSCALE-1)
+          {
+            spr->nextcolormap[0] = scalelight_nextcolormap[lightnum][lightindex];
+            R_SetDitherPattern(scalelight_ditherlevel[lightnum][dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+          }
+          else { R_SetDitherPattern(0); }
+        }
+      }
+      else {
+        voxellightoffset = scalelightoffset[lightnum];
 
-				if (dithered_lighting)
-				{
-					voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
-					voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
-				}
-			}
-		}
-		else if (do_voxel_radial_fog)
-		{
-			voxellightoffset = scalelightoffset[spr->lightnum];
+        if (dithered_lighting)
+        {
+          voxellight_ditherlevel = scalelight_ditherlevel[lightnum];
+          voxellight_nextcolormap = scalelight_nextcolormap[lightnum];
+        }
+      }
+    }
+    else if (do_voxel_radial_fog)
+    {
+      voxellightoffset = scalelightoffset[spr->lightnum];
 
-			if (dithered_lighting)
-			{
-				voxellight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
-				voxellight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
-			}
-		}
-		else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
-	}
+      if (dithered_lighting)
+      {
+        voxellight_ditherlevel = scalelight_ditherlevel[spr->lightnum];
+        voxellight_nextcolormap = scalelight_nextcolormap[spr->lightnum];
+      }
+    }
+    else if (dithered_lighting) { R_SetDitherPattern(spr->ditherlevel); }
+  }
 
-	// [Nugget] ---------------------------------------------------------------/
+  // [Nugget] ---------------------------------------------------------------/
 
-	DrawColumnBoundedLoop(
-		spr,
-		v,
-		ofs1,
-		ofs2,
-		frontscale,
-		backscale,
-		midscale,
-		imidscale,
-		visible_h_faces,
-		shadow,
-		ux,
-		ux2,
-		do_voxel_radial_fog
-	);
+  DrawColumnBoundedLoop(
+    spr,
+    v,
+    ofs1,
+    ofs2,
+    frontscale,
+    backscale,
+    midscale,
+    imidscale,
+    visible_h_faces,
+    shadow,
+    ux,
+    ux2,
+    do_voxel_radial_fog
+  );
 }
 
+#define MAX_CACHED_POSTS 32
+
+typedef struct cachedvoxelpost_s
+{
+  int yl, yh;
+} cachedvoxelpost_t;
+
 static void DrawColumnBoundedLoop8(
-	const vissprite_t *const spr,
-	const struct Voxel *const v,
-	const int ofs1,
-	const int ofs2,
-	const fixed_t frontscale,
-	const fixed_t backscale,
-	const fixed_t midscale,
-	const fixed_t imidscale,
-	const byte visible_h_faces,
-	const boolean shadow,
-	fixed_t ux,
-	const fixed_t ux2,
-	const boolean do_voxel_radial_fog
+  const vissprite_t *const spr,
+  const struct Voxel *const v,
+  const int ofs1,
+  const int ofs2,
+  const fixed_t frontscale,
+  const fixed_t backscale,
+  const fixed_t midscale,
+  const fixed_t imidscale,
+  const byte visible_h_faces,
+  const boolean shadow,
+  fixed_t ux,
+  const fixed_t ux2,
+  const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
-	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+  const int linesize = video.pitch;
+  pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy,
+          *last_dest;
 
-	const lighttable_t *thiscolormap =
-		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
+  const lighttable_t *thiscolormap =
+    (spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
-	const lighttable_t *colormap[2];
+  const lighttable_t *colormap[2];
 
-	colormap[0] = thiscolormap + spr->colormap[0];
-	colormap[1] = thiscolormap + spr->colormap[1];
+  colormap[0] = thiscolormap + spr->colormap[0];
+  colormap[1] = thiscolormap + spr->colormap[1];
 
-	const fixed_t x1 =  spr->x1      << FRACBITS,
-	              x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-	int uxi = ux >> FRACBITS;
-	dest += uxi;
+  int uxi = FixedToInt(ux);
+  dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
-	{
-		if (ux >= x2) break;
-		if (ux <  x1) continue;
+  boolean can_copy_column = false;
+  int copy_column_yl, copy_column_yh;
+  int copy_column_uyl, copy_column_uyh;
 
-		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+  cachedvoxelpost_t cached_posts[MAX_CACHED_POSTS];
+  int num_cached_posts;
 
-		const byte *      slab = &v->data[ofs1],
-		           *const  end = &v->data[ofs2];
+  boolean try_copy_column = ux2 - ux > FRACUNIT && !shadow;
 
-		// [Nugget] Radial fog
-		if (do_voxel_radial_fog)
-		{
-			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
-		}
+  const lighttable_t *last_colormap = NULL;
 
-		for (byte top, len, face;  slab < end;  slab += len)
-		{
-			top  = *slab++;
-			len  = *slab++;
-			face = *slab++;
+  for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
+  {
+    if (ux >= x2) break;
+    if (ux <  x1) continue;
 
-			const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
-			const byte visible_v_face = (top_z < 0)                       ? F_TOP
-			                          : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-			                          :                                     0;
+    // Radial fog
+    if (do_voxel_radial_fog)
+    {
+      colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
+    }
 
-			if (!(face & (visible_h_faces | visible_v_face))) { continue; }
+    if (try_copy_column)
+    {
+      if (last_colormap == colormap[0] && can_copy_column)
+      {
+        const int
+          clip_yi1 = FixedToInt(clip_y1),
+          clip_yi2 = FixedToInt(clip_y2);
 
-			const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
-			                 topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
+        const int
+          cyl = MAX(copy_column_uyl, clip_yi1),
+          cyh = MIN(copy_column_uyh, clip_yi2);
 
-			fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-			fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+        if (!(cyl < copy_column_yl || copy_column_yh < cyh))
+        {
+          for (int i = 0;  i < num_cached_posts;  i++)
+          {
+            const int
+              pyl = MAX(cached_posts[i].yl, cyl),
+              pyh = MIN(cached_posts[i].yh, cyh);
 
-			if (uy1 >= clip_y2) break;
-			if (uy2 <= clip_y1) continue;
+            if (pyl <= pyh)
+            { memcpy(dest + pyl, last_dest + pyl, pyh - pyl + 1); }
+          }
 
-			const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
+          continue;
+        }
+      }
+      else {
+        last_colormap = colormap[0];
+        num_cached_posts = 0;
+        last_dest = dest;
+      }
+    }
 
-			uy1 = MAX(uy1, clip_y1);
-			uy2 = MIN(uy2, clip_y2);
+    const byte *      slab = &v->data[ofs1],
+               *const  end = &v->data[ofs2];
 
-			if (shadow)
-			{
-				dc_x  = uxi;
-				dc_yl = uy1 >> FRACBITS;
-				dc_yh = uy2 >> FRACBITS;
+    for (byte top, len, face;  slab < end;  slab += len)
+    {
+      top  = *slab++;
+      len  = *slab++;
+      face = *slab++;
 
-				if (dc_yl <= dc_yh)
-					R_DrawFuzzColumn ();
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-				continue;
-			}
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
-			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+      if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
-			{
-				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+      const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
+                       topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
-				i = CLAMP(i, 0, len - 1);
+      fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
-				const byte src = slab[i];
-				const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
+      if (uy1 >= clip_y2) break;
+      if (uy2 <= clip_y1) continue;
 
-				*dest2 = pix;
-			}
-		}
-	}
+      const int
+        uyl = FixedToInt(uy1 + FRACMASK),
+        uyh = FixedToInt(uy2);
+
+      const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
+
+      uy1 = MAX(uy1, clip_y1);
+      uy2 = MIN(uy2, clip_y2);
+
+      if (shadow)
+      {
+        dc_x  = uxi;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
+
+        if (dc_yl <= dc_yh)
+          R_DrawFuzzColumn();
+
+        continue;
+      }
+
+      fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
+      const int uyi = FixedToInt(uy);
+      int uyi2 = uyi - 1;
+
+      pixel_t *dest2 = dest + uyi;
+
+      for (; uy <= uy2;  uy += FRACUNIT, uyi2++, dest2++)
+      {
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
+            i = CLAMP(i, 0, len - 1);
+
+        const byte src = slab[i];
+        const pixel_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+
+        *dest2 = pix;
+      }
+
+      if (try_copy_column)
+      {
+        if (!num_cached_posts)
+        {
+          copy_column_yl = cached_posts[0].yl = uyi;
+          copy_column_yh = cached_posts[0].yh = uyi2;
+
+          copy_column_uyl = uyl;
+          copy_column_uyh = uyh;
+
+          num_cached_posts++;
+          can_copy_column = true;
+        }
+        else if (uyi - copy_column_yh <= 1)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts - 1].yh = uyi2;
+        }
+        else
+        if (num_cached_posts < MAX_CACHED_POSTS)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts].yl = uyi;
+          cached_posts[num_cached_posts].yh = uyi2;
+
+          num_cached_posts++;
+        }
+        else
+        {
+          try_copy_column = can_copy_column = false;
+        }
+      }
+    }
+  }
 }
 
 static void DrawColumnBoundedLoop32(
-	const vissprite_t *const spr,
-	const struct Voxel *const v,
-	const int ofs1,
-	const int ofs2,
-	const fixed_t frontscale,
-	const fixed_t backscale,
-	const fixed_t midscale,
-	const fixed_t imidscale,
-	const byte visible_h_faces,
-	const boolean shadow,
-	fixed_t ux,
-	const fixed_t ux2,
-	const boolean do_voxel_radial_fog
+  const vissprite_t *const spr,
+  const struct Voxel *const v,
+  const int ofs1,
+  const int ofs2,
+  const fixed_t frontscale,
+  const fixed_t backscale,
+  const fixed_t midscale,
+  const fixed_t imidscale,
+  const byte visible_h_faces,
+  const boolean shadow,
+  fixed_t ux,
+  const fixed_t ux2,
+  const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
-	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+  const int linesize = video.pitch;
+  pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy,
+            *last_dest;
 
-	const lighttable32_t *thiscolormap =
-		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
+  const lighttable32_t *thiscolormap =
+    (spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
-	const lighttable32_t *colormap[2];
+  const lighttable32_t *colormap[2];
 
-	colormap[0] = thiscolormap + spr->colormap[0];
-	colormap[1] = thiscolormap + spr->colormap[1];
+  colormap[0] = thiscolormap + spr->colormap[0];
+  colormap[1] = thiscolormap + spr->colormap[1];
 
-	const fixed_t x1 =  spr->x1      << FRACBITS,
-	              x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-	int uxi = ux >> FRACBITS;
-	dest += uxi;
+  int uxi = FixedToInt(ux);
+  dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
-	{
-		if (ux >= x2) break;
-		if (ux <  x1) continue;
+  boolean can_copy_column = false;
+  int copy_column_yl, copy_column_yh;
+  int copy_column_uyl, copy_column_uyh;
 
-		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+  cachedvoxelpost_t cached_posts[MAX_CACHED_POSTS];
+  int num_cached_posts;
 
-		const byte *      slab = &v->data[ofs1],
-		           *const  end = &v->data[ofs2];
+  boolean try_copy_column = ux2 - ux > FRACUNIT && !shadow;
 
-		// [Nugget] Radial fog
-		if (do_voxel_radial_fog)
-		{
-			colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
-		}
+  const lighttable32_t *last_colormap = NULL;
 
-		for (byte top, len, face;  slab < end;  slab += len)
-		{
-			top  = *slab++;
-			len  = *slab++;
-			face = *slab++;
+  for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
+  {
+    if (ux >= x2) break;
+    if (ux <  x1) continue;
 
-			const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
-			const byte visible_v_face = (top_z < 0)                       ? F_TOP
-			                          : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-			                          :                                     0;
+    // Radial fog
+    if (do_voxel_radial_fog)
+    {
+      colormap[0] = thiscolormap + voxellightoffset[R_GetLightIndex(midscale, uxi)];
+    }
 
-			if (!(face & (visible_h_faces | visible_v_face))) { continue; }
+    if (try_copy_column)
+    {
+      if (last_colormap == colormap[0] && can_copy_column)
+      {
+        const int
+          clip_yi1 = FixedToInt(clip_y1),
+          clip_yi2 = FixedToInt(clip_y2);
 
-			const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
-			                 topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
+        const int
+          cyl = MAX(copy_column_uyl, clip_yi1),
+          cyh = MIN(copy_column_uyh, clip_yi2);
 
-			fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-			fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+        if (!(cyl < copy_column_yl || copy_column_yh < cyh))
+        {
+          for (int i = 0;  i < num_cached_posts;  i++)
+          {
+            const int
+              pyl = MAX(cached_posts[i].yl, cyl),
+              pyh = MIN(cached_posts[i].yh, cyh);
 
-			if (uy1 >= clip_y2) break;
-			if (uy2 <= clip_y1) continue;
+            if (pyl <= pyh)
+            { V_RGBCopy(dest + pyl, last_dest + pyl, pyh - pyl + 1); }
+          }
 
-			const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
+          continue;
+        }
+      }
+      else {
+        last_colormap = colormap[0];
+        num_cached_posts = 0;
+        last_dest = dest;
+      }
+    }
 
-			uy1 = MAX(uy1, clip_y1);
-			uy2 = MIN(uy2, clip_y2);
+    const byte *      slab = &v->data[ofs1],
+               *const  end = &v->data[ofs2];
 
-			if (shadow)
-			{
-				dc_x  = uxi;
-				dc_yl = uy1 >> FRACBITS;
-				dc_yh = uy2 >> FRACBITS;
+    for (byte top, len, face;  slab < end;  slab += len)
+    {
+      top  = *slab++;
+      len  = *slab++;
+      face = *slab++;
 
-				if (dc_yl <= dc_yh)
-					R_DrawFuzzColumn ();
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-				continue;
-			}
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
-			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel32_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+      if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
-			{
-				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+      const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
+                       topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
-				i = CLAMP(i, 0, len - 1);
+      fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
-				const byte src = slab[i];
-				const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]]; // [Nugget] Translation
+      if (uy1 >= clip_y2) break;
+      if (uy2 <= clip_y1) continue;
 
-				*dest2 = pix;
-			}
-		}
-	}
+      const int
+        uyl = FixedToInt(uy1 + FRACMASK),
+        uyh = FixedToInt(uy2);
+
+      const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
+
+      uy1 = MAX(uy1, clip_y1);
+      uy2 = MIN(uy2, clip_y2);
+
+      if (shadow)
+      {
+        dc_x  = uxi;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
+
+        if (dc_yl <= dc_yh)
+          R_DrawFuzzColumn();
+
+        continue;
+      }
+
+      fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
+      const int uyi = FixedToInt(uy);
+      int uyi2 = uyi - 1;
+
+      pixel32_t *dest2 = dest + uyi;
+
+      for (; uy <= uy2;  uy += FRACUNIT, uyi2++, dest2++)
+      {
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
+            i = CLAMP(i, 0, len - 1);
+
+        const byte src = slab[i];
+        const pixel32_t pix = colormap[spr->brightmap[src]][dc_translation[src]];
+
+        *dest2 = pix;
+      }
+
+      if (try_copy_column)
+      {
+        if (!num_cached_posts)
+        {
+          copy_column_yl = cached_posts[0].yl = uyi;
+          copy_column_yh = cached_posts[0].yh = uyi2;
+
+          copy_column_uyl = uyl;
+          copy_column_uyh = uyh;
+
+          num_cached_posts++;
+          can_copy_column = true;
+        }
+        else if (uyi - copy_column_yh <= 1)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts - 1].yh = uyi2;
+        }
+        else
+        if (num_cached_posts < MAX_CACHED_POSTS)
+        {
+          copy_column_yh = uyi2;
+          copy_column_uyh = uyh;
+
+          cached_posts[num_cached_posts].yl = uyi;
+          cached_posts[num_cached_posts].yh = uyi2;
+
+          num_cached_posts++;
+        }
+        else
+        {
+          try_copy_column = can_copy_column = false;
+        }
+      }
+    }
+  }
 }
 
 // Dithered lighting ---------------------------------------------------------
 
 static void DrawColumnBoundedLoopDithered8(
-	const vissprite_t *const spr,
-	const struct Voxel *const v,
-	const int ofs1,
-	const int ofs2,
-	const fixed_t frontscale,
-	const fixed_t backscale,
-	const fixed_t midscale,
-	const fixed_t imidscale,
-	const byte visible_h_faces,
-	const boolean shadow,
-	fixed_t ux,
-	const fixed_t ux2,
-	const boolean do_voxel_radial_fog
+  const vissprite_t *const spr,
+  const struct Voxel *const v,
+  const int ofs1,
+  const int ofs2,
+  const fixed_t frontscale,
+  const fixed_t backscale,
+  const fixed_t midscale,
+  const fixed_t imidscale,
+  const byte visible_h_faces,
+  const boolean shadow,
+  fixed_t ux,
+  const fixed_t ux2,
+  const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
-	pixel_t *dest = I_VideoBuffer + viewwindowy * linesize + viewwindowx;
+  const int linesize = video.pitch;
+  pixel_t *dest = I_VideoBuffer + (viewwindowx * linesize) + viewwindowy;
 
-	const lighttable_t *thiscolormap =
-		(spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
+  const lighttable_t *thiscolormap =
+    (spr->tint >= 0) ? colormaps[spr->tint] : fullcolormap;
 
-	const lighttable_t *colormap[2][2];
+  const lighttable_t *colormap[2][2];
 
-	colormap[0][0] = thiscolormap + spr->colormap[0];
-	colormap[0][1] = thiscolormap + spr->colormap[1];
-	colormap[1][0] = thiscolormap + spr->nextcolormap[0];
-	colormap[1][1] = thiscolormap + spr->nextcolormap[1];
+  colormap[0][0] = thiscolormap + spr->colormap[0];
+  colormap[0][1] = thiscolormap + spr->colormap[1];
+  colormap[1][0] = thiscolormap + spr->nextcolormap[0];
+  colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
-	const fixed_t x1 =  spr->x1      << FRACBITS,
-	              x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-	int uxi = ux >> FRACBITS;
-	dest += uxi;
+  int uxi = FixedToInt(ux);
+  dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
-	{
-		if (ux >= x2) break;
-		if (ux <  x1) continue;
+  for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
+  {
+    if (ux >= x2) break;
+    if (ux <  x1) continue;
 
-		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
-		const byte *      slab = &v->data[ofs1],
-		           *const  end = &v->data[ofs2];
+    // Radial fog
+    if (do_voxel_radial_fog)
+    {
+      const int index = R_GetLightIndex(midscale, uxi);
 
-		// [Nugget] Radial fog
-		if (do_voxel_radial_fog)
-		{
-			const int index = R_GetLightIndex(midscale, uxi);
+      colormap[0][0] = thiscolormap + voxellightoffset[index];
 
-			colormap[0][0] = thiscolormap + voxellightoffset[index];
+      if (index < MAXLIGHTSCALE-1)
+      {
+        colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+        R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+      }
+      else { R_SetDitherPattern(0); }
+    }
 
-			if (index < MAXLIGHTSCALE-1)
-			{
-				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
-				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-			}
-			else { R_SetDitherPattern(0); }
-		}
+    const byte *      slab = &v->data[ofs1],
+               *const  end = &v->data[ofs2];
 
-		byte const dy = uxi & DITHER_PATTERN_HEIGHT_MASK;
-		const byte *const dither_pattern_row = dither_pattern[dy];
+    byte const dy = uxi & DITHER_PATTERN_HEIGHT_MASK;
+    const byte *const restrict dither_pattern_row = dither_pattern[dy];
 
-		for (byte top, len, face;  slab < end;  slab += len)
-		{
-			top  = *slab++;
-			len  = *slab++;
-			face = *slab++;
+    for (byte top, len, face;  slab < end;  slab += len)
+    {
+      top  = *slab++;
+      len  = *slab++;
+      face = *slab++;
 
-			const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-			const byte visible_v_face = (top_z < 0)                       ? F_TOP
-			                          : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-			                          :                                     0;
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
-			if (!(face & (visible_h_faces | visible_v_face))) { continue; }
+      if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
-			const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
-			                 topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
+      const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
+                       topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
-			fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-			fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+      fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
-			if (uy1 >= clip_y2) break;
-			if (uy2 <= clip_y1) continue;
+      if (uy1 >= clip_y2) break;
+      if (uy2 <= clip_y1) continue;
 
-			const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
+      const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
 
-			uy1 = MAX(uy1, clip_y1);
-			uy2 = MIN(uy2, clip_y2);
+      uy1 = MAX(uy1, clip_y1);
+      uy2 = MIN(uy2, clip_y2);
 
-			if (shadow)
-			{
-				dc_x  = uxi;
-				dc_yl = uy1 >> FRACBITS;
-				dc_yh = uy2 >> FRACBITS;
+      if (shadow)
+      {
+        dc_x  = uxi;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
 
-				if (dc_yl <= dc_yh)
-					R_DrawFuzzColumn ();
+        if (dc_yl <= dc_yh)
+          R_DrawFuzzColumn();
 
-				continue;
-			}
+        continue;
+      }
 
-			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+      fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
+      const int uyi = FixedToInt(uy);
 
-			byte dx = (uy >> FRACBITS) & DITHER_PATTERN_WIDTH_MASK;
+      pixel_t *dest2 = dest + uyi;
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
-			{
-				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+      byte dx = uyi & DITHER_PATTERN_WIDTH_MASK;
 
-				i = CLAMP(i, 0, len - 1);
+      for (; uy <= uy2;  uy += FRACUNIT, dest2++)
+      {
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
+            i = CLAMP(i, 0, len - 1);
 
-				const byte src = slab[i];
-				const pixel_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
+        const byte src = slab[i];
+        const pixel_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
 
-				*dest2 = pix;
-				dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
-			}
-		}
-	}
+        *dest2 = pix;
+        dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
+      }
+    }
+  }
 }
 
 static void DrawColumnBoundedLoopDithered32(
-	const vissprite_t *const spr,
-	const struct Voxel *const v,
-	const int ofs1,
-	const int ofs2,
-	const fixed_t frontscale,
-	const fixed_t backscale,
-	const fixed_t midscale,
-	const fixed_t imidscale,
-	const byte visible_h_faces,
-	const boolean shadow,
-	fixed_t ux,
-	const fixed_t ux2,
-	const boolean do_voxel_radial_fog
+  const vissprite_t *const spr,
+  const struct Voxel *const v,
+  const int ofs1,
+  const int ofs2,
+  const fixed_t frontscale,
+  const fixed_t backscale,
+  const fixed_t midscale,
+  const fixed_t imidscale,
+  const byte visible_h_faces,
+  const boolean shadow,
+  fixed_t ux,
+  const fixed_t ux2,
+  const boolean do_voxel_radial_fog
 ) {
-	const int linesize = video.pitch;
-	pixel32_t *dest = I_VideoBuffer32 + viewwindowy * linesize + viewwindowx;
+  const int linesize = video.pitch;
+  pixel32_t *dest = I_VideoBuffer32 + (viewwindowx * linesize) + viewwindowy;
 
-	const lighttable32_t *thiscolormap =
-		(spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
+  const lighttable32_t *thiscolormap =
+    (spr->tint >= 0) ? colormaps32[spr->tint] : fullcolormap32;
 
-	const lighttable32_t *colormap[2][2];
+  const lighttable32_t *colormap[2][2];
 
-	colormap[0][0] = thiscolormap + spr->colormap[0];
-	colormap[0][1] = thiscolormap + spr->colormap[1];
-	colormap[1][0] = thiscolormap + spr->nextcolormap[0];
-	colormap[1][1] = thiscolormap + spr->nextcolormap[1];
+  colormap[0][0] = thiscolormap + spr->colormap[0];
+  colormap[0][1] = thiscolormap + spr->colormap[1];
+  colormap[1][0] = thiscolormap + spr->nextcolormap[0];
+  colormap[1][1] = thiscolormap + spr->nextcolormap[1];
 
-	const fixed_t x1 =  spr->x1      << FRACBITS,
-	              x2 = (spr->x2 + 1) << FRACBITS;
+  const fixed_t x1 = IntToFixed(spr->x1),
+                x2 = IntToFixed(spr->x2 + 1);
 
-	int uxi = ux >> FRACBITS;
-	dest += uxi;
+  int uxi = FixedToInt(ux);
+  dest += uxi * linesize;
 
-	for (; ux < ux2;  ux += FRACUNIT, uxi++, dest++)
-	{
-		if (ux >= x2) break;
-		if (ux <  x1) continue;
+  for (; ux < ux2;  ux += FRACUNIT, uxi++, dest += linesize)
+  {
+    if (ux >= x2) break;
+    if (ux <  x1) continue;
 
-		const fixed_t clip_y1 =  ((int) mceilingclip[uxi] + 1) << FRACBITS,
-		              clip_y2 = (((int) mfloorclip  [uxi]    ) << FRACBITS) - 1;
+    const fixed_t clip_y1 = IntToFixed(mceilingclip[uxi] + 1),
+                  clip_y2 = IntToFixed(mfloorclip  [uxi]    ) - 1;
 
-		const byte *      slab = &v->data[ofs1],
-		           *const  end = &v->data[ofs2];
+    // Radial fog
+    if (do_voxel_radial_fog)
+    {
+      const int index = R_GetLightIndex(midscale, uxi);
 
-		// [Nugget] Radial fog
-		if (do_voxel_radial_fog)
-		{
-			const int index = R_GetLightIndex(midscale, uxi);
+      colormap[0][0] = thiscolormap + voxellightoffset[index];
 
-			colormap[0][0] = thiscolormap + voxellightoffset[index];
+      if (index < MAXLIGHTSCALE-1)
+      {
+        colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
+        R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
+      }
+      else { R_SetDitherPattern(0); }
+    }
 
-			if (index < MAXLIGHTSCALE-1)
-			{
-				colormap[1][0] = thiscolormap + voxellight_nextcolormap[index];
-				R_SetDitherPattern(voxellight_ditherlevel[dc_rawlightindex >> LIGHTSCALEDITHERSHIFT]);
-			}
-			else { R_SetDitherPattern(0); }
-		}
+    const byte *      slab = &v->data[ofs1],
+               *const  end = &v->data[ofs2];
 
-		byte const dy = uxi & DITHER_PATTERN_HEIGHT_MASK;
-		const byte *const dither_pattern_row = dither_pattern[dy];
+    byte const dy = uxi & DITHER_PATTERN_HEIGHT_MASK;
+    const byte *const restrict dither_pattern_row = dither_pattern[dy];
 
-		for (byte top, len, face;  slab < end;  slab += len)
-		{
-			top  = *slab++;
-			len  = *slab++;
-			face = *slab++;
+    for (byte top, len, face;  slab < end;  slab += len)
+    {
+      top  = *slab++;
+      len  = *slab++;
+      face = *slab++;
 
-			const fixed_t top_z = spr->gzt - viewz - (top << FRACBITS);
+      const fixed_t top_z = spr->gzt - viewz - IntToFixed(top);
 
-			const byte visible_v_face = (top_z < 0)                       ? F_TOP
-			                          : (top_z > ((int) len << FRACBITS)) ? F_BOTTOM
-			                          :                                     0;
+      const byte visible_v_face = (top_z < 0)               ? F_TOP
+                                : (top_z > IntToFixed(len)) ? F_BOTTOM
+                                :                             0;
 
-			if (!(face & (visible_h_faces | visible_v_face))) { continue; }
+      if (!(face & (visible_h_faces | visible_v_face))) { continue; }
 
-			const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
-			                 topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
+      const fixed_t bottomscale = (visible_v_face == F_BOTTOM) ? backscale : frontscale,
+                       topscale = (visible_v_face == F_TOP)    ? backscale : frontscale;
 
-			fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
-			fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + (fixed_t) len * bottomscale;
+      fixed_t uy1 = centeryfrac - FixedMul(top_z, topscale);
+      fixed_t uy2 = centeryfrac - FixedMul(top_z, bottomscale) + len * bottomscale;
 
-			if (uy1 >= clip_y2) break;
-			if (uy2 <= clip_y1) continue;
+      if (uy1 >= clip_y2) break;
+      if (uy2 <= clip_y1) continue;
 
-			const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
+      const fixed_t uy0 = centeryfrac - FixedMul(top_z, frontscale);
 
-			uy1 = MAX(uy1, clip_y1);
-			uy2 = MIN(uy2, clip_y2);
+      uy1 = MAX(uy1, clip_y1);
+      uy2 = MIN(uy2, clip_y2);
 
-			if (shadow)
-			{
-				dc_x  = uxi;
-				dc_yl = uy1 >> FRACBITS;
-				dc_yh = uy2 >> FRACBITS;
+      if (shadow)
+      {
+        dc_x  = uxi;
+        dc_yl = FixedToInt(uy1);
+        dc_yh = FixedToInt(uy2);
 
-				if (dc_yl <= dc_yh)
-					R_DrawFuzzColumn ();
+        if (dc_yl <= dc_yh)
+          R_DrawFuzzColumn();
 
-				continue;
-			}
+        continue;
+      }
 
-			fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
-			pixel32_t *dest2 = dest + (uy >> FRACBITS) * linesize;
+      fixed_t uy = ((uy1 - 1) | FRACMASK) + 1;
+      const int uyi = FixedToInt(uy);
 
-			byte dx = (uy >> FRACBITS) & DITHER_PATTERN_WIDTH_MASK;
+      pixel32_t *dest2 = dest + uyi;
 
-			for (; uy <= uy2;  uy += FRACUNIT, dest2 += linesize)
-			{
-				int i = (((uy - uy0) >> FRACBITS) * imidscale) >> FRACBITS;
+      byte dx = uyi & DITHER_PATTERN_WIDTH_MASK;
 
-				i = CLAMP(i, 0, len - 1);
+      for (; uy <= uy2;  uy += FRACUNIT, dest2++)
+      {
+        int i = FixedToInt(FixedToInt(uy - uy0) * imidscale);
+            i = CLAMP(i, 0, len - 1);
 
-				const byte src = slab[i];
-				const pixel32_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
+        const byte src = slab[i];
+        const pixel32_t pix = colormap[dither_pattern_row[dx]][spr->brightmap[src]][dc_translation[src]];
 
-				*dest2 = pix;
-				dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
-			}
-		}
-	}
+        *dest2 = pix;
+        dx = (dx + 1) & DITHER_PATTERN_WIDTH_MASK;
+      }
+    }
+  }
 }
 
 // [Nugget] =================================================================/
@@ -2595,7 +2758,7 @@ void VX_DrawVoxel (vissprite_t * spr)
 	// always pass the source color through a translation table, selected here
 	if ((spr->mobjflags_extra & MFX_COLOREDBLOOD) && !(spr->mobjflags & MF_SHADOW))
 	{
-		dc_translation = red2col[spr->color];
+		dc_translation = xlat[spr->color].lump;
 	}
 	else if ((spr->mobjflags & MF_TRANSLATION) && !(spr->mobjflags & MF_SHADOW))
 	{

@@ -8,12 +8,15 @@
 
 ## Changes
 
+- **Merged changes from Woof! post-16.0.0**
 - **Improved accuracy of plane rendering**
 - **Improved plane lighting in true-color modes**
 - **Improved vertical sprite clipping** (thanks to @JNechaevsky and @pvictress)
+- **Optimized _Bounded Voxel Rendering_**
 - **Improved culling of distant sprite shadows**
 - **Pointed automap marks are now underlined**
 - **Allowed `IDDF` and `IDDET` cheats during demos and netgames (except deathmatch)**
+- **Improved low-resolution post-process**
 - **Renamed _Hitbox-based Hitscan Collision_ to _Edge-based Hitscan Collision_** [^1]
 
 ## Bug Fixes
